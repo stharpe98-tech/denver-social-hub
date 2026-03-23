@@ -1,6 +1,5 @@
 import { env } from "cloudflare:workers";
 
-import { env } from "cloudflare:workers";
 const POST = async ({ cookies }) => {
   const db = env.DB;
   const cookie = cookies.get("dsn_user")?.value;
