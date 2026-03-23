@@ -52,7 +52,7 @@ const currentPath = Astro.url.pathname;
       <a href="/fund"     class:list={[{ active: currentPath.startsWith("/fund")              }]}><span>🤝</span>Fund</a>
       <a href="/about"    class:list={[{ active: currentPath.startsWith("/about")             }]}><span>💬</span>About</a>
       {isAdmin && <a href="/admin" class:list={[{ active: currentPath.startsWith("/admin") }]}><span>⚙️</span>Admin</a>}
-      {!user   && <a href="/login" class:list={[{ active: currentPath.startsWith("/login") }]} style="color:#60a5fa"><span>✨</span>Join</a>}
+
     </div>
   </div>
 </body>
