@@ -10,5 +10,5 @@ database_id = "402f83a5-8907-4666-8343-7d12e90ef9c3"
 
 [assets]
 binding = "ASSETS"
-directory = "./dist/client"
+directory = "./dist"
 run_worker_first = true
