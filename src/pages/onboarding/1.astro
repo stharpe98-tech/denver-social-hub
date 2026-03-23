@@ -55,6 +55,7 @@ const availabilityOptions = [
   "☀️ Weekday lunches","🌆 Weekday evenings","🎉 Friday nights",
   "🌙 Saturday nights","🌅 Weekend days","🎉 Whenever, I'm easy",
   "🏠 Mostly remote / flexible","⚡ Last minute is fine",
+  "🥱 Spontaneous only","💸 Budget-friendly options please",
 ];
 
 const meetStyleOptions = [
@@ -69,8 +70,8 @@ const meetStyleOptions = [
 const personalityOptions = [
   "😌 Homebody at heart","🗣️ Oversharer",
   "😶 Quiet observer","🤓 Nerd & proud","🎨 Creative type",
-  "🔥 Workaholic","🥱 Allergic to plans","🌊 Former coastal transplant",
-  "💸 Always broke but still going out","🐶 Dog person","🐱 Cat person",
+  "🔥 Workaholic","🌊 Former coastal transplant",
+  "🐶 Dog person","🐱 Cat person",
 ];
 
 const lifestyleOptions = [
@@ -108,6 +109,19 @@ const lifestyleOptions = [
           <option value="" disabled selected>Pick your area…</option>
           {neighborhoods.map(n => <option value={n}>{n}</option>)}
         </select>
+      </div>
+
+      <!-- Age range -->
+      <div class="ob-section">
+        <div class="ob-label">🎂 Age range</div>
+        <div class="ob-pills">
+          {ageRanges.map(a => (
+            <label class="ob-pill-wrap">
+              <input type="radio" name="age_range" value={a} />
+              <span>{a}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       <!-- Age range -->
