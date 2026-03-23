@@ -57,6 +57,15 @@ const availabilityOptions = [
   "🏠 Mostly remote / flexible","⚡ Last minute is fine",
 ];
 
+const meetStyleOptions = [
+  "🍽️ Sit-down dinner (small table)",
+  "🍺 Bar / casual hangout",
+  "🏔️ Activity first, talk second",
+  "☕ Coffee after a group event",
+  "🎲 Game night / low pressure",
+  "🚶 Walk & talk outdoors",
+];
+
 const vibeOptions = [
   "🌙 Night owl","🌅 Early riser","🏔️ Outdoorsy","🐶 Dog person",
   "🆕 New to Denver","🏙️ Denver native","🎉 Always down to hang",
@@ -147,6 +156,19 @@ const vibeOptions = [
             <label class="ob-pill-wrap">
               <input type="checkbox" name="availability" value={a} />
               <span>{a}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Meet style -->
+      <div class="ob-section">
+        <div class="ob-label">🤝 How do you prefer to meet people? <span class="ob-hint">(pick your faves)</span></div>
+        <div class="ob-pills">
+          {meetStyleOptions.map(m => (
+            <label class="ob-pill-wrap">
+              <input type="checkbox" name="meet_style" value={m} />
+              <span>{m}</span>
             </label>
           ))}
         </div>
