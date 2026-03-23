@@ -36,10 +36,12 @@ const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",ou
       <a href="/fund"     style="font-size:13px;color:rgba(255,255,255,.6);text-decoration:none;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">🤝 Fund</a>
       <a href="/about"    style="font-size:13px;color:rgba(255,255,255,.6);text-decoration:none;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">About</a>
     </div>
-    {user
-      ? <a href="/profile" style="padding:8px 22px;background:rgba(255,255,255,.08);color:#fff;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;border:1px solid rgba(255,255,255,.1)">My Profile</a>
-      : <a href="/login"   style="padding:8px 22px;background:rgba(255,255,255,.08);color:#fff;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;border:1px solid rgba(255,255,255,.1)">Join the Fun</a>
-    }
+    <div class="hp-nav-auth">
+      {user
+        ? <a href="/profile" style="padding:8px 22px;background:rgba(255,255,255,.08);color:#fff;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;border:1px solid rgba(255,255,255,.1)">My Profile</a>
+        : <a href="/login"   style="padding:8px 22px;background:rgba(255,255,255,.08);color:#fff;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;border:1px solid rgba(255,255,255,.1)">Join the Fun</a>
+      }
+    </div>
   </nav>
 
   <!-- HERO -->
@@ -169,9 +171,10 @@ const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",ou
   </div>
 
 <style>
-  /* Hide desktop nav links on mobile */
+  /* Hide desktop nav links + auth button on mobile */
   @media (max-width: 900px) {
     .hp-nav-links { display: none !important; }
+    .hp-nav-auth  { display: none !important; }
     #hp-nav { padding: 16px 20px; }
   }
   /* Hide mobile bottom nav on desktop */

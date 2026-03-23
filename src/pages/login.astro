@@ -35,8 +35,7 @@ if (Astro.request.method === "POST") {
 <Base title="Join / Sign In">
   <div style="max-width:440px;margin:0 auto;padding:40px 20px">
     {error && <div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:12px;padding:14px;color:#f87171;font-size:13px;margin-bottom:16px">{error}</div>}
-    {(mode==='choose'||mode==='join') && (
-      <div class="card" style="margin-bottom:16px">
+    <div class="card" style="margin-bottom:16px">
         <h2 style="font-size:22px;color:#fff;margin-bottom:4px;font-family:'Instrument Serif',serif">Join Denver Social</h2>
         <p class="muted" style="font-size:13px;margin-bottom:20px">Free forever. 60 seconds to join.</p>
         <form method="POST">
@@ -46,9 +45,7 @@ if (Astro.request.method === "POST") {
           <button type="submit" class="btn btn-primary" style="width:100%">Join Free →</button>
         </form>
       </div>
-    )}
-    {(mode==='choose'||mode==='login') && (
-      <div class="card">
+    <div class="card">
         <h2 style="font-size:18px;color:#fff;margin-bottom:16px">Already a member?</h2>
         <form method="POST">
           <input type="hidden" name="action" value="login" />
@@ -56,6 +53,6 @@ if (Astro.request.method === "POST") {
           <button type="submit" class="btn btn-ghost" style="width:100%">Sign In →</button>
         </form>
       </div>
-    )}
+    </div>
   </div>
 </Base>
