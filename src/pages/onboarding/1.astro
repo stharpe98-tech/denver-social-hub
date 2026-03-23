@@ -38,37 +38,25 @@ const neighborhoods = [
 const ageRanges = ["18–24","25–29","30–34","35–39","40–44","45–49","50+"];
 
 const interestOptions = [
-  { emoji:"🍽️", label:"Food & Dining" },
-  { emoji:"🍺", label:"Craft Beer" },
-  { emoji:"🥾", label:"Hiking" },
-  { emoji:"🎲", label:"Board Games" },
-  { emoji:"🎵", label:"Live Music" },
-  { emoji:"🎨", label:"Art & Culture" },
-  { emoji:"🎳", label:"Bowling" },
-  { emoji:"💪", label:"Fitness" },
-  { emoji:"😂", label:"Comedy" },
-  { emoji:"🎰", label:"Casino Trips" },
-  { emoji:"🏔️", label:"Outdoor Adventures" },
-  { emoji:"☕", label:"Coffee & Cafes" },
-  { emoji:"🧠", label:"Trivia Nights" },
-  { emoji:"🎤", label:"Karaoke" },
-  { emoji:"🍜", label:"Trying New Restaurants" },
-  { emoji:"🏒", label:"Sports Outings" },
+  "🍽️ Food & Dining","🍺 Craft Beer","🥾 Hiking","🎲 Board Games",
+  "🎵 Live Music","🎨 Art & Culture","🎳 Bowling","💪 Fitness",
+  "😂 Comedy","🎰 Casino Trips","🏔️ Outdoor Adventures","☕ Coffee & Cafes",
+  "🧠 Trivia Nights","🎤 Karaoke","🍜 New Restaurants","🏒 Sports Outings",
 ];
 
 const lookingOptions = [
-  { emoji:"👯", label:"New friends" },
-  { emoji:"🥾", label:"Hiking buddy" },
-  { emoji:"🍽️", label:"Dinner companion" },
-  { emoji:"🏋️", label:"Workout partner" },
-  { emoji:"🗺️", label:"Explore Denver" },
-  { emoji:"💼", label:"Professional networking" },
-  { emoji:"😎", label:"Just vibing" },
+  "👯 New friends","🥾 Hiking buddy","🍽️ Dinner companion","🏋️ Workout partner",
+  "🗺️ Explore Denver","💼 Networking","😎 Just vibing","🎮 Gaming crew",
+  "🐕 Dog walk buddy","📸 Adventure partner",
 ];
 
 const vibeOptions = [
-  "Night owl","Morning person","Foodie","Outdoorsy","Beer lover",
-  "Dog person","New to Denver","Denver native","Always down","Chill vibes only"
+  "🌙 Night owl","🌅 Morning person","🍕 Foodie","🏔️ Outdoorsy",
+  "🍺 Beer lover","🐶 Dog person","🆕 New to Denver","🏙️ Denver native",
+  "🎉 Always down","😌 Chill vibes only","🎵 Live music junkie",
+  "📚 Homebody","🚴 Active & sporty","🌱 Sober curious","✈️ Always traveling",
+  "💻 Remote worker","🎨 Creative type","🍷 Wine over beer","🏋️ Gym rat",
+  "🌮 Taco Tuesday every week",
 ];
 ---
 
@@ -95,7 +83,7 @@ const vibeOptions = [
 
       <!-- Neighborhood -->
       <div class="ob-section">
-        <label class="ob-label">📍 Your neighborhood</label>
+        <div class="ob-label">📍 Your neighborhood</div>
         <select name="neighborhood" class="ob-select" required>
           <option value="" disabled selected>Pick your area…</option>
           {neighborhoods.map(n => <option value={n}>{n}</option>)}
@@ -104,12 +92,12 @@ const vibeOptions = [
 
       <!-- Age range -->
       <div class="ob-section">
-        <label class="ob-label">🎂 Age range</label>
+        <div class="ob-label">🎂 Age range</div>
         <div class="ob-pills">
           {ageRanges.map(a => (
-            <label class="ob-pill-label">
+            <label class="ob-pill-wrap">
               <input type="radio" name="age_range" value={a} />
-              <span class="ob-pill">{a}</span>
+              <span>{a}</span>
             </label>
           ))}
         </div>
@@ -117,12 +105,12 @@ const vibeOptions = [
 
       <!-- Interests -->
       <div class="ob-section">
-        <label class="ob-label">✨ What are you into? <span style="color:#4a5568;font-weight:400;text-transform:none;letter-spacing:0">(pick a few)</span></label>
+        <div class="ob-label">✨ What are you into? <span class="ob-hint">(pick a few)</span></div>
         <div class="ob-pills">
           {interestOptions.map(i => (
-            <label class="ob-pill-label">
-              <input type="checkbox" name="interests" value={i.label} />
-              <span class="ob-pill">{i.emoji} {i.label}</span>
+            <label class="ob-pill-wrap">
+              <input type="checkbox" name="interests" value={i} />
+              <span>{i}</span>
             </label>
           ))}
         </div>
@@ -130,12 +118,12 @@ const vibeOptions = [
 
       <!-- Looking for -->
       <div class="ob-section">
-        <label class="ob-label">🔍 What are you looking for? <span style="color:#4a5568;font-weight:400;text-transform:none;letter-spacing:0">(pick all that apply)</span></label>
+        <div class="ob-label">🔍 What are you looking for? <span class="ob-hint">(pick all that apply)</span></div>
         <div class="ob-pills">
           {lookingOptions.map(l => (
-            <label class="ob-pill-label">
-              <input type="checkbox" name="looking_for" value={l.label} />
-              <span class="ob-pill">{l.emoji} {l.label}</span>
+            <label class="ob-pill-wrap">
+              <input type="checkbox" name="looking_for" value={l} />
+              <span>{l}</span>
             </label>
           ))}
         </div>
@@ -143,11 +131,15 @@ const vibeOptions = [
 
       <!-- Vibe -->
       <div class="ob-section">
-        <label class="ob-label">💫 Your vibe <span style="color:#4a5568;font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
-        <select name="vibe" class="ob-select">
-          <option value="">Choose one…</option>
-          {vibeOptions.map(v => <option value={v}>{v}</option>)}
-        </select>
+        <div class="ob-label">💫 Your vibe <span class="ob-hint">(optional)</span></div>
+        <div class="ob-pills">
+          {vibeOptions.map(v => (
+            <label class="ob-pill-wrap">
+              <input type="checkbox" name="vibe" value={v} />
+              <span>{v}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       <button type="submit" class="btn btn-primary" style="width:100%;padding:16px;font-size:16px;margin-top:8px">
@@ -159,9 +151,9 @@ const vibeOptions = [
 </Base>
 
 <style>
-  .ob-section { margin-bottom: 28px; }
+  .ob-section { margin-bottom: 32px; }
+
   .ob-label {
-    display: block;
     font-size: 12px;
     font-weight: 700;
     color: #9ca3af;
@@ -169,6 +161,15 @@ const vibeOptions = [
     letter-spacing: .06em;
     margin-bottom: 12px;
   }
+
+  .ob-hint {
+    font-size: 12px;
+    font-weight: 400;
+    color: #4a5568;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
   .ob-select {
     width: 100%;
     padding: 14px 16px;
@@ -187,10 +188,27 @@ const vibeOptions = [
   }
   .ob-select:focus { border-color: #3b82f6; outline: none; }
   .ob-select option { background: #0f1117; color: #e8ecf4; }
+
+  /* Pill = native label wrapping hidden input + visible span */
   .ob-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-  .ob-pill-label { cursor: pointer; }
-  .ob-pill-label input { display: none; }
-  .ob-pill {
+
+  .ob-pill-wrap {
+    display: inline-flex;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Hide the actual input but keep it accessible */
+  .ob-pill-wrap input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  /* The visible pill */
+  .ob-pill-wrap span {
     display: inline-block;
     padding: 9px 16px;
     border-radius: 50px;
@@ -199,26 +217,20 @@ const vibeOptions = [
     color: #6b7a8e;
     background: rgba(255,255,255,.04);
     border: 1.5px solid rgba(255,255,255,.08);
-    transition: all .15s;
+    transition: all .15s ease;
     user-select: none;
     white-space: nowrap;
   }
-  .ob-pill-label input:checked + .ob-pill {
+
+  .ob-pill-wrap:hover span {
+    border-color: rgba(255,255,255,.2);
+    color: #e8ecf4;
+  }
+
+  /* Selected state — triggered natively by :checked */
+  .ob-pill-wrap input:checked + span {
     background: rgba(59,130,246,.15);
     border-color: #3b82f6;
     color: #60a5fa;
   }
-  .ob-pill:hover { border-color: rgba(255,255,255,.2); color: #e8ecf4; }
 </style>
-
-<script>
-  document.querySelectorAll('.ob-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      const input = pill.previousElementSibling as HTMLInputElement;
-      if (input.type === 'checkbox') {
-        input.checked = !input.checked;
-        pill.classList.toggle('selected', input.checked);
-      }
-    });
-  });
-</script>
