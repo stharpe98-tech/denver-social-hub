@@ -16,6 +16,7 @@ if (Astro.request.method === "POST" && db) {
   const age_range    = form.get("age_range")?.toString() || "";
   const interests    = form.getAll("interests").join(",");
   const looking_for  = form.getAll("looking_for").join(",");
+  const availability = form.getAll("availability").join(",");
   const vibe         = form.get("vibe")?.toString() || "";
   try {
     await db.prepare(
@@ -48,6 +49,12 @@ const lookingOptions = [
   "👯 New friends","🥾 Hiking buddy","🍽️ Dinner companion","🏋️ Workout partner",
   "🗺️ Explore Denver","💼 Networking","😎 Just vibing","🎮 Gaming crew",
   "🐕 Dog walk buddy","📸 Adventure partner",
+];
+
+const availabilityOptions = [
+  "☀️ Weekday lunches","🌆 Weekday evenings","🎉 Friday nights",
+  "🌙 Saturday nights","🌅 Weekend days","🥱 Honestly, whenever",
+  "🏠 Mostly remote / flexible","⚡ Last minute is fine",
 ];
 
 const vibeOptions = [
@@ -127,6 +134,19 @@ const vibeOptions = [
             <label class="ob-pill-wrap">
               <input type="checkbox" name="looking_for" value={l} />
               <span>{l}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Availability -->
+      <div class="ob-section">
+        <div class="ob-label">📅 When are you usually free? <span class="ob-hint">(pick all that apply)</span></div>
+        <div class="ob-pills">
+          {availabilityOptions.map(a => (
+            <label class="ob-pill-wrap">
+              <input type="checkbox" name="availability" value={a} />
+              <span>{a}</span>
             </label>
           ))}
         </div>
