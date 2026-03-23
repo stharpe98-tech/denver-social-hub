@@ -1,27 +1,19 @@
 import { env } from "cloudflare:workers";
 
-const POST = async ({ request, cookies }) => {
-  const db = env.DB;
+export const POST = async ({ request, cookies }: { request: Request; cookies: any }) => {
+  const db = (env as any).DB;
   const cookie = cookies.get("dsn_user")?.value;
   if (!cookie) return new Response(JSON.stringify({ error: "login" }), { status: 401 });
-  let user;
-  try {
-    user = JSON.parse(cookie);
-  } catch {
+  let user: any;
+  try { user = JSON.parse(cookie); } catch {
     return new Response(JSON.stringify({ error: "bad" }), { status: 401 });
   }
-  const { text, event_type } = await request.json();
-  if (!text) return new Response(JSON.stringify({ error: "missing" }), { status: 400 });
+  const { to_email, message, event_id } = await request.json();
+  if (!db || !to_email) return new Response(JSON.stringify({ error: "missing" }), { status: 400 });
   try {
-    const member = await db.prepare("SELECT name FROM members WHERE email=?").bind(user.email).first();
-    await db.prepare("INSERT INTO shoutouts (email, name, text, event_type) VALUES (?, ?, ?, ?)").bind(user.email, member?.name || user.name, text, event_type || "").run();
+    await db.prepare("INSERT INTO shoutouts (from_email, to_email, message, event_id) VALUES (?,?,?,?)").bind(user.email, to_email, message || "", event_id || null).run();
     return new Response(JSON.stringify({ success: true }));
-  } catch (e) {
+  } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }
-};
-  __proto__: null,
-  POST
-export {
-  page
 };
