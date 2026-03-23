@@ -27,13 +27,27 @@ if (Astro.request.method === "POST" && db) {
 }
 
 const neighborhoods = [
-  "RiNo / River North","Capitol Hill","LoDo / Downtown","Washington Park",
-  "Highlands / LoHi","Cherry Creek","Baker","Five Points","Stapleton / Central Park",
-  "Sloan's Lake","Congress Park","Sunnyside","Jefferson Park","Berkeley",
-  "Green Valley Ranch","Hampden","Platt Park","South Park Hill","Hilltop",
-  "Aurora","Lakewood","Englewood","Littleton","Centennial","Westminster",
-  "Thornton","Arvada","Wheat Ridge","Golden","Parker","Broomfield","Boulder",
-  "Other / Outside Denver"
+  // Downtown / Central
+  "LoDo / Downtown","RiNo / River North","Five Points","Curtis Park","Whittier",
+  // Capitol Hill / Central East
+  "Capitol Hill","Cheesman Park","Congress Park","Uptown",
+  // East Denver
+  "Cherry Creek","Hilltop","Mayfair","Hale","South Park Hill","North Park Hill",
+  "Stapleton / Central Park",
+  // South Denver
+  "Washington Park","Platt Park","Baker","Hampden","Virginia Village",
+  "Green Valley Ranch",
+  // West / Northwest Denver
+  "Highlands / LoHi","Sunnyside","Jefferson Park","Berkeley","Sloan's Lake",
+  "Wheat Ridge",
+  // Suburbs — South
+  "Englewood","Littleton","Centennial","Parker",
+  // Suburbs — West
+  "Lakewood","Golden","Arvada",
+  // Suburbs — North
+  "Westminster","Thornton","Broomfield",
+  // Other
+  "Aurora","Boulder","Other / Outside Denver"
 ];
 
 const ageRanges = ["18–24","25–29","30–34","35–39","40–44","45–49","50+"];
