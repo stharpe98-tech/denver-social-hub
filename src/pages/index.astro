@@ -171,11 +171,10 @@ const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",ou
   </div>
 
 <style>
-  /* Hide desktop nav links + auth button on mobile */
+  /* Hide desktop nav links on mobile, but keep auth button */
   @media (max-width: 900px) {
     .hp-nav-links { display: none !important; }
-    .hp-nav-auth  { display: none !important; }
-    #hp-nav { padding: 16px 20px; }
+    #hp-nav { padding: 14px 20px; }
   }
   /* Hide mobile bottom nav on desktop */
   @media (min-width: 901px) {
