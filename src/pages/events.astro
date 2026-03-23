@@ -1,0 +1,39 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDB } from '../lib/db';
+
+const db = getDB();
+let events: any[] = [];
+try {
+  if (db) events = (await db.prepare("SELECT * FROM events ORDER BY id DESC").all())?.results || [];
+} catch {}
+const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",other:"📅" };
+---
+<Base title="Events">
+  <div style="max-width:680px;margin:0 auto;padding:24px 20px">
+    <div style="text-align:center;margin-bottom:20px">
+      <h1 style="font-size:28px;color:#fff;margin-bottom:4px">Upcoming Events</h1>
+      <p class="muted" style="font-size:13px">Real hangouts with real people. Pick one and show up.</p>
+    </div>
+    {events.length===0 && <p style="text-align:center;color:#4a5568;padding:40px">No events yet. Check back soon!</p>}
+    <div style="display:flex;flex-direction:column;gap:10px">
+      {events.map(ev => (
+        <a href={`/events/${ev.id}`} style="display:flex;gap:16px;align-items:center;padding:18px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);text-decoration:none;color:#e8ecf4">
+          <div style="text-align:center;background:rgba(59,130,246,.1);border-radius:10px;padding:8px 12px;min-width:52px">
+            <div style="font-size:10px;font-weight:700;color:#60a5fa;text-transform:uppercase">{ev.event_month||'TBD'}</div>
+            <div style="font-family:'Instrument Serif',serif;font-size:22px;color:#fff">{ev.event_day||'—'}</div>
+          </div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="font-size:14px">{typeEmoji[ev.event_type]||'📅'}</span>
+              <span style="font-size:11px;color:#60a5fa;font-weight:600;text-transform:capitalize">{(ev.event_type||'').replace('_',' ')}</span>
+            </div>
+            <h3 style="font-size:15px;color:#fff;margin-bottom:2px">{ev.title}</h3>
+            <div style="font-size:11px;color:#4a5568">{ev.location||ev.zone} · {ev.spots} spots{ev.price_cap?` · ${ev.price_cap}`:''}</div>
+          </div>
+          <span style="color:#4a5568;font-size:16px">→</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</Base>

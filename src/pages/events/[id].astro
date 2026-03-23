@@ -1,0 +1,96 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+
+const db = getDB();
+const { id } = Astro.params;
+let user: any = null;
+const cookie = Astro.cookies.get("dsn_user")?.value;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+
+let event: any = null;
+let rsvps: any[] = [];
+let myRsvp = false;
+
+try {
+  if (db && id) {
+    event = await db.prepare("SELECT * FROM events WHERE id=?").bind(id).first();
+    const r = await db.prepare("SELECT r.email,r.name,m.neighborhood FROM event_rsvps r LEFT JOIN members m ON r.email=m.email WHERE r.event_id=?").bind(id).all();
+    rsvps = r?.results || [];
+    if (user) myRsvp = rsvps.some((r:any) => r.email===user.email);
+  }
+} catch {}
+
+if (!event) return Astro.redirect("/events");
+const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",other:"📅" };
+---
+<Base title={event.title}>
+  <div style="max-width:600px;margin:0 auto;padding:24px 20px">
+    <a href="/events" style="font-size:13px;color:#60a5fa;text-decoration:none;margin-bottom:16px;display:inline-block">← All Events</a>
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <span style="font-size:24px">{typeEmoji[event.event_type]||'📅'}</span>
+        <span style="font-size:12px;color:#60a5fa;font-weight:600;text-transform:capitalize">{(event.event_type||'').replace('_',' ')}</span>
+        {event.event_month && <span style="font-size:12px;color:#6b7a8e;margin-left:auto">{event.event_month} {event.event_day}</span>}
+      </div>
+      <h1 style="font-family:'Instrument Serif',serif;font-size:26px;color:#fff;margin-bottom:8px">{event.title}</h1>
+      {event.description && <p style="font-size:14px;color:#6b7a8e;line-height:1.7;margin-bottom:16px">{event.description}</p>}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+        <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:12px">
+          <div style="font-size:10px;color:#6b7a8e;font-weight:600;text-transform:uppercase;margin-bottom:4px">Location</div>
+          <div style="font-size:13px;color:#e8ecf4">{myRsvp?(event.location||event.zone):(event.zone||'TBD')} {!myRsvp&&<span style="font-size:11px;color:#4a5568">(RSVP to see)</span>}</div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:12px">
+          <div style="font-size:10px;color:#6b7a8e;font-weight:600;text-transform:uppercase;margin-bottom:4px">Spots</div>
+          <div style="font-size:13px;color:#e8ecf4">{rsvps.length}/{event.spots} filled</div>
+        </div>
+        {event.price_cap && (
+          <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:12px">
+            <div style="font-size:10px;color:#6b7a8e;font-weight:600;text-transform:uppercase;margin-bottom:4px">Cost</div>
+            <div style="font-size:13px;color:#e8ecf4">{event.price_cap}</div>
+          </div>
+        )}
+      </div>
+      {user ? (
+        <button id="rsvp-btn" onclick="toggleRsvp()" style={`width:100%;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;background:${myRsvp?'rgba(248,113,113,.15)':'#3b82f6'};color:${myRsvp?'#f87171':'#fff'}`}>
+          {myRsvp?"✓ You're In — Cancel RSVP":"RSVP →"}
+        </button>
+      ) : (
+        <a href={`/login?next=/events/${id}`} class="btn btn-primary" style="width:100%;display:block;text-align:center">Sign in to RSVP</a>
+      )}
+    </div>
+    {rsvps.length>0 && (
+      <div class="card">
+        <h3 style="font-size:16px;color:#fff;margin-bottom:12px">Who's coming ({rsvps.length})</h3>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          {rsvps.map((r:any) => (
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:32px;height:32px;border-radius:50%;background:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">{(r.name||'?')[0]}</div>
+              <div>
+                <div style="font-size:13px;color:#e8ecf4">{r.name}</div>
+                {r.neighborhood && <div style="font-size:11px;color:#6b7a8e">{r.neighborhood}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+  <script define:vars={{ eventId: id, initialRsvp: myRsvp }}>
+    let rsvped = initialRsvp;
+    async function toggleRsvp() {
+      const btn = document.getElementById('rsvp-btn');
+      btn.textContent = 'Loading...';
+      try {
+        const r = await fetch('/api/rsvp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:eventId})});
+        if (r.status===401){location.href='/login?next='+location.pathname;return;}
+        const d = await r.json();
+        if(d.error){btn.textContent=d.message||'Error';return;}
+        rsvped=d.rsvped;
+        btn.style.background=rsvped?'rgba(248,113,113,.15)':'#3b82f6';
+        btn.style.color=rsvped?'#f87171':'#fff';
+        btn.textContent=rsvped?"✓ You're In — Cancel RSVP":"RSVP →";
+      } catch{btn.textContent='Error — try again';}
+    }
+  </script>
+</Base>

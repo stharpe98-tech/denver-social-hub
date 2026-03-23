@@ -1,0 +1,17 @@
+---
+import Base from '../../layouts/Base.astro';
+let user: any = null;
+const cookie = Astro.cookies.get("dsn_user")?.value;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+---
+<Base title="You're in!">
+  <div style="max-width:480px;margin:0 auto;padding:60px 20px;text-align:center">
+    <div style="font-size:56px;margin-bottom:16px">🏔️</div>
+    <h1 style="font-family:'Instrument Serif',serif;font-size:32px;color:#fff;margin-bottom:12px">You're officially part of the crew.</h1>
+    <p class="muted" style="font-size:15px;line-height:1.7;margin-bottom:32px">Now go find an event and show up. That's really all there is to it.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a href="/discover" class="btn btn-primary">Browse Events →</a>
+      <a href="https://discord.gg/S8SFNkdSgK" class="btn btn-ghost" target="_blank">Join Discord</a>
+    </div>
+  </div>
+</Base>

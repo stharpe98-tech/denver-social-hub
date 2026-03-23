@@ -1,0 +1,57 @@
+---
+import Base from '../layouts/Base.astro';
+const tab = Astro.url.searchParams.get("tab") || "story";
+const faqs = [
+  { q:"Is this free to join?", a:"Completely free. No membership fees, no subscriptions, no hidden costs. Denver Social will always be free to join." },
+  { q:"Do I need to know anyone?", a:"Nope — that's the whole point. Most people come solo. We keep groups small so nobody gets lost in the crowd." },
+  { q:"How small are the groups?", a:"Usually 6–12 people per event. Big enough to have energy, small enough that you actually talk to everyone." },
+  { q:"What kind of events do you do?", a:"Dinners are our bread and butter. Also brewery crawls, game nights, hikes, and more." },
+  { q:"How do I RSVP?", a:"Create a free profile and hit the RSVP button on any event page. Discord is the fastest way to hear about new events first." },
+  { q:"What does it cost to attend?", a:"Each event shows the price upfront. Dinners are usually $25–35/person. Some events are free." },
+  { q:"What if I can't afford it?", a:"We built the Spot a Stranger fund for exactly this. Community members chip in — completely anonymous, no questions asked." },
+];
+---
+<Base title="About">
+  <div style="max-width:600px;margin:0 auto;padding:24px 20px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:36px">🏙️</div>
+      <h1 style="font-size:28px;color:#fff;margin-bottom:4px">About DSN</h1>
+      <p class="muted" style="font-size:13px">Real people. Real places. Zero pressure.</p>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px">
+      <a href="/about" style={`padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;${tab==='story'?'background:#3b82f6;color:#fff':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>Our Story</a>
+      <a href="/about?tab=faq" style={`padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;${tab==='faq'?'background:#3b82f6;color:#fff':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>FAQ</a>
+      <a href="/about?tab=contact" style={`padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;${tab==='contact'?'background:#3b82f6;color:#fff':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>Contact</a>
+    </div>
+    {tab==='story' && (
+      <div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
+          <div style="font-size:24px">👋</div>
+          <div><b style="font-family:'Instrument Serif',serif;font-size:16px;color:#fff">Seth Tharpe</b><br/><span style="font-size:12px;color:#4a5568">Founder · Denver Social</span></div>
+        </div>
+        <h3 style="font-size:20px;color:#fff;margin-bottom:8px">The problem</h3>
+        <p style="font-size:14px;color:#6b7a8e;line-height:1.8;margin-bottom:12px">Denver has incredible people. But meeting them — actually meeting them — is weirdly hard.</p>
+        <p style="font-size:14px;color:#6b7a8e;line-height:1.8;margin-bottom:12px">I moved here and kept hitting the same wall: bars are loud, Meetup groups are huge and impersonal, dating apps are exhausting.</p>
+        <h3 style="font-size:20px;color:#fff;margin:20px 0 8px">The solution</h3>
+        <p style="font-size:14px;color:#6b7a8e;line-height:1.8">Small groups. Real venues. No awkwardness. Every member is approved. Groups cap at 12. One-strike policy for bad behavior.</p>
+      </div>
+    )}
+    {tab==='faq' && (
+      <div style="display:flex;flex-direction:column;gap:12px">
+        {faqs.map(f => (
+          <div class="card" style="padding:16px">
+            <b style="font-size:14px;color:#fff;display:block;margin-bottom:6px">{f.q}</b>
+            <p style="font-size:13px;color:#6b7a8e;line-height:1.7">{f.a}</p>
+          </div>
+        ))}
+      </div>
+    )}
+    {tab==='contact' && (
+      <div class="card">
+        <h3 style="font-size:18px;color:#fff;margin-bottom:12px">Say hey 👋</h3>
+        <p style="font-size:14px;color:#6b7a8e;line-height:1.7;margin-bottom:16px">Best way to reach Seth is on <a href="https://discord.gg/S8SFNkdSgK" style="color:#60a5fa">Discord</a> or by email at <a href="mailto:stharpe98@gmail.com" style="color:#60a5fa">stharpe98@gmail.com</a>.</p>
+        <a href="https://discord.gg/S8SFNkdSgK" style="display:inline-block;padding:12px 24px;background:#5865F2;color:#fff;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none">Join the Discord →</a>
+      </div>
+    )}
+  </div>
+</Base>

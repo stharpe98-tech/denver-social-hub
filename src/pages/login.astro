@@ -1,0 +1,61 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDB } from '../lib/db';
+
+const db = getDB();
+let error: string | null = null;
+const mode = Astro.url.searchParams.get("mode") || "choose";
+
+if (Astro.request.method === "POST") {
+  try {
+    const form = await Astro.request.formData();
+    const action = form.get("action")?.toString();
+    const email  = form.get("email")?.toString().trim().toLowerCase();
+    if (action === "login" && db && email) {
+      let member: any = await db.prepare("SELECT * FROM members WHERE email=?").bind(email).first();
+      if (!member && email === "stharpe98@gmail.com") {
+        await db.prepare("INSERT INTO members (email,name,bio,neighborhood,onboarding_done) VALUES (?,?,?,?,1) ON CONFLICT(email) DO NOTHING").bind("stharpe98@gmail.com","Seth","Founder","RiNo").run();
+        member = await db.prepare("SELECT * FROM members WHERE email=?").bind(email).first();
+      }
+      if (member) {
+        const val = encodeURIComponent(JSON.stringify({ email: member.email, name: member.name }));
+        return new Response(null, { status: 302, headers: { "Location": Astro.url.searchParams.get("next")||"/members", "Set-Cookie": `dsn_user=${val}; Path=/; Max-Age=604800; SameSite=Lax` } });
+      } else { error = "No account found. Want to join instead?"; }
+    } else if (action === "join") {
+      const name = form.get("name")?.toString().trim();
+      if (email && name && db) {
+        await db.prepare("INSERT INTO members (email,name,bio,neighborhood) VALUES (?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name").bind(email,name,"","").run();
+        const val = encodeURIComponent(JSON.stringify({ email, name }));
+        return new Response(null, { status: 302, headers: { "Location": `/onboarding/1`, "Set-Cookie": `dsn_user=${val}; Path=/; Max-Age=31536000; SameSite=Lax` } });
+      } else { error = "Email and name are required."; }
+    }
+  } catch { error = "Something went wrong. Try again."; }
+}
+---
+<Base title="Join / Sign In">
+  <div style="max-width:440px;margin:0 auto;padding:40px 20px">
+    {error && <div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:12px;padding:14px;color:#f87171;font-size:13px;margin-bottom:16px">{error}</div>}
+    {(mode==='choose'||mode==='join') && (
+      <div class="card" style="margin-bottom:16px">
+        <h2 style="font-size:22px;color:#fff;margin-bottom:4px;font-family:'Instrument Serif',serif">Join Denver Social</h2>
+        <p class="muted" style="font-size:13px;margin-bottom:20px">Free forever. 60 seconds to join.</p>
+        <form method="POST">
+          <input type="hidden" name="action" value="join" />
+          <input type="text"  name="name"  placeholder="Your name"  required class="input" style="margin-bottom:10px" />
+          <input type="email" name="email" placeholder="Your email" required class="input" style="margin-bottom:16px" />
+          <button type="submit" class="btn btn-primary" style="width:100%">Join Free →</button>
+        </form>
+      </div>
+    )}
+    {(mode==='choose'||mode==='login') && (
+      <div class="card">
+        <h2 style="font-size:18px;color:#fff;margin-bottom:16px">Already a member?</h2>
+        <form method="POST">
+          <input type="hidden" name="action" value="login" />
+          <input type="email" name="email" placeholder="Your email" required class="input" style="margin-bottom:12px" />
+          <button type="submit" class="btn btn-ghost" style="width:100%">Sign In →</button>
+        </form>
+      </div>
+    )}
+  </div>
+</Base>

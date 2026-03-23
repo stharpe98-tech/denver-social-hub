@@ -1,0 +1,42 @@
+---
+import Base from '../layouts/Base.astro';
+const tab = Astro.url.searchParams.get("tab") || "spot";
+---
+<Base title="Spot a Stranger Fund">
+  <div style="max-width:600px;margin:0 auto;padding:24px 20px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:36px">🤝</div>
+      <h1 style="font-size:28px;color:#fff;margin-bottom:4px">Spot a Stranger</h1>
+      <p class="muted" style="font-size:13px">Spot a stranger. Request a spot. No questions asked.</p>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px;flex-wrap:wrap">
+      <a href="/fund" style={`padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;${tab==='spot'?'background:#fbbf24;color:#000':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>⭐ Spot a Stranger</a>
+      <a href="/fund?tab=request" style={`padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;${tab==='request'?'background:#fbbf24;color:#000':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>🙋 Request a Spot</a>
+      <a href="/fund?tab=deposits" style={`padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;${tab==='deposits'?'background:#fbbf24;color:#000':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>💳 Deposits</a>
+    </div>
+    {tab==='spot' && (
+      <div class="card">
+        <div style="font-size:28px;margin-bottom:8px">⭐</div>
+        <h3 style="font-size:18px;color:#fff;margin-bottom:6px">Spot a Stranger</h3>
+        <p style="font-size:13px;color:#6b7a8e;line-height:1.6;margin-bottom:16px">Cover someone's event cost — anonymously. They'll never know who paid.</p>
+        <p style="font-size:13px;color:#6b7a8e;margin-bottom:12px">💳 $20 · Stripe coming soon — <a href="https://discord.gg/S8SFNkdSgK" style="color:#60a5fa">message Seth on Discord</a> to spot manually</p>
+        <button style="width:100%;padding:14px;background:#fbbf24;color:#000;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Spot Someone →</button>
+      </div>
+    )}
+    {tab==='request' && (
+      <div class="card">
+        <div style="font-size:28px;margin-bottom:8px">🙋</div>
+        <h3 style="font-size:18px;color:#fff;margin-bottom:6px">Request a Spot</h3>
+        <p style="font-size:13px;color:#6b7a8e;line-height:1.6;margin-bottom:16px">Need help covering an event? No judgment, no questions. Seth handles it privately.</p>
+        <p style="font-size:13px;color:#6b7a8e">Message <a href="https://discord.gg/S8SFNkdSgK" style="color:#60a5fa">Seth on Discord</a> — completely anonymous.</p>
+      </div>
+    )}
+    {tab==='deposits' && (
+      <div class="card">
+        <div style="font-size:28px;margin-bottom:8px">💳</div>
+        <h3 style="font-size:18px;color:#fff;margin-bottom:6px">Event Deposits</h3>
+        <p style="font-size:13px;color:#6b7a8e;line-height:1.6">Some events require a small refundable deposit. Show up → get it back. No-show → it goes to the Spot a Stranger pool.</p>
+      </div>
+    )}
+  </div>
+</Base>

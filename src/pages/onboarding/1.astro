@@ -1,0 +1,75 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+
+const db = getDB();
+let user: any = null;
+const cookie = Astro.cookies.get("dsn_user")?.value;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+if (!user) return Astro.redirect("/login");
+
+let error: string|null = null;
+if (Astro.request.method === "POST" && db) {
+  const form = await Astro.request.formData();
+  const neighborhood = form.get("neighborhood")?.toString().trim()||"";
+  const interests    = form.getAll("interests").join(",");
+  const looking_for  = form.getAll("looking_for").join(",");
+  try {
+    await db.prepare("UPDATE members SET neighborhood=?,interests=?,looking_for=?,onboarding_done=1 WHERE email=?").bind(neighborhood,interests,looking_for,user.email).run();
+    return Astro.redirect("/onboarding/done");
+  } catch { error = "Something went wrong, try again."; }
+}
+
+const interestOptions = ["Food & Dining","Craft Beer","Hiking","Board Games","Live Music","Art & Culture","Bowling","Fitness","Comedy","Outdoor adventures","Coffee & Cafes","Trivia nights","Karaoke"];
+const lookingOptions  = ["New friends","Hiking buddy","Dinner companion","Workout partner","Explore Denver","Just vibing"];
+---
+<Base title="Welcome">
+  <div style="max-width:480px;margin:0 auto;padding:40px 20px">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:40px;margin-bottom:12px">🎉</div>
+      <h1 style="font-family:'Instrument Serif',serif;font-size:28px;color:#fff;margin-bottom:8px">You're in, {user.name?.split(' ')[0]}!</h1>
+      <p class="muted" style="font-size:14px">Tell us a bit about yourself so we can help you connect.</p>
+    </div>
+    {error && <div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:12px;padding:12px;color:#f87171;font-size:13px;margin-bottom:16px">{error}</div>}
+    <form method="POST">
+      <div class="card">
+        <div style="margin-bottom:16px">
+          <label style="display:block;font-size:12px;font-weight:600;color:#6b7a8e;margin-bottom:6px">Your neighborhood</label>
+          <input type="text" name="neighborhood" placeholder="RiNo, Cap Hill, Wash Park, LoDo..." class="input" />
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="display:block;font-size:12px;font-weight:600;color:#6b7a8e;margin-bottom:8px">What are you into?</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            {interestOptions.map(opt => (
+              <label style="cursor:pointer">
+                <input type="checkbox" name="interests" value={opt} style="display:none" />
+                <span class="chip">{opt}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div style="margin-bottom:20px">
+          <label style="display:block;font-size:12px;font-weight:600;color:#6b7a8e;margin-bottom:8px">What are you looking for?</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            {lookingOptions.map(opt => (
+              <label style="cursor:pointer">
+                <input type="checkbox" name="looking_for" value={opt} style="display:none" />
+                <span class="chip">{opt}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">Let's go →</button>
+      </div>
+    </form>
+  </div>
+</Base>
+<script>
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const input = chip.previousElementSibling as HTMLInputElement;
+      input.checked = !input.checked;
+      chip.classList.toggle('selected', input.checked);
+    });
+  });
+</script>

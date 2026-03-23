@@ -1,0 +1,96 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDB } from '../lib/db';
+
+const db = getDB();
+  let events = [];
+  let restaurants = [];
+  try {
+    if (db) {
+      const ev = await db.prepare("SELECT * FROM events ORDER BY id DESC LIMIT 20").all();
+      events = ev?.results || [];
+      try {
+        const rest = await db.prepare("SELECT * FROM restaurants ORDER BY name").all();
+        restaurants = rest?.results || [];
+      } catch {
+      }
+    }
+  } catch {
+  }
+  let freeTonight = [];
+  try {
+    if (db) {
+      freeTonight = (await db.prepare("SELECT * FROM free_tonight WHERE expires_at > datetime('now') ORDER BY created_at DESC LIMIT 10").all())?.results || [];
+    }
+  } catch {
+  }
+  let user = null;
+  const userCookie = Astro.cookies.get("dsn_user")?.value;
+  if (userCookie) {
+    try {
+      user = JSON.parse(userCookie);
+    } catch {
+    }
+  }
+  const filter = Astro.url.searchParams.get("type") || "all";
+  const filtered = filter === "all" ? events : events.filter((e) => e.event_type === filter);
+  const typeEmoji = { dinner: "🍽️", game_night: "🎳", outdoor: "🏔️", brewery: "🍺", coffee: "☕", arts: "🎨", music: "🎵", social: "🎉", group_tickets: "🎫", camping: "🏕️", sports_outing: "🏒", concert: "🎵", sports: "🏒", bowling: "🎳", active: "🧗", casino: "🎰", food_trucks: "🌮", other: "📅" };
+  const types = ["all", "dinner", "brewery", "game_night", "outdoor", "coffee", "arts", "music", "social"];
+---
+<Base title="Explore">
+  <div style="max-width:680px;margin:0 auto;padding:24px 20px">
+    <div style="text-align:center;margin-bottom:20px">
+      <h1 style="font-size:28px;color:#fff;margin-bottom:4px">Stop scrolling. Start showing up.</h1>
+      <p class="muted" style="font-size:13px">Browse events, restaurants, and vibes across Denver.</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:20px">
+      {types.map(t => (
+        <a href={`/discover${t==='all'?'':`?type=${t}`}`}
+           style={`padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;${filter===t?'background:#3b82f6;color:#fff':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>
+          {t==='all'?'✨ All':`${typeEmoji[t]||'📅'} ${t.replace('_',' ')}`}
+        </a>
+      ))}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
+      {filtered.map((ev:any) => (
+        <a href={`/events/${ev.id}`} style="display:flex;gap:14px;align-items:center;padding:16px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);text-decoration:none;color:#e8ecf4">
+          <span style="font-size:22px">{typeEmoji[ev.event_type]||'📅'}</span>
+          <div style="flex:1">
+            <div style="font-size:13px;color:#fff;font-weight:600;margin-bottom:2px">{ev.title}</div>
+            <div style="font-size:11px;color:#6b7a8e">{ev.event_month} {ev.event_day} · {ev.zone} · {ev.spots} spots</div>
+          </div>
+          <span style="color:#4a5568">→</span>
+        </a>
+      ))}
+      {filtered.length===0 && <p style="text-align:center;color:#4a5568;padding:40px">No events in this category yet.</p>}
+    </div>
+    <div style="margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="font-size:20px;color:#fff">🌙 Free Tonight</h2>
+        {user && <button id="free-btn" onclick="broadcastFree()" style="padding:8px 16px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.2);color:#60a5fa;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer">I'm Free Tonight →</button>}
+      </div>
+      {freeTonight.length===0
+        ? <p style="font-size:13px;color:#4a5568">Nobody's broadcast yet — be the first!</p>
+        : freeTonight.map((f:any) => (
+          <div style="padding:12px 16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;margin-bottom:8px">
+            <span style="font-size:13px;color:#e8ecf4;font-weight:600">{f.name}</span>
+            {f.message && <span style="font-size:12px;color:#6b7a8e;margin-left:8px">{f.message}</span>}
+          </div>
+        ))
+      }
+    </div>
+  </div>
+  <script>
+    async function broadcastFree() {
+      const btn = document.getElementById('free-btn') as HTMLButtonElement;
+      const msg = prompt("Any plans in mind? (optional)") || "";
+      btn.textContent = "Broadcasting...";
+      try {
+        await fetch('/api/free-tonight', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+        btn.textContent = "🟢 You're live!";
+        btn.style.background = 'rgba(74,222,128,.2)';
+        setTimeout(()=>location.reload(),1000);
+      } catch { btn.textContent = "I'm Free Tonight →"; }
+    }
+  </script>
+</Base>
