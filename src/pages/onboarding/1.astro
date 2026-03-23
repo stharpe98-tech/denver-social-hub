@@ -66,16 +66,17 @@ const meetStyleOptions = [
   "🚶 Walk & talk outdoors",
 ];
 
-const vibeOptions = [
-  "🌙 Night owl","🌅 Early riser","🏔️ Outdoorsy","🐶 Dog person",
-  "🆕 New to Denver","🏙️ Denver native","🎉 Always down to hang",
-  "😌 Homebody at heart","🎵 Live music junkie","🚴 Active & sporty",
-  "🌱 Sober curious","✈️ Always traveling","💻 Remote worker",
-  "🎨 Creative type","🏋️ Gym rat","🧘 Wellness focused",
-  "📸 Content creator","🐱 Cat person","🌮 Obsessed with food",
-  "🎮 Gamer","🔥 Workaholic","🥱 Allergic to plans",
-  "🤓 Nerd & proud","🌊 Former coastal transplant","🗣️ Oversharer",
-  "😶 Quiet observer","💸 Always broke but still going out",
+const personalityOptions = [
+  "🎉 Always down to hang","😌 Homebody at heart","🗣️ Oversharer",
+  "😶 Quiet observer","🤓 Nerd & proud","🎨 Creative type",
+  "🔥 Workaholic","🥱 Allergic to plans","🌊 Former coastal transplant",
+  "💸 Always broke but still going out","🐶 Dog person","🐱 Cat person",
+];
+
+const lifestyleOptions = [
+  "🌙 Night owl","🌅 Early riser","🏔️ Outdoorsy","🚴 Active & sporty",
+  "🏋️ Gym rat","🧘 Wellness focused","🌱 Sober curious","✈️ Always traveling",
+  "💻 Remote worker","🎮 Gamer","🆕 New to Denver","🏙️ Denver native",
 ];
 ---
 
@@ -174,13 +175,26 @@ const vibeOptions = [
         </div>
       </div>
 
-      <!-- Vibe -->
+      <!-- Personality -->
       <div class="ob-section">
-        <div class="ob-label">💫 Your vibe <span class="ob-hint">(optional)</span></div>
+        <div class="ob-label">🧠 Your personality <span class="ob-hint">(pick a few)</span></div>
         <div class="ob-pills">
-          {vibeOptions.map(v => (
+          {personalityOptions.map(v => (
             <label class="ob-pill-wrap">
-              <input type="checkbox" name="vibe" value={v} />
+              <input type="checkbox" name="personality" value={v} />
+              <span>{v}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Lifestyle -->
+      <div class="ob-section">
+        <div class="ob-label">🌀 Your lifestyle <span class="ob-hint">(pick a few)</span></div>
+        <div class="ob-pills">
+          {lifestyleOptions.map(v => (
+            <label class="ob-pill-wrap">
+              <input type="checkbox" name="lifestyle" value={v} />
               <span>{v}</span>
             </label>
           ))}
