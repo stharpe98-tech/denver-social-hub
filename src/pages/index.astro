@@ -29,8 +29,8 @@ const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",ou
 
   <!-- NAV -->
   <nav id="hp-nav" style="position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:flex;align-items:center;justify-content:space-between;transition:all .35s">
-    <a href="/" style="font-family:'Instrument Serif',serif;font-size:20px;color:#fff;text-decoration:none">DSN <em style="color:#4ade80;font-style:italic">Denver</em></a>
-    <div style="display:flex;gap:28px">
+    <a href="/" style="font-family:'Instrument Serif',serif;font-size:20px;color:#fff;text-decoration:none;flex-shrink:0">DSN <em style="color:#4ade80;font-style:italic">Denver</em></a>
+    <div class="hp-nav-links" style="display:flex;gap:28px" class="hp-nav-links">
       <a href="/discover" style="font-size:13px;color:rgba(255,255,255,.6);text-decoration:none;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">Explore</a>
       <a href="/members"  style="font-size:13px;color:rgba(255,255,255,.6);text-decoration:none;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">The Crew</a>
       <a href="/fund"     style="font-size:13px;color:rgba(255,255,255,.6);text-decoration:none;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">🤝 Fund</a>
@@ -151,7 +151,7 @@ const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",ou
   </div>
 
   <!-- MOBILE NAV -->
-  <div style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#05070df2;backdrop-filter:blur(24px);border-top:1px solid rgba(255,255,255,.08);padding:10px 0">
+  <div class="hp-mob-nav" style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#05070df2;backdrop-filter:blur(24px);border-top:1px solid rgba(255,255,255,.08);padding:10px 0">
     <div style="display:flex;justify-content:space-around;align-items:center;max-width:540px;margin:0 auto;padding:0 8px">
       {[
         { href:"/",        emoji:"🏠", label:"Home"    },
@@ -167,5 +167,24 @@ const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",ou
       {!user && <a href="/login" style="display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none;padding:8px 6px;font-size:11px;color:#60a5fa;font-weight:700;border-radius:12px"><span style="font-size:22px">✨</span>Join</a>}
     </div>
   </div>
+
+<style>
+  /* Hide desktop nav links on mobile */
+  @media (max-width: 900px) {
+    .hp-nav-links { display: none !important; }
+    #hp-nav { padding: 16px 20px; }
+  }
+  /* Hide mobile bottom nav on desktop */
+  @media (min-width: 901px) {
+    .hp-mob-nav { display: none !important; }
+    body { padding-bottom: 0; }
+  }
+  /* Fix hero events grid on mobile */
+  @media (max-width: 600px) {
+    .hp-grid-2 { grid-template-columns: 1fr !important; }
+    .hp-steps { grid-template-columns: 1fr !important; }
+    .hp-trust { grid-template-columns: 1fr !important; }
+  }
+</style>
 </body>
 </html>
