@@ -8,68 +8,217 @@ const cookie = Astro.cookies.get("dsn_user")?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 if (!user) return Astro.redirect("/login");
 
-let error: string|null = null;
+let error: string | null = null;
+
 if (Astro.request.method === "POST" && db) {
   const form = await Astro.request.formData();
-  const neighborhood = form.get("neighborhood")?.toString().trim()||"";
+  const neighborhood = form.get("neighborhood")?.toString().trim() || "";
+  const age_range    = form.get("age_range")?.toString() || "";
   const interests    = form.getAll("interests").join(",");
   const looking_for  = form.getAll("looking_for").join(",");
+  const vibe         = form.get("vibe")?.toString() || "";
   try {
-    await db.prepare("UPDATE members SET neighborhood=?,interests=?,looking_for=?,onboarding_done=1 WHERE email=?").bind(neighborhood,interests,looking_for,user.email).run();
+    await db.prepare(
+      "UPDATE members SET neighborhood=?, interests=?, looking_for=?, onboarding_done=1 WHERE email=?"
+    ).bind(neighborhood, interests, looking_for, user.email).run();
     return Astro.redirect("/onboarding/done");
   } catch { error = "Something went wrong, try again."; }
 }
 
-const interestOptions = ["Food & Dining","Craft Beer","Hiking","Board Games","Live Music","Art & Culture","Bowling","Fitness","Comedy","Outdoor adventures","Coffee & Cafes","Trivia nights","Karaoke"];
-const lookingOptions  = ["New friends","Hiking buddy","Dinner companion","Workout partner","Explore Denver","Just vibing"];
+const neighborhoods = [
+  "RiNo / River North","Capitol Hill","LoDo / Downtown","Washington Park",
+  "Highlands / LoHi","Cherry Creek","Baker","Five Points","Stapleton / Central Park",
+  "Sloan's Lake","Congress Park","Sunnyside","Jefferson Park","Berkeley",
+  "Green Valley Ranch","Hampden","Platt Park","South Park Hill","Hilltop",
+  "Aurora","Lakewood","Englewood","Littleton","Centennial","Westminster",
+  "Thornton","Arvada","Wheat Ridge","Golden","Parker","Broomfield","Boulder",
+  "Other / Outside Denver"
+];
+
+const ageRanges = ["18–24","25–29","30–34","35–39","40–44","45–49","50+"];
+
+const interestOptions = [
+  { emoji:"🍽️", label:"Food & Dining" },
+  { emoji:"🍺", label:"Craft Beer" },
+  { emoji:"🥾", label:"Hiking" },
+  { emoji:"🎲", label:"Board Games" },
+  { emoji:"🎵", label:"Live Music" },
+  { emoji:"🎨", label:"Art & Culture" },
+  { emoji:"🎳", label:"Bowling" },
+  { emoji:"💪", label:"Fitness" },
+  { emoji:"😂", label:"Comedy" },
+  { emoji:"🎰", label:"Casino Trips" },
+  { emoji:"🏔️", label:"Outdoor Adventures" },
+  { emoji:"☕", label:"Coffee & Cafes" },
+  { emoji:"🧠", label:"Trivia Nights" },
+  { emoji:"🎤", label:"Karaoke" },
+  { emoji:"🍜", label:"Trying New Restaurants" },
+  { emoji:"🏒", label:"Sports Outings" },
+];
+
+const lookingOptions = [
+  { emoji:"👯", label:"New friends" },
+  { emoji:"🥾", label:"Hiking buddy" },
+  { emoji:"🍽️", label:"Dinner companion" },
+  { emoji:"🏋️", label:"Workout partner" },
+  { emoji:"🗺️", label:"Explore Denver" },
+  { emoji:"💼", label:"Professional networking" },
+  { emoji:"😎", label:"Just vibing" },
+];
+
+const vibeOptions = [
+  "Night owl","Morning person","Foodie","Outdoorsy","Beer lover",
+  "Dog person","New to Denver","Denver native","Always down","Chill vibes only"
+];
 ---
-<Base title="Welcome">
-  <div style="max-width:480px;margin:0 auto;padding:40px 20px">
-    <div style="text-align:center;margin-bottom:28px">
-      <div style="font-size:40px;margin-bottom:12px">🎉</div>
-      <h1 style="font-family:'Instrument Serif',serif;font-size:28px;color:#fff;margin-bottom:8px">You're in, {user.name?.split(' ')[0]}!</h1>
-      <p class="muted" style="font-size:14px">Tell us a bit about yourself so we can help you connect.</p>
+
+<Base title="Welcome to DSN">
+  <div style="max-width:480px;margin:0 auto;padding:32px 20px 120px">
+
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:48px;margin-bottom:12px">👋</div>
+      <h1 style="font-family:'Instrument Serif',serif;font-size:28px;color:#fff;margin-bottom:8px">
+        Hey {user.name?.split(' ')[0]}!
+      </h1>
+      <p style="font-size:14px;color:#6b7a8e;line-height:1.6">
+        Quick setup so we can match you with the right people and events.
+      </p>
     </div>
-    {error && <div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:12px;padding:12px;color:#f87171;font-size:13px;margin-bottom:16px">{error}</div>}
-    <form method="POST">
-      <div class="card">
-        <div style="margin-bottom:16px">
-          <label style="display:block;font-size:12px;font-weight:600;color:#6b7a8e;margin-bottom:6px">Your neighborhood</label>
-          <input type="text" name="neighborhood" placeholder="RiNo, Cap Hill, Wash Park, LoDo..." class="input" />
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="display:block;font-size:12px;font-weight:600;color:#6b7a8e;margin-bottom:8px">What are you into?</label>
-          <div style="display:flex;flex-wrap:wrap;gap:6px">
-            {interestOptions.map(opt => (
-              <label style="cursor:pointer">
-                <input type="checkbox" name="interests" value={opt} style="display:none" />
-                <span class="chip">{opt}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        <div style="margin-bottom:20px">
-          <label style="display:block;font-size:12px;font-weight:600;color:#6b7a8e;margin-bottom:8px">What are you looking for?</label>
-          <div style="display:flex;flex-wrap:wrap;gap:6px">
-            {lookingOptions.map(opt => (
-              <label style="cursor:pointer">
-                <input type="checkbox" name="looking_for" value={opt} style="display:none" />
-                <span class="chip">{opt}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%">Let's go →</button>
+
+    {error && (
+      <div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);border-radius:12px;padding:12px;color:#f87171;font-size:13px;margin-bottom:20px">
+        {error}
       </div>
+    )}
+
+    <form method="POST">
+
+      <!-- Neighborhood -->
+      <div class="ob-section">
+        <label class="ob-label">📍 Your neighborhood</label>
+        <select name="neighborhood" class="ob-select" required>
+          <option value="" disabled selected>Pick your area…</option>
+          {neighborhoods.map(n => <option value={n}>{n}</option>)}
+        </select>
+      </div>
+
+      <!-- Age range -->
+      <div class="ob-section">
+        <label class="ob-label">🎂 Age range</label>
+        <div class="ob-pills">
+          {ageRanges.map(a => (
+            <label class="ob-pill-label">
+              <input type="radio" name="age_range" value={a} />
+              <span class="ob-pill">{a}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Interests -->
+      <div class="ob-section">
+        <label class="ob-label">✨ What are you into? <span style="color:#4a5568;font-weight:400;text-transform:none;letter-spacing:0">(pick a few)</span></label>
+        <div class="ob-pills">
+          {interestOptions.map(i => (
+            <label class="ob-pill-label">
+              <input type="checkbox" name="interests" value={i.label} />
+              <span class="ob-pill">{i.emoji} {i.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Looking for -->
+      <div class="ob-section">
+        <label class="ob-label">🔍 What are you looking for? <span style="color:#4a5568;font-weight:400;text-transform:none;letter-spacing:0">(pick all that apply)</span></label>
+        <div class="ob-pills">
+          {lookingOptions.map(l => (
+            <label class="ob-pill-label">
+              <input type="checkbox" name="looking_for" value={l.label} />
+              <span class="ob-pill">{l.emoji} {l.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Vibe -->
+      <div class="ob-section">
+        <label class="ob-label">💫 Your vibe <span style="color:#4a5568;font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+        <select name="vibe" class="ob-select">
+          <option value="">Choose one…</option>
+          {vibeOptions.map(v => <option value={v}>{v}</option>)}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:16px;font-size:16px;margin-top:8px">
+        Let's go →
+      </button>
+
     </form>
   </div>
 </Base>
+
+<style>
+  .ob-section { margin-bottom: 28px; }
+  .ob-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 12px;
+  }
+  .ob-select {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(255,255,255,.05);
+    border: 1.5px solid rgba(255,255,255,.1);
+    border-radius: 14px;
+    font-size: 15px;
+    color: #e8ecf4;
+    font-family: 'DM Sans', sans-serif;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7a8e' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  .ob-select:focus { border-color: #3b82f6; outline: none; }
+  .ob-select option { background: #0f1117; color: #e8ecf4; }
+  .ob-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ob-pill-label { cursor: pointer; }
+  .ob-pill-label input { display: none; }
+  .ob-pill {
+    display: inline-block;
+    padding: 9px 16px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7a8e;
+    background: rgba(255,255,255,.04);
+    border: 1.5px solid rgba(255,255,255,.08);
+    transition: all .15s;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .ob-pill-label input:checked + .ob-pill {
+    background: rgba(59,130,246,.15);
+    border-color: #3b82f6;
+    color: #60a5fa;
+  }
+  .ob-pill:hover { border-color: rgba(255,255,255,.2); color: #e8ecf4; }
+</style>
+
 <script>
-  document.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const input = chip.previousElementSibling as HTMLInputElement;
-      input.checked = !input.checked;
-      chip.classList.toggle('selected', input.checked);
+  document.querySelectorAll('.ob-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const input = pill.previousElementSibling as HTMLInputElement;
+      if (input.type === 'checkbox') {
+        input.checked = !input.checked;
+        pill.classList.toggle('selected', input.checked);
+      }
     });
   });
 </script>
