@@ -14,6 +14,8 @@ if (Astro.request.method === "POST" && db) {
   const form = await Astro.request.formData();
   const neighborhood = form.get("neighborhood")?.toString().trim() || "";
   const age_range    = form.get("age_range")?.toString() || "";
+  const gender       = form.get("gender")?.toString() || "";
+  const open_to      = form.getAll("open_to").join(",");
   const interests    = form.getAll("interests").join(",");
   const looking_for  = form.getAll("looking_for").join(",");
   const availability = form.getAll("availability").join(",");
@@ -22,9 +24,21 @@ if (Astro.request.method === "POST" && db) {
     await db.prepare(
       "UPDATE members SET neighborhood=?, interests=?, looking_for=?, onboarding_done=1 WHERE email=?"
     ).bind(neighborhood, interests, looking_for, user.email).run();
+    // Store gender separately (best effort, column may not exist yet)
+    try {
+      await db.prepare("UPDATE members SET gender=?, open_to=? WHERE email=?").bind(gender, open_to, user.email).run();
+    } catch {}
     return Astro.redirect("/onboarding/done");
   } catch { error = "Something went wrong, try again."; }
 }
+
+const genderOptions = [
+  "Man","Woman","Non-binary","Genderfluid","Prefer not to say","Other"
+];
+
+const openToOptions = [
+  "Men","Women","Non-binary folks","Everyone — doesn't matter"
+];
 
 const neighborhoods = [
   // Downtown / Central
@@ -146,6 +160,32 @@ const lifestyleOptions = [
             <label class="ob-pill-wrap">
               <input type="radio" name="age_range" value={a} />
               <span>{a}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Gender -->
+      <div class="ob-section">
+        <div class="ob-label">👤 I identify as</div>
+        <div class="ob-pills">
+          {genderOptions.map(g => (
+            <label class="ob-pill-wrap">
+              <input type="radio" name="gender" value={g} />
+              <span>{g}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Open to -->
+      <div class="ob-section">
+        <div class="ob-label">👥 I'm open to hanging with <span class="ob-hint">(pick all that apply)</span></div>
+        <div class="ob-pills">
+          {openToOptions.map(o => (
+            <label class="ob-pill-wrap">
+              <input type="checkbox" name="open_to" value={o} />
+              <span>{o}</span>
             </label>
           ))}
         </div>
