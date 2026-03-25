@@ -33,7 +33,6 @@ const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",ou
     <div class="hp-nav-links" style="display:flex;gap:28px" class="hp-nav-links">
       <a href="/discover" style="font-size:13px;color:rgba(255,255,255,.6);text-decoration:none;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">Explore</a>
       <a href="/members"  style="font-size:13px;color:rgba(255,255,255,.6);text-decoration:none;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">The Crew</a>
-      <a href="/fund"     style="font-size:13px;color:rgba(255,255,255,.6);text-decoration:none;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">🤝 Fund</a>
       <a href="/about"    style="font-size:13px;color:rgba(255,255,255,.6);text-decoration:none;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">About</a>
     </div>
     <div class="hp-nav-auth">
@@ -159,7 +158,6 @@ const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",ou
         { href:"/",        emoji:"🏠", label:"Home"    },
         { href:"/discover",emoji:"🔍", label:"Explore"  },
         { href:"/members", emoji:"👥", label:"Crew"     },
-        { href:"/fund",    emoji:"🤝", label:"Fund"     },
         { href:"/about",   emoji:"💬", label:"About"    },
       ].map(l => (
         <a href={l.href} style="display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none;padding:8px 6px;font-size:11px;color:rgba(255,255,255,.4);font-weight:700;border-radius:12px">
