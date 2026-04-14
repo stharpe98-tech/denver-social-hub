@@ -1,0 +1,137 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+
+// Auth check
+const cookie = Astro.request.headers.get('cookie') || '';
+const userMatch = cookie.match(/dsn_user=([^;]+)/);
+let isAdmin = false;
+if (userMatch) {
+  try {
+    const user = JSON.parse(decodeURIComponent(userMatch[1]));
+    isAdmin = user.email === 'stharpe98@gmail.com';
+  } catch {}
+}
+if (!isAdmin) return Astro.redirect('/admin');
+
+const db = getDB();
+let members: any[] = [];
+let events: any[] = [];
+let memberCount = 0;
+
+if (db) {
+  try {
+    const mRes = await db.prepare(`SELECT * FROM members ORDER BY created_at DESC LIMIT 50`).all();
+    members = mRes.results || [];
+    memberCount = members.length;
+    const eRes = await db.prepare(`SELECT * FROM events ORDER BY created_at DESC LIMIT 20`).all();
+    events = eRes.results || [];
+  } catch {}
+}
+---
+<Base title="Admin Dashboard — Denver Social">
+  <div style="max-width:1100px;margin:0 auto;padding:40px 32px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:36px">
+      <div>
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#F05A28;font-weight:600;margin-bottom:8px">Admin</div>
+        <h1 style="font-family:'Instrument Serif',serif;font-size:36px;font-weight:900;color:#fff;margin:0">Dashboard</h1>
+      </div>
+      <div style="display:flex;gap:12px">
+        <a href="/" style="color:#888;text-decoration:none;font-size:13px;padding:8px 16px;border:1px solid #2e2e36;border-radius:50px">← View Site</a>
+        <a href="/api/logout" style="color:#888;text-decoration:none;font-size:13px;padding:8px 16px;border:1px solid #2e2e36;border-radius:50px">Log Out</a>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:36px">
+      <div style="background:#18181c;border:1px solid #2e2e36;border-radius:16px;padding:20px 24px">
+        <div style="font-family:'Instrument Serif',serif;font-size:36px;font-weight:900;color:#F05A28">{memberCount}</div>
+        <div style="font-size:12px;color:#888;margin-top:4px">Total Members</div>
+      </div>
+      <div style="background:#18181c;border:1px solid #2e2e36;border-radius:16px;padding:20px 24px">
+        <div style="font-family:'Instrument Serif',serif;font-size:36px;font-weight:900;color:#F05A28">{events.length}</div>
+        <div style="font-size:12px;color:#888;margin-top:4px">Events</div>
+      </div>
+      <div style="background:#18181c;border:1px solid #2e2e36;border-radius:16px;padding:20px 24px">
+        <div style="font-family:'Instrument Serif',serif;font-size:36px;font-weight:900;color:#F05A28">{members.filter((m:any) => m.onboarding_done).length}</div>
+        <div style="font-size:12px;color:#888;margin-top:4px">Onboarded</div>
+      </div>
+      <div style="background:#18181c;border:1px solid #2e2e36;border-radius:16px;padding:20px 24px">
+        <div style="font-family:'Instrument Serif',serif;font-size:36px;font-weight:900;color:#F05A28">{events.filter((e:any) => e.featured).length}</div>
+        <div style="font-size:12px;color:#888;margin-top:4px">Featured Events</div>
+      </div>
+    </div>
+
+    <!-- MEMBERS TABLE -->
+    <div style="background:#18181c;border:1px solid #2e2e36;border-radius:20px;overflow:hidden;margin-bottom:28px">
+      <div style="padding:20px 24px;border-bottom:1px solid #2e2e36;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-weight:600;font-size:16px;color:#fff">Members</div>
+        <a href="/members" style="font-size:13px;color:#F05A28;text-decoration:none">View all →</a>
+      </div>
+      {members.length === 0 ? (
+        <div style="padding:40px;text-align:center;color:#888">No members yet.</div>
+      ) : (
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#222228">
+              <th style="padding:12px 24px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;font-weight:600">Name</th>
+              <th style="padding:12px 24px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;font-weight:600">Email</th>
+              <th style="padding:12px 24px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;font-weight:600">Neighborhood</th>
+              <th style="padding:12px 24px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;font-weight:600">Onboarded</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.map((m: any) => (
+              <tr style="border-top:1px solid #2e2e36">
+                <td style="padding:14px 24px;color:#f0f0f0;font-weight:600;font-size:14px">{m.name || '—'}</td>
+                <td style="padding:14px 24px;color:#888;font-size:13px">{m.email}</td>
+                <td style="padding:14px 24px;color:#888;font-size:13px">{m.neighborhood || '—'}</td>
+                <td style="padding:14px 24px">
+                  <span style={`font-size:11px;font-weight:600;padding:3px 10px;border-radius:50px;${m.onboarding_done ? 'background:rgba(34,197,94,0.1);color:#22c55e' : 'background:rgba(255,255,255,0.05);color:#888'}`}>
+                    {m.onboarding_done ? '✓ Yes' : 'No'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+
+    <!-- EVENTS TABLE -->
+    <div style="background:#18181c;border:1px solid #2e2e36;border-radius:20px;overflow:hidden">
+      <div style="padding:20px 24px;border-bottom:1px solid #2e2e36;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-weight:600;font-size:16px;color:#fff">Events</div>
+        <a href="/events/new" style="background:#F05A28;color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:8px 18px;border-radius:50px">+ Add Event</a>
+      </div>
+      {events.length === 0 ? (
+        <div style="padding:40px;text-align:center;color:#888">No events yet.</div>
+      ) : (
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#222228">
+              <th style="padding:12px 24px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;font-weight:600">Event</th>
+              <th style="padding:12px 24px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;font-weight:600">Date</th>
+              <th style="padding:12px 24px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;font-weight:600">Location</th>
+              <th style="padding:12px 24px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;font-weight:600">Featured</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((e: any) => (
+              <tr style="border-top:1px solid #2e2e36">
+                <td style="padding:14px 24px;color:#f0f0f0;font-weight:600;font-size:14px">{e.emoji || ''} {e.title}</td>
+                <td style="padding:14px 24px;color:#888;font-size:13px">{e.date_label || e.date || '—'}</td>
+                <td style="padding:14px 24px;color:#888;font-size:13px">{e.location || '—'}</td>
+                <td style="padding:14px 24px">
+                  {e.featured && <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:50px;background:rgba(240,90,40,0.1);color:#F05A28">⭐ Featured</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+
+  </div>
+</Base>

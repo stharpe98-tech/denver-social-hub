@@ -1,0 +1,84 @@
+---
+import Base from '../../layouts/Base.astro';
+
+// Check if already logged in as admin
+const cookie = Astro.request.headers.get('cookie') || '';
+const userMatch = cookie.match(/dsn_user=([^;]+)/);
+let isAdmin = false;
+if (userMatch) {
+  try {
+    const user = JSON.parse(decodeURIComponent(userMatch[1]));
+    isAdmin = user.email === 'stharpe98@gmail.com';
+  } catch {}
+}
+
+if (isAdmin) {
+  return Astro.redirect('/admin/dashboard');
+}
+---
+<Base title="Admin Login — Denver Social">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+    <div style="background:#18181c;border:1px solid #2e2e36;border-radius:24px;padding:48px 40px;width:100%;max-width:400px;text-align:center">
+      <div style="font-family:'Instrument Serif',serif;font-size:22px;font-weight:900;color:#fff;margin-bottom:6px">
+        Denver Social <span style="color:#F05A28">Nights</span>
+      </div>
+      <div style="color:#888;font-size:13px;margin-bottom:36px">Admin access · Enter your email to get a login link</div>
+
+      <div id="form">
+        <input
+          type="email"
+          id="emailInput"
+          placeholder="your@email.com"
+          onkeydown="if(event.key==='Enter') sendLink()"
+          style="width:100%;background:#0f0f12;border:1.5px solid #2e2e36;border-radius:12px;padding:13px 16px;color:#f0f0f0;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px;box-sizing:border-box"
+        />
+        <button
+          onclick="sendLink()"
+          id="sendBtn"
+          style="width:100%;background:#F05A28;color:#fff;border:none;border-radius:50px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit"
+        >
+          Send My Link →
+        </button>
+        <div id="error" style="color:#f87171;font-size:13px;margin-top:10px;display:none"></div>
+      </div>
+
+      <div id="success" style="display:none">
+        <div style="font-size:48px;margin-bottom:16px">📬</div>
+        <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:8px">Check your inbox</div>
+        <div style="color:#888;font-size:14px;line-height:1.6">We sent a login link to <span id="sentTo" style="color:#F05A28"></span>. It expires in 15 minutes.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function sendLink() {
+      const email = document.getElementById('emailInput').value.trim();
+      const btn = document.getElementById('sendBtn');
+      const errEl = document.getElementById('error');
+      errEl.style.display = 'none';
+      if (!email || !email.includes('@')) {
+        errEl.textContent = 'Please enter a valid email.';
+        errEl.style.display = 'block';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      try {
+        const res = await fetch('/api/magic-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        if (!res.ok) throw new Error();
+        document.getElementById('form').style.display = 'none';
+        document.getElementById('sentTo').textContent = email;
+        document.getElementById('success').style.display = 'block';
+      } catch {
+        errEl.textContent = 'Something went wrong. Try again.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Send My Link →';
+      }
+    }
+  </script>
+</Base>
