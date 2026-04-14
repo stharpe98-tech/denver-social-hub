@@ -16,11 +16,20 @@ const isAdmin = user?.email === "stharpe98@gmail.com";
 const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",other:"📅" };
 
 const slides = [
-  { img:"https://images.unsplash.com/photo-1546156929-a4c0ac411f47?w=1600&q=80", alt:"Denver skyline at dusk" },
-  { img:"https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1600&q=80", alt:"Pottery studio" },
-  { img:"https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=1600&q=80", alt:"Friends at dinner" },
-  { img:"https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&q=80", alt:"Colorado mountains" },
-  { img:"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&q=80", alt:"Mountain sunset" },
+  { img:"https://images.unsplash.com/photo-1546156929-a4c0ac411f47?w=1800&q=80", alt:"Denver skyline at dusk" },
+  { img:"https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1800&q=80", alt:"Pottery studio" },
+  { img:"https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=1800&q=80", alt:"Friends at dinner" },
+  { img:"https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1800&q=80", alt:"Colorado mountains" },
+  { img:"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1800&q=80", alt:"Mountain sunset" },
+];
+
+const activities = [
+  { emoji:"🍽️", title:"Dinner hangs", desc:"Small tables, real conversation. Friends by dessert.", img:"https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=600&q=70", color:"#F05A28" },
+  { emoji:"🏔️", title:"Outdoor adventures", desc:"Hikes, sunrise treks, park days across Colorado.", img:"https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=70", color:"#22c55e" },
+  { emoji:"🏺", title:"Pottery nights", desc:"Get your hands dirty. No skill needed.", img:"https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&q=70", color:"#3b82f6" },
+  { emoji:"🎲", title:"Game evenings", desc:"Board games, trivia, zero experience required.", img:"https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=600&q=70", color:"#a855f7" },
+  { emoji:"🧶", title:"Fiber arts", desc:"Knitting, crochet — bring your project or start one.", img:"https://images.unsplash.com/photo-1551524559-8af4e6624178?w=600&q=70", color:"#ec4899" },
+  { emoji:"🎳", title:"Bowling nights", desc:"Strikes, gutters, and a whole lot of laughing.", img:"https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?w=600&q=70", color:"#f59e0b" },
 ];
 ---
 <!DOCTYPE html>
@@ -29,7 +38,7 @@ const slides = [
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Denver Social — Show up. See what happens.</title>
-  <meta name="description" content="We organize small-group hangouts across Denver. Dinners, hikes, game nights, brewery crawls. No fees. No awkwardness. Just show up." />
+  <meta name="description" content="Small-group hangouts across Denver. Dinners, hikes, game nights, brewery crawls. No fees. No awkwardness. Just show up." />
   <link rel="icon" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -37,9 +46,7 @@ const slides = [
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════
-     NAV — hidden by default, fades in on scroll
-     ═══════════════════════════════════════════ -->
+<!-- ═══ NAV — fades in on scroll ═══ -->
 <nav id="nav" class="nav">
   <a href="/" class="nav-logo">Denver <em>Social</em></a>
   <div class="nav-links">
@@ -56,41 +63,30 @@ const slides = [
 </nav>
 
 
-<!-- ═══════════════════════════════════════════
-     HERO — fullscreen slideshow, no chrome
-     ═══════════════════════════════════════════ -->
+<!-- ═══ HERO — fullscreen slideshow with Ken Burns ═══ -->
 <section class="hero" id="hero">
   {slides.map((s, i) => (
-    <div class={`hero-slide ${i === 0 ? 'active' : ''}`} style={`background-image:url(${s.img})`} aria-label={s.alt}></div>
+    <div class={`hero-slide ${i === 0 ? 'active' : ''}`} aria-label={s.alt}>
+      <div class="hero-slide-img" style={`background-image:url(${s.img})`}></div>
+    </div>
   ))}
 
-  <div class="hero-gradient"></div>
+  <div class="hero-overlay"></div>
 
   <div class="hero-content">
-    <p class="hero-loc">📍 Denver, Colorado</p>
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      88 locals and growing
+    </div>
     <h1 class="hero-h1">
       Tired of not knowing<br>anyone in <em>Denver?</em>
     </h1>
     <p class="hero-sub">
-      Small-group hangouts across Denver — dinners, hikes, game nights, brewery crawls. No fees. No awkwardness. Just show up.
+      We organize small-group hangouts across Denver — dinners, hikes, pottery, game nights. No fees. No awkwardness. Just show up.
     </p>
     <div class="hero-btns">
-      <a href="/login?mode=join" class="btn-hero-primary">Join Free →</a>
-      <a href="#how" class="btn-hero-ghost">How it works</a>
-    </div>
-    <div class="hero-stats">
-      <div class="hero-stat">
-        <strong>88+</strong>
-        <span>In Discord</span>
-      </div>
-      <div class="hero-stat">
-        <strong>{upcomingEvents.length}</strong>
-        <span>Events</span>
-      </div>
-      <div class="hero-stat">
-        <strong>Free</strong>
-        <span>Always</span>
-      </div>
+      <a href="/login?mode=join" class="btn-primary-lg">Join Free →</a>
+      <a href="#activities" class="btn-ghost-lg">See What We Do</a>
     </div>
   </div>
 
@@ -100,102 +96,179 @@ const slides = [
     ))}
   </div>
 
-  <div class="scroll-hint" id="scrollHint">
-    <span>Scroll</span>
-    <div class="scroll-arrow"></div>
+  <div class="hero-scroll" id="scrollHint">
+    <div class="hero-scroll-line"></div>
   </div>
 </section>
 
 
-<!-- ═══════════════════════════════════════════
-     HOW IT WORKS
-     ═══════════════════════════════════════════ -->
-<section id="how" class="section">
-  <div class="section-label">
-    How it works<span class="section-line"></span>
+<!-- ═══ ACTIVITY CARDS — photo-backed grid ═══ -->
+<section id="activities" class="section">
+  <div class="section-head">
+    <span class="section-tag">What we do</span>
+    <h2 class="section-h2">Pick your thing. <em>Show up.</em></h2>
+    <p class="section-sub">No experience needed for any of these. Seriously.</p>
   </div>
-  <div class="steps">
-    <div class="step fade-up">
-      <div class="step-num">01</div>
-      <h3 class="step-title">Join for free</h3>
-      <p class="step-desc">60 seconds. Connect with Discord and tell us what you're into.</p>
-    </div>
-    <div class="step fade-up">
-      <div class="step-num">02</div>
-      <h3 class="step-title">Pick an event</h3>
-      <p class="step-desc">Dinners, hikes, pottery, game nights — whatever sounds fun.</p>
-    </div>
-    <div class="step fade-up">
-      <div class="step-num">03</div>
-      <h3 class="step-title">Show up</h3>
-      <p class="step-desc">Small group, real people. No icebreakers. Walk-ins welcome.</p>
-    </div>
+  <div class="activity-grid">
+    {activities.map((a) => (
+      <a href="/events" class="activity-card fade-up">
+        <img src={a.img} alt={a.title} class="activity-img" loading="lazy" />
+        <div class="activity-overlay"></div>
+        <div class="activity-content">
+          <span class="activity-emoji">{a.emoji}</span>
+          <h3 class="activity-title">{a.title}</h3>
+          <p class="activity-desc">{a.desc}</p>
+        </div>
+        <div class="activity-arrow">→</div>
+      </a>
+    ))}
   </div>
 </section>
 
 
-<!-- ═══════════════════════════════════════════
-     UPCOMING EVENTS
-     ═══════════════════════════════════════════ -->
-{upcomingEvents.length > 0 && (
-  <section class="section">
-    <div class="section-label">
-      Coming up in Denver<span class="section-line"></span>
+<!-- ═══ HOW IT WORKS — with numbered visual steps ═══ -->
+<section class="how-section">
+  <div class="how-inner">
+    <div class="section-head">
+      <span class="section-tag">How it works</span>
+      <h2 class="section-h2">Three steps, <em>that's it.</em></h2>
     </div>
-    <div class="events-grid">
-      {upcomingEvents.slice(0, 4).map((ev: any) => (
-        <a href={`/events/${ev.id}`} class="event-card fade-up">
-          <div class="event-card-top">
-            <span class="event-emoji">{typeEmoji[ev.event_type] || '📅'}</span>
-            <span class="event-zone">{ev.zone}</span>
-          </div>
-          <h3 class="event-title">{ev.title}</h3>
-          <div class="event-meta">{ev.event_month} {ev.event_day} · {ev.spots} spots</div>
-        </a>
-      ))}
-    </div>
-    <div class="section-cta">
-      <a href="/events" class="btn-ghost-lg">See All Events →</a>
-    </div>
-  </section>
-)}
-
-
-<!-- ═══════════════════════════════════════════
-     TRUST / SOCIAL PROOF
-     ═══════════════════════════════════════════ -->
-<section class="section">
-  <div class="trust-grid">
-    <blockquote class="testimonial fade-up">
-      <p>"I moved to Denver knowing nobody. Three dinners later, I had a group text with 8 new friends."</p>
-      <footer>— Member since January 2026</footer>
-    </blockquote>
-    <div class="trust-card fade-up">
-      <h3>Built for trust.</h3>
-      <div class="trust-items">
-        <div class="trust-item"><span class="check">✓</span> Every member is approved before RSVP</div>
-        <div class="trust-item"><span class="check">✓</span> Locations are private until you RSVP</div>
-        <div class="trust-item"><span class="check">✓</span> Small groups only — 6 to 12 people</div>
-        <div class="trust-item"><span class="check">✓</span> One-strike policy for bad behavior</div>
+    <div class="steps">
+      <div class="step fade-up">
+        <div class="step-number">1</div>
+        <div class="step-body">
+          <h3>Join free</h3>
+          <p>60 seconds — name, email, done. No credit card, no subscription.</p>
+        </div>
+      </div>
+      <div class="step-divider fade-up"></div>
+      <div class="step fade-up">
+        <div class="step-number">2</div>
+        <div class="step-body">
+          <h3>Pick something</h3>
+          <p>Pottery, dinner, hike, game night. Whatever sounds like you.</p>
+        </div>
+      </div>
+      <div class="step-divider fade-up"></div>
+      <div class="step fade-up">
+        <div class="step-number">3</div>
+        <div class="step-body">
+          <h3>Show up</h3>
+          <p>Small group, real people. Walk-ins welcome. No icebreakers, we promise.</p>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
 
-<!-- ═══════════════════════════════════════════
-     FINAL CTA
-     ═══════════════════════════════════════════ -->
-<section class="section" style="text-align:center;padding-bottom:80px">
-  <h2 class="cta-h2 fade-up">Ready to <em>show up?</em></h2>
-  <p class="cta-sub fade-up">Free forever. Takes 60 seconds to join.</p>
-  <a href="/login?mode=join" class="btn-hero-primary fade-up" style="font-size:15px;padding:16px 40px">Join Free →</a>
+<!-- ═══ UPCOMING EVENTS ═══ -->
+{upcomingEvents.length > 0 && (
+  <section class="section">
+    <div class="section-head">
+      <span class="section-tag">Coming up</span>
+      <h2 class="section-h2">Happening in <em>Denver</em></h2>
+    </div>
+    <div class="events-grid">
+      {upcomingEvents.slice(0, 4).map((ev: any) => (
+        <a href={`/events/${ev.id}`} class="event-card fade-up">
+          <div class="event-date-badge">
+            <span class="event-month">{ev.event_month || 'TBD'}</span>
+            <span class="event-day">{ev.event_day || '—'}</span>
+          </div>
+          <div class="event-info">
+            <div class="event-type-row">
+              <span>{typeEmoji[ev.event_type] || '📅'}</span>
+              <span class="event-type-label">{(ev.event_type || '').replace('_', ' ')}</span>
+            </div>
+            <h3 class="event-title">{ev.title}</h3>
+            <p class="event-meta">{ev.zone || ev.location} · up to {ev.spots} people</p>
+          </div>
+          <span class="event-arrow">›</span>
+        </a>
+      ))}
+    </div>
+    <div style="text-align:center;margin-top:28px">
+      <a href="/events" class="btn-ghost-lg">All events →</a>
+    </div>
+  </section>
+)}
+
+
+<!-- ═══ DISCORD CTA — full-width band ═══ -->
+<section class="discord-section fade-up">
+  <div class="discord-inner">
+    <div class="discord-icon">💬</div>
+    <div class="discord-text">
+      <h3><strong>88</strong> locals in the Discord</h3>
+      <p>That's where plans actually happen — polls, last-minute hangs, figuring out what's next.</p>
+    </div>
+    <a href="https://discord.gg/S8SFNkdSgK" class="discord-btn" target="_blank" rel="noopener">Join the Discord →</a>
+  </div>
 </section>
 
 
-<!-- ═══════════════════════════════════════════
-     MOBILE BOTTOM NAV
-     ═══════════════════════════════════════════ -->
+<!-- ═══ TRUST / SOCIAL PROOF ═══ -->
+<section class="section">
+  <div class="trust-grid">
+    <div class="trust-quote fade-up">
+      <div class="trust-quote-mark">"</div>
+      <p>I moved to Denver knowing nobody. Three dinners later, I had a group text with 8 new friends.</p>
+      <footer>
+        <div class="trust-avatar">S</div>
+        <div>
+          <strong>Sarah M.</strong>
+          <span>Member since Jan 2026</span>
+        </div>
+      </footer>
+    </div>
+    <div class="trust-facts fade-up">
+      <h3>Built for trust.</h3>
+      <div class="trust-list">
+        <div class="trust-item"><div class="trust-check">✓</div><span>Every member is verified before RSVP</span></div>
+        <div class="trust-item"><div class="trust-check">✓</div><span>Locations stay private until you commit</span></div>
+        <div class="trust-item"><div class="trust-check">✓</div><span>Small groups only — 6 to 12 people</span></div>
+        <div class="trust-item"><div class="trust-check">✓</div><span>One-strike policy for bad behavior</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══ FINAL CTA — with background image ═══ -->
+<section class="final-cta">
+  <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&q=75" alt="" class="final-cta-bg" loading="lazy" />
+  <div class="final-cta-overlay"></div>
+  <div class="final-cta-content fade-up">
+    <h2>Your people are<br>out <em>there.</em></h2>
+    <p>Free forever. Takes 60 seconds.</p>
+    <a href="/login?mode=join" class="btn-primary-lg" style="font-size:16px;padding:18px 44px">Join Free →</a>
+  </div>
+</section>
+
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="footer-logo">Denver <em>Social</em></span>
+      <p>Real connections, real city.</p>
+    </div>
+    <div class="footer-links">
+      <a href="/events">Events</a>
+      <a href="/members">The Crew</a>
+      <a href="/about">About</a>
+      <a href="/conduct">Code of Conduct</a>
+    </div>
+    <div class="footer-links">
+      <a href="https://discord.gg/S8SFNkdSgK" target="_blank" rel="noopener">Discord</a>
+      <a href="/login?mode=join">Join Free</a>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ═══ MOBILE NAV ═══ -->
 <div class="mob-nav">
   <div class="mob-nav-inner">
     <a href="/" class="active"><span>🏠</span>Home</a>
@@ -207,13 +280,17 @@ const slides = [
 </div>
 
 
+<!-- ═══════════════════════════════════════════════════════════
+     STYLES
+     ═══════════════════════════════════════════════════════════ -->
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { font-family: 'DM Sans', sans-serif; background: #05070d; color: #e8ecf4; scroll-behavior: smooth; }
-  body { min-height: 100vh; }
+  body { min-height: 100vh; overflow-x: hidden; }
   a { color: inherit; text-decoration: none; }
+  img { display: block; }
 
-  /* ─── NAV (hidden until scroll) ─── */
+  /* ─── NAV ─── */
   .nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 200;
     display: flex; align-items: center; justify-content: space-between;
@@ -221,7 +298,7 @@ const slides = [
     background: rgba(5,7,13,.92); backdrop-filter: blur(20px);
     border-bottom: 1px solid rgba(255,255,255,.06);
     transform: translateY(-100%); opacity: 0;
-    transition: transform .4s cubic-bezier(.22,1,.36,1), opacity .4s ease;
+    transition: transform .45s cubic-bezier(.22,1,.36,1), opacity .4s ease;
     pointer-events: none;
   }
   .nav.visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
@@ -233,146 +310,285 @@ const slides = [
   .nav-auth { display: flex; gap: 8px; }
   .nav-btn { font-size: 13px; font-weight: 600; padding: 7px 18px; border-radius: 50px; transition: all .2s; }
   .nav-btn-primary { background: #3b82f6; color: #fff; }
-  .nav-btn-primary:hover { background: #2563eb; }
   .nav-btn-ghost { color: #fff; border: 1px solid rgba(255,255,255,.15); }
-  .nav-btn-ghost:hover { border-color: rgba(255,255,255,.3); }
 
   /* ─── HERO ─── */
-  .hero { position: relative; width: 100%; height: 100svh; min-height: 600px; overflow: hidden; background: #05070d; }
+  .hero { position: relative; width: 100%; height: 100svh; min-height: 640px; overflow: hidden; background: #000; }
   .hero-slide {
     position: absolute; inset: 0;
-    background-size: cover; background-position: center;
-    opacity: 0; transition: opacity 1.4s ease; will-change: opacity;
-  }
-  .hero-slide::after {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(to bottom,
-      rgba(5,7,13,.15) 0%, rgba(5,7,13,.1) 30%,
-      rgba(5,7,13,.4) 60%, rgba(5,7,13,.92) 85%, #05070d 100%);
+    opacity: 0; transition: opacity 1.6s ease;
   }
   .hero-slide.active { opacity: 1; }
-  .hero-gradient {
-    position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
-    background: linear-gradient(transparent, #05070d); z-index: 5; pointer-events: none;
+  .hero-slide.active .hero-slide-img { animation: kenBurns 12s ease forwards; }
+  .hero-slide-img {
+    position: absolute; inset: -20px;
+    background-size: cover; background-position: center;
+    will-change: transform;
   }
+  @keyframes kenBurns {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.08); }
+  }
+
+  .hero-overlay {
+    position: absolute; inset: 0; z-index: 2;
+    background:
+      linear-gradient(to bottom, rgba(5,7,13,.25) 0%, rgba(5,7,13,.05) 25%, rgba(5,7,13,.3) 55%, rgba(5,7,13,.95) 82%, #05070d 100%),
+      radial-gradient(ellipse at 20% 50%, rgba(59,130,246,.08), transparent 60%);
+  }
+
   .hero-content {
     position: absolute; bottom: 0; left: 0; right: 0;
-    padding: 0 40px 48px; z-index: 10; max-width: 720px;
+    padding: 0 48px 56px; z-index: 10; max-width: 760px;
   }
-  .hero-loc { font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: rgba(255,255,255,.3); margin-bottom: 16px; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 16px; border-radius: 50px;
+    background: rgba(255,255,255,.08); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,.1);
+    font-size: 12px; color: rgba(255,255,255,.7); margin-bottom: 22px;
+    font-weight: 500;
+  }
+  .hero-badge-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,.5); }
   .hero-h1 {
     font-family: 'Instrument Serif', serif;
-    font-size: clamp(32px, 5.5vw, 60px);
-    font-weight: 400; color: #fff; line-height: 1.06; margin-bottom: 14px;
+    font-size: clamp(36px, 6vw, 66px);
+    font-weight: 400; color: #fff; line-height: 1.04; margin-bottom: 16px;
   }
   .hero-h1 em { font-style: italic; color: #4ade80; }
-  .hero-sub { font-size: clamp(13px, 1.5vw, 16px); color: rgba(255,255,255,.4); line-height: 1.7; max-width: 480px; margin-bottom: 24px; }
-  .hero-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 28px; }
-  .btn-hero-primary {
-    display: inline-block; padding: 13px 30px; background: #fff; color: #05070d;
-    border-radius: 12px; font-size: 14px; font-weight: 700;
-    transition: transform .15s, box-shadow .2s;
+  .hero-sub {
+    font-size: clamp(14px, 1.6vw, 17px); color: rgba(255,255,255,.45);
+    line-height: 1.7; max-width: 500px; margin-bottom: 28px;
   }
-  .btn-hero-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,255,255,.1); }
-  .btn-hero-ghost {
-    display: inline-block; padding: 13px 30px;
+  .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn-primary-lg {
+    display: inline-block; padding: 14px 32px; background: #fff; color: #05070d;
+    border-radius: 14px; font-size: 15px; font-weight: 700;
+    transition: transform .2s, box-shadow .3s;
+  }
+  .btn-primary-lg:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(255,255,255,.12); }
+  .btn-ghost-lg {
+    display: inline-block; padding: 14px 32px;
     background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
-    color: #fff; border-radius: 12px; font-size: 14px; font-weight: 500; transition: background .2s;
+    color: #fff; border-radius: 14px; font-size: 15px; font-weight: 500;
+    transition: background .2s, border-color .2s;
   }
-  .btn-hero-ghost:hover { background: rgba(255,255,255,.1); }
-  .hero-stats { display: flex; gap: 10px; flex-wrap: wrap; }
-  .hero-stat {
-    padding: 8px 16px; background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.07); border-radius: 10px; text-align: center;
-  }
-  .hero-stat strong { font-family: 'Instrument Serif', serif; font-size: 17px; color: #fff; display: block; }
-  .hero-stat span { font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: rgba(255,255,255,.3); }
+  .btn-ghost-lg:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); }
 
-  /* Dots */
-  .hero-dots { position: absolute; bottom: 32px; right: 40px; z-index: 12; display: flex; gap: 6px; align-items: center; }
+  .hero-dots { position: absolute; bottom: 40px; right: 48px; z-index: 12; display: flex; gap: 6px; align-items: center; }
   .hero-dot {
     width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.25);
     border: none; padding: 0; cursor: pointer; transition: all .4s cubic-bezier(.22,1,.36,1);
   }
-  .hero-dot.active { width: 20px; border-radius: 3px; background: #fff; }
+  .hero-dot.active { width: 22px; border-radius: 3px; background: #fff; }
 
-  /* Scroll hint */
-  .scroll-hint {
-    position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
-    z-index: 12; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  .hero-scroll {
+    position: absolute; bottom: 32px; left: 48px; z-index: 12; height: 36px;
     opacity: 1; transition: opacity .5s;
-    animation: scrollPulse 2.5s ease-in-out infinite;
   }
-  .scroll-hint.hidden { opacity: 0; pointer-events: none; }
-  .scroll-hint span { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.25); }
-  .scroll-arrow {
-    width: 10px; height: 10px;
-    border-right: 1.5px solid rgba(255,255,255,.25);
-    border-bottom: 1.5px solid rgba(255,255,255,.25);
-    transform: rotate(45deg);
+  .hero-scroll.hidden { opacity: 0; }
+  .hero-scroll-line {
+    width: 1px; height: 100%; background: rgba(255,255,255,.2);
+    animation: scrollLine 2s ease-in-out infinite;
   }
-  @keyframes scrollPulse {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(6px); }
+  @keyframes scrollLine {
+    0% { transform: scaleY(0); transform-origin: top; opacity: 0; }
+    30% { opacity: 1; }
+    60% { transform: scaleY(1); transform-origin: top; }
+    100% { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
   }
 
-  /* ─── SECTIONS ─── */
-  .section { max-width: 960px; margin: 0 auto; padding: 56px 40px; }
-  .section-label {
-    font-size: 10px; text-transform: uppercase; letter-spacing: .2em;
-    color: #3b82f6; font-weight: 600; margin-bottom: 22px;
-    display: flex; align-items: center; gap: 12px;
+  /* ─── SECTION HEADS ─── */
+  .section { max-width: 1040px; margin: 0 auto; padding: 72px 40px; }
+  .section-head { margin-bottom: 36px; }
+  .section-tag {
+    display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .2em;
+    color: #3b82f6; font-weight: 700; margin-bottom: 10px;
+    padding: 5px 12px; background: rgba(59,130,246,.08); border-radius: 6px;
   }
-  .section-line { flex: 1; height: 1px; background: rgba(255,255,255,.06); }
-  .section-cta { text-align: center; margin-top: 32px; }
-
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .step {
-    background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.05);
-    border-radius: 16px; padding: 28px 24px; transition: border-color .25s, transform .25s;
+  .section-h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(28px, 4vw, 42px); color: #fff; line-height: 1.1; margin-bottom: 8px;
   }
-  .step:hover { border-color: rgba(255,255,255,.12); transform: translateY(-2px); }
-  .step-num { font-family: 'Instrument Serif', serif; font-size: 28px; color: rgba(255,255,255,.08); margin-bottom: 10px; }
-  .step-title { font-size: 16px; color: #fff; font-weight: 600; margin-bottom: 6px; }
-  .step-desc { font-size: 13px; color: rgba(255,255,255,.4); line-height: 1.6; }
+  .section-h2 em { font-style: italic; color: #4ade80; }
+  .section-sub { font-size: 14px; color: rgba(255,255,255,.4); }
 
-  .events-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  /* ─── ACTIVITY CARDS ─── */
+  .activity-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  .activity-card {
+    position: relative; border-radius: 18px; overflow: hidden;
+    height: 220px; display: flex;
+    transition: transform .3s cubic-bezier(.22,1,.36,1);
+  }
+  .activity-card:hover { transform: translateY(-4px); }
+  .activity-card:hover .activity-img { transform: scale(1.06); }
+  .activity-card:hover .activity-arrow { opacity: 1; transform: translateX(0); }
+  .activity-img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    transition: transform .5s ease;
+  }
+  .activity-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.3) 50%, rgba(0,0,0,.15) 100%);
+  }
+  .activity-content {
+    position: relative; z-index: 2; margin-top: auto; padding: 20px;
+  }
+  .activity-emoji { font-size: 22px; display: block; margin-bottom: 8px; }
+  .activity-title { font-size: 16px; color: #fff; font-weight: 700; margin-bottom: 4px; }
+  .activity-desc { font-size: 12px; color: rgba(255,255,255,.55); line-height: 1.5; }
+  .activity-arrow {
+    position: absolute; top: 16px; right: 16px; z-index: 3;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,255,255,.12); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 14px; opacity: 0; transform: translateX(-8px);
+    transition: all .3s ease;
+  }
+
+  /* ─── HOW IT WORKS ─── */
+  .how-section {
+    background: linear-gradient(180deg, rgba(59,130,246,.04) 0%, transparent 100%);
+    border-top: 1px solid rgba(255,255,255,.04);
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    padding: 72px 0;
+  }
+  .how-inner { max-width: 1040px; margin: 0 auto; padding: 0 40px; }
+  .steps { display: flex; align-items: flex-start; gap: 0; margin-top: 12px; }
+  .step { flex: 1; display: flex; align-items: flex-start; gap: 16px; }
+  .step-number {
+    width: 44px; height: 44px; flex-shrink: 0;
+    border-radius: 14px; background: rgba(59,130,246,.1);
+    border: 1px solid rgba(59,130,246,.2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Instrument Serif', serif; font-size: 22px; color: #60a5fa;
+  }
+  .step-body h3 { font-size: 16px; color: #fff; margin-bottom: 4px; }
+  .step-body p { font-size: 13px; color: rgba(255,255,255,.4); line-height: 1.6; }
+  .step-divider {
+    width: 1px; min-height: 60px; align-self: stretch;
+    background: linear-gradient(to bottom, rgba(59,130,246,.2), transparent);
+    margin: 0 20px; flex-shrink: 0;
+  }
+
+  /* ─── EVENT CARDS ─── */
+  .events-grid { display: flex; flex-direction: column; gap: 10px; }
   .event-card {
-    display: block; padding: 20px; border-radius: 14px;
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 20px; border-radius: 16px;
     background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.05);
-    transition: border-color .2s, transform .2s;
+    transition: border-color .2s, transform .2s, background .2s;
   }
-  .event-card:hover { border-color: rgba(255,255,255,.12); transform: translateY(-2px); }
-  .event-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-  .event-emoji { font-size: 16px; }
-  .event-zone { font-size: 10px; color: rgba(255,255,255,.25); }
-  .event-title { font-size: 14px; color: #fff; font-weight: 600; margin-bottom: 4px; }
-  .event-meta { font-size: 11px; color: rgba(255,255,255,.3); }
-  .btn-ghost-lg {
-    display: inline-block; padding: 14px 32px;
-    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
-    border-radius: 14px; font-size: 14px; font-weight: 500; color: #fff; transition: background .2s;
+  .event-card:hover { border-color: rgba(255,255,255,.12); transform: translateX(4px); background: rgba(255,255,255,.04); }
+  .event-date-badge {
+    text-align: center; padding: 8px 12px; min-width: 54px;
+    background: rgba(59,130,246,.1); border-radius: 12px;
   }
-  .btn-ghost-lg:hover { background: rgba(255,255,255,.08); }
+  .event-month { display: block; font-size: 10px; font-weight: 700; color: #60a5fa; text-transform: uppercase; }
+  .event-day { display: block; font-family: 'Instrument Serif', serif; font-size: 22px; color: #fff; line-height: 1.1; }
+  .event-info { flex: 1; }
+  .event-type-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .event-type-label { font-size: 11px; color: #60a5fa; font-weight: 600; text-transform: capitalize; }
+  .event-title { font-size: 15px; color: #fff; font-weight: 600; margin-bottom: 2px; }
+  .event-meta { font-size: 12px; color: rgba(255,255,255,.3); }
+  .event-arrow { font-size: 20px; color: rgba(255,255,255,.2); flex-shrink: 0; transition: color .2s; }
+  .event-card:hover .event-arrow { color: rgba(255,255,255,.5); }
 
+  /* ─── DISCORD ─── */
+  .discord-section {
+    margin: 0 40px; border-radius: 24px; overflow: hidden;
+    background: linear-gradient(135deg, #5865F2 0%, #4752c4 100%);
+    position: relative;
+  }
+  .discord-section::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 80% 20%, rgba(255,255,255,.12), transparent 50%);
+  }
+  .discord-inner {
+    position: relative; z-index: 2;
+    max-width: 1040px; margin: 0 auto;
+    padding: 40px 48px; display: flex; align-items: center; gap: 24px;
+  }
+  .discord-icon { font-size: 36px; flex-shrink: 0; }
+  .discord-text { flex: 1; }
+  .discord-text h3 { font-size: 18px; color: #fff; margin-bottom: 4px; }
+  .discord-text h3 strong { font-family: 'Instrument Serif', serif; font-size: 24px; }
+  .discord-text p { font-size: 13px; color: rgba(255,255,255,.65); line-height: 1.5; }
+  .discord-btn {
+    padding: 12px 28px; background: #fff; color: #5865F2;
+    border-radius: 12px; font-size: 14px; font-weight: 700;
+    flex-shrink: 0; transition: transform .2s, box-shadow .2s;
+  }
+  .discord-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+
+  /* ─── TRUST ─── */
   .trust-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  .testimonial {
-    background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.05);
-    border-radius: 18px; padding: 32px;
+  .trust-quote {
+    background: linear-gradient(135deg, rgba(74,222,128,.06) 0%, rgba(59,130,246,.04) 100%);
+    border: 1px solid rgba(74,222,128,.1);
+    border-radius: 20px; padding: 36px; position: relative;
   }
-  .testimonial p { font-family: 'Instrument Serif', serif; font-size: 19px; color: #fff; line-height: 1.5; margin-bottom: 14px; }
-  .testimonial footer { font-size: 12px; color: rgba(255,255,255,.3); font-family: 'DM Sans', sans-serif; }
-  .trust-card {
-    background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.05);
-    border-radius: 18px; padding: 32px;
+  .trust-quote-mark {
+    font-family: 'Instrument Serif', serif; font-size: 72px;
+    color: rgba(74,222,128,.15); line-height: 0.5; margin-bottom: 16px; display: block;
   }
-  .trust-card h3 { font-size: 16px; color: #fff; margin-bottom: 18px; }
-  .trust-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: rgba(255,255,255,.45); margin-bottom: 10px; }
-  .check { color: #4ade80; flex-shrink: 0; }
+  .trust-quote p { font-family: 'Instrument Serif', serif; font-size: 20px; color: #fff; line-height: 1.5; margin-bottom: 20px; }
+  .trust-quote footer { display: flex; align-items: center; gap: 12px; }
+  .trust-avatar {
+    width: 36px; height: 36px; border-radius: 50%; background: rgba(74,222,128,.15);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; color: #4ade80; flex-shrink: 0;
+  }
+  .trust-quote footer strong { display: block; font-size: 13px; color: #fff; }
+  .trust-quote footer span { font-size: 11px; color: rgba(255,255,255,.35); }
+  .trust-facts {
+    background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.06);
+    border-radius: 20px; padding: 36px;
+  }
+  .trust-facts h3 { font-size: 18px; color: #fff; margin-bottom: 22px; }
+  .trust-list { display: flex; flex-direction: column; gap: 14px; }
+  .trust-item { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; color: rgba(255,255,255,.5); line-height: 1.5; }
+  .trust-check {
+    width: 24px; height: 24px; flex-shrink: 0;
+    background: rgba(74,222,128,.1); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #4ade80; font-size: 12px; font-weight: 700;
+  }
 
-  .cta-h2 { font-family: 'Instrument Serif', serif; font-size: clamp(28px, 4vw, 40px); color: #fff; margin-bottom: 8px; }
-  .cta-h2 em { color: #4ade80; font-style: italic; }
-  .cta-sub { font-size: 14px; color: rgba(255,255,255,.4); margin-bottom: 24px; }
+  /* ─── FINAL CTA ─── */
+  .final-cta {
+    position: relative; height: 420px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    margin-top: 40px;
+  }
+  .final-cta-bg {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  }
+  .final-cta-overlay {
+    position: absolute; inset: 0;
+    background: rgba(5,7,13,.7);
+    backdrop-filter: blur(2px);
+  }
+  .final-cta-content { position: relative; z-index: 2; padding: 0 24px; }
+  .final-cta-content h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(32px, 5vw, 52px); color: #fff; line-height: 1.08; margin-bottom: 12px;
+  }
+  .final-cta-content h2 em { font-style: italic; color: #4ade80; }
+  .final-cta-content p { font-size: 15px; color: rgba(255,255,255,.5); margin-bottom: 28px; }
+
+  /* ─── FOOTER ─── */
+  .footer { border-top: 1px solid rgba(255,255,255,.06); padding: 48px 40px; }
+  .footer-inner { max-width: 1040px; margin: 0 auto; display: flex; gap: 48px; align-items: flex-start; }
+  .footer-brand { flex: 1; }
+  .footer-logo { font-family: 'Instrument Serif', serif; font-size: 20px; color: #fff; display: block; margin-bottom: 6px; }
+  .footer-logo em { color: #4ade80; font-style: italic; }
+  .footer-brand p { font-size: 12px; color: rgba(255,255,255,.3); }
+  .footer-links { display: flex; flex-direction: column; gap: 10px; }
+  .footer-links a { font-size: 13px; color: rgba(255,255,255,.35); transition: color .2s; }
+  .footer-links a:hover { color: #fff; }
 
   /* ─── MOBILE NAV ─── */
   .mob-nav {
@@ -396,27 +612,41 @@ const slides = [
   @media (max-width: 900px) {
     .nav-links { display: none; }
     .nav { padding: 14px 20px; }
+    .discord-section { margin: 0 20px; }
+    .discord-inner { flex-direction: column; text-align: center; padding: 32px 24px; }
   }
   @media (min-width: 901px) { .mob-nav { display: none; } body { padding-bottom: 0; } }
   @media (max-width: 768px) {
     body { padding-bottom: 76px; }
-    .hero-content { padding: 0 20px 36px; }
-    .hero-dots { right: 20px; bottom: 24px; }
-    .steps { grid-template-columns: 1fr; }
-    .events-grid { grid-template-columns: 1fr; }
+    .hero-content { padding: 0 24px 40px; }
+    .hero-dots { right: 24px; bottom: 28px; }
+    .hero-scroll { left: 24px; }
+    .activity-grid { grid-template-columns: 1fr 1fr; }
+    .activity-card { height: 180px; }
+    .steps { flex-direction: column; gap: 0; }
+    .step-divider { width: 40px; min-height: 1px; height: 1px; margin: 16px 0 16px 22px;
+      background: linear-gradient(to right, rgba(59,130,246,.2), transparent); }
     .trust-grid { grid-template-columns: 1fr; }
-    .section { padding: 40px 20px; }
-    .scroll-hint { bottom: 80px; }
+    .events-grid { gap: 8px; }
+    .section { padding: 48px 20px; }
+    .how-inner { padding: 0 20px; }
+    .footer-inner { flex-direction: column; gap: 24px; }
+    .footer { padding: 32px 20px; }
+    .final-cta { height: 340px; }
+  }
+  @media (max-width: 480px) {
+    .activity-grid { grid-template-columns: 1fr; }
+    .activity-card { height: 160px; }
   }
 
-  /* ─── SCROLL ANIMATIONS ─── */
-  .fade-up { opacity: 0; transform: translateY(20px); transition: opacity .6s ease, transform .6s ease; }
+  /* ─── ANIMATIONS ─── */
+  .fade-up { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1); }
   .fade-up.in { opacity: 1; transform: translateY(0); }
 </style>
 
 
 <script is:inline>
-  // ── Slideshow ──
+  // ── Slideshow with Ken Burns ──
   var slides = document.querySelectorAll('.hero-slide');
   var dots = document.querySelectorAll('.hero-dot');
   var current = 0;
@@ -426,68 +656,50 @@ const slides = [
     slides[current].classList.remove('active');
     dots[current].classList.remove('active');
     current = i;
+    // Reset Ken Burns by cloning the img div
+    var img = slides[current].querySelector('.hero-slide-img');
+    if (img) { img.style.animation = 'none'; img.offsetHeight; img.style.animation = ''; }
     slides[current].classList.add('active');
     dots[current].classList.add('active');
   }
 
-  function nextSlide() {
-    goToSlide((current + 1) % slides.length);
-  }
+  function nextSlide() { goToSlide((current + 1) % slides.length); }
 
-  function startSlideshow() {
-    interval = setInterval(nextSlide, 4500);
-  }
+  function startSlideshow() { interval = setInterval(nextSlide, 5000); }
 
   dots.forEach(function(dot, i) {
     dot.addEventListener('click', function() {
-      clearInterval(interval);
-      goToSlide(i);
-      startSlideshow();
+      clearInterval(interval); goToSlide(i); startSlideshow();
     });
   });
-
   startSlideshow();
 
-  // ── Nav reveal on scroll ──
+  // ── Nav reveal ──
   var nav = document.getElementById('nav');
   var hero = document.getElementById('hero');
   var scrollHint = document.getElementById('scrollHint');
-  var navVisible = false;
+  var navShown = false;
 
-  function checkScroll() {
-    var scrollY = window.scrollY || window.pageYOffset;
-    var threshold = hero.offsetHeight * 0.6;
-
-    if (scrollY > threshold && !navVisible) {
-      nav.classList.add('visible');
-      navVisible = true;
-    } else if (scrollY <= threshold && navVisible) {
-      nav.classList.remove('visible');
-      navVisible = false;
-    }
-
-    if (scrollY > 80) {
-      scrollHint.classList.add('hidden');
-    } else {
-      scrollHint.classList.remove('hidden');
-    }
+  function onScroll() {
+    var y = window.scrollY || window.pageYOffset;
+    var t = hero.offsetHeight * 0.55;
+    if (y > t && !navShown) { nav.classList.add('visible'); navShown = true; }
+    else if (y <= t && navShown) { nav.classList.remove('visible'); navShown = false; }
+    if (y > 60) scrollHint.classList.add('hidden');
+    else scrollHint.classList.remove('hidden');
   }
-
-  window.addEventListener('scroll', checkScroll, { passive: true });
-  checkScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 
   // ── Fade-up on scroll ──
   var fadeEls = document.querySelectorAll('.fade-up');
   if (fadeEls.length && 'IntersectionObserver' in window) {
-    var observer = new IntersectionObserver(function(entries) {
-      entries.forEach(function(entry) {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('in');
-          observer.unobserve(entry.target);
-        }
+    var obs = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); }
       });
-    }, { threshold: 0.15 });
-    fadeEls.forEach(function(el) { observer.observe(el); });
+    }, { threshold: 0.12 });
+    fadeEls.forEach(function(el) { obs.observe(el); });
   }
 </script>
 
