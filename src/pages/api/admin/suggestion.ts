@@ -15,15 +15,17 @@ export async function POST({ request }: APIContext) {
   const db = getDB();
   if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
   try {
-    const { action, id } = await request.json() as any;
-    if (action === 'delete') {
-      await db.prepare(`DELETE FROM members WHERE id=?`).bind(id).run();
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    const { action, id, status } = await request.json() as any;
+    if (action === 'status' && id && status) {
+      await db.prepare(`UPDATE suggestions SET status=? WHERE id=?`).bind(status, id).run();
+      return new Response(JSON.stringify({ ok: true }));
     }
-    if (action === 'clear_pending') {
-      await db.prepare(`DELETE FROM members WHERE onboarding_done=0 OR onboarding_done IS NULL`).run();
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    if (action === 'delete' && id) {
+      await db.prepare(`DELETE FROM suggestions WHERE id=?`).bind(id).run();
+      return new Response(JSON.stringify({ ok: true }));
     }
     return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400 });
-  } catch(e:any) { return new Response(JSON.stringify({ error: e.message }), { status: 500 }); }
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+  }
 }

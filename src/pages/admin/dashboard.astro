@@ -324,33 +324,95 @@ const typeEmoji: Record<string,string> = {
 
       <!-- EVENTS -->
       <div class="panel" id="panel-events">
+        <!-- Create Event Form (hidden by default) -->
+        <div class="table-card" id="create-event-form" style="display:none;margin-bottom:20px">
+          <div class="table-head"><div class="table-title">Create New Event</div>
+            <button class="action-btn" onclick="(window as any).toggleCreateEvent()">✕ Cancel</button>
+          </div>
+          <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="settings-field" style="grid-column:span 2">
+              <label class="settings-label">Title</label>
+              <input class="settings-input" id="new-evt-title" placeholder="e.g. Friday Night Bowling" />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Type</label>
+              <select class="settings-select" id="new-evt-type">
+                <option value="social">🎉 Social</option>
+                <option value="dinner">🍽️ Dinner</option>
+                <option value="game_night">🎲 Game Night</option>
+                <option value="outdoor">🏔️ Outdoor</option>
+                <option value="brewery">🍺 Brewery</option>
+                <option value="bowling">🎳 Bowling</option>
+                <option value="arts">🎨 Arts</option>
+                <option value="music">🎵 Music</option>
+                <option value="group_tickets">🎫 Group Tickets</option>
+                <option value="other">📅 Other</option>
+              </select>
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Location</label>
+              <input class="settings-input" id="new-evt-location" placeholder="e.g. Elitch Lanes, Denver" />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Zone / Neighborhood</label>
+              <input class="settings-input" id="new-evt-zone" placeholder="e.g. LoHi, Cap Hill" />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Month</label>
+              <input class="settings-input" id="new-evt-month" placeholder="e.g. May" />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Day / Date</label>
+              <input class="settings-input" id="new-evt-day" placeholder="e.g. 17th, Every Friday" />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Spots</label>
+              <input class="settings-input" id="new-evt-spots" type="number" value="10" min="1" />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Price Cap</label>
+              <input class="settings-input" id="new-evt-price" placeholder="e.g. $25, Free" />
+            </div>
+            <div class="settings-field" style="grid-column:span 2">
+              <label class="settings-label">Description</label>
+              <textarea class="settings-input" id="new-evt-desc" rows="3" placeholder="What's the plan?" style="resize:vertical"></textarea>
+            </div>
+            <div style="grid-column:span 2;display:flex;align-items:center;gap:16px">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer">
+                <input type="checkbox" id="new-evt-featured" /> ⭐ Featured event
+              </label>
+              <button class="save-btn" style="margin:0;margin-left:auto" onclick="(window as any).createEvent()">Create Event</button>
+            </div>
+          </div>
+        </div>
+
         <div class="table-card">
           <div class="table-head">
             <div class="table-title">All Events ({events.length})</div>
             <div style="display:flex;gap:8px;align-items:center">
               <input class="table-search" placeholder="Search events..." oninput="(window as any).filterTable('events-table',this.value)" />
-              <a href="/events/new" style="background:var(--coral);color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;white-space:nowrap">+ Add Event</a>
+              <button onclick="(window as any).toggleCreateEvent()" style="background:var(--coral);color:#fff;border:none;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;white-space:nowrap;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add Event</button>
             </div>
           </div>
           {events.length === 0 ? (
-            <div class="empty"><div class="empty-icon">📅</div><p>No events yet. <a href="/events/new" style="color:var(--coral)">Create one →</a></p></div>
+            <div class="empty"><div class="empty-icon">📅</div><p>No events yet. Click "+ Add Event" above to create one.</p></div>
           ) : (
             <table id="events-table">
               <thead><tr><th>Title</th><th>Date</th><th>Location</th><th>Capacity</th><th>Status</th><th></th></tr></thead>
               <tbody>
                 {events.map((e:any) => (
-                  <tr data-search={`${e.title} ${e.location} ${e.type}`}>
+                  <tr data-search={`${e.title} ${e.location} ${e.type}`} data-event-id={e.id}>
                     <td class="td-name">{typeEmoji[e.type] || '📅'} {e.title}</td>
-                    <td class="td-muted">{e.date_label || e.date || 'TBD'}</td>
+                    <td class="td-muted">{e.date_label || e.event_month && e.event_day ? `${e.event_month} ${e.event_day}` : e.date || 'TBD'}</td>
                     <td class="td-muted">{e.location || '—'}</td>
-                    <td class="td-muted">{e.capacity ? `up to ${e.capacity}` : '—'}</td>
+                    <td class="td-muted">{e.spots ? `up to ${e.spots}` : e.capacity ? `up to ${e.capacity}` : '—'}</td>
                     <td>
                       {e.featured
                         ? <span class="badge badge-coral">⭐ Featured</span>
-                        : <span class="badge badge-muted">{e.type || 'event'}</span>}
+                        : <span class="badge badge-muted">{e.type || e.event_type || 'event'}</span>}
                     </td>
                     <td style="display:flex;gap:6px">
-                      <a href={`/events/${e.id}`} class="action-btn" style="text-decoration:none">View</a>
+                      <button class="action-btn" data-id={e.id} data-featured={e.featured ? '1' : '0'} onclick="(window as any).toggleFeature(this.dataset.id, this.dataset.featured)">{e.featured ? 'Unfeature' : '⭐ Feature'}</button>
                       <button class="action-btn del" data-id={e.id} data-title={e.title} onclick="(window as any).deleteEvent(this.dataset.id,this.dataset.title)">Delete</button>
                     </td>
                   </tr>
@@ -558,6 +620,9 @@ const typeEmoji: Record<string,string> = {
   (window as any).filterTable = filterTable;
   (window as any).removeMember = removeMember;
   (window as any).deleteEvent = deleteEvent;
+  (window as any).createEvent = createEvent;
+  (window as any).toggleCreateEvent = toggleCreateEvent;
+  (window as any).toggleFeature = toggleFeature;
   (window as any).markSuggestion = markSuggestion;
   (window as any).deleteSuggestion = deleteSuggestion;
   (window as any).saveSetting = saveSetting;
@@ -566,12 +631,18 @@ const typeEmoji: Record<string,string> = {
   (window as any).toggleSidebar = toggleSidebar;
   (window as any).closeSidebar = closeSidebar;
 
-  // Panel navigation
+  // ─── Panel navigation ───
   function showPanel(id: string, btn: HTMLElement | null) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById(`panel-${id}`)?.classList.add('active');
     document.querySelectorAll('.sb-link').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
+    else {
+      // Find the matching sidebar button
+      document.querySelectorAll('.sb-link').forEach(b => {
+        if (b.getAttribute('onclick')?.includes(`'${id}'`)) b.classList.add('active');
+      });
+    }
     const titles: Record<string,string> = {
       overview:'Dashboard', members:'Members', events:'Events',
       suggestions:'Suggestions', settings:'Settings', content:'Site Content'
@@ -581,7 +652,7 @@ const typeEmoji: Record<string,string> = {
     closeSidebar();
   }
 
-  // Sidebar mobile
+  // ─── Sidebar mobile ───
   function toggleSidebar() {
     document.getElementById('sidebar')?.classList.toggle('open');
     const overlay = document.getElementById('sbOverlay');
@@ -593,7 +664,7 @@ const typeEmoji: Record<string,string> = {
     if (overlay) overlay.style.display = 'none';
   }
 
-  // Table search filter
+  // ─── Table search filter ───
   function filterTable(tableId: string, query: string) {
     const q = query.toLowerCase();
     document.querySelectorAll(`#${tableId} tr[data-search]`).forEach((row) => {
@@ -602,65 +673,276 @@ const typeEmoji: Record<string,string> = {
     });
   }
 
-  // Toast
-  function toast(msg: string) {
+  // ─── Toast ───
+  function toast(msg: string, isError = false) {
     const el = document.getElementById('toast')!;
-    el.textContent = msg; el.classList.add('show');
+    el.textContent = msg;
+    el.style.borderColor = isError ? 'var(--red)' : 'var(--border)';
+    el.classList.add('show');
     setTimeout(() => el.classList.remove('show'), 3000);
   }
 
-  // Settings toggles
-  function saveSetting(key: string, val: boolean) {
-    try { const s = JSON.parse(localStorage.getItem('dsn_admin_settings') || '{}'); s[key] = val; localStorage.setItem('dsn_admin_settings', JSON.stringify(s)); } catch {}
-    toast(`${key.replace(/_/g,' ')} ${val ? 'enabled' : 'disabled'}`);
-  }
-
-  function saveSettings() {
-    toast('Settings saved ✓');
-  }
-
-  function loadSettings() {
+  // ─── API helper ───
+  async function api(url: string, body: any): Promise<{ok:boolean, error?:string}> {
     try {
-      const s = JSON.parse(localStorage.getItem('dsn_admin_settings') || '{}');
-      Object.entries(s).forEach(([k, v]) => {
-        const el = document.getElementById(`toggle-${k}`) as HTMLInputElement;
-        if (el) el.checked = v as boolean;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Request failed');
+      return { ok: true };
+    } catch (e: any) {
+      return { ok: false, error: e.message };
+    }
+  }
+
+  // ─── Remove Member (wired to API) ───
+  async function removeMember(id: string, name: string) {
+    if (!confirm(`Remove ${name} from the community? This cannot be undone.`)) return;
+    const btn = document.querySelector(`button[data-id="${id}"].del`) as HTMLButtonElement;
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+    const result = await api('/api/admin/member', { action: 'delete', id: parseInt(id) });
+    if (result.ok) {
+      toast(`${name} removed from community.`);
+      // Remove row from DOM
+      const row = btn?.closest('tr');
+      if (row) row.remove();
+      // Update badge count
+      const badge = document.getElementById('memberBadge');
+      if (badge) {
+        const count = document.querySelectorAll('#members-table tbody tr').length;
+        badge.textContent = String(count);
+      }
+    } else {
+      toast(`Failed: ${result.error}`, true);
+      if (btn) { btn.disabled = false; btn.textContent = 'Remove'; }
+    }
+  }
+
+  // ─── Delete Event (wired to API) ───
+  async function deleteEvent(id: string, title: string) {
+    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    const btn = document.querySelector(`tr[data-event-id="${id}"] button.del`) as HTMLButtonElement;
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+    const result = await api('/api/admin/event', { action: 'delete', id: parseInt(id) });
+    if (result.ok) {
+      toast(`"${title}" deleted.`);
+      const row = document.querySelector(`tr[data-event-id="${id}"]`);
+      if (row) row.remove();
+      const badge = document.getElementById('eventBadge');
+      if (badge) {
+        const count = document.querySelectorAll('#events-table tbody tr').length;
+        badge.textContent = String(count);
+      }
+    } else {
+      toast(`Failed: ${result.error}`, true);
+      if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
+    }
+  }
+
+  // ─── Toggle Feature (wired to API) ───
+  async function toggleFeature(id: string, currentlyFeatured: string) {
+    const newFeatured = currentlyFeatured === '1' ? false : true;
+    const result = await api('/api/admin/event', { action: 'feature', id: parseInt(id), featured: newFeatured });
+    if (result.ok) {
+      toast(newFeatured ? 'Event featured ⭐' : 'Event unfeatured');
+      // Reload to reflect changes (simplest with SSR)
+      setTimeout(() => window.location.reload(), 500);
+    } else {
+      toast(`Failed: ${result.error}`, true);
+    }
+  }
+
+  // ─── Create Event (inline form) ───
+  function toggleCreateEvent() {
+    const form = document.getElementById('create-event-form')!;
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+
+  async function createEvent() {
+    const title = (document.getElementById('new-evt-title') as HTMLInputElement).value.trim();
+    if (!title) { toast('Event title is required.', true); return; }
+
+    const body = {
+      action: 'create',
+      title,
+      event_type: (document.getElementById('new-evt-type') as HTMLSelectElement).value,
+      location: (document.getElementById('new-evt-location') as HTMLInputElement).value.trim(),
+      zone: (document.getElementById('new-evt-zone') as HTMLInputElement).value.trim(),
+      event_month: (document.getElementById('new-evt-month') as HTMLInputElement).value.trim(),
+      event_day: (document.getElementById('new-evt-day') as HTMLInputElement).value.trim(),
+      spots: (document.getElementById('new-evt-spots') as HTMLInputElement).value,
+      price_cap: (document.getElementById('new-evt-price') as HTMLInputElement).value.trim(),
+      description: (document.getElementById('new-evt-desc') as HTMLTextAreaElement).value.trim(),
+      featured: (document.getElementById('new-evt-featured') as HTMLInputElement).checked,
+    };
+
+    const result = await api('/api/admin/event', body);
+    if (result.ok) {
+      toast('Event created! 🎉');
+      setTimeout(() => window.location.reload(), 600);
+    } else {
+      toast(`Failed: ${result.error}`, true);
+    }
+  }
+
+  // ─── Mark Suggestion (wired to API) ───
+  async function markSuggestion(id: string, status: string) {
+    const result = await api('/api/admin/suggestion', { action: 'status', id: parseInt(id), status });
+    if (result.ok) {
+      toast(`Marked as ${status} ✓`);
+      setTimeout(() => window.location.reload(), 500);
+    } else {
+      toast(`Failed: ${result.error}`, true);
+    }
+  }
+
+  // ─── Delete Suggestion (wired to API) ───
+  async function deleteSuggestion(id: string) {
+    if (!confirm('Delete this suggestion?')) return;
+    const result = await api('/api/admin/suggestion', { action: 'delete', id: parseInt(id) });
+    if (result.ok) {
+      toast('Suggestion deleted.');
+      const btn = document.querySelector(`button[data-id="${id}"].del`);
+      const row = btn?.closest('tr');
+      if (row) row.remove();
+    } else {
+      toast(`Failed: ${result.error}`, true);
+    }
+  }
+
+  // ─── Settings — save to D1 ───
+  function gatherSettings(): Record<string, string> {
+    const s: Record<string, string> = {};
+    // Toggles
+    const toggles = ['maintenance','signups','directory','discord-rsvp','notif-member','notif-suggestion','notif-rsvp'];
+    toggles.forEach(key => {
+      const el = document.getElementById(`toggle-${key}`) as HTMLInputElement;
+      if (el) s[`toggle_${key.replace(/-/g,'_')}`] = el.checked ? '1' : '0';
+    });
+    // Text inputs
+    const inputs: Record<string,string> = {
+      'setting-name':'community_name', 'setting-city':'home_city',
+      'setting-discord':'discord_link', 'setting-groupsize':'max_group_size',
+      'setting-admin-email':'admin_email',
+      'content-headline':'hero_headline', 'content-sub':'hero_sub',
+      'content-cta':'hero_cta', 'content-membercount':'member_count_label',
+    };
+    Object.entries(inputs).forEach(([elId, key]) => {
+      const el = document.getElementById(elId) as HTMLInputElement | HTMLSelectElement;
+      if (el) s[key] = el.value;
+    });
+    return s;
+  }
+
+  async function saveSettings() {
+    const settings = gatherSettings();
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast('Settings saved to database ✓');
+      } else {
+        toast(`Save failed: ${data.error}`, true);
+      }
+    } catch (e: any) {
+      toast(`Save failed: ${e.message}`, true);
+    }
+  }
+
+  function saveSetting(key: string, val: boolean) {
+    // Immediate feedback, then batch save
+    toast(`${key.replace(/_/g,' ').replace(/-/g,' ')} ${val ? 'enabled' : 'disabled'}`);
+    // Auto-save all settings whenever a toggle changes
+    saveSettings();
+  }
+
+  async function loadSettings() {
+    try {
+      const res = await fetch('/api/admin/settings');
+      if (!res.ok) return;
+      const settings = await res.json();
+      if (settings.error) return;
+
+      // Restore toggles
+      const toggleMap: Record<string,string> = {
+        'toggle_maintenance':'toggle-maintenance', 'toggle_signups':'toggle-signups',
+        'toggle_directory':'toggle-directory', 'toggle_discord_rsvp':'toggle-discord-rsvp',
+        'toggle_notif_member':'toggle-notif-member', 'toggle_notif_suggestion':'toggle-notif-suggestion',
+        'toggle_notif_rsvp':'toggle-notif-rsvp',
+      };
+      Object.entries(toggleMap).forEach(([dbKey, elId]) => {
+        const el = document.getElementById(elId) as HTMLInputElement;
+        if (el && settings[dbKey] !== undefined) el.checked = settings[dbKey] === '1';
+      });
+
+      // Restore text inputs
+      const inputMap: Record<string,string> = {
+        'community_name':'setting-name', 'home_city':'setting-city',
+        'discord_link':'setting-discord', 'max_group_size':'setting-groupsize',
+        'admin_email':'setting-admin-email',
+        'hero_headline':'content-headline', 'hero_sub':'content-sub',
+        'hero_cta':'content-cta', 'member_count_label':'content-membercount',
+      };
+      Object.entries(inputMap).forEach(([dbKey, elId]) => {
+        const el = document.getElementById(elId) as HTMLInputElement | HTMLSelectElement;
+        if (el && settings[dbKey]) el.value = settings[dbKey];
       });
     } catch {}
   }
 
-  // Member remove
-  async function removeMember(id: string, name: string) {
-    if (!confirm(`Remove ${name} from the community?`)) return;
-    toast(`${name} removed.`);
-  }
-
-  // Event delete
-  async function deleteEvent(id: string, title: string) {
-    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
-    toast(`Event deleted.`);
-  }
-
-  // Suggestion actions
-  function markSuggestion(id: string, status: string) {
-    toast(`Marked as ${status} ✓`);
-  }
-  function deleteSuggestion(id: string) {
-    if (!confirm('Delete this suggestion?')) return;
-    toast('Suggestion deleted.');
-  }
-
-  // Danger zone
-  function confirmAction(msg: string, action: string) {
+  // ─── Danger Zone actions ───
+  async function confirmAction(msg: string, action: string) {
     if (!confirm(msg)) return;
+
     if (action === 'exportMembers') {
-      toast('Export started — check your email.');
+      toast('Generating CSV...');
+      try {
+        // Fetch current page data (members are SSR-rendered, so we scrape the table)
+        const rows = document.querySelectorAll('#members-table tbody tr');
+        if (rows.length === 0) { toast('No members to export.', true); return; }
+        let csv = 'Name,Email,Neighborhood,Bio,Status\n';
+        rows.forEach(row => {
+          const cells = row.querySelectorAll('td');
+          const name = (cells[0]?.textContent || '').replace(/,/g, '');
+          const email = (cells[1]?.textContent || '').replace(/,/g, '');
+          const hood = (cells[2]?.textContent || '').replace(/,/g, '');
+          const bio = (cells[3]?.textContent || '').replace(/,/g, '').replace(/\n/g, ' ');
+          const status = (cells[4]?.textContent || '').replace(/,/g, '').trim();
+          csv += `"${name}","${email}","${hood}","${bio}","${status}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `dsn-members-${new Date().toISOString().slice(0,10)}.csv`;
+        a.click(); URL.revokeObjectURL(url);
+        toast('CSV downloaded ✓');
+      } catch (e: any) {
+        toast(`Export failed: ${e.message}`, true);
+      }
+    } else if (action === 'clearPending') {
+      // Delete members where onboarding_done is false/0
+      const result = await api('/api/admin/member', { action: 'clear_pending' });
+      if (result.ok) {
+        toast('Pending members cleared.');
+        setTimeout(() => window.location.reload(), 600);
+      } else {
+        toast(`Failed: ${result.error}`, true);
+      }
     } else {
       toast('Done.');
     }
   }
 
-  // Init
+  // ─── Init: load settings from D1 ───
   loadSettings();
 </script>
 </AdminBase>
