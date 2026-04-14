@@ -18,8 +18,16 @@ export async function POST({ request }: APIContext) {
     const body = await request.json() as any;
     const { action } = body;
     if (action === 'create') {
-      await db.prepare(`INSERT INTO events (title,event_type,location,zone,event_month,event_day,spots,price_cap,description,featured) VALUES (?,?,?,?,?,?,?,?,?,?)`)
-        .bind(body.title,body.event_type||'social',body.location||'',body.zone||'',body.event_month||'',body.event_day||'',parseInt(body.spots)||10,body.price_cap||'',body.description||'',body.featured?1:0).run();
+      await db.prepare(`INSERT INTO events (title,event_type,location,zone,event_month,event_day,spots,price_cap,description,featured,plus_one_allowed,difficulty,pet_friendly,cell_service,packing_list,reservation_by,price_per_person,payment_link,min_group_size,deposit_required,deposit_amount,commit_deadline) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .bind(
+          body.title, body.event_type||'social', body.location||'', body.zone||'', body.event_month||'', body.event_day||'',
+          parseInt(body.spots)||10, body.price_cap||'', body.description||'', body.featured?1:0,
+          body.plus_one_allowed!==undefined?parseInt(body.plus_one_allowed):1,
+          body.difficulty||'', body.pet_friendly?1:0, body.cell_service||'', body.packing_list||'',
+          body.reservation_by||'', body.price_per_person||'', body.payment_link||'',
+          parseInt(body.min_group_size)||0, body.deposit_required?1:0,
+          parseFloat(body.deposit_amount)||10, body.commit_deadline||''
+        ).run();
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
     if (action === 'update') {

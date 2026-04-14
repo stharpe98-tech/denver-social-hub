@@ -197,8 +197,17 @@ const typeEmoji: Record<string, string> = {
   /* ═══ CREATE FORM ═══ */
   .create-form { display:none; margin-bottom:20px; }
   .create-form.open { display:block; animation:fadeIn .2s ease; }
-  .form-grid { padding:20px 22px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-grid { padding:20px 22px; display:grid; grid-template-columns:1fr; gap:14px; }
   .span2 { grid-column:span 2; }
+  .type-chip {
+    padding:10px 16px; font-size:13px; font-weight:500; border-radius:var(--radius-sm);
+    border:1px solid var(--border); background:var(--white); color:var(--text-secondary);
+    cursor:pointer; font-family:var(--font); transition:all .15s;
+  }
+  .type-chip:hover { border-color:var(--accent); color:var(--text); }
+  .type-chip.selected { border-color:var(--accent); background:var(--accent-light); color:var(--accent); font-weight:600; }
+  .evt-field { display:none; }
+  .evt-field.show { display:block; }
 
   /* ═══ EMPTY / TOAST ═══ */
   .empty { padding:48px; text-align:center; color:var(--text-hint); }
@@ -336,16 +345,77 @@ const typeEmoji: Record<string, string> = {
     <div class="create-form card" id="create-event-form">
       <div class="card-head"><div class="card-title">Create new event</div><button class="btn" id="cancel-create">✕ Cancel</button></div>
       <div class="form-grid">
-        <div class="field span2"><label class="field-label">Title</label><input class="field-input" id="evt-title" placeholder="e.g. Friday Night Bowling" /></div>
-        <div class="field"><label class="field-label">Type</label><select class="field-select" id="evt-type"><option value="social">🎉 Social</option><option value="dinner">🍽️ Dinner</option><option value="game_night">🎲 Game Night</option><option value="outdoor">🏔️ Outdoor</option><option value="brewery">🍺 Brewery</option><option value="bowling">🎳 Bowling</option><option value="arts">🎨 Arts</option><option value="music">🎵 Music</option><option value="sports">⚾ Sports</option><option value="coffee">☕ Coffee</option><option value="casino">🎰 Casino</option><option value="other">📅 Other</option></select></div>
-        <div class="field"><label class="field-label">Location</label><input class="field-input" id="evt-location" placeholder="e.g. Elitch Lanes" /></div>
-        <div class="field"><label class="field-label">Zone</label><input class="field-input" id="evt-zone" placeholder="e.g. LoHi" /></div>
-        <div class="field"><label class="field-label">Month</label><input class="field-input" id="evt-month" placeholder="e.g. May" /></div>
-        <div class="field"><label class="field-label">Day</label><input class="field-input" id="evt-day" placeholder="e.g. 17th" /></div>
-        <div class="field"><label class="field-label">Spots</label><input class="field-input" id="evt-spots" type="number" value="10" min="1" /></div>
-        <div class="field"><label class="field-label">Price Cap</label><input class="field-input" id="evt-price" placeholder="e.g. $25" /></div>
-        <div class="field span2"><label class="field-label">Description</label><textarea class="field-input" id="evt-desc" rows="3" placeholder="What's the plan?" style="resize:vertical"></textarea></div>
-        <div class="span2" style="display:flex;align-items:center;gap:16px"><label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);cursor:pointer"><input type="checkbox" id="evt-featured" /> ⭐ Featured</label><button class="btn-primary" style="margin-left:auto" id="submit-event">Create Event</button></div>
+        <!-- STEP 1: Always shown -->
+        <div class="field span2" style="margin-bottom:4px">
+          <label class="field-label">What type of event?</label>
+          <div id="type-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+            <button type="button" class="type-chip" data-type="dinner">🍽️ Dinner</button>
+            <button type="button" class="type-chip" data-type="brewery">🍺 Brewery</button>
+            <button type="button" class="type-chip" data-type="outdoor">🏔️ Outdoor / Hike</button>
+            <button type="button" class="type-chip" data-type="game_night">🎲 Game Night</button>
+            <button type="button" class="type-chip" data-type="bowling">🎳 Bowling</button>
+            <button type="button" class="type-chip" data-type="sports">⚾ Sports / Watch Party</button>
+            <button type="button" class="type-chip" data-type="music">🎵 Music / Concert</button>
+            <button type="button" class="type-chip" data-type="arts">🎨 Arts / Creative</button>
+            <button type="button" class="type-chip" data-type="coffee">☕ Coffee Meetup</button>
+            <button type="button" class="type-chip" data-type="casino">🎰 Casino Trip</button>
+            <button type="button" class="type-chip" data-type="social">🎉 General Social</button>
+            <button type="button" class="type-chip" data-type="other">📅 Other</button>
+          </div>
+          <input type="hidden" id="evt-type" value="" />
+        </div>
+
+        <!-- STEP 2: Core fields (shown after type pick) -->
+        <div id="evt-core" style="display:none;grid-column:span 2">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="field span2"><label class="field-label">Event name</label><input class="field-input" id="evt-title" placeholder="" /></div>
+            <div class="field"><label class="field-label">Where</label><input class="field-input" id="evt-location" placeholder="" /></div>
+            <div class="field"><label class="field-label">Neighborhood</label><input class="field-input" id="evt-zone" value="RiNo" placeholder="e.g. RiNo, Cap Hill, LoDo" /></div>
+            <div class="field"><label class="field-label">Month</label><select class="field-select" id="evt-month"><option value="">Pick a month</option><option>JAN</option><option>FEB</option><option>MAR</option><option>APR</option><option>MAY</option><option>JUN</option><option>JUL</option><option>AUG</option><option>SEP</option><option>OCT</option><option>NOV</option><option>DEC</option></select></div>
+            <div class="field"><label class="field-label">Day</label><input class="field-input" id="evt-day" placeholder="e.g. 17th, Every Friday" /></div>
+            <div class="field"><label class="field-label">Group size</label><input class="field-input" id="evt-spots" type="number" value="10" min="1" max="50" /></div>
+            <div class="field"><label class="field-label" id="price-label">Price cap</label><input class="field-input" id="evt-price" placeholder="" /></div>
+          </div>
+
+          <!-- Type-specific fields -->
+          <div id="evt-extra" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+            <!-- Outdoor fields -->
+            <div class="field evt-field" data-for="outdoor"><label class="field-label">Difficulty</label><select class="field-select" id="evt-difficulty"><option value="">Select</option><option value="easy">Easy — casual walk</option><option value="moderate">Moderate — some elevation</option><option value="hard">Hard — strenuous</option></select></div>
+            <div class="field evt-field" data-for="outdoor"><label class="field-label">Pet friendly?</label><select class="field-select" id="evt-pet"><option value="0">No</option><option value="1">Yes</option></select></div>
+            <div class="field evt-field" data-for="outdoor"><label class="field-label">Cell service</label><select class="field-select" id="evt-cell"><option value="">Unknown</option><option value="good">Good</option><option value="spotty">Spotty</option><option value="none">None</option></select></div>
+            <div class="field evt-field" data-for="outdoor"><label class="field-label">Packing list</label><input class="field-input" id="evt-packing" placeholder="e.g. Water, sunscreen, layers" /></div>
+
+            <!-- Dinner / Brewery / Coffee fields -->
+            <div class="field evt-field" data-for="dinner brewery coffee"><label class="field-label">Reservation made by</label><input class="field-input" id="evt-reservation" placeholder="e.g. Seth, or TBD" /></div>
+            <div class="field evt-field" data-for="dinner brewery coffee"><label class="field-label">Price per person</label><input class="field-input" id="evt-ppp" placeholder="e.g. $20-30" /></div>
+
+            <!-- Casino / Sports fields -->
+            <div class="field evt-field" data-for="casino sports"><label class="field-label">Payment / ticket link</label><input class="field-input" id="evt-payment" placeholder="https://..." /></div>
+            <div class="field evt-field" data-for="casino sports"><label class="field-label">Min group size to go</label><input class="field-input" id="evt-mingroup" type="number" value="4" min="1" /></div>
+
+            <!-- Music / Arts fields -->
+            <div class="field evt-field" data-for="music arts"><label class="field-label">Ticket / event link</label><input class="field-input" id="evt-ticketlink" placeholder="https://..." /></div>
+
+            <!-- Deposit fields (shown for casino, sports, music) -->
+            <div class="field evt-field" data-for="casino sports music"><label class="field-label">Require deposit?</label><select class="field-select" id="evt-deposit"><option value="0">No</option><option value="1">Yes</option></select></div>
+            <div class="field evt-field" data-for="casino sports music"><label class="field-label">Deposit amount</label><input class="field-input" id="evt-depositamt" value="10" type="number" min="0" /></div>
+
+            <!-- Commit deadline (shown for dinner, casino, sports, music) -->
+            <div class="field evt-field" data-for="dinner casino sports music"><label class="field-label">Commit deadline</label><input class="field-input" id="evt-deadline" placeholder="e.g. May 15th" /></div>
+
+            <!-- Plus-one (shown for all) -->
+            <div class="field evt-field" data-for="all"><label class="field-label">Allow plus-ones?</label><select class="field-select" id="evt-plusone"><option value="1">Yes</option><option value="0">No</option></select></div>
+          </div>
+
+          <!-- Description + Submit -->
+          <div style="margin-top:14px">
+            <div class="field"><label class="field-label">Description</label><textarea class="field-input" id="evt-desc" rows="3" placeholder="" style="resize:vertical"></textarea></div>
+            <div style="display:flex;align-items:center;gap:16px;margin-top:8px">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);cursor:pointer"><input type="checkbox" id="evt-featured" /> ⭐ Featured event</label>
+              <button class="btn-primary" style="margin-left:auto" id="submit-event">Create Event</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -467,6 +537,35 @@ const typeEmoji: Record<string, string> = {
 <div class="toast" id="toast"></div>
 
 <script is:inline>
-(function(){var $=function(s){return document.querySelector(s)},$$=function(s){return document.querySelectorAll(s)};function toast(m,e){var el=$('#toast');if(!el)return;el.textContent=m;el.className=e?'toast show error':'toast show';setTimeout(function(){el.className='toast'},3000)}function api(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);return d})}var titles={overview:'Overview',members:'Members',events:'Events',suggestions:'Suggestions',settings:'Settings',content:'Content'};function showPanel(id){$$('.panel').forEach(function(p){p.classList.remove('active')});var t=$('#panel-'+id);if(t)t.classList.add('active');$$('.tab').forEach(function(b){b.classList.remove('active')});$$('.tab[data-panel="'+id+'"]').forEach(function(b){b.classList.add('active')});var mob=$('#mob-tabs');if(mob)mob.classList.remove('open')}$$('[data-panel]').forEach(function(b){b.addEventListener('click',function(){showPanel(this.getAttribute('data-panel'))})});var mobMenu=$('#mob-menu'),mobTabs=$('#mob-tabs');if(mobMenu)mobMenu.addEventListener('click',function(){mobTabs.classList.toggle('open')});function bindSearch(i,t){var inp=$('#'+i);if(!inp)return;inp.addEventListener('input',function(){var q=this.value.toLowerCase();$$('#'+t+' tr[data-search]').forEach(function(r){r.style.display=(r.getAttribute('data-search')||'').toLowerCase().indexOf(q)>=0?'':'none'})})}bindSearch('search-members','members-table');bindSearch('search-events','events-table');document.addEventListener('click',function(e){var btn=e.target.closest('[data-action]');if(!btn)return;var act=btn.getAttribute('data-action'),id=btn.getAttribute('data-id');if(act==='remove-member'){var nm=btn.getAttribute('data-name');if(!confirm('Remove '+nm+'?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/member',{action:'delete',id:parseInt(id)}).then(function(){toast(nm+' removed.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Remove'})}if(act==='delete-event'){var tt=btn.getAttribute('data-title');if(!confirm('Delete "'+tt+'"?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/event',{action:'delete',id:parseInt(id)}).then(function(){toast('"'+tt+'" deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Delete'})}if(act==='toggle-feature'){var f=btn.getAttribute('data-featured')==='1';api('/api/admin/event',{action:'feature',id:parseInt(id),featured:!f}).then(function(){toast(f?'Unfeatured':'Featured ⭐');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}if(act==='mark-suggestion'){var st=btn.getAttribute('data-status');api('/api/admin/suggestion',{action:'status',id:parseInt(id),status:st}).then(function(){toast('Marked '+st+' ✓');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}if(act==='delete-suggestion'){if(!confirm('Delete this suggestion?'))return;api('/api/admin/suggestion',{action:'delete',id:parseInt(id)}).then(function(){toast('Deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true)})}});$('#toggle-create').addEventListener('click',function(){$('#create-event-form').classList.toggle('open')});$('#cancel-create').addEventListener('click',function(){$('#create-event-form').classList.remove('open')});$('#submit-event').addEventListener('click',function(){var t=$('#evt-title').value.trim();if(!t){toast('Title required.',true);return}api('/api/admin/event',{action:'create',title:t,event_type:$('#evt-type').value,location:$('#evt-location').value.trim(),zone:$('#evt-zone').value.trim(),event_month:$('#evt-month').value.trim(),event_day:$('#evt-day').value.trim(),spots:$('#evt-spots').value,price_cap:$('#evt-price').value.trim(),description:$('#evt-desc').value.trim(),featured:$('#evt-featured').checked}).then(function(){toast('Event created! 🎉');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});function gatherAll(){var s={};$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');s[k]=el.type==='checkbox'?(el.checked?'1':'0'):el.value});return s}function doSave(){api('/api/admin/settings',gatherAll()).then(function(){toast('Settings saved ✓')}).catch(function(err){toast('Failed: '+err.message,true)})}$$('.js-save').forEach(function(b){b.addEventListener('click',doSave)});fetch('/api/admin/settings').then(function(r){return r.json()}).then(function(d){if(d.error)return;$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');if(d[k]===undefined)return;if(el.type==='checkbox')el.checked=d[k]==='1';else el.value=d[k]})}).catch(function(){});$('#clear-pending').addEventListener('click',function(){if(!confirm('Clear all pending members?'))return;api('/api/admin/member',{action:'clear_pending'}).then(function(){toast('Cleared.');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});$('#export-csv').addEventListener('click',function(){var rows=$$('#members-table tbody tr');if(!rows.length){toast('No members.',true);return}var csv='Name,Email,Neighborhood,Bio,Status\n';rows.forEach(function(row){var cells=row.querySelectorAll('td');var vals=[];for(var i=0;i<5;i++)vals.push('"'+(cells[i]?cells[i].textContent.trim().replace(/"/g,'""'):'')+'"');csv+=vals.join(',')+'\n'});var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='dsn-members-'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('CSV downloaded ✓')});$('#clear-past-events').addEventListener('click',function(){if(!confirm('Mark all past events as archived? This sets is_past=1 on all events.'))return;api('/api/admin/event',{action:'archive_past'}).then(function(){toast('Past events archived.');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});var themeBtn=$('#theme-toggle');function setTheme(dark){if(dark){document.documentElement.classList.add('dark');themeBtn.textContent='🌙'}else{document.documentElement.classList.remove('dark');themeBtn.textContent='☀️'}try{localStorage.setItem('dsn_admin_theme',dark?'dark':'light')}catch(e){}}var saved=null;try{saved=localStorage.getItem('dsn_admin_theme')}catch(e){}if(saved==='dark')setTheme(true);else setTheme(false);themeBtn.addEventListener('click',function(){var isDark=document.documentElement.classList.contains('dark');setTheme(!isDark)})})();
+(function(){var $=function(s){return document.querySelector(s)},$$=function(s){return document.querySelectorAll(s)};function toast(m,e){var el=$('#toast');if(!el)return;el.textContent=m;el.className=e?'toast show error':'toast show';setTimeout(function(){el.className='toast'},3000)}function api(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);return d})}var titles={overview:'Overview',members:'Members',events:'Events',suggestions:'Suggestions',settings:'Settings',content:'Content'};function showPanel(id){$$('.panel').forEach(function(p){p.classList.remove('active')});var t=$('#panel-'+id);if(t)t.classList.add('active');$$('.tab').forEach(function(b){b.classList.remove('active')});$$('.tab[data-panel="'+id+'"]').forEach(function(b){b.classList.add('active')});var mob=$('#mob-tabs');if(mob)mob.classList.remove('open')}$$('[data-panel]').forEach(function(b){b.addEventListener('click',function(){showPanel(this.getAttribute('data-panel'))})});var mobMenu=$('#mob-menu'),mobTabs=$('#mob-tabs');if(mobMenu)mobMenu.addEventListener('click',function(){mobTabs.classList.toggle('open')});function bindSearch(i,t){var inp=$('#'+i);if(!inp)return;inp.addEventListener('input',function(){var q=this.value.toLowerCase();$$('#'+t+' tr[data-search]').forEach(function(r){r.style.display=(r.getAttribute('data-search')||'').toLowerCase().indexOf(q)>=0?'':'none'})})}bindSearch('search-members','members-table');bindSearch('search-events','events-table');document.addEventListener('click',function(e){var btn=e.target.closest('[data-action]');if(!btn)return;var act=btn.getAttribute('data-action'),id=btn.getAttribute('data-id');if(act==='remove-member'){var nm=btn.getAttribute('data-name');if(!confirm('Remove '+nm+'?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/member',{action:'delete',id:parseInt(id)}).then(function(){toast(nm+' removed.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Remove'})}if(act==='delete-event'){var tt=btn.getAttribute('data-title');if(!confirm('Delete "'+tt+'"?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/event',{action:'delete',id:parseInt(id)}).then(function(){toast('"'+tt+'" deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Delete'})}if(act==='toggle-feature'){var f=btn.getAttribute('data-featured')==='1';api('/api/admin/event',{action:'feature',id:parseInt(id),featured:!f}).then(function(){toast(f?'Unfeatured':'Featured ⭐');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}if(act==='mark-suggestion'){var st=btn.getAttribute('data-status');api('/api/admin/suggestion',{action:'status',id:parseInt(id),status:st}).then(function(){toast('Marked '+st+' ✓');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}if(act==='delete-suggestion'){if(!confirm('Delete this suggestion?'))return;api('/api/admin/suggestion',{action:'delete',id:parseInt(id)}).then(function(){toast('Deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true)})}});$('#toggle-create').addEventListener('click',function(){$('#create-event-form').classList.toggle('open')});$('#cancel-create').addEventListener('click',function(){$('#create-event-form').classList.remove('open')});
+
+var typeHints={dinner:{title:'e.g. RiNo Ramen Night',location:'e.g. Uncle Ramen — RiNo',price:'e.g. $20-30/person',desc:'Where are we eating? Any dietary notes?'},brewery:{title:'e.g. Brewery Crawl — Sunnyside',location:'e.g. Sunnyside, Denver',price:'e.g. $15-25/person',desc:'How many stops? Any food trucks nearby?'},outdoor:{title:'e.g. Bear Creek Trail Hike',location:'e.g. Bear Creek Trail, Lakewood',price:'Free',desc:'Distance, terrain, what to bring?'},game_night:{title:'e.g. Game Night — RiNo',location:'e.g. Board game cafe or someone\'s place',price:'Free or $5',desc:'What games? BYOB?'},bowling:{title:'e.g. Cosmic Bowling — Highlands',location:'e.g. Punch Bowl Social',price:'e.g. $15-20',desc:'How many lanes? Shoes included?'},sports:{title:'e.g. Rockies Game — Group Tickets',location:'e.g. Coors Field — LoDo',price:'e.g. $25-40/ticket',desc:'Which game? Tailgate plans?'},music:{title:'e.g. Red Rocks Concert Night',location:'e.g. Red Rocks Amphitheatre',price:'e.g. $30-60/ticket',desc:'Who\'s playing? Carpool plans?'},arts:{title:'e.g. Paint & Sip Night',location:'e.g. Painting with a Twist',price:'e.g. $35/person',desc:'What are we making? Supplies included?'},coffee:{title:'e.g. Sunday Coffee — Crema',location:'e.g. Crema Coffee House — RiNo',price:'Buy your own',desc:'Casual hangout? Anything planned?'},casino:{title:'e.g. Blackhawk Casino Night',location:'e.g. Isle Casino — Blackhawk, CO',price:'e.g. Bring $50-100',desc:'Which casino? Carpool from Denver?'},social:{title:'e.g. Block Party — RiNo',location:'e.g. RiNo Art District',price:'Free',desc:'What\'s the vibe?'},other:{title:'e.g. Potluck at the Park',location:'e.g. Washington Park',price:'Free or varies',desc:'What\'s the plan?'}};
+
+function showTypeFields(type){
+  $$('.evt-field').forEach(function(f){
+    var forTypes=f.getAttribute('data-for');
+    f.classList.toggle('show',forTypes==='all'||forTypes.split(' ').indexOf(type)>=0);
+  });
+  var h=typeHints[type]||typeHints.other;
+  $('#evt-title').placeholder=h.title;$('#evt-location').placeholder=h.location;$('#evt-price').placeholder=h.price;$('#evt-desc').placeholder=h.desc;
+  $('#evt-core').style.display='';
+  if(type==='outdoor')$('#price-label').textContent='Cost';else $('#price-label').textContent='Price cap';
+}
+
+$$('.type-chip').forEach(function(chip){chip.addEventListener('click',function(){$$('.type-chip').forEach(function(c){c.classList.remove('selected')});this.classList.add('selected');$('#evt-type').value=this.getAttribute('data-type');showTypeFields(this.getAttribute('data-type'))})});
+
+$('#submit-event').addEventListener('click',function(){var t=$('#evt-title').value.trim();var ty=$('#evt-type').value;if(!ty){toast('Pick an event type first.',true);return}if(!t){toast('Give it a name.',true);return}var body={action:'create',title:t,event_type:ty,location:$('#evt-location').value.trim(),zone:$('#evt-zone').value.trim(),event_month:$('#evt-month').value,event_day:$('#evt-day').value.trim(),spots:$('#evt-spots').value,price_cap:$('#evt-price').value.trim(),description:$('#evt-desc').value.trim(),featured:$('#evt-featured').checked,plus_one_allowed:$('#evt-plusone').value};
+var d=$('#evt-difficulty');if(d&&d.offsetParent)body.difficulty=d.value;
+var p=$('#evt-pet');if(p&&p.offsetParent)body.pet_friendly=parseInt(p.value);
+var c=$('#evt-cell');if(c&&c.offsetParent)body.cell_service=c.value;
+var pk=$('#evt-packing');if(pk&&pk.offsetParent)body.packing_list=pk.value.trim();
+var rv=$('#evt-reservation');if(rv&&rv.offsetParent)body.reservation_by=rv.value.trim();
+var pp=$('#evt-ppp');if(pp&&pp.offsetParent)body.price_per_person=pp.value.trim();
+var pay=$('#evt-payment');if(pay&&pay.offsetParent)body.payment_link=pay.value.trim();
+var tk=$('#evt-ticketlink');if(tk&&tk.offsetParent)body.payment_link=tk.value.trim();
+var mg=$('#evt-mingroup');if(mg&&mg.offsetParent)body.min_group_size=parseInt(mg.value);
+var dep=$('#evt-deposit');if(dep&&dep.offsetParent){body.deposit_required=parseInt(dep.value);body.deposit_amount=parseFloat($('#evt-depositamt').value)||10}
+var dl=$('#evt-deadline');if(dl&&dl.offsetParent)body.commit_deadline=dl.value.trim();
+api('/api/admin/event',body).then(function(){toast('Event created! 🎉');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});function gatherAll(){var s={};$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');s[k]=el.type==='checkbox'?(el.checked?'1':'0'):el.value});return s}function doSave(){api('/api/admin/settings',gatherAll()).then(function(){toast('Settings saved ✓')}).catch(function(err){toast('Failed: '+err.message,true)})}$$('.js-save').forEach(function(b){b.addEventListener('click',doSave)});fetch('/api/admin/settings').then(function(r){return r.json()}).then(function(d){if(d.error)return;$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');if(d[k]===undefined)return;if(el.type==='checkbox')el.checked=d[k]==='1';else el.value=d[k]})}).catch(function(){});$('#clear-pending').addEventListener('click',function(){if(!confirm('Clear all pending members?'))return;api('/api/admin/member',{action:'clear_pending'}).then(function(){toast('Cleared.');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});$('#export-csv').addEventListener('click',function(){var rows=$$('#members-table tbody tr');if(!rows.length){toast('No members.',true);return}var csv='Name,Email,Neighborhood,Bio,Status\n';rows.forEach(function(row){var cells=row.querySelectorAll('td');var vals=[];for(var i=0;i<5;i++)vals.push('"'+(cells[i]?cells[i].textContent.trim().replace(/"/g,'""'):'')+'"');csv+=vals.join(',')+'\n'});var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='dsn-members-'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('CSV downloaded ✓')});$('#clear-past-events').addEventListener('click',function(){if(!confirm('Mark all past events as archived? This sets is_past=1 on all events.'))return;api('/api/admin/event',{action:'archive_past'}).then(function(){toast('Past events archived.');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});var themeBtn=$('#theme-toggle');function setTheme(dark){if(dark){document.documentElement.classList.add('dark');themeBtn.textContent='🌙'}else{document.documentElement.classList.remove('dark');themeBtn.textContent='☀️'}try{localStorage.setItem('dsn_admin_theme',dark?'dark':'light')}catch(e){}}var saved=null;try{saved=localStorage.getItem('dsn_admin_theme')}catch(e){}if(saved==='dark')setTheme(true);else setTheme(false);themeBtn.addEventListener('click',function(){var isDark=document.documentElement.classList.contains('dark');setTheme(!isDark)})})();
 </script>
 </AdminBase>
