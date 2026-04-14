@@ -1,7 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
 
-// Check if already logged in as admin
 const cookie = Astro.request.headers.get('cookie') || '';
 const userMatch = cookie.match(/dsn_user=([^;]+)/);
 let isAdmin = false;
@@ -11,10 +10,7 @@ if (userMatch) {
     isAdmin = user.email === 'stharpe98@gmail.com';
   } catch {}
 }
-
-if (isAdmin) {
-  return Astro.redirect('/admin/dashboard');
-}
+if (isAdmin) return Astro.redirect('/admin/dashboard');
 ---
 <Base title="Admin Login — Denver Social">
   <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
@@ -22,45 +18,90 @@ if (isAdmin) {
       <div style="font-family:'Instrument Serif',serif;font-size:22px;font-weight:900;color:#fff;margin-bottom:6px">
         Denver Social <span style="color:#F05A28">Nights</span>
       </div>
-      <div style="color:#888;font-size:13px;margin-bottom:36px">Admin access · Enter your email to get a login link</div>
 
-      <div id="form">
-        <input
-          type="email"
-          id="emailInput"
-          placeholder="your@email.com"
-          style="width:100%;background:#0f0f12;border:1.5px solid #2e2e36;border-radius:12px;padding:13px 16px;color:#f0f0f0;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px;box-sizing:border-box"
-        />
-        <button
-          id="sendBtn"
-          style="width:100%;background:#F05A28;color:#fff;border:none;border-radius:50px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit"
-        >
-          Send My Link →
+      <!-- STEP 1: Email -->
+      <div id="stepEmail">
+        <div style="color:#888;font-size:13px;margin-bottom:28px">Admin access · Enter your email to get a code</div>
+        <input type="email" id="emailInput" placeholder="your@email.com"
+          style="width:100%;background:#0f0f12;border:1.5px solid #2e2e36;border-radius:12px;padding:13px 16px;color:#f0f0f0;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px;box-sizing:border-box"/>
+        <button id="sendBtn"
+          style="width:100%;background:#F05A28;color:#fff;border:none;border-radius:50px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">
+          Send My Code →
         </button>
-        <div id="error" style="color:#f87171;font-size:13px;margin-top:10px;display:none"></div>
+        <div id="sendError" style="color:#f87171;font-size:13px;margin-top:10px;display:none"></div>
       </div>
 
-      <div id="success" style="display:none">
-        <div style="font-size:48px;margin-bottom:16px">📬</div>
-        <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:8px">Check your inbox</div>
-        <div style="color:#888;font-size:14px;line-height:1.6">We sent a login link to <span id="sentTo" style="color:#F05A28"></span>. It expires in 15 minutes.</div>
+      <!-- STEP 2: OTP -->
+      <div id="stepOtp" style="display:none">
+        <div style="color:#888;font-size:13px;margin-bottom:8px">We sent a 6-digit code to</div>
+        <div id="sentTo" style="color:#F05A28;font-size:14px;font-weight:600;margin-bottom:24px"></div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px" id="otpInputs">
+          <input type="text" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:24px;font-weight:700;background:#0f0f12;border:1.5px solid #2e2e36;border-radius:12px;color:#f0f0f0;font-family:inherit;outline:none"/>
+          <input type="text" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:24px;font-weight:700;background:#0f0f12;border:1.5px solid #2e2e36;border-radius:12px;color:#f0f0f0;font-family:inherit;outline:none"/>
+          <input type="text" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:24px;font-weight:700;background:#0f0f12;border:1.5px solid #2e2e36;border-radius:12px;color:#f0f0f0;font-family:inherit;outline:none"/>
+          <input type="text" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:24px;font-weight:700;background:#0f0f12;border:1.5px solid #2e2e36;border-radius:12px;color:#f0f0f0;font-family:inherit;outline:none"/>
+          <input type="text" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:24px;font-weight:700;background:#0f0f12;border:1.5px solid #2e2e36;border-radius:12px;color:#f0f0f0;font-family:inherit;outline:none"/>
+          <input type="text" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:24px;font-weight:700;background:#0f0f12;border:1.5px solid #2e2e36;border-radius:12px;color:#f0f0f0;font-family:inherit;outline:none"/>
+        </div>
+        <button id="verifyBtn"
+          style="width:100%;background:#F05A28;color:#fff;border:none;border-radius:50px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;opacity:0.5" disabled>
+          Verify Code →
+        </button>
+        <div id="otpError" style="color:#f87171;font-size:13px;margin-top:10px;display:none"></div>
+        <div style="margin-top:14px">
+          <a id="resendLink" style="color:#888;font-size:12px;cursor:pointer;text-decoration:underline">Resend code</a>
+          &nbsp;·&nbsp;
+          <a id="backLink" style="color:#888;font-size:12px;cursor:pointer;text-decoration:underline">Change email</a>
+        </div>
       </div>
+
     </div>
   </div>
 
   <script>
-    async function sendLink() {
+    let currentEmail = '';
+
+    const sendBtn = document.getElementById('sendBtn')!;
+    const verifyBtn = document.getElementById('verifyBtn')!;
+    const otpBoxes = document.querySelectorAll<HTMLInputElement>('#otpInputs input');
+
+    sendBtn.addEventListener('click', sendCode);
+    document.getElementById('emailInput')!.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendCode(); });
+    verifyBtn.addEventListener('click', verifyCode);
+    document.getElementById('resendLink')!.addEventListener('click', () => { showStep('email'); setTimeout(sendCode, 100); });
+    document.getElementById('backLink')!.addEventListener('click', () => showStep('email'));
+
+    otpBoxes.forEach((box, i) => {
+      box.addEventListener('input', () => {
+        box.value = box.value.replace(/\D/g, '');
+        if (box.value && i < 5) otpBoxes[i + 1].focus();
+        const full = [...otpBoxes].map(b => b.value).join('');
+        (verifyBtn as HTMLButtonElement).disabled = full.length < 6;
+        (verifyBtn as HTMLElement).style.opacity = full.length < 6 ? '0.5' : '1';
+        if (full.length === 6) verifyCode();
+      });
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !box.value && i > 0) otpBoxes[i - 1].focus();
+      });
+    });
+
+    function showStep(step: string) {
+      (document.getElementById('stepEmail') as HTMLElement).style.display = step === 'email' ? 'block' : 'none';
+      (document.getElementById('stepOtp') as HTMLElement).style.display = step === 'otp' ? 'block' : 'none';
+    }
+
+    async function sendCode() {
       const email = (document.getElementById('emailInput') as HTMLInputElement).value.trim();
-      const btn = document.getElementById('sendBtn') as HTMLButtonElement;
-      const errEl = document.getElementById('error') as HTMLElement;
+      const errEl = document.getElementById('sendError')!;
       errEl.style.display = 'none';
       if (!email || !email.includes('@')) {
         errEl.textContent = 'Please enter a valid email.';
         errEl.style.display = 'block';
         return;
       }
-      btn.disabled = true;
-      btn.textContent = 'Sending...';
+      currentEmail = email;
+      sendBtn.setAttribute('disabled', 'true');
+      sendBtn.textContent = 'Sending...';
       try {
         const res = await fetch('/api/magic-link', {
           method: 'POST',
@@ -68,20 +109,48 @@ if (isAdmin) {
           body: JSON.stringify({ email }),
         });
         if (!res.ok) throw new Error();
-        (document.getElementById('form') as HTMLElement).style.display = 'none';
         (document.getElementById('sentTo') as HTMLElement).textContent = email;
-        (document.getElementById('success') as HTMLElement).style.display = 'block';
+        otpBoxes.forEach(b => b.value = '');
+        (verifyBtn as HTMLButtonElement).disabled = true;
+        (verifyBtn as HTMLElement).style.opacity = '0.5';
+        showStep('otp');
+        otpBoxes[0].focus();
       } catch {
         errEl.textContent = 'Something went wrong. Try again.';
         errEl.style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = 'Send My Link →';
       }
+      sendBtn.removeAttribute('disabled');
+      sendBtn.textContent = 'Send My Code →';
     }
 
-    document.getElementById('sendBtn')?.addEventListener('click', sendLink);
-    document.getElementById('emailInput')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') sendLink();
-    });
+    async function verifyCode() {
+      const code = [...otpBoxes].map(b => b.value).join('');
+      if (code.length < 6) return;
+      const errEl = document.getElementById('otpError')!;
+      errEl.style.display = 'none';
+      verifyBtn.setAttribute('disabled', 'true');
+      verifyBtn.textContent = 'Verifying...';
+      try {
+        const res = await fetch('/admin/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, email: currentEmail }),
+        });
+        const data = await res.json() as any;
+        if (data.ok) {
+          window.location.href = '/admin/dashboard';
+        } else {
+          errEl.textContent = data.error || 'Incorrect code. Try again.';
+          errEl.style.display = 'block';
+          otpBoxes.forEach(b => b.value = '');
+          otpBoxes[0].focus();
+        }
+      } catch {
+        errEl.textContent = 'Something went wrong. Try again.';
+        errEl.style.display = 'block';
+      }
+      verifyBtn.removeAttribute('disabled');
+      verifyBtn.textContent = 'Verify Code →';
+    }
   </script>
 </Base>
