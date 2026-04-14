@@ -12,182 +12,257 @@ if (userMatch) {
 }
 if (isAdmin) return Astro.redirect('/admin/dashboard');
 ---
-<AdminBase title="Admin Login — Denver Social">
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+<AdminBase title="Admin — Denver Social">
+<style>
+  .login-wrap {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
 
-    <div style="width:100%;max-width:420px;">
+  /* LEFT */
+  .login-left {
+    position: relative;
+    overflow: hidden;
+    background: #080a10;
+    display: flex;
+    flex-direction: column;
+    padding: 48px;
+  }
+  .login-left-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 90% 70% at 10% 90%, rgba(240,90,40,0.3) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 60% at 90% 10%, rgba(59,130,246,0.12) 0%, transparent 50%);
+    z-index: 0;
+  }
+  .login-left-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+    background-size: 44px 44px;
+    z-index: 0;
+  }
+  .login-left-content { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; }
+  .login-brand { display: flex; align-items: center; gap: 12px; }
+  .login-brand-icon { width: 42px; height: 42px; background: #F05A28; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 0 28px rgba(240,90,40,0.45); }
+  .login-brand-name { font-family: 'Instrument Serif', serif; font-size: 20px; color: #fff; font-weight: 900; }
 
-      <!-- Logo -->
-      <div style="text-align:center;margin-bottom:48px;">
-        <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:16px;">
-          <div style="width:40px;height:40px;background:#F05A28;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;">🌆</div>
-          <span style="font-family:'Instrument Serif',serif;font-size:22px;font-weight:900;color:#fff;">Denver Social</span>
-        </div>
-        <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#F05A28;font-weight:600;">Admin Access</div>
+  .login-hero { margin-top: auto; padding-bottom: 12px; }
+  .login-eyebrow { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #F05A28; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .login-eyebrow::before { content: ''; width: 20px; height: 2px; background: #F05A28; display: inline-block; }
+  .login-h1 { font-family: 'Instrument Serif', serif; font-size: clamp(40px, 4.5vw, 62px); font-weight: 900; color: #fff; line-height: 1.0; letter-spacing: -1.5px; margin-bottom: 20px; }
+  .login-h1 em { font-style: italic; color: #F05A28; }
+  .login-sub { color: rgba(255,255,255,0.3); font-size: 15px; line-height: 1.7; font-weight: 300; max-width: 320px; margin-bottom: 40px; }
+  .login-stats { display: flex; gap: 28px; }
+  .login-stat-num { font-family: 'Instrument Serif', serif; font-size: 26px; font-weight: 900; color: #fff; line-height: 1; }
+  .login-stat-lbl { font-size: 10px; color: rgba(255,255,255,.3); text-transform: uppercase; letter-spacing: 1.2px; margin-top: 3px; }
+
+  /* RIGHT */
+  .login-right {
+    background: #0b0d15;
+    display: flex; align-items: center; justify-content: center;
+    padding: 48px 40px;
+  }
+  .login-form-wrap { width: 100%; max-width: 380px; }
+
+  .login-step-title { font-family: 'Instrument Serif', serif; font-size: 32px; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: 6px; }
+  .login-step-title em { font-style: italic; color: #F05A28; }
+  .login-step-sub { color: #5a6478; font-size: 14px; margin-bottom: 32px; line-height: 1.6; }
+  .login-step-sub span { color: #F05A28; font-weight: 600; }
+
+  .form-card { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); border-radius: 20px; padding: 28px; margin-bottom: 16px; }
+  .form-label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #5a6478; margin-bottom: 10px; }
+  .form-input {
+    width: 100%; padding: 14px 16px;
+    background: rgba(255,255,255,.05); border: 1.5px solid rgba(255,255,255,.08);
+    border-radius: 12px; font-size: 15px; color: #e8ecf4;
+    font-family: 'DM Sans', sans-serif; outline: none; transition: all 0.2s;
+    margin-bottom: 16px;
+  }
+  .form-input:focus { border-color: #F05A28; background: rgba(240,90,40,.05); }
+  .form-btn {
+    width: 100%; background: #F05A28; color: #fff; border: none;
+    border-radius: 50px; padding: 15px; font-size: 15px; font-weight: 700;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: opacity 0.2s;
+    letter-spacing: 0.2px;
+  }
+  .form-btn:hover { opacity: 0.88; }
+  .form-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* OTP boxes */
+  .otp-row { display: flex; gap: 8px; justify-content: center; margin-bottom: 24px; }
+  .otp-box {
+    width: 50px; height: 60px; text-align: center; font-size: 26px; font-weight: 700;
+    background: rgba(255,255,255,.05); border: 1.5px solid rgba(255,255,255,.1);
+    border-radius: 14px; color: #fff; font-family: 'DM Sans', sans-serif; outline: none;
+    transition: all 0.18s;
+  }
+  .otp-box:focus { border-color: #F05A28; background: rgba(240,90,40,.07); }
+  .otp-box.filled { border-color: rgba(240,90,40,0.5); }
+  .otp-box.error { border-color: rgba(239,68,68,0.6); background: rgba(239,68,68,.06); }
+
+  .form-links { display: flex; justify-content: center; gap: 18px; }
+  .form-link { color: #5a6478; font-size: 12px; cursor: pointer; text-decoration: underline; background: none; border: none; font-family: 'DM Sans', sans-serif; }
+  .form-link:hover { color: #e8ecf4; }
+  .form-error { color: #f87171; font-size: 13px; margin-top: 10px; display: none; text-align: center; }
+  .form-footer { text-align: center; color: #2d3748; font-size: 12px; margin-top: 16px; }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .login-wrap { grid-template-columns: 1fr; }
+    .login-left { display: none; }
+    .login-right { padding: 40px 24px; min-height: 100vh; }
+  }
+</style>
+
+<div class="login-wrap">
+  <!-- LEFT -->
+  <div class="login-left">
+    <div class="login-left-bg"></div>
+    <div class="login-left-grid"></div>
+    <div class="login-left-content">
+      <div class="login-brand">
+        <div class="login-brand-icon">🌆</div>
+        <span class="login-brand-name">Denver Social</span>
       </div>
+      <div class="login-hero">
+        <div class="login-eyebrow">Admin Portal</div>
+        <h1 class="login-h1">Your city.<br>Your <em>crew.</em><br>Your dashboard.</h1>
+        <p class="login-sub">Manage events, members, and everything happening across Denver Social.</p>
+        <div class="login-stats">
+          <div><div class="login-stat-num">88+</div><div class="login-stat-lbl">Members</div></div>
+          <div><div class="login-stat-num">12+</div><div class="login-stat-lbl">Events</div></div>
+          <div><div class="login-stat-num">RiNo</div><div class="login-stat-lbl">Home base</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="login-right">
+    <div class="login-form-wrap">
 
       <!-- STEP 1: Email -->
       <div id="stepEmail">
-        <h1 style="font-family:'Instrument Serif',serif;font-size:36px;font-weight:900;color:#fff;text-align:center;margin-bottom:8px;line-height:1.1;">
-          Welcome <span style="font-style:italic;color:#F05A28;">back.</span>
-        </h1>
-        <p style="text-align:center;color:#6b7a8e;font-size:15px;margin-bottom:36px;font-weight:300;">
-          Enter your email and we'll send you a 6-digit code.
-        </p>
-
-        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px;">
-          <label style="display:block;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#6b7a8e;margin-bottom:8px;">Email Address</label>
-          <input
-            type="email"
-            id="emailInput"
-            placeholder="you@example.com"
-            class="input"
-            style="margin-bottom:16px;"
-          />
-          <button id="sendBtn" style="width:100%;background:#F05A28;color:#fff;border:none;border-radius:50px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity 0.2s;letter-spacing:0.3px;">
-            Send My Code →
-          </button>
-          <div id="sendError" style="color:#f87171;font-size:13px;margin-top:12px;display:none;text-align:center;"></div>
+        <h2 class="login-step-title">Welcome <em>back,</em><br>Seth.</h2>
+        <p class="login-step-sub">Enter your email and we'll send a 6-digit code to your inbox.</p>
+        <div class="form-card">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="emailInput" class="form-input" placeholder="stharpe98@gmail.com" />
+          <button id="sendBtn" class="form-btn">Send My Code →</button>
+          <div id="sendError" class="form-error"></div>
         </div>
-
-        <p style="text-align:center;color:#2d3748;font-size:12px;margin-top:20px;">
-          Only authorized admins can access this area.
-        </p>
+        <div class="form-footer">Only authorized admins can access this area.</div>
       </div>
 
       <!-- STEP 2: OTP -->
-      <div id="stepOtp" style="display:none;">
-        <h1 style="font-family:'Instrument Serif',serif;font-size:36px;font-weight:900;color:#fff;text-align:center;margin-bottom:8px;line-height:1.1;">
-          Check your <span style="font-style:italic;color:#F05A28;">inbox.</span>
-        </h1>
-        <p style="text-align:center;color:#6b7a8e;font-size:15px;margin-bottom:8px;font-weight:300;">
-          We sent a 6-digit code to
-        </p>
-        <p id="sentTo" style="text-align:center;color:#F05A28;font-size:15px;font-weight:600;margin-bottom:36px;"></p>
-
-        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px;">
-          <label style="display:block;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#6b7a8e;margin-bottom:20px;text-align:center;">Enter Code</label>
-
-          <div id="otpInputs" style="display:flex;gap:10px;justify-content:center;margin-bottom:24px;">
-            <input type="text" maxlength="1" style="width:52px;height:64px;text-align:center;font-size:28px;font-weight:700;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;"/>
-            <input type="text" maxlength="1" style="width:52px;height:64px;text-align:center;font-size:28px;font-weight:700;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;"/>
-            <input type="text" maxlength="1" style="width:52px;height:64px;text-align:center;font-size:28px;font-weight:700;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;"/>
-            <input type="text" maxlength="1" style="width:52px;height:64px;text-align:center;font-size:28px;font-weight:700;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;"/>
-            <input type="text" maxlength="1" style="width:52px;height:64px;text-align:center;font-size:28px;font-weight:700;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;"/>
-            <input type="text" maxlength="1" style="width:52px;height:64px;text-align:center;font-size:28px;font-weight:700;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;"/>
+      <div id="stepOtp" style="display:none">
+        <h2 class="login-step-title">Check your <em>inbox.</em></h2>
+        <p class="login-step-sub">6-digit code sent to <span id="sentTo"></span></p>
+        <div class="form-card">
+          <label class="form-label" style="text-align:center;display:block;margin-bottom:18px;">Enter Code</label>
+          <div class="otp-row" id="otpInputs">
+            <input type="text" maxlength="1" class="otp-box" inputmode="numeric" />
+            <input type="text" maxlength="1" class="otp-box" inputmode="numeric" />
+            <input type="text" maxlength="1" class="otp-box" inputmode="numeric" />
+            <input type="text" maxlength="1" class="otp-box" inputmode="numeric" />
+            <input type="text" maxlength="1" class="otp-box" inputmode="numeric" />
+            <input type="text" maxlength="1" class="otp-box" inputmode="numeric" />
           </div>
-
-          <button id="verifyBtn" disabled style="width:100%;background:#F05A28;color:#fff;border:none;border-radius:50px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;opacity:0.4;transition:opacity 0.2s;">
-            Verify Code →
-          </button>
-          <div id="otpError" style="color:#f87171;font-size:13px;margin-top:12px;display:none;text-align:center;"></div>
+          <button id="verifyBtn" class="form-btn" disabled>Verify Code →</button>
+          <div id="otpError" class="form-error"></div>
         </div>
-
-        <div style="display:flex;justify-content:center;gap:20px;margin-top:20px;">
-          <a id="resendLink" style="color:#6b7a8e;font-size:13px;cursor:pointer;text-decoration:underline;">Resend code</a>
-          <span style="color:#2d3748;">·</span>
-          <a id="backLink" style="color:#6b7a8e;font-size:13px;cursor:pointer;text-decoration:underline;">Change email</a>
+        <div class="form-links">
+          <button class="form-link" id="resendLink">Resend code</button>
+          <button class="form-link" id="backLink">Change email</button>
         </div>
       </div>
 
     </div>
   </div>
+</div>
 
-  <script>
-    let currentEmail = '';
-    const sendBtn = document.getElementById('sendBtn') as HTMLButtonElement;
-    const verifyBtn = document.getElementById('verifyBtn') as HTMLButtonElement;
-    const otpBoxes = document.querySelectorAll<HTMLInputElement>('#otpInputs input');
+<script>
+  let currentEmail = '';
+  const sendBtn = document.getElementById('sendBtn') as HTMLButtonElement;
+  const verifyBtn = document.getElementById('verifyBtn') as HTMLButtonElement;
+  const otpBoxes = document.querySelectorAll<HTMLInputElement>('.otp-box');
 
-    sendBtn.addEventListener('click', sendCode);
-    document.getElementById('emailInput')!.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendCode(); });
-    verifyBtn.addEventListener('click', verifyCode);
-    document.getElementById('resendLink')!.addEventListener('click', () => { showStep('email'); setTimeout(sendCode, 100); });
-    document.getElementById('backLink')!.addEventListener('click', () => showStep('email'));
+  sendBtn.addEventListener('click', sendCode);
+  document.getElementById('emailInput')!.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendCode(); });
+  verifyBtn.addEventListener('click', verifyCode);
+  document.getElementById('resendLink')!.addEventListener('click', () => { showStep('email'); setTimeout(sendCode, 100); });
+  document.getElementById('backLink')!.addEventListener('click', () => showStep('email'));
 
-    otpBoxes.forEach((box, i) => {
-      box.addEventListener('input', () => {
-        box.value = box.value.replace(/\D/g, '');
-        if (box.value && i < 5) otpBoxes[i + 1].focus();
-        const full = [...otpBoxes].map(b => b.value).join('');
-        verifyBtn.disabled = full.length < 6;
-        verifyBtn.style.opacity = full.length < 6 ? '0.4' : '1';
-        verifyBtn.style.cursor = full.length < 6 ? 'not-allowed' : 'pointer';
-        if (full.length === 6) verifyCode();
-      });
-      box.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && !box.value && i > 0) otpBoxes[i - 1].focus();
-      });
-      box.addEventListener('focus', () => { box.style.borderColor = '#F05A28'; box.style.background = 'rgba(240,90,40,0.08)'; });
-      box.addEventListener('blur', () => { box.style.borderColor = box.value ? 'rgba(240,90,40,0.5)' : 'rgba(255,255,255,.1)'; box.style.background = 'rgba(255,255,255,.05)'; });
+  otpBoxes.forEach((box, i) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/\D/g, '');
+      box.classList.toggle('filled', !!box.value);
+      if (box.value && i < 5) otpBoxes[i + 1].focus();
+      const full = [...otpBoxes].map(b => b.value).join('');
+      verifyBtn.disabled = full.length < 6;
+      if (full.length === 6) verifyCode();
     });
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !box.value && i > 0) { otpBoxes[i - 1].focus(); otpBoxes[i-1].classList.remove('filled'); }
+    });
+    box.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = e.clipboardData?.getData('text').replace(/\D/g,'').slice(0,6) || '';
+      text.split('').forEach((ch, idx) => { if (otpBoxes[idx]) { otpBoxes[idx].value = ch; otpBoxes[idx].classList.add('filled'); } });
+      if (text.length === 6) verifyCode();
+    });
+  });
 
-    function showStep(step: string) {
-      (document.getElementById('stepEmail') as HTMLElement).style.display = step === 'email' ? 'block' : 'none';
-      (document.getElementById('stepOtp') as HTMLElement).style.display = step === 'otp' ? 'block' : 'none';
-    }
+  function showStep(step: string) {
+    (document.getElementById('stepEmail') as HTMLElement).style.display = step === 'email' ? 'block' : 'none';
+    (document.getElementById('stepOtp') as HTMLElement).style.display = step === 'otp' ? 'block' : 'none';
+  }
 
-    async function sendCode() {
-      const email = (document.getElementById('emailInput') as HTMLInputElement).value.trim();
-      const errEl = document.getElementById('sendError')!;
-      errEl.style.display = 'none';
-      if (!email || !email.includes('@')) {
-        errEl.textContent = 'Please enter a valid email.';
-        errEl.style.display = 'block';
-        return;
-      }
-      currentEmail = email;
-      sendBtn.disabled = true;
-      sendBtn.textContent = 'Sending...';
-      try {
-        const res = await fetch('/api/magic-link', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        });
-        if (!res.ok) throw new Error();
-        (document.getElementById('sentTo') as HTMLElement).textContent = email;
-        otpBoxes.forEach(b => { b.value = ''; b.style.borderColor = 'rgba(255,255,255,.1)'; });
-        verifyBtn.disabled = true;
-        verifyBtn.style.opacity = '0.4';
-        showStep('otp');
-        otpBoxes[0].focus();
-      } catch {
-        errEl.textContent = 'Something went wrong. Try again.';
-        errEl.style.display = 'block';
-      }
-      sendBtn.disabled = false;
-      sendBtn.textContent = 'Send My Code →';
-    }
-
-    async function verifyCode() {
-      const code = [...otpBoxes].map(b => b.value).join('');
-      if (code.length < 6) return;
-      const errEl = document.getElementById('otpError')!;
-      errEl.style.display = 'none';
+  async function sendCode() {
+    const email = (document.getElementById('emailInput') as HTMLInputElement).value.trim();
+    const errEl = document.getElementById('sendError')!;
+    errEl.style.display = 'none';
+    if (!email || !email.includes('@')) { errEl.textContent = 'Please enter a valid email.'; errEl.style.display = 'block'; return; }
+    currentEmail = email;
+    sendBtn.disabled = true; sendBtn.textContent = 'Sending...';
+    try {
+      const res = await fetch('/api/magic-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+      if (!res.ok) throw new Error();
+      (document.getElementById('sentTo') as HTMLElement).textContent = email;
+      otpBoxes.forEach(b => { b.value = ''; b.classList.remove('filled','error'); });
       verifyBtn.disabled = true;
-      verifyBtn.textContent = 'Verifying...';
-      try {
-        const res = await fetch('/admin/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, email: currentEmail }),
-        });
-        const data = await res.json() as any;
-        if (data.ok) {
-          window.location.href = '/admin/dashboard';
-        } else {
-          errEl.textContent = data.error || 'Incorrect code. Try again.';
-          errEl.style.display = 'block';
-          otpBoxes.forEach(b => { b.value = ''; b.style.borderColor = 'rgba(255,0,0,.4)'; });
-          otpBoxes[0].focus();
-        }
-      } catch {
-        errEl.textContent = 'Something went wrong. Try again.';
-        errEl.style.display = 'block';
-      }
-      verifyBtn.disabled = false;
-      verifyBtn.textContent = 'Verify Code →';
+      showStep('otp');
+      otpBoxes[0].focus();
+    } catch {
+      errEl.textContent = 'Something went wrong. Try again.'; errEl.style.display = 'block';
     }
-  </script>
+    sendBtn.disabled = false; sendBtn.textContent = 'Send My Code →';
+  }
+
+  async function verifyCode() {
+    const code = [...otpBoxes].map(b => b.value).join('');
+    if (code.length < 6) return;
+    const errEl = document.getElementById('otpError')!;
+    errEl.style.display = 'none';
+    verifyBtn.disabled = true; verifyBtn.textContent = 'Verifying...';
+    try {
+      const res = await fetch('/admin/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, email: currentEmail }) });
+      const data = await res.json() as any;
+      if (data.ok) {
+        window.location.href = '/admin/dashboard';
+      } else {
+        errEl.textContent = data.error || 'Incorrect code. Try again.'; errEl.style.display = 'block';
+        otpBoxes.forEach(b => { b.value = ''; b.classList.remove('filled'); b.classList.add('error'); });
+        otpBoxes[0].focus();
+        setTimeout(() => otpBoxes.forEach(b => b.classList.remove('error')), 1500);
+      }
+    } catch {
+      errEl.textContent = 'Something went wrong. Try again.'; errEl.style.display = 'block';
+    }
+    verifyBtn.disabled = false; verifyBtn.textContent = 'Verify Code →';
+  }
+</script>
 </AdminBase>

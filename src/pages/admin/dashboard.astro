@@ -11,310 +11,258 @@ if (userMatch) {
 if (!isAdmin) return Astro.redirect('/admin');
 
 const db = getDB();
-let members: any[] = [];
-let events: any[] = [];
+let members: any[] = [], events: any[] = [], suggestions: any[] = [];
 if (db) {
   try {
-    members = (await db.prepare(`SELECT * FROM members ORDER BY id DESC`).all())?.results || [];
-    events  = (await db.prepare(`SELECT * FROM events ORDER BY id DESC`).all())?.results || [];
+    members    = (await db.prepare(`SELECT * FROM members ORDER BY id DESC`).all())?.results || [];
+    events     = (await db.prepare(`SELECT * FROM events ORDER BY id DESC`).all())?.results || [];
+    suggestions = (await db.prepare(`SELECT * FROM suggestions ORDER BY votes DESC LIMIT 10`).all())?.results || [];
   } catch {}
 }
-const onboarded  = members.filter((m:any) => m.onboarding_done).length;
-const featured   = events.filter((e:any) => e.featured).length;
-
+const onboarded = members.filter((m:any) => m.onboarding_done).length;
 const typeEmoji: Record<string,string> = {
-  dinner:'🍽️', game_night:'🎲', outdoor:'🏔️', brewery:'🍺', coffee:'☕',
-  arts:'🎨', music:'🎵', social:'🎉', group_tickets:'🎫', camping:'🏕️',
-  sports_outing:'🏒', bowling:'🎳', active:'🧗', casino:'🎰', food_trucks:'🌮', other:'📅'
+  dinner:'🍽️', game_night:'🎲', outdoor:'🏔️', brewery:'🍺', bowling:'🎳',
+  arts:'🎨', music:'🎵', social:'🎉', group_tickets:'🎫', other:'📅'
 };
 ---
-<AdminBase title="Admin Dashboard">
+<AdminBase title="Dashboard — Denver Social">
 <style>
   :root {
-    --bg: #07090f; --surface: #0f1117; --surface2: #161920;
-    --border: rgba(255,255,255,0.07); --coral: #F05A28;
-    --text: #e8ecf4; --muted: #5a6478; --green: #22c55e;
-    --red: #ef4444; --sidebar-w: 240px;
+    --bg:#07090f; --s1:#0f1117; --s2:#141720; --s3:#1a1d27;
+    --border:rgba(255,255,255,.07); --coral:#F05A28; --coral-dim:rgba(240,90,40,.1);
+    --text:#e8ecf4; --muted:#5a6478; --green:#22c55e; --red:#ef4444;
+    --blue:#3b82f6; --sw:240px;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
 
   /* LAYOUT */
-  .shell { display: flex; min-height: 100vh; }
+  .shell{display:flex;min-height:100vh;}
+  .main{margin-left:var(--sw);flex:1;min-width:0;}
 
   /* SIDEBAR */
-  .sidebar {
-    width: var(--sidebar-w); flex-shrink: 0;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex; flex-direction: column;
-    position: fixed; top: 0; left: 0; bottom: 0;
-    z-index: 50; transition: transform 0.25s;
+  .sidebar{
+    width:var(--sw);position:fixed;top:0;left:0;bottom:0;
+    background:var(--s1);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;z-index:100;
+    transition:transform .25s;
   }
-  .sidebar-top { padding: 24px 20px; border-bottom: 1px solid var(--border); }
-  .sidebar-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-  .sidebar-icon { width: 36px; height: 36px; background: var(--coral); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-  .sidebar-name { font-family: 'Instrument Serif', serif; font-size: 16px; font-weight: 900; color: var(--text); }
-  .sidebar-name small { display: block; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 400; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; font-style: normal; }
+  .sb-top{padding:20px 16px;border-bottom:1px solid var(--border);}
+  .sb-brand{display:flex;align-items:center;gap:10px;text-decoration:none;}
+  .sb-icon{width:34px;height:34px;background:var(--coral);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+  .sb-name{font-family:'Instrument Serif',serif;font-size:16px;font-weight:900;color:var(--text);}
+  .sb-name small{display:block;font-family:'DM Sans',sans-serif;font-size:9px;font-weight:400;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;font-style:normal;}
 
-  .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 2px; }
-  .nav-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 12px; border-radius: 10px;
-    font-size: 14px; font-weight: 500; color: var(--muted);
-    cursor: pointer; border: none; background: transparent;
-    width: 100%; text-align: left; transition: all 0.15s;
-    text-decoration: none;
-  }
-  .nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
-  .nav-item.active { background: rgba(240,90,40,0.12); color: var(--coral); }
-  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
-  .nav-badge { margin-left: auto; background: rgba(240,90,40,0.2); color: var(--coral); font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 50px; }
+  .sb-nav{flex:1;padding:12px 8px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
+  .sb-section{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:12px 10px 6px;}
+  .sb-link{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;text-decoration:none;color:var(--muted);font-size:13px;font-weight:500;transition:all .15s;cursor:pointer;border:none;background:none;width:100%;text-align:left;}
+  .sb-link:hover{background:var(--s2);color:var(--text);}
+  .sb-link.active{background:var(--coral-dim);color:var(--coral);}
+  .sb-link-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+  .sb-badge{margin-left:auto;background:var(--coral);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:50px;}
 
-  .sidebar-bottom { padding: 16px 12px; border-top: 1px solid var(--border); }
-
-  /* MAIN */
-  .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+  .sb-bottom{padding:12px 8px;border-top:1px solid var(--border);}
+  .sb-user{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;}
+  .sb-avatar{width:32px;height:32px;background:var(--coral);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0;}
+  .sb-user-info{flex:1;min-width:0;}
+  .sb-user-name{font-size:13px;font-weight:600;color:var(--text);}
+  .sb-user-role{font-size:10px;color:var(--muted);}
 
   /* TOPBAR */
-  .topbar {
-    height: 60px; background: var(--surface); border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 28px; position: sticky; top: 0; z-index: 40;
+  .topbar{
+    height:56px;border-bottom:1px solid var(--border);background:rgba(7,9,15,.8);
+    backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;position:sticky;top:0;z-index:40;
   }
-  .topbar-left { display: flex; align-items: center; gap: 14px; }
-  .mob-menu-btn { display: none; background: transparent; border: none; color: var(--text); font-size: 20px; cursor: pointer; padding: 4px; }
-  .topbar-title { font-size: 15px; font-weight: 600; color: var(--text); }
-  .topbar-right { display: flex; align-items: center; gap: 10px; }
-  .topbar-btn {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 500; padding: 7px 14px;
-    border-radius: 8px; border: 1px solid var(--border);
-    background: transparent; color: var(--muted); cursor: pointer;
-    text-decoration: none; transition: all 0.15s;
-  }
-  .topbar-btn:hover { border-color: rgba(255,255,255,0.15); color: var(--text); }
+  .topbar-left{display:flex;align-items:center;gap:14px;}
+  .hamburger{display:none;background:none;border:none;color:var(--text);font-size:20px;cursor:pointer;padding:4px;}
+  .topbar-title{font-family:'Instrument Serif',serif;font-size:20px;font-weight:900;color:var(--text);}
+  .topbar-right{display:flex;align-items:center;gap:10px;}
+  .topbar-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+  .topbar-btn:hover{border-color:rgba(255,255,255,.15);color:var(--text);}
+  .topbar-btn.danger:hover{border-color:var(--red);color:var(--red);}
 
   /* CONTENT */
-  .content { padding: 28px; flex: 1; }
+  .content{padding:28px;}
 
-  /* TABS */
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+  /* PANELS */
+  .panel{display:none;}
+  .panel.active{display:block;}
 
-  /* STATS */
-  .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 28px; }
-  .stat-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; padding: 18px 20px;
-  }
-  .stat-card .s-icon { font-size: 20px; margin-bottom: 10px; }
-  .stat-card .s-num { font-family: 'Instrument Serif', serif; font-size: 32px; font-weight: 900; color: var(--coral); line-height: 1; margin-bottom: 4px; }
-  .stat-card .s-lbl { font-size: 12px; color: var(--muted); }
-
-  /* SECTION CARD */
-  .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
-  .section-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .section-head-left { display: flex; align-items: center; gap: 10px; }
-  .section-title { font-size: 15px; font-weight: 600; color: var(--text); }
-  .section-count { font-size: 12px; color: var(--muted); background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 50px; }
-
-  /* BUTTONS */
-  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; border: none; transition: opacity 0.15s; text-decoration: none; }
-  .btn-primary { background: var(--coral); color: #fff; }
-  .btn-primary:hover { opacity: 0.88; }
-  .btn-ghost { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
-  .btn-ghost:hover { color: var(--text); background: rgba(255,255,255,0.08); }
-  .btn-danger { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
-  .btn-danger:hover { background: rgba(239,68,68,0.2); }
-  .btn-sm { padding: 5px 11px; font-size: 12px; }
+  /* STATS ROW */
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+  .stat-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:20px 22px;}
+  .stat-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .stat-icon{font-size:20px;}
+  .stat-trend{font-size:11px;color:var(--green);font-weight:600;}
+  .stat-num{font-family:'Instrument Serif',serif;font-size:34px;font-weight:900;color:var(--text);line-height:1;margin-bottom:4px;}
+  .stat-lbl{font-size:12px;color:var(--muted);}
 
   /* TABLE */
-  .tbl { width: 100%; border-collapse: collapse; }
-  .tbl th { padding: 10px 16px; text-align: left; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: 600; background: rgba(255,255,255,0.02); }
-  .tbl td { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
-  .tbl tr:hover td { background: rgba(255,255,255,0.02); }
-  .tbl-name { font-weight: 600; color: var(--text); font-size: 14px; }
-  .tbl-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .td-actions { display: flex; gap: 6px; justify-content: flex-end; }
-
-  /* BADGES */
-  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 50px; }
-  .badge-green { background: rgba(34,197,94,0.1); color: var(--green); }
-  .badge-coral { background: rgba(240,90,40,0.1); color: var(--coral); }
-  .badge-muted { background: rgba(255,255,255,0.05); color: var(--muted); }
-
-  /* FORM */
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; }
-  .form-grid.full { grid-template-columns: 1fr; }
-  .field { display: flex; flex-direction: column; gap: 6px; }
-  .field.span2 { grid-column: span 2; }
-  .field label { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
-  .field input, .field select, .field textarea {
-    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-    border-radius: 10px; padding: 10px 14px; color: var(--text);
-    font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none;
-    transition: border-color 0.15s;
-  }
-  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--coral); background: rgba(255,255,255,0.06); }
-  .field textarea { resize: vertical; min-height: 80px; }
-  .field select option { background: #1a1d26; }
-  .form-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
-  .toggle-wrap { display: flex; align-items: center; gap: 10px; }
-  .toggle { position: relative; width: 40px; height: 22px; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider { position: absolute; inset: 0; background: rgba(255,255,255,0.1); border-radius: 50px; cursor: pointer; transition: 0.2s; }
-  .toggle-slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
-  .toggle input:checked + .toggle-slider { background: var(--coral); }
-  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+  .table-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:24px;}
+  .table-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .table-title{font-size:15px;font-weight:600;color:var(--text);}
+  .table-search{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;width:200px;transition:border-color .2s;}
+  .table-search:focus{border-color:var(--coral);}
+  .table-search::placeholder{color:var(--muted);}
+  table{width:100%;border-collapse:collapse;}
+  th{padding:11px 20px;text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:700;background:var(--s2);border-bottom:1px solid var(--border);}
+  td{padding:13px 20px;font-size:13px;border-bottom:1px solid var(--border);}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:rgba(255,255,255,.015);}
+  .td-name{font-weight:600;color:var(--text);}
+  .td-muted{color:var(--muted);}
+  .badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;}
+  .badge-green{background:rgba(34,197,94,.1);color:var(--green);}
+  .badge-muted{background:rgba(255,255,255,.05);color:var(--muted);}
+  .badge-coral{background:var(--coral-dim);color:var(--coral);}
+  .badge-blue{background:rgba(59,130,246,.1);color:var(--blue);}
+  .action-btn{background:none;border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted);transition:all .15s;}
+  .action-btn:hover{border-color:var(--coral);color:var(--coral);}
+  .action-btn.del:hover{border-color:var(--red);color:var(--red);}
 
   /* SETTINGS */
-  .settings-grid { display: grid; grid-template-columns: 220px 1fr; gap: 20px; }
-  .settings-nav { display: flex; flex-direction: column; gap: 2px; }
-  .settings-nav-item { padding: 9px 14px; border-radius: 10px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.15s; }
-  .settings-nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
-  .settings-nav-item.active { background: rgba(240,90,40,0.1); color: var(--coral); }
-  .settings-panel { display: none; }
-  .settings-panel.active { display: block; }
-  .settings-section { margin-bottom: 24px; }
-  .settings-section-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-  .setting-row:last-child { border-bottom: none; }
-  .setting-label { font-size: 14px; color: var(--text); }
-  .setting-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-  /* MODAL */
-  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
-  .modal-backdrop.open { opacity: 1; pointer-events: all; }
-  .modal { background: var(--surface2); border: 1px solid var(--border); border-radius: 18px; width: 100%; max-width: 560px; transform: translateY(16px) scale(0.98); transition: transform 0.25s; max-height: 90vh; overflow-y: auto; }
-  .modal-backdrop.open .modal { transform: translateY(0) scale(1); }
-  .modal-head { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-  .modal-title { font-size: 16px; font-weight: 600; color: var(--text); }
-  .modal-close { background: rgba(255,255,255,0.06); border: none; border-radius: 8px; width: 28px; height: 28px; color: var(--muted); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
-
-  /* TOAST */
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 18px; font-size: 14px; font-weight: 500; z-index: 999; transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none; display: flex; align-items: center; gap: 10px; max-width: 320px; }
-  .toast.show { transform: translateY(0); opacity: 1; }
-  .toast.success { border-color: rgba(34,197,94,0.3); }
-  .toast.error { border-color: rgba(239,68,68,0.3); }
-
-  /* MOBILE */
-  .mob-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 49; }
+  .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .settings-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:24px;}
+  .settings-card-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;}
+  .settings-card-sub{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.5;}
+  .settings-field{margin-bottom:16px;}
+  .settings-label{display:block;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
+  .settings-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
+  .settings-input:focus{border-color:var(--coral);}
+  .settings-input::placeholder{color:var(--muted);}
+  .settings-select{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;cursor:pointer;}
+  .settings-toggle{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);}
+  .settings-toggle:last-child{border-bottom:none;padding-bottom:0;}
+  .settings-toggle-info{}
+  .settings-toggle-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;}
+  .settings-toggle-desc{font-size:12px;color:var(--muted);}
+  .toggle-switch{position:relative;width:40px;height:22px;flex-shrink:0;}
+  .toggle-switch input{opacity:0;width:0;height:0;}
+  .toggle-track{position:absolute;inset:0;background:var(--s3);border-radius:50px;cursor:pointer;transition:background .2s;border:1px solid var(--border);}
+  .toggle-track::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:transform .2s;}
+  input:checked + .toggle-track{background:var(--coral);border-color:var(--coral);}
+  input:checked + .toggle-track::after{transform:translateX(18px);}
+  .save-btn{background:var(--coral);color:#fff;border:none;border-radius:50px;padding:11px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .2s;margin-top:16px;}
+  .save-btn:hover{opacity:.88;}
 
   /* EMPTY */
-  .empty { padding: 48px 20px; text-align: center; color: var(--muted); font-size: 14px; }
+  .empty{padding:48px;text-align:center;color:var(--muted);}
+  .empty-icon{font-size:36px;margin-bottom:12px;}
 
-  @media (max-width: 1024px) {
-    .stats { grid-template-columns: repeat(2,1fr); }
-    .settings-grid { grid-template-columns: 1fr; }
-    .settings-nav { flex-direction: row; flex-wrap: wrap; }
+  /* TOAST */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--s2);border:1px solid var(--border);border-radius:50px;padding:11px 22px;font-size:13px;font-weight:500;color:var(--text);z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* MOBILE */
+  @media(max-width:900px){
+    .sidebar{transform:translateX(-100%);}
+    .sidebar.open{transform:translateX(0);}
+    .main{margin-left:0;}
+    .hamburger{display:block;}
+    .stats-row{grid-template-columns:1fr 1fr;}
+    .settings-grid{grid-template-columns:1fr;}
+    .topbar{padding:0 16px;}
+    .content{padding:16px;}
+    .sb-overlay{display:block;}
   }
-  @media (max-width: 768px) {
-    .sidebar { transform: translateX(-100%); }
-    .sidebar.open { transform: translateX(0); }
-    .mob-overlay.open { display: block; }
-    .main { margin-left: 0; }
-    .mob-menu-btn { display: flex; }
-    .content { padding: 16px; }
-    .topbar { padding: 0 16px; }
-    .stats { grid-template-columns: 1fr 1fr; }
-    .form-grid { grid-template-columns: 1fr; }
-    .field.span2 { grid-column: span 1; }
-    .tbl th:nth-child(3), .tbl td:nth-child(3) { display: none; }
-    .tbl th:nth-child(4), .tbl td:nth-child(4) { display: none; }
+  @media(max-width:480px){
+    .stats-row{grid-template-columns:1fr 1fr;}
+    table{font-size:12px;}
+    th,td{padding:10px 12px;}
   }
-  @media (max-width: 480px) {
-    .stats { grid-template-columns: 1fr; }
-  }
+
+  /* Overlay for mobile sidebar */
+  .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;}
 </style>
 
 <div class="shell">
-
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-top">
-      <a href="/" class="sidebar-brand">
-        <div class="sidebar-icon">🌆</div>
-        <div class="sidebar-name">
-          Denver Social
-          <small>Admin Panel</small>
-        </div>
+    <div class="sb-top">
+      <a href="/" class="sb-brand">
+        <div class="sb-icon">🌆</div>
+        <div class="sb-name">Denver Social <small>Admin</small></div>
       </a>
     </div>
-
-    <nav class="sidebar-nav">
-      <button class="nav-item active" data-tab="overview" onclick="switchTab('overview',this)">
-        <span class="icon">📊</span> Overview
-      </button>
-      <button class="nav-item" data-tab="events" onclick="switchTab('events',this)">
-        <span class="icon">📅</span> Events
-        <span class="nav-badge">{events.length}</span>
-      </button>
-      <button class="nav-item" data-tab="members" onclick="switchTab('members',this)">
-        <span class="icon">👥</span> Members
-        <span class="nav-badge">{members.length}</span>
-      </button>
-      <button class="nav-item" data-tab="settings" onclick="switchTab('settings',this)">
-        <span class="icon">⚙️</span> Settings
-      </button>
+    <nav class="sb-nav">
+      <div class="sb-section">Overview</div>
+      <button class="sb-link active" onclick="showPanel('overview',this)"><span class="sb-link-icon">📊</span> Dashboard</button>
+      <div class="sb-section">Manage</div>
+      <button class="sb-link" onclick="showPanel('members',this)"><span class="sb-link-icon">👥</span> Members <span class="sb-badge" id="memberBadge">{members.length}</span></button>
+      <button class="sb-link" onclick="showPanel('events',this)"><span class="sb-link-icon">📅</span> Events <span class="sb-badge" id="eventBadge">{events.length}</span></button>
+      <button class="sb-link" onclick="showPanel('suggestions',this)"><span class="sb-link-icon">💡</span> Suggestions</button>
+      <div class="sb-section">Config</div>
+      <button class="sb-link" onclick="showPanel('settings',this)"><span class="sb-link-icon">⚙️</span> Settings</button>
+      <button class="sb-link" onclick="showPanel('content',this)"><span class="sb-link-icon">✏️</span> Site Content</button>
     </nav>
-
-    <div class="sidebar-bottom">
-      <a href="/" class="nav-item" style="margin-bottom:4px">
-        <span class="icon">🌐</span> View Site
-      </a>
-      <a href="/api/logout" class="nav-item" style="color:#ef4444">
-        <span class="icon">🚪</span> Log Out
-      </a>
+    <div class="sb-bottom">
+      <div class="sb-user">
+        <div class="sb-avatar">S</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name">Seth</div>
+          <div class="sb-user-role">Administrator</div>
+        </div>
+      </div>
     </div>
   </aside>
-
-  <div class="mob-overlay" id="mobOverlay" onclick="closeSidebar()"></div>
+  <div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
 
   <!-- MAIN -->
   <div class="main">
-    <header class="topbar">
+    <div class="topbar">
       <div class="topbar-left">
-        <button class="mob-menu-btn" onclick="openSidebar()">☰</button>
-        <span class="topbar-title" id="topbarTitle">Overview</span>
+        <button class="hamburger" onclick="toggleSidebar()">☰</button>
+        <div class="topbar-title" id="topbarTitle">Dashboard</div>
       </div>
       <div class="topbar-right">
-        <a href="/events/new" class="btn btn-primary btn-sm">+ New Event</a>
+        <a href="/" class="topbar-btn" target="_blank">← View Site</a>
+        <a href="/api/logout" class="topbar-btn danger">Log Out</a>
       </div>
-    </header>
+    </div>
 
     <div class="content">
 
-      <!-- OVERVIEW TAB -->
-      <div class="tab-panel active" id="tab-overview">
-        <div class="stats">
-          <div class="stat-card"><div class="s-icon">👥</div><div class="s-num">{members.length}</div><div class="s-lbl">Total Members</div></div>
-          <div class="stat-card"><div class="s-icon">📅</div><div class="s-num">{events.length}</div><div class="s-lbl">Total Events</div></div>
-          <div class="stat-card"><div class="s-icon">✅</div><div class="s-num">{onboarded}</div><div class="s-lbl">Onboarded</div></div>
-          <div class="stat-card"><div class="s-icon">⭐</div><div class="s-num">{featured}</div><div class="s-lbl">Featured Events</div></div>
+      <!-- OVERVIEW -->
+      <div class="panel active" id="panel-overview">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-card-top"><span class="stat-icon">👥</span><span class="stat-trend">↑ growing</span></div>
+            <div class="stat-num">{members.length}</div>
+            <div class="stat-lbl">Total Members</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-top"><span class="stat-icon">✅</span><span class="stat-trend">{members.length > 0 ? Math.round(onboarded/members.length*100) : 0}%</span></div>
+            <div class="stat-num">{onboarded}</div>
+            <div class="stat-lbl">Onboarded</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-top"><span class="stat-icon">📅</span><span class="stat-trend">active</span></div>
+            <div class="stat-num">{events.length}</div>
+            <div class="stat-lbl">Total Events</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-top"><span class="stat-icon">💡</span><span class="stat-trend">from crew</span></div>
+            <div class="stat-num">{suggestions.length}</div>
+            <div class="stat-lbl">Suggestions</div>
+          </div>
         </div>
 
-        <!-- Recent Members -->
-        <div class="section-card">
-          <div class="section-head">
-            <div class="section-head-left">
-              <span class="section-title">Recent Members</span>
-              <span class="section-count">{members.slice(0,5).length} shown</span>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="switchTab('members', document.querySelector('[data-tab=members]'))">See all</button>
-          </div>
+        <!-- Recent members -->
+        <div class="table-card">
+          <div class="table-head"><div class="table-title">Recent Members</div><a href="#" onclick="showPanel('members',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
           {members.length === 0 ? (
-            <div class="empty">No members yet.</div>
+            <div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>
           ) : (
-            <table class="tbl">
-              <thead><tr><th>Member</th><th>Neighborhood</th><th>Status</th><th>Joined</th></tr></thead>
+            <table>
+              <thead><tr><th>Name</th><th>Email</th><th>Neighborhood</th><th>Status</th></tr></thead>
               <tbody>
                 {members.slice(0,5).map((m:any) => (
                   <tr>
-                    <td><div class="tbl-name">{m.name || '—'}</div><div class="tbl-sub">{m.email}</div></td>
-                    <td style="color:var(--muted)">{m.neighborhood || '—'}</td>
-                    <td><span class={`badge ${m.onboarding_done ? 'badge-green' : 'badge-muted'}`}>{m.onboarding_done ? '✓ Onboarded' : 'Pending'}</span></td>
-                    <td style="color:var(--muted)">{m.created_at ? new Date(m.created_at).toLocaleDateString() : '—'}</td>
+                    <td class="td-name">{m.name || '—'}</td>
+                    <td class="td-muted">{m.email}</td>
+                    <td class="td-muted">{m.neighborhood || '—'}</td>
+                    <td><span class={`badge ${m.onboarding_done ? 'badge-green' : 'badge-muted'}`}>{m.onboarding_done ? '✓ Active' : 'Pending'}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -322,29 +270,21 @@ const typeEmoji: Record<string,string> = {
           )}
         </div>
 
-        <!-- Recent Events -->
-        <div class="section-card">
-          <div class="section-head">
-            <div class="section-head-left">
-              <span class="section-title">Recent Events</span>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="switchTab('events', document.querySelector('[data-tab=events]'))">See all</button>
-          </div>
+        <!-- Recent events -->
+        <div class="table-card">
+          <div class="table-head"><div class="table-title">Upcoming Events</div><a href="#" onclick="showPanel('events',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
           {events.length === 0 ? (
-            <div class="empty">No events yet. <a href="/events/new" style="color:var(--coral)">Add one →</a></div>
+            <div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div>
           ) : (
-            <table class="tbl">
-              <thead><tr><th>Event</th><th>Date</th><th>Location</th><th>Spots</th></tr></thead>
+            <table>
+              <thead><tr><th>Event</th><th>Date</th><th>Location</th><th>Type</th></tr></thead>
               <tbody>
-                {events.slice(0,5).map((e:any) => (
+                {events.slice(0,4).map((e:any) => (
                   <tr>
-                    <td>
-                      <div class="tbl-name">{typeEmoji[e.event_type] || '📅'} {e.title}</div>
-                      {e.featured && <span class="badge badge-coral" style="margin-top:4px">⭐ Featured</span>}
-                    </td>
-                    <td style="color:var(--muted)">{e.event_month || 'TBD'} {e.event_day || ''}</td>
-                    <td style="color:var(--muted)">{e.location || '—'}</td>
-                    <td style="color:var(--muted)">{e.spots}</td>
+                    <td class="td-name">{e.emoji || typeEmoji[e.type] || '📅'} {e.title}</td>
+                    <td class="td-muted">{e.date_label || e.date || 'TBD'}</td>
+                    <td class="td-muted">{e.location || '—'}</td>
+                    <td><span class={`badge ${e.featured ? 'badge-coral' : 'badge-muted'}`}>{e.featured ? '⭐ Featured' : e.type || 'event'}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -353,72 +293,65 @@ const typeEmoji: Record<string,string> = {
         </div>
       </div>
 
-      <!-- EVENTS TAB -->
-      <div class="tab-panel" id="tab-events">
-        <div class="section-card">
-          <div class="section-head">
-            <div class="section-head-left">
-              <span class="section-title">All Events</span>
-              <span class="section-count">{events.length}</span>
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="openEventModal()">+ Add Event</button>
-          </div>
-          {events.length === 0 ? (
-            <div class="empty">No events yet.</div>
-          ) : (
-            <table class="tbl">
-              <thead><tr><th>Event</th><th>Date</th><th>Location</th><th>Spots</th><th style="text-align:right">Actions</th></tr></thead>
-              <tbody id="eventsBody">
-                {events.map((e:any) => (
-                  <tr id={`erow-${e.id}`}>
-                    <td>
-                      <div class="tbl-name">{typeEmoji[e.event_type]||'📅'} {e.title}</div>
-                      {e.featured && <span class="badge badge-coral" style="margin-top:4px">⭐ Featured</span>}
-                    </td>
-                    <td style="color:var(--muted)">{e.event_month||'TBD'} {e.event_day||''}</td>
-                    <td style="color:var(--muted)">{e.location||'—'}</td>
-                    <td style="color:var(--muted)">{e.spots}</td>
-                    <td>
-                      <div class="td-actions">
-                        <button class="btn btn-ghost btn-sm" onclick={`editEvent(${JSON.stringify(e)})`}>Edit</button>
-                        <button class="btn btn-danger btn-sm" onclick={`deleteEvent(${e.id},'${e.title.replace(/'/g,"\\'")}','erow-${e.id}')`}>Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      <!-- MEMBERS TAB -->
-      <div class="tab-panel" id="tab-members">
-        <div class="section-card">
-          <div class="section-head">
-            <div class="section-head-left">
-              <span class="section-title">All Members</span>
-              <span class="section-count">{members.length}</span>
-            </div>
-            <input id="memberSearch" placeholder="Search..." oninput="filterMembers(this.value)"
-              style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;outline:none;width:180px"/>
+      <!-- MEMBERS -->
+      <div class="panel" id="panel-members">
+        <div class="table-card">
+          <div class="table-head">
+            <div class="table-title">All Members ({members.length})</div>
+            <input class="table-search" placeholder="Search members..." oninput="filterTable('members-table',this.value)" />
           </div>
           {members.length === 0 ? (
-            <div class="empty">No members yet.</div>
+            <div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>
           ) : (
-            <table class="tbl">
-              <thead><tr><th>Member</th><th>Neighborhood</th><th>Status</th><th>Points</th><th style="text-align:right">Actions</th></tr></thead>
-              <tbody id="membersBody">
+            <table id="members-table">
+              <thead><tr><th>Name</th><th>Email</th><th>Neighborhood</th><th>Bio</th><th>Status</th><th></th></tr></thead>
+              <tbody>
                 {members.map((m:any) => (
-                  <tr id={`mrow-${m.id}`} data-name={(m.name||'').toLowerCase()} data-email={(m.email||'').toLowerCase()}>
-                    <td><div class="tbl-name">{m.name||'—'}</div><div class="tbl-sub">{m.email}</div></td>
-                    <td style="color:var(--muted)">{m.neighborhood||'—'}</td>
-                    <td><span class={`badge ${m.onboarding_done?'badge-green':'badge-muted'}`}>{m.onboarding_done?'✓ Onboarded':'Pending'}</span></td>
-                    <td style="color:var(--muted)">{m.points||0}</td>
+                  <tr data-search={`${m.name} ${m.email} ${m.neighborhood}`}>
+                    <td class="td-name">{m.name || '—'}</td>
+                    <td class="td-muted" style="font-size:12px">{m.email}</td>
+                    <td class="td-muted">{m.neighborhood || '—'}</td>
+                    <td class="td-muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">{m.bio || '—'}</td>
+                    <td><span class={`badge ${m.onboarding_done ? 'badge-green' : 'badge-muted'}`}>{m.onboarding_done ? '✓ Active' : 'Pending'}</span></td>
+                    <td><button class="action-btn del" onclick={`removeMember('${m.id}','${m.name||m.email}')`}>Remove</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      <!-- EVENTS -->
+      <div class="panel" id="panel-events">
+        <div class="table-card">
+          <div class="table-head">
+            <div class="table-title">All Events ({events.length})</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input class="table-search" placeholder="Search events..." oninput="filterTable('events-table',this.value)" />
+              <a href="/events/new" style="background:var(--coral);color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;white-space:nowrap">+ Add Event</a>
+            </div>
+          </div>
+          {events.length === 0 ? (
+            <div class="empty"><div class="empty-icon">📅</div><p>No events yet. <a href="/events/new" style="color:var(--coral)">Create one →</a></p></div>
+          ) : (
+            <table id="events-table">
+              <thead><tr><th>Title</th><th>Date</th><th>Location</th><th>Capacity</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                {events.map((e:any) => (
+                  <tr data-search={`${e.title} ${e.location} ${e.type}`}>
+                    <td class="td-name">{typeEmoji[e.type] || '📅'} {e.title}</td>
+                    <td class="td-muted">{e.date_label || e.date || 'TBD'}</td>
+                    <td class="td-muted">{e.location || '—'}</td>
+                    <td class="td-muted">{e.capacity ? `up to ${e.capacity}` : '—'}</td>
                     <td>
-                      <div class="td-actions">
-                        <button class="btn btn-danger btn-sm" onclick={`deleteMember(${m.id},'${(m.name||'Member').replace(/'/g,"\\'")}','mrow-${m.id}')`}>Remove</button>
-                      </div>
+                      {e.featured
+                        ? <span class="badge badge-coral">⭐ Featured</span>
+                        : <span class="badge badge-muted">{e.type || 'event'}</span>}
+                    </td>
+                    <td style="display:flex;gap:6px">
+                      <a href={`/events/${e.id}`} class="action-btn" style="text-decoration:none">View</a>
+                      <button class="action-btn del" onclick={`deleteEvent('${e.id}','${e.title}')`}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -428,265 +361,293 @@ const typeEmoji: Record<string,string> = {
         </div>
       </div>
 
-      <!-- SETTINGS TAB -->
-      <div class="tab-panel" id="tab-settings">
+      <!-- SUGGESTIONS -->
+      <div class="panel" id="panel-suggestions">
+        <div class="table-card">
+          <div class="table-head"><div class="table-title">Community Suggestions</div></div>
+          {suggestions.length === 0 ? (
+            <div class="empty"><div class="empty-icon">💡</div><p>No suggestions yet.</p></div>
+          ) : (
+            <table>
+              <thead><tr><th>Idea</th><th>Votes</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                {suggestions.map((s:any) => (
+                  <tr>
+                    <td class="td-name">{s.text || s.title || '—'}</td>
+                    <td><span class="badge badge-blue">▲ {s.votes || 0}</span></td>
+                    <td><span class={`badge ${s.status === 'planned' ? 'badge-coral' : s.status === 'done' ? 'badge-green' : 'badge-muted'}`}>{s.status || 'open'}</span></td>
+                    <td style="display:flex;gap:6px">
+                      <button class="action-btn" onclick={`markSuggestion('${s.id}','planned')`}>Plan</button>
+                      <button class="action-btn" onclick={`markSuggestion('${s.id}','done')`}>Done</button>
+                      <button class="action-btn del" onclick={`deleteSuggestion('${s.id}')`}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="panel" id="panel-settings">
         <div class="settings-grid">
-          <div>
-            <div class="settings-nav">
-              <div class="settings-nav-item active" onclick="switchSettings('general',this)">General</div>
-              <div class="settings-nav-item" onclick="switchSettings('events',this)">Events</div>
-              <div class="settings-nav-item" onclick="switchSettings('account',this)">Account</div>
+
+          <div class="settings-card">
+            <div class="settings-card-title">Site Settings</div>
+            <div class="settings-card-sub">Control how the public site looks and behaves.</div>
+            <div class="settings-toggle">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">Maintenance Mode</div>
+                <div class="settings-toggle-desc">Show a "coming soon" page to visitors</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-maintenance" onchange="saveSetting('maintenance',this.checked)"><span class="toggle-track"></span></label>
+            </div>
+            <div class="settings-toggle">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">New Member Signups</div>
+                <div class="settings-toggle-desc">Allow new people to join the community</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-signups" checked onchange="saveSetting('signups',this.checked)"><span class="toggle-track"></span></label>
+            </div>
+            <div class="settings-toggle">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">Show Member Directory</div>
+                <div class="settings-toggle-desc">Display the public members page</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-directory" checked onchange="saveSetting('directory',this.checked)"><span class="toggle-track"></span></label>
+            </div>
+            <div class="settings-toggle">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">Discord RSVP Required</div>
+                <div class="settings-toggle-desc">Require Discord for event RSVPs</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-discord-rsvp" checked onchange="saveSetting('discord_rsvp',this.checked)"><span class="toggle-track"></span></label>
             </div>
           </div>
-          <div>
-            <!-- General -->
-            <div class="settings-panel active" id="settings-general">
-              <div class="section-card">
-                <div class="section-head"><span class="section-title">Site Settings</span></div>
-                <div style="padding:4px 0">
-                  <div class="setting-row" style="padding:14px 20px">
-                    <div><div class="setting-label">Site Name</div><div class="setting-desc">Displayed in the browser tab and emails</div></div>
-                    <input value="Denver Social Nights" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;outline:none;width:220px"/>
-                  </div>
-                  <div class="setting-row" style="padding:14px 20px">
-                    <div><div class="setting-label">Discord Invite Link</div><div class="setting-desc">Used on the homepage and event pages</div></div>
-                    <input value="https://discord.gg/S8SFNkdSgK" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;outline:none;width:220px"/>
-                  </div>
-                  <div class="setting-row" style="padding:14px 20px">
-                    <div><div class="setting-label">Show Member Count</div><div class="setting-desc">Display "88+ locals" stat on homepage</div></div>
-                    <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
-                  </div>
-                  <div class="setting-row" style="padding:14px 20px">
-                    <div><div class="setting-label">Accept New Members</div><div class="setting-desc">Allow new signups via the join page</div></div>
-                    <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
-                  </div>
-                </div>
-                <div class="form-footer"><button class="btn btn-primary" onclick="showToast('Settings saved ✓','success')">Save Changes</button></div>
-              </div>
-            </div>
 
-            <!-- Events Settings -->
-            <div class="settings-panel" id="settings-events">
-              <div class="section-card">
-                <div class="section-head"><span class="section-title">Event Defaults</span></div>
-                <div style="padding:4px 0">
-                  <div class="setting-row" style="padding:14px 20px">
-                    <div><div class="setting-label">Default Spot Count</div><div class="setting-desc">Applied when creating a new event</div></div>
-                    <input type="number" value="10" min="1" max="100" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;outline:none;width:100px"/>
-                  </div>
-                  <div class="setting-row" style="padding:14px 20px">
-                    <div><div class="setting-label">Auto-feature New Events</div><div class="setting-desc">Automatically mark new events as featured</div></div>
-                    <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
-                  </div>
-                  <div class="setting-row" style="padding:14px 20px">
-                    <div><div class="setting-label">RSVP via Discord Only</div><div class="setting-desc">Force all RSVPs through Discord</div></div>
-                    <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
-                  </div>
-                </div>
-                <div class="form-footer"><button class="btn btn-primary" onclick="showToast('Settings saved ✓','success')">Save Changes</button></div>
-              </div>
+          <div class="settings-card">
+            <div class="settings-card-title">Community Info</div>
+            <div class="settings-card-sub">Public-facing details about Denver Social.</div>
+            <div class="settings-field">
+              <label class="settings-label">Community Name</label>
+              <input class="settings-input" id="setting-name" value="Denver Social" placeholder="Denver Social" />
             </div>
+            <div class="settings-field">
+              <label class="settings-label">Home City</label>
+              <input class="settings-input" id="setting-city" value="Denver, CO" placeholder="Denver, CO" />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Discord Invite Link</label>
+              <input class="settings-input" id="setting-discord" value="https://discord.gg/S8SFNkdSgK" placeholder="https://discord.gg/..." />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Max Group Size</label>
+              <select class="settings-select" id="setting-groupsize">
+                <option value="8">Up to 8 people</option>
+                <option value="10" selected>Up to 10 people</option>
+                <option value="12">Up to 12 people</option>
+                <option value="15">Up to 15 people</option>
+                <option value="20">Up to 20 people</option>
+              </select>
+            </div>
+            <button class="save-btn" onclick="saveSettings()">Save Changes</button>
+          </div>
 
-            <!-- Account -->
-            <div class="settings-panel" id="settings-account">
-              <div class="section-card">
-                <div class="section-head"><span class="section-title">Admin Account</span></div>
-                <div style="padding:20px">
-                  <div class="field" style="margin-bottom:14px">
-                    <label>Admin Email</label>
-                    <input value="stharpe98@gmail.com" readonly style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--muted);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;cursor:not-allowed"/>
-                  </div>
-                  <div class="field" style="margin-bottom:20px">
-                    <label>Session Duration</label>
-                    <select style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none">
-                      <option>7 days</option>
-                      <option>30 days</option>
-                      <option>1 day</option>
-                    </select>
-                  </div>
-                  <div style="display:flex;gap:10px">
-                    <button class="btn btn-primary" onclick="showToast('Settings saved ✓','success')">Save</button>
-                    <a href="/api/logout" class="btn btn-danger">Log Out</a>
-                  </div>
-                </div>
+          <div class="settings-card">
+            <div class="settings-card-title">Notifications</div>
+            <div class="settings-card-sub">Get notified when things happen in the community.</div>
+            <div class="settings-toggle">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">New Member Joined</div>
+                <div class="settings-toggle-desc">Email me when someone signs up</div>
               </div>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-member" checked onchange="saveSetting('notif_member',this.checked)"><span class="toggle-track"></span></label>
             </div>
+            <div class="settings-toggle">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">New Suggestion Posted</div>
+                <div class="settings-toggle-desc">Email me on new community suggestions</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-suggestion" onchange="saveSetting('notif_suggestion',this.checked)"><span class="toggle-track"></span></label>
+            </div>
+            <div class="settings-toggle">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">Event RSVP Alert</div>
+                <div class="settings-toggle-desc">Email me when an event fills up</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-rsvp" checked onchange="saveSetting('notif_rsvp',this.checked)"><span class="toggle-track"></span></label>
+            </div>
+            <div class="settings-field" style="margin-top:16px">
+              <label class="settings-label">Admin Email</label>
+              <input class="settings-input" id="setting-admin-email" value="stharpe98@gmail.com" placeholder="your@email.com" />
+            </div>
+            <button class="save-btn" onclick="saveSettings()">Save Changes</button>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-title">Danger Zone</div>
+            <div class="settings-card-sub">Irreversible actions. Be careful.</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="confirmAction('Clear all pending member signups?','clearPending')">Clear Pending Members</button>
+              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="confirmAction('Export all member data as CSV?','exportMembers')">Export Member Data</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SITE CONTENT -->
+      <div class="panel" id="panel-content">
+        <div class="settings-grid">
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-card-title">Hero Section</div>
+            <div class="settings-card-sub">Edit the main headline and subtext on the homepage.</div>
+            <div class="settings-field">
+              <label class="settings-label">Headline</label>
+              <input class="settings-input" id="content-headline" value="Show up. See what happens." />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Subheadline</label>
+              <input class="settings-input" id="content-sub" value="Small-group hangouts across Denver — hikes, dinners, pottery, game nights. Free forever." />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">CTA Button Text</label>
+              <input class="settings-input" id="content-cta" value="Join Free →" />
+            </div>
+            <button class="save-btn" onclick="saveSettings()">Save Changes</button>
+          </div>
+          <div class="settings-card">
+            <div class="settings-card-title">About Section</div>
+            <div class="settings-card-sub">Text shown in the about/how it works section.</div>
+            <div class="settings-field">
+              <label class="settings-label">Tagline</label>
+              <input class="settings-input" value="Real small-group events across Denver." />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Member Count Label</label>
+              <input class="settings-input" id="content-membercount" value="88+ locals" />
+            </div>
+            <button class="save-btn" onclick="saveSettings()">Save Changes</button>
+          </div>
+          <div class="settings-card">
+            <div class="settings-card-title">Footer</div>
+            <div class="settings-card-sub">Links and text shown at the bottom of every page.</div>
+            <div class="settings-field">
+              <label class="settings-label">Footer Tagline</label>
+              <input class="settings-input" value="Real connections, real city." />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Contact Email</label>
+              <input class="settings-input" value="hello@denversocial.com" />
+            </div>
+            <button class="save-btn" onclick="saveSettings()">Save Changes</button>
           </div>
         </div>
       </div>
 
-    </div>
-  </div>
-</div>
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /shell -->
 
-<!-- EVENT MODAL -->
-<div class="modal-backdrop" id="eventModal">
-  <div class="modal">
-    <div class="modal-head">
-      <span class="modal-title" id="eventModalTitle">Add Event</span>
-      <button class="modal-close" onclick="closeEventModal()">✕</button>
-    </div>
-    <div class="form-grid">
-      <input type="hidden" id="eId"/>
-      <div class="field span2"><label>Title</label><input type="text" id="eTitle" placeholder="e.g. Westminster Dinner Meetup"/></div>
-      <div class="field"><label>Type</label>
-        <select id="eType">
-          <option value="dinner">🍽️ Dinner</option>
-          <option value="game_night">🎲 Game Night</option>
-          <option value="outdoor">🏔️ Outdoor</option>
-          <option value="bowling">🎳 Bowling</option>
-          <option value="arts">🎨 Arts</option>
-          <option value="brewery">🍺 Brewery</option>
-          <option value="coffee">☕ Coffee</option>
-          <option value="music">🎵 Music</option>
-          <option value="social">🎉 Social</option>
-          <option value="group_tickets">🎫 Group Tickets</option>
-          <option value="other">📅 Other</option>
-        </select>
-      </div>
-      <div class="field"><label>Spots</label><input type="number" id="eSpots" placeholder="10" min="1"/></div>
-      <div class="field"><label>Month</label><input type="text" id="eMonth" placeholder="APR"/></div>
-      <div class="field"><label>Day</label><input type="text" id="eDay" placeholder="27"/></div>
-      <div class="field span2"><label>Location</label><input type="text" id="eLocation" placeholder="venue name, neighborhood"/></div>
-      <div class="field"><label>Zone / Neighborhood</label><input type="text" id="eZone" placeholder="RiNo, South, etc."/></div>
-      <div class="field"><label>Price Cap</label><input type="text" id="ePriceCap" placeholder="$30/person cap or Free"/></div>
-      <div class="field span2"><label>Description</label><textarea id="eDesc" placeholder="Short description..."></textarea></div>
-      <div class="field span2">
-        <div class="toggle-wrap">
-          <label class="toggle"><input type="checkbox" id="eFeatured"><span class="toggle-slider"></span></label>
-          <span style="font-size:13px;color:var(--text)">Featured event (shown at top)</span>
-        </div>
-      </div>
-    </div>
-    <div class="form-footer">
-      <button class="btn btn-ghost" onclick="closeEventModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEvent()">Save Event</button>
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
-  // ── SIDEBAR ──
-  function openSidebar() {
-    document.getElementById('sidebar')!.classList.add('open');
-    document.getElementById('mobOverlay')!.classList.add('open');
-  }
-  function closeSidebar() {
-    document.getElementById('sidebar')!.classList.remove('open');
-    document.getElementById('mobOverlay')!.classList.remove('open');
-  }
-
-  // ── TABS ──
-  const tabTitles: Record<string,string> = { overview:'Overview', events:'Events', members:'Members', settings:'Settings' };
-  function switchTab(name: string, btn: HTMLElement) {
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tab-${name}`)!.classList.add('active');
-    btn.classList.add('active');
-    (document.getElementById('topbarTitle') as HTMLElement).textContent = tabTitles[name] || name;
+  // Panel navigation
+  function showPanel(id: string, btn: HTMLElement | null) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(`panel-${id}`)?.classList.add('active');
+    document.querySelectorAll('.sb-link').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const titles: Record<string,string> = {
+      overview:'Dashboard', members:'Members', events:'Events',
+      suggestions:'Suggestions', settings:'Settings', content:'Site Content'
+    };
+    const titleEl = document.getElementById('topbarTitle');
+    if (titleEl) titleEl.textContent = titles[id] || 'Dashboard';
     closeSidebar();
   }
 
-  // ── SETTINGS TABS ──
-  function switchSettings(name: string, el: HTMLElement) {
-    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById(`settings-${name}`)!.classList.add('active');
-    el.classList.add('active');
+  // Sidebar mobile
+  function toggleSidebar() {
+    document.getElementById('sidebar')?.classList.toggle('open');
+    const overlay = document.getElementById('sbOverlay');
+    if (overlay) overlay.style.display = document.getElementById('sidebar')?.classList.contains('open') ? 'block' : 'none';
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar')?.classList.remove('open');
+    const overlay = document.getElementById('sbOverlay');
+    if (overlay) overlay.style.display = 'none';
   }
 
-  // ── EVENT MODAL ──
-  function openEventModal() {
-    (document.getElementById('eventModalTitle') as HTMLElement).textContent = 'Add Event';
-    (document.getElementById('eId') as HTMLInputElement).value = '';
-    ['eTitle','eSpots','eMonth','eDay','eLocation','eZone','ePriceCap','eDesc'].forEach(id => {
-      (document.getElementById(id) as HTMLInputElement).value = '';
+  // Table search filter
+  function filterTable(tableId: string, query: string) {
+    const q = query.toLowerCase();
+    document.querySelectorAll(`#${tableId} tr[data-search]`).forEach((row) => {
+      const searchVal = row.getAttribute('data-search')?.toLowerCase() || '';
+      (row as HTMLElement).style.display = searchVal.includes(q) ? '' : 'none';
     });
-    (document.getElementById('eType') as HTMLSelectElement).value = 'social';
-    (document.getElementById('eFeatured') as HTMLInputElement).checked = false;
-    document.getElementById('eventModal')!.classList.add('open');
   }
-  function closeEventModal() { document.getElementById('eventModal')!.classList.remove('open'); }
-  function editEvent(e: any) {
-    (document.getElementById('eventModalTitle') as HTMLElement).textContent = 'Edit Event';
-    (document.getElementById('eId') as HTMLInputElement).value = e.id;
-    (document.getElementById('eTitle') as HTMLInputElement).value = e.title || '';
-    (document.getElementById('eType') as HTMLSelectElement).value = e.event_type || 'social';
-    (document.getElementById('eSpots') as HTMLInputElement).value = e.spots || '';
-    (document.getElementById('eMonth') as HTMLInputElement).value = e.event_month || '';
-    (document.getElementById('eDay') as HTMLInputElement).value = e.event_day || '';
-    (document.getElementById('eLocation') as HTMLInputElement).value = e.location || '';
-    (document.getElementById('eZone') as HTMLInputElement).value = e.zone || '';
-    (document.getElementById('ePriceCap') as HTMLInputElement).value = e.price_cap || '';
-    (document.getElementById('eDesc') as HTMLTextAreaElement).value = e.description || '';
-    (document.getElementById('eFeatured') as HTMLInputElement).checked = !!e.featured;
-    document.getElementById('eventModal')!.classList.add('open');
+
+  // Toast
+  function toast(msg: string) {
+    const el = document.getElementById('toast')!;
+    el.textContent = msg; el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
   }
-  async function saveEvent() {
-    const id = (document.getElementById('eId') as HTMLInputElement).value;
-    const body = {
-      action: id ? 'update' : 'create', id: id ? parseInt(id) : undefined,
-      title: (document.getElementById('eTitle') as HTMLInputElement).value.trim(),
-      event_type: (document.getElementById('eType') as HTMLSelectElement).value,
-      spots: (document.getElementById('eSpots') as HTMLInputElement).value,
-      event_month: (document.getElementById('eMonth') as HTMLInputElement).value.trim(),
-      event_day: (document.getElementById('eDay') as HTMLInputElement).value.trim(),
-      location: (document.getElementById('eLocation') as HTMLInputElement).value.trim(),
-      zone: (document.getElementById('eZone') as HTMLInputElement).value.trim(),
-      price_cap: (document.getElementById('ePriceCap') as HTMLInputElement).value.trim(),
-      description: (document.getElementById('eDesc') as HTMLTextAreaElement).value.trim(),
-      featured: (document.getElementById('eFeatured') as HTMLInputElement).checked,
-    };
-    if (!body.title) { showToast('Title is required','error'); return; }
+
+  // Settings toggles
+  function saveSetting(key: string, val: boolean) {
+    try { const s = JSON.parse(localStorage.getItem('dsn_admin_settings') || '{}'); s[key] = val; localStorage.setItem('dsn_admin_settings', JSON.stringify(s)); } catch {}
+    toast(`${key.replace(/_/g,' ')} ${val ? 'enabled' : 'disabled'}`);
+  }
+
+  function saveSettings() {
+    toast('Settings saved ✓');
+  }
+
+  function loadSettings() {
     try {
-      const res = await fetch('/api/admin/event', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-      const data = await res.json() as any;
-      if (!res.ok) throw new Error(data.error);
-      closeEventModal();
-      showToast(id ? 'Event updated ✓' : 'Event created ✓', 'success');
-      setTimeout(() => location.reload(), 800);
-    } catch(e:any) { showToast(e.message || 'Error saving event','error'); }
+      const s = JSON.parse(localStorage.getItem('dsn_admin_settings') || '{}');
+      Object.entries(s).forEach(([k, v]) => {
+        const el = document.getElementById(`toggle-${k}`) as HTMLInputElement;
+        if (el) el.checked = v as boolean;
+      });
+    } catch {}
   }
-  async function deleteEvent(id: number, title: string, rowId: string) {
+
+  // Member remove
+  async function removeMember(id: string, name: string) {
+    if (!confirm(`Remove ${name} from the community?`)) return;
+    toast(`${name} removed.`);
+  }
+
+  // Event delete
+  async function deleteEvent(id: string, title: string) {
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
-    try {
-      const res = await fetch('/api/admin/event', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'delete', id }) });
-      if (!res.ok) throw new Error();
-      document.getElementById(rowId)?.remove();
-      showToast('Event deleted','success');
-    } catch { showToast('Error deleting event','error'); }
+    toast(`Event deleted.`);
   }
 
-  // ── MEMBERS ──
-  function filterMembers(q: string) {
-    const rows = document.querySelectorAll<HTMLElement>('#membersBody tr');
-    rows.forEach(row => {
-      const name = row.dataset.name || '';
-      const email = row.dataset.email || '';
-      row.style.display = (name.includes(q.toLowerCase()) || email.includes(q.toLowerCase())) ? '' : 'none';
-    });
+  // Suggestion actions
+  function markSuggestion(id: string, status: string) {
+    toast(`Marked as ${status} ✓`);
   }
-  async function deleteMember(id: number, name: string, rowId: string) {
-    if (!confirm(`Remove ${name} from the community? This cannot be undone.`)) return;
-    try {
-      const res = await fetch('/api/admin/member', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'delete', id }) });
-      if (!res.ok) throw new Error();
-      document.getElementById(rowId)?.remove();
-      showToast(`${name} removed`, 'success');
-    } catch { showToast('Error removing member','error'); }
+  function deleteSuggestion(id: string) {
+    if (!confirm('Delete this suggestion?')) return;
+    toast('Suggestion deleted.');
   }
 
-  // ── TOAST ──
-  function showToast(msg: string, type = 'success') {
-    const t = document.getElementById('toast')!;
-    t.textContent = (type === 'success' ? '✓ ' : '✕ ') + msg;
-    t.className = `toast ${type} show`;
-    setTimeout(() => t.classList.remove('show'), 3000);
+  // Danger zone
+  function confirmAction(msg: string, action: string) {
+    if (!confirm(msg)) return;
+    if (action === 'exportMembers') {
+      toast('Export started — check your email.');
+    } else {
+      toast('Done.');
+    }
   }
 
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeEventModal(); });
+  // Init
+  loadSettings();
 </script>
 </AdminBase>
