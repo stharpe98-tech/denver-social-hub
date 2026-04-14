@@ -187,14 +187,14 @@ const typeEmoji = {
     </div>
     <nav class="sb-nav">
       <div class="sb-section">Overview</div>
-      <button class="sb-link active" onclick="window.__dsn.showPanel('overview',this)"><span class="sb-link-icon">📊</span> Dashboard</button>
+      <button class="sb-link active" data-action="panel" data-panel="overview"><span class="sb-link-icon">📊</span> Dashboard</button>
       <div class="sb-section">Manage</div>
-      <button class="sb-link" onclick="window.__dsn.showPanel('members',this)"><span class="sb-link-icon">👥</span> Members <span class="sb-badge" id="memberBadge">{members.length}</span></button>
-      <button class="sb-link" onclick="window.__dsn.showPanel('events',this)"><span class="sb-link-icon">📅</span> Events <span class="sb-badge" id="eventBadge">{events.length}</span></button>
-      <button class="sb-link" onclick="window.__dsn.showPanel('suggestions',this)"><span class="sb-link-icon">💡</span> Suggestions</button>
+      <button class="sb-link" data-action="panel" data-panel="members"><span class="sb-link-icon">👥</span> Members <span class="sb-badge" id="memberBadge">{members.length}</span></button>
+      <button class="sb-link" data-action="panel" data-panel="events"><span class="sb-link-icon">📅</span> Events <span class="sb-badge" id="eventBadge">{events.length}</span></button>
+      <button class="sb-link" data-action="panel" data-panel="suggestions"><span class="sb-link-icon">💡</span> Suggestions</button>
       <div class="sb-section">Config</div>
-      <button class="sb-link" onclick="window.__dsn.showPanel('settings',this)"><span class="sb-link-icon">⚙️</span> Settings</button>
-      <button class="sb-link" onclick="window.__dsn.showPanel('content',this)"><span class="sb-link-icon">✏️</span> Site Content</button>
+      <button class="sb-link" data-action="panel" data-panel="settings"><span class="sb-link-icon">⚙️</span> Settings</button>
+      <button class="sb-link" data-action="panel" data-panel="content"><span class="sb-link-icon">✏️</span> Site Content</button>
     </nav>
     <div class="sb-bottom">
       <div class="sb-user">
@@ -206,13 +206,13 @@ const typeEmoji = {
       </div>
     </div>
   </aside>
-  <div class="sb-overlay" id="sbOverlay" onclick="window.__dsn.closeSidebar()"></div>
+  <div class="sb-overlay" id="sbOverlay" data-action="close-sidebar"></div>
 
   <!-- MAIN -->
   <div class="main">
     <div class="topbar">
       <div class="topbar-left">
-        <button class="hamburger" onclick="window.__dsn.toggleSidebar()">☰</button>
+        <button class="hamburger" data-action="toggle-sidebar">☰</button>
         <div class="topbar-title" id="topbarTitle">Dashboard</div>
       </div>
       <div class="topbar-right">
@@ -250,7 +250,7 @@ const typeEmoji = {
 
         <!-- Recent members -->
         <div class="table-card">
-          <div class="table-head"><div class="table-title">Recent Members</div><a href="#" onclick="window.__dsn.showPanel('members',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
+          <div class="table-head"><div class="table-title">Recent Members</div><a href="#" data-action="panel" data-panel="members" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
           {members.length === 0 ? (
             <div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>
           ) : (
@@ -272,7 +272,7 @@ const typeEmoji = {
 
         <!-- Recent events -->
         <div class="table-card">
-          <div class="table-head"><div class="table-title">Upcoming Events</div><a href="#" onclick="window.__dsn.showPanel('events',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
+          <div class="table-head"><div class="table-title">Upcoming Events</div><a href="#" data-action="panel" data-panel="events" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
           {events.length === 0 ? (
             <div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div>
           ) : (
@@ -298,7 +298,7 @@ const typeEmoji = {
         <div class="table-card">
           <div class="table-head">
             <div class="table-title">All Members ({members.length})</div>
-            <input class="table-search" placeholder="Search members..." oninput="window.__dsn.filterTable('members-table',this.value)" />
+            <input class="table-search" placeholder="Search members..." data-action="filter" data-table="members-table" />
           </div>
           {members.length === 0 ? (
             <div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>
@@ -313,7 +313,7 @@ const typeEmoji = {
                     <td class="td-muted">{m.neighborhood || '—'}</td>
                     <td class="td-muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">{m.bio || '—'}</td>
                     <td><span class={`badge ${m.onboarding_done ? 'badge-green' : 'badge-muted'}`}>{m.onboarding_done ? '✓ Active' : 'Pending'}</span></td>
-                    <td><button class="action-btn del" data-id={m.id} data-name={m.name||m.email} onclick="window.__dsn.removeMember(this.dataset.id,this.dataset.name)">Remove</button></td>
+                    <td><button class="action-btn del" data-id={m.id} data-name={m.name||m.email} data-action="remove-member">Remove</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -327,7 +327,7 @@ const typeEmoji = {
         <!-- Create Event Form (hidden by default) -->
         <div class="table-card" id="create-event-form" style="display:none;margin-bottom:20px">
           <div class="table-head"><div class="table-title">Create New Event</div>
-            <button class="action-btn" onclick="window.__dsn.toggleCreateEvent()">✕ Cancel</button>
+            <button class="action-btn" data-action="toggle-create-event">✕ Cancel</button>
           </div>
           <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
             <div class="settings-field" style="grid-column:span 2">
@@ -381,7 +381,7 @@ const typeEmoji = {
               <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer">
                 <input type="checkbox" id="new-evt-featured" /> ⭐ Featured event
               </label>
-              <button class="save-btn" style="margin:0;margin-left:auto" onclick="window.__dsn.createEvent()">Create Event</button>
+              <button class="save-btn" style="margin:0;margin-left:auto" data-action="create-event">Create Event</button>
             </div>
           </div>
         </div>
@@ -390,8 +390,8 @@ const typeEmoji = {
           <div class="table-head">
             <div class="table-title">All Events ({events.length})</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <input class="table-search" placeholder="Search events..." oninput="window.__dsn.filterTable('events-table',this.value)" />
-              <button onclick="window.__dsn.toggleCreateEvent()" style="background:var(--coral);color:#fff;border:none;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;white-space:nowrap;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add Event</button>
+              <input class="table-search" placeholder="Search events..." data-action="filter" data-table="events-table" />
+              <button data-action="toggle-create-event" style="background:var(--coral);color:#fff;border:none;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;white-space:nowrap;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add Event</button>
             </div>
           </div>
           {events.length === 0 ? (
@@ -412,8 +412,8 @@ const typeEmoji = {
                         : <span class="badge badge-muted">{e.type || e.event_type || 'event'}</span>}
                     </td>
                     <td style="display:flex;gap:6px">
-                      <button class="action-btn" data-id={e.id} data-featured={e.featured ? '1' : '0'} onclick="window.__dsn.toggleFeature(this.dataset.id, this.dataset.featured)">{e.featured ? 'Unfeature' : '⭐ Feature'}</button>
-                      <button class="action-btn del" data-id={e.id} data-title={e.title} onclick="window.__dsn.deleteEvent(this.dataset.id,this.dataset.title)">Delete</button>
+                      <button class="action-btn" data-id={e.id} data-featured={e.featured ? '1' : '0'} data-action="toggle-feature">{e.featured ? 'Unfeature' : '⭐ Feature'}</button>
+                      <button class="action-btn del" data-id={e.id} data-title={e.title} data-action="delete-event">Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -439,9 +439,9 @@ const typeEmoji = {
                     <td><span class="badge badge-blue">▲ {s.votes || 0}</span></td>
                     <td><span class={`badge ${s.status === 'planned' ? 'badge-coral' : s.status === 'done' ? 'badge-green' : 'badge-muted'}`}>{s.status || 'open'}</span></td>
                     <td style="display:flex;gap:6px">
-                      <button class="action-btn" data-id={s.id} onclick="window.__dsn.markSuggestion(this.dataset.id,'planned')">Plan</button>
-                      <button class="action-btn" data-id={s.id} onclick="window.__dsn.markSuggestion(this.dataset.id,'done')">Done</button>
-                      <button class="action-btn del" data-id={s.id} onclick="window.__dsn.deleteSuggestion(this.dataset.id)">Delete</button>
+                      <button class="action-btn" data-id={s.id} data-action="mark-suggestion" data-status="planned">Plan</button>
+                      <button class="action-btn" data-id={s.id} data-action="mark-suggestion" data-status="done">Done</button>
+                      <button class="action-btn del" data-id={s.id} data-action="delete-suggestion">Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -463,28 +463,28 @@ const typeEmoji = {
                 <div class="settings-toggle-label">Maintenance Mode</div>
                 <div class="settings-toggle-desc">Show a "coming soon" page to visitors</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-maintenance" onchange="window.__dsn.saveSetting('maintenance',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-maintenance" data-action="toggle-setting" data-key="maintenance"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">New Member Signups</div>
                 <div class="settings-toggle-desc">Allow new people to join the community</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-signups" checked onchange="window.__dsn.saveSetting('signups',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-signups" checked data-action="toggle-setting" data-key="signups"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">Show Member Directory</div>
                 <div class="settings-toggle-desc">Display the public members page</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-directory" checked onchange="window.__dsn.saveSetting('directory',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-directory" checked data-action="toggle-setting" data-key="directory"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">Discord RSVP Required</div>
                 <div class="settings-toggle-desc">Require Discord for event RSVPs</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-discord-rsvp" checked onchange="window.__dsn.saveSetting('discord_rsvp',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-discord-rsvp" checked data-action="toggle-setting" data-key="discord_rsvp"><span class="toggle-track"></span></label>
             </div>
           </div>
 
@@ -513,7 +513,7 @@ const typeEmoji = {
                 <option value="20">Up to 20 people</option>
               </select>
             </div>
-            <button class="save-btn" onclick="window.__dsn.saveSettings()">Save Changes</button>
+            <button class="save-btn" data-action="save-settings">Save Changes</button>
           </div>
 
           <div class="settings-card">
@@ -524,35 +524,35 @@ const typeEmoji = {
                 <div class="settings-toggle-label">New Member Joined</div>
                 <div class="settings-toggle-desc">Email me when someone signs up</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-member" checked onchange="window.__dsn.saveSetting('notif_member',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-member" checked data-action="toggle-setting" data-key="notif_member"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">New Suggestion Posted</div>
                 <div class="settings-toggle-desc">Email me on new community suggestions</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-suggestion" onchange="window.__dsn.saveSetting('notif_suggestion',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-suggestion" data-action="toggle-setting" data-key="notif_suggestion"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">Event RSVP Alert</div>
                 <div class="settings-toggle-desc">Email me when an event fills up</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-rsvp" checked onchange="window.__dsn.saveSetting('notif_rsvp',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-rsvp" checked data-action="toggle-setting" data-key="notif_rsvp"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-field" style="margin-top:16px">
               <label class="settings-label">Admin Email</label>
               <input class="settings-input" id="setting-admin-email" value="stharpe98@gmail.com" placeholder="your@email.com" />
             </div>
-            <button class="save-btn" onclick="window.__dsn.saveSettings()">Save Changes</button>
+            <button class="save-btn" data-action="save-settings">Save Changes</button>
           </div>
 
           <div class="settings-card">
             <div class="settings-card-title">Danger Zone</div>
             <div class="settings-card-sub">Irreversible actions. Be careful.</div>
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
-              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="window.__dsn.confirmAction('Clear all pending member signups?','clearPending')">Clear Pending Members</button>
-              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="window.__dsn.confirmAction('Export all member data as CSV?','exportMembers')">Export Member Data</button>
+              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" data-action="confirm" data-confirm-msg="Clear all pending member signups?" data-confirm-action="clearPending">Clear Pending Members</button>
+              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" data-action="confirm" data-confirm-msg="Export all member data as CSV?" data-confirm-action="exportMembers">Export Member Data</button>
             </div>
           </div>
 
@@ -577,7 +577,7 @@ const typeEmoji = {
               <label class="settings-label">CTA Button Text</label>
               <input class="settings-input" id="content-cta" value="Join Free →" />
             </div>
-            <button class="save-btn" onclick="window.__dsn.saveSettings()">Save Changes</button>
+            <button class="save-btn" data-action="save-settings">Save Changes</button>
           </div>
           <div class="settings-card">
             <div class="settings-card-title">About Section</div>
@@ -590,7 +590,7 @@ const typeEmoji = {
               <label class="settings-label">Member Count Label</label>
               <input class="settings-input" id="content-membercount" value="88+ locals" />
             </div>
-            <button class="save-btn" onclick="window.__dsn.saveSettings()">Save Changes</button>
+            <button class="save-btn" data-action="save-settings">Save Changes</button>
           </div>
           <div class="settings-card">
             <div class="settings-card-title">Footer</div>
@@ -603,7 +603,7 @@ const typeEmoji = {
               <label class="settings-label">Contact Email</label>
               <input class="settings-input" value="hello@denversocial.com" />
             </div>
-            <button class="save-btn" onclick="window.__dsn.saveSettings()">Save Changes</button>
+            <button class="save-btn" data-action="save-settings">Save Changes</button>
           </div>
         </div>
       </div>
@@ -764,7 +764,7 @@ const typeEmoji = {
 
   // ─── Create Event (inline form) ───
   function toggleCreateEvent() {
-    const form = document.getElementById('create-event-form')!;
+    const form = document.getElementById('create-event-form');
     form.style.display = form.style.display === 'none' ? 'block' : 'none';
   }
 
