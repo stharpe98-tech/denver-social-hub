@@ -11,7 +11,7 @@ if (userMatch) {
 if (!isAdmin) return Astro.redirect('/admin');
 
 const db = getDB();
-let members: any[] = [], events: any[] = [], suggestions: any[] = [];
+let members[] = [], events[] = [], suggestions[] = [];
 if (db) {
   try {
     members    = (await db.prepare(`SELECT * FROM members ORDER BY id DESC`).all())?.results || [];
@@ -20,7 +20,7 @@ if (db) {
   } catch {}
 }
 const onboarded = members.filter((m:any) => m.onboarding_done).length;
-const typeEmoji: Record<string,string> = {
+const typeEmoji = {
   dinner:'🍽️', game_night:'🎲', outdoor:'🏔️', brewery:'🍺', bowling:'🎳',
   arts:'🎨', music:'🎵', social:'🎉', group_tickets:'🎫', other:'📅'
 };
@@ -187,14 +187,14 @@ const typeEmoji: Record<string,string> = {
     </div>
     <nav class="sb-nav">
       <div class="sb-section">Overview</div>
-      <button class="sb-link active" onclick="(window as any).showPanel('overview',this)"><span class="sb-link-icon">📊</span> Dashboard</button>
+      <button class="sb-link active" onclick="window.__dsn.showPanel('overview',this)"><span class="sb-link-icon">📊</span> Dashboard</button>
       <div class="sb-section">Manage</div>
-      <button class="sb-link" onclick="(window as any).showPanel('members',this)"><span class="sb-link-icon">👥</span> Members <span class="sb-badge" id="memberBadge">{members.length}</span></button>
-      <button class="sb-link" onclick="(window as any).showPanel('events',this)"><span class="sb-link-icon">📅</span> Events <span class="sb-badge" id="eventBadge">{events.length}</span></button>
-      <button class="sb-link" onclick="(window as any).showPanel('suggestions',this)"><span class="sb-link-icon">💡</span> Suggestions</button>
+      <button class="sb-link" onclick="window.__dsn.showPanel('members',this)"><span class="sb-link-icon">👥</span> Members <span class="sb-badge" id="memberBadge">{members.length}</span></button>
+      <button class="sb-link" onclick="window.__dsn.showPanel('events',this)"><span class="sb-link-icon">📅</span> Events <span class="sb-badge" id="eventBadge">{events.length}</span></button>
+      <button class="sb-link" onclick="window.__dsn.showPanel('suggestions',this)"><span class="sb-link-icon">💡</span> Suggestions</button>
       <div class="sb-section">Config</div>
-      <button class="sb-link" onclick="(window as any).showPanel('settings',this)"><span class="sb-link-icon">⚙️</span> Settings</button>
-      <button class="sb-link" onclick="(window as any).showPanel('content',this)"><span class="sb-link-icon">✏️</span> Site Content</button>
+      <button class="sb-link" onclick="window.__dsn.showPanel('settings',this)"><span class="sb-link-icon">⚙️</span> Settings</button>
+      <button class="sb-link" onclick="window.__dsn.showPanel('content',this)"><span class="sb-link-icon">✏️</span> Site Content</button>
     </nav>
     <div class="sb-bottom">
       <div class="sb-user">
@@ -206,13 +206,13 @@ const typeEmoji: Record<string,string> = {
       </div>
     </div>
   </aside>
-  <div class="sb-overlay" id="sbOverlay" onclick="(window as any).closeSidebar()"></div>
+  <div class="sb-overlay" id="sbOverlay" onclick="window.__dsn.closeSidebar()"></div>
 
   <!-- MAIN -->
   <div class="main">
     <div class="topbar">
       <div class="topbar-left">
-        <button class="hamburger" onclick="(window as any).toggleSidebar()">☰</button>
+        <button class="hamburger" onclick="window.__dsn.toggleSidebar()">☰</button>
         <div class="topbar-title" id="topbarTitle">Dashboard</div>
       </div>
       <div class="topbar-right">
@@ -250,7 +250,7 @@ const typeEmoji: Record<string,string> = {
 
         <!-- Recent members -->
         <div class="table-card">
-          <div class="table-head"><div class="table-title">Recent Members</div><a href="#" onclick="(window as any).showPanel('members',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
+          <div class="table-head"><div class="table-title">Recent Members</div><a href="#" onclick="window.__dsn.showPanel('members',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
           {members.length === 0 ? (
             <div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>
           ) : (
@@ -272,7 +272,7 @@ const typeEmoji: Record<string,string> = {
 
         <!-- Recent events -->
         <div class="table-card">
-          <div class="table-head"><div class="table-title">Upcoming Events</div><a href="#" onclick="(window as any).showPanel('events',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
+          <div class="table-head"><div class="table-title">Upcoming Events</div><a href="#" onclick="window.__dsn.showPanel('events',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
           {events.length === 0 ? (
             <div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div>
           ) : (
@@ -298,7 +298,7 @@ const typeEmoji: Record<string,string> = {
         <div class="table-card">
           <div class="table-head">
             <div class="table-title">All Members ({members.length})</div>
-            <input class="table-search" placeholder="Search members..." oninput="(window as any).filterTable('members-table',this.value)" />
+            <input class="table-search" placeholder="Search members..." oninput="window.__dsn.filterTable('members-table',this.value)" />
           </div>
           {members.length === 0 ? (
             <div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>
@@ -313,7 +313,7 @@ const typeEmoji: Record<string,string> = {
                     <td class="td-muted">{m.neighborhood || '—'}</td>
                     <td class="td-muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">{m.bio || '—'}</td>
                     <td><span class={`badge ${m.onboarding_done ? 'badge-green' : 'badge-muted'}`}>{m.onboarding_done ? '✓ Active' : 'Pending'}</span></td>
-                    <td><button class="action-btn del" data-id={m.id} data-name={m.name||m.email} onclick="(window as any).removeMember(this.dataset.id,this.dataset.name)">Remove</button></td>
+                    <td><button class="action-btn del" data-id={m.id} data-name={m.name||m.email} onclick="window.__dsn.removeMember(this.dataset.id,this.dataset.name)">Remove</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -327,7 +327,7 @@ const typeEmoji: Record<string,string> = {
         <!-- Create Event Form (hidden by default) -->
         <div class="table-card" id="create-event-form" style="display:none;margin-bottom:20px">
           <div class="table-head"><div class="table-title">Create New Event</div>
-            <button class="action-btn" onclick="(window as any).toggleCreateEvent()">✕ Cancel</button>
+            <button class="action-btn" onclick="window.__dsn.toggleCreateEvent()">✕ Cancel</button>
           </div>
           <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
             <div class="settings-field" style="grid-column:span 2">
@@ -381,7 +381,7 @@ const typeEmoji: Record<string,string> = {
               <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer">
                 <input type="checkbox" id="new-evt-featured" /> ⭐ Featured event
               </label>
-              <button class="save-btn" style="margin:0;margin-left:auto" onclick="(window as any).createEvent()">Create Event</button>
+              <button class="save-btn" style="margin:0;margin-left:auto" onclick="window.__dsn.createEvent()">Create Event</button>
             </div>
           </div>
         </div>
@@ -390,8 +390,8 @@ const typeEmoji: Record<string,string> = {
           <div class="table-head">
             <div class="table-title">All Events ({events.length})</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <input class="table-search" placeholder="Search events..." oninput="(window as any).filterTable('events-table',this.value)" />
-              <button onclick="(window as any).toggleCreateEvent()" style="background:var(--coral);color:#fff;border:none;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;white-space:nowrap;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add Event</button>
+              <input class="table-search" placeholder="Search events..." oninput="window.__dsn.filterTable('events-table',this.value)" />
+              <button onclick="window.__dsn.toggleCreateEvent()" style="background:var(--coral);color:#fff;border:none;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;white-space:nowrap;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add Event</button>
             </div>
           </div>
           {events.length === 0 ? (
@@ -412,8 +412,8 @@ const typeEmoji: Record<string,string> = {
                         : <span class="badge badge-muted">{e.type || e.event_type || 'event'}</span>}
                     </td>
                     <td style="display:flex;gap:6px">
-                      <button class="action-btn" data-id={e.id} data-featured={e.featured ? '1' : '0'} onclick="(window as any).toggleFeature(this.dataset.id, this.dataset.featured)">{e.featured ? 'Unfeature' : '⭐ Feature'}</button>
-                      <button class="action-btn del" data-id={e.id} data-title={e.title} onclick="(window as any).deleteEvent(this.dataset.id,this.dataset.title)">Delete</button>
+                      <button class="action-btn" data-id={e.id} data-featured={e.featured ? '1' : '0'} onclick="window.__dsn.toggleFeature(this.dataset.id, this.dataset.featured)">{e.featured ? 'Unfeature' : '⭐ Feature'}</button>
+                      <button class="action-btn del" data-id={e.id} data-title={e.title} onclick="window.__dsn.deleteEvent(this.dataset.id,this.dataset.title)">Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -439,9 +439,9 @@ const typeEmoji: Record<string,string> = {
                     <td><span class="badge badge-blue">▲ {s.votes || 0}</span></td>
                     <td><span class={`badge ${s.status === 'planned' ? 'badge-coral' : s.status === 'done' ? 'badge-green' : 'badge-muted'}`}>{s.status || 'open'}</span></td>
                     <td style="display:flex;gap:6px">
-                      <button class="action-btn" data-id={s.id} onclick="(window as any).markSuggestion(this.dataset.id,'planned')">Plan</button>
-                      <button class="action-btn" data-id={s.id} onclick="(window as any).markSuggestion(this.dataset.id,'done')">Done</button>
-                      <button class="action-btn del" data-id={s.id} onclick="(window as any).deleteSuggestion(this.dataset.id)">Delete</button>
+                      <button class="action-btn" data-id={s.id} onclick="window.__dsn.markSuggestion(this.dataset.id,'planned')">Plan</button>
+                      <button class="action-btn" data-id={s.id} onclick="window.__dsn.markSuggestion(this.dataset.id,'done')">Done</button>
+                      <button class="action-btn del" data-id={s.id} onclick="window.__dsn.deleteSuggestion(this.dataset.id)">Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -463,28 +463,28 @@ const typeEmoji: Record<string,string> = {
                 <div class="settings-toggle-label">Maintenance Mode</div>
                 <div class="settings-toggle-desc">Show a "coming soon" page to visitors</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-maintenance" onchange="(window as any).saveSetting('maintenance',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-maintenance" onchange="window.__dsn.saveSetting('maintenance',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">New Member Signups</div>
                 <div class="settings-toggle-desc">Allow new people to join the community</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-signups" checked onchange="(window as any).saveSetting('signups',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-signups" checked onchange="window.__dsn.saveSetting('signups',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">Show Member Directory</div>
                 <div class="settings-toggle-desc">Display the public members page</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-directory" checked onchange="(window as any).saveSetting('directory',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-directory" checked onchange="window.__dsn.saveSetting('directory',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">Discord RSVP Required</div>
                 <div class="settings-toggle-desc">Require Discord for event RSVPs</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-discord-rsvp" checked onchange="(window as any).saveSetting('discord_rsvp',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-discord-rsvp" checked onchange="window.__dsn.saveSetting('discord_rsvp',this.checked)"><span class="toggle-track"></span></label>
             </div>
           </div>
 
@@ -513,7 +513,7 @@ const typeEmoji: Record<string,string> = {
                 <option value="20">Up to 20 people</option>
               </select>
             </div>
-            <button class="save-btn" onclick="(window as any).saveSettings()">Save Changes</button>
+            <button class="save-btn" onclick="window.__dsn.saveSettings()">Save Changes</button>
           </div>
 
           <div class="settings-card">
@@ -524,35 +524,35 @@ const typeEmoji: Record<string,string> = {
                 <div class="settings-toggle-label">New Member Joined</div>
                 <div class="settings-toggle-desc">Email me when someone signs up</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-member" checked onchange="(window as any).saveSetting('notif_member',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-member" checked onchange="window.__dsn.saveSetting('notif_member',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">New Suggestion Posted</div>
                 <div class="settings-toggle-desc">Email me on new community suggestions</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-suggestion" onchange="(window as any).saveSetting('notif_suggestion',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-suggestion" onchange="window.__dsn.saveSetting('notif_suggestion',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">Event RSVP Alert</div>
                 <div class="settings-toggle-desc">Email me when an event fills up</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-rsvp" checked onchange="(window as any).saveSetting('notif_rsvp',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-rsvp" checked onchange="window.__dsn.saveSetting('notif_rsvp',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-field" style="margin-top:16px">
               <label class="settings-label">Admin Email</label>
               <input class="settings-input" id="setting-admin-email" value="stharpe98@gmail.com" placeholder="your@email.com" />
             </div>
-            <button class="save-btn" onclick="(window as any).saveSettings()">Save Changes</button>
+            <button class="save-btn" onclick="window.__dsn.saveSettings()">Save Changes</button>
           </div>
 
           <div class="settings-card">
             <div class="settings-card-title">Danger Zone</div>
             <div class="settings-card-sub">Irreversible actions. Be careful.</div>
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
-              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="(window as any).confirmAction('Clear all pending member signups?','clearPending')">Clear Pending Members</button>
-              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="(window as any).confirmAction('Export all member data as CSV?','exportMembers')">Export Member Data</button>
+              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="window.__dsn.confirmAction('Clear all pending member signups?','clearPending')">Clear Pending Members</button>
+              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="window.__dsn.confirmAction('Export all member data as CSV?','exportMembers')">Export Member Data</button>
             </div>
           </div>
 
@@ -577,7 +577,7 @@ const typeEmoji: Record<string,string> = {
               <label class="settings-label">CTA Button Text</label>
               <input class="settings-input" id="content-cta" value="Join Free →" />
             </div>
-            <button class="save-btn" onclick="(window as any).saveSettings()">Save Changes</button>
+            <button class="save-btn" onclick="window.__dsn.saveSettings()">Save Changes</button>
           </div>
           <div class="settings-card">
             <div class="settings-card-title">About Section</div>
@@ -590,7 +590,7 @@ const typeEmoji: Record<string,string> = {
               <label class="settings-label">Member Count Label</label>
               <input class="settings-input" id="content-membercount" value="88+ locals" />
             </div>
-            <button class="save-btn" onclick="(window as any).saveSettings()">Save Changes</button>
+            <button class="save-btn" onclick="window.__dsn.saveSettings()">Save Changes</button>
           </div>
           <div class="settings-card">
             <div class="settings-card-title">Footer</div>
@@ -603,7 +603,7 @@ const typeEmoji: Record<string,string> = {
               <label class="settings-label">Contact Email</label>
               <input class="settings-input" value="hello@denversocial.com" />
             </div>
-            <button class="save-btn" onclick="(window as any).saveSettings()">Save Changes</button>
+            <button class="save-btn" onclick="window.__dsn.saveSettings()">Save Changes</button>
           </div>
         </div>
       </div>
@@ -614,25 +614,30 @@ const typeEmoji: Record<string,string> = {
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script is:inline>
+  // Create global namespace for onclick handlers
+  window.__dsn = {};
+</script>
+
+<script is:inline>
   // Expose all functions globally so inline onclick works in Astro
-  (window as any).showPanel = showPanel;
-  (window as any).filterTable = filterTable;
-  (window as any).removeMember = removeMember;
-  (window as any).deleteEvent = deleteEvent;
-  (window as any).createEvent = createEvent;
-  (window as any).toggleCreateEvent = toggleCreateEvent;
-  (window as any).toggleFeature = toggleFeature;
-  (window as any).markSuggestion = markSuggestion;
-  (window as any).deleteSuggestion = deleteSuggestion;
-  (window as any).saveSetting = saveSetting;
-  (window as any).saveSettings = saveSettings;
-  (window as any).confirmAction = confirmAction;
-  (window as any).toggleSidebar = toggleSidebar;
-  (window as any).closeSidebar = closeSidebar;
+  window.__dsn.showPanel = showPanel;
+  window.__dsn.filterTable = filterTable;
+  window.__dsn.removeMember = removeMember;
+  window.__dsn.deleteEvent = deleteEvent;
+  window.__dsn.createEvent = createEvent;
+  window.__dsn.toggleCreateEvent = toggleCreateEvent;
+  window.__dsn.toggleFeature = toggleFeature;
+  window.__dsn.markSuggestion = markSuggestion;
+  window.__dsn.deleteSuggestion = deleteSuggestion;
+  window.__dsn.saveSetting = saveSetting;
+  window.__dsn.saveSettings = saveSettings;
+  window.__dsn.confirmAction = confirmAction;
+  window.__dsn.toggleSidebar = toggleSidebar;
+  window.__dsn.closeSidebar = closeSidebar;
 
   // ─── Panel navigation ───
-  function showPanel(id: string, btn: HTMLElement | null) {
+  function showPanel(id, btn) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById(`panel-${id}`)?.classList.add('active');
     document.querySelectorAll('.sb-link').forEach(b => b.classList.remove('active'));
@@ -643,7 +648,7 @@ const typeEmoji: Record<string,string> = {
         if (b.getAttribute('onclick')?.includes(`'${id}'`)) b.classList.add('active');
       });
     }
-    const titles: Record<string,string> = {
+    const titles = {
       overview:'Dashboard', members:'Members', events:'Events',
       suggestions:'Suggestions', settings:'Settings', content:'Site Content'
     };
@@ -665,17 +670,17 @@ const typeEmoji: Record<string,string> = {
   }
 
   // ─── Table search filter ───
-  function filterTable(tableId: string, query: string) {
+  function filterTable(tableId, query) {
     const q = query.toLowerCase();
     document.querySelectorAll(`#${tableId} tr[data-search]`).forEach((row) => {
       const searchVal = row.getAttribute('data-search')?.toLowerCase() || '';
-      (row as HTMLElement).style.display = searchVal.includes(q) ? '' : 'none';
+      (row).style.display = searchVal.includes(q) ? '' : 'none';
     });
   }
 
   // ─── Toast ───
-  function toast(msg: string, isError = false) {
-    const el = document.getElementById('toast')!;
+  function toast(msg, isError) {
+    const el = document.getElementById('toast');
     el.textContent = msg;
     el.style.borderColor = isError ? 'var(--red)' : 'var(--border)';
     el.classList.add('show');
@@ -683,7 +688,7 @@ const typeEmoji: Record<string,string> = {
   }
 
   // ─── API helper ───
-  async function api(url: string, body: any): Promise<{ok:boolean, error?:string}> {
+  async function api(url, body) {
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -693,15 +698,15 @@ const typeEmoji: Record<string,string> = {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Request failed');
       return { ok: true };
-    } catch (e: any) {
+    } catch (e) {
       return { ok: false, error: e.message };
     }
   }
 
   // ─── Remove Member (wired to API) ───
-  async function removeMember(id: string, name: string) {
+  async function removeMember(id, name) {
     if (!confirm(`Remove ${name} from the community? This cannot be undone.`)) return;
-    const btn = document.querySelector(`button[data-id="${id}"].del`) as HTMLButtonElement;
+    const btn = document.querySelector(`button[data-id="${id}"].del`);
     if (btn) { btn.disabled = true; btn.textContent = '...'; }
 
     const result = await api('/api/admin/member', { action: 'delete', id: parseInt(id) });
@@ -723,9 +728,9 @@ const typeEmoji: Record<string,string> = {
   }
 
   // ─── Delete Event (wired to API) ───
-  async function deleteEvent(id: string, title: string) {
+  async function deleteEvent(id, title) {
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
-    const btn = document.querySelector(`tr[data-event-id="${id}"] button.del`) as HTMLButtonElement;
+    const btn = document.querySelector(`tr[data-event-id="${id}"] button.del`);
     if (btn) { btn.disabled = true; btn.textContent = '...'; }
 
     const result = await api('/api/admin/event', { action: 'delete', id: parseInt(id) });
@@ -745,7 +750,7 @@ const typeEmoji: Record<string,string> = {
   }
 
   // ─── Toggle Feature (wired to API) ───
-  async function toggleFeature(id: string, currentlyFeatured: string) {
+  async function toggleFeature(id, currentlyFeatured) {
     const newFeatured = currentlyFeatured === '1' ? false : true;
     const result = await api('/api/admin/event', { action: 'feature', id: parseInt(id), featured: newFeatured });
     if (result.ok) {
@@ -764,21 +769,21 @@ const typeEmoji: Record<string,string> = {
   }
 
   async function createEvent() {
-    const title = (document.getElementById('new-evt-title') as HTMLInputElement).value.trim();
+    const title = (document.getElementById('new-evt-title')).value.trim();
     if (!title) { toast('Event title is required.', true); return; }
 
     const body = {
       action: 'create',
       title,
-      event_type: (document.getElementById('new-evt-type') as HTMLSelectElement).value,
-      location: (document.getElementById('new-evt-location') as HTMLInputElement).value.trim(),
-      zone: (document.getElementById('new-evt-zone') as HTMLInputElement).value.trim(),
-      event_month: (document.getElementById('new-evt-month') as HTMLInputElement).value.trim(),
-      event_day: (document.getElementById('new-evt-day') as HTMLInputElement).value.trim(),
-      spots: (document.getElementById('new-evt-spots') as HTMLInputElement).value,
-      price_cap: (document.getElementById('new-evt-price') as HTMLInputElement).value.trim(),
-      description: (document.getElementById('new-evt-desc') as HTMLTextAreaElement).value.trim(),
-      featured: (document.getElementById('new-evt-featured') as HTMLInputElement).checked,
+      event_type: (document.getElementById('new-evt-type')).value,
+      location: (document.getElementById('new-evt-location')).value.trim(),
+      zone: (document.getElementById('new-evt-zone')).value.trim(),
+      event_month: (document.getElementById('new-evt-month')).value.trim(),
+      event_day: (document.getElementById('new-evt-day')).value.trim(),
+      spots: (document.getElementById('new-evt-spots')).value,
+      price_cap: (document.getElementById('new-evt-price')).value.trim(),
+      description: (document.getElementById('new-evt-desc')).value.trim(),
+      featured: (document.getElementById('new-evt-featured')).checked,
     };
 
     const result = await api('/api/admin/event', body);
@@ -791,7 +796,7 @@ const typeEmoji: Record<string,string> = {
   }
 
   // ─── Mark Suggestion (wired to API) ───
-  async function markSuggestion(id: string, status: string) {
+  async function markSuggestion(id, status) {
     const result = await api('/api/admin/suggestion', { action: 'status', id: parseInt(id), status });
     if (result.ok) {
       toast(`Marked as ${status} ✓`);
@@ -802,7 +807,7 @@ const typeEmoji: Record<string,string> = {
   }
 
   // ─── Delete Suggestion (wired to API) ───
-  async function deleteSuggestion(id: string) {
+  async function deleteSuggestion(id) {
     if (!confirm('Delete this suggestion?')) return;
     const result = await api('/api/admin/suggestion', { action: 'delete', id: parseInt(id) });
     if (result.ok) {
@@ -816,16 +821,16 @@ const typeEmoji: Record<string,string> = {
   }
 
   // ─── Settings — save to D1 ───
-  function gatherSettings(): Record<string, string> {
-    const s: Record<string, string> = {};
+  function gatherSettings() {
+    const s = {};
     // Toggles
     const toggles = ['maintenance','signups','directory','discord-rsvp','notif-member','notif-suggestion','notif-rsvp'];
     toggles.forEach(key => {
-      const el = document.getElementById(`toggle-${key}`) as HTMLInputElement;
+      const el = document.getElementById(`toggle-${key}`);
       if (el) s[`toggle_${key.replace(/-/g,'_')}`] = el.checked ? '1' : '0';
     });
     // Text inputs
-    const inputs: Record<string,string> = {
+    const inputs = {
       'setting-name':'community_name', 'setting-city':'home_city',
       'setting-discord':'discord_link', 'setting-groupsize':'max_group_size',
       'setting-admin-email':'admin_email',
@@ -833,7 +838,7 @@ const typeEmoji: Record<string,string> = {
       'content-cta':'hero_cta', 'content-membercount':'member_count_label',
     };
     Object.entries(inputs).forEach(([elId, key]) => {
-      const el = document.getElementById(elId) as HTMLInputElement | HTMLSelectElement;
+      const el = document.getElementById(elId) | HTMLSelectElement;
       if (el) s[key] = el.value;
     });
     return s;
@@ -853,12 +858,12 @@ const typeEmoji: Record<string,string> = {
       } else {
         toast(`Save failed: ${data.error}`, true);
       }
-    } catch (e: any) {
+    } catch (e) {
       toast(`Save failed: ${e.message}`, true);
     }
   }
 
-  function saveSetting(key: string, val: boolean) {
+  function saveSetting(key, val) {
     // Immediate feedback, then batch save
     toast(`${key.replace(/_/g,' ').replace(/-/g,' ')} ${val ? 'enabled' : 'disabled'}`);
     // Auto-save all settings whenever a toggle changes
@@ -873,19 +878,19 @@ const typeEmoji: Record<string,string> = {
       if (settings.error) return;
 
       // Restore toggles
-      const toggleMap: Record<string,string> = {
+      const toggleMap = {
         'toggle_maintenance':'toggle-maintenance', 'toggle_signups':'toggle-signups',
         'toggle_directory':'toggle-directory', 'toggle_discord_rsvp':'toggle-discord-rsvp',
         'toggle_notif_member':'toggle-notif-member', 'toggle_notif_suggestion':'toggle-notif-suggestion',
         'toggle_notif_rsvp':'toggle-notif-rsvp',
       };
       Object.entries(toggleMap).forEach(([dbKey, elId]) => {
-        const el = document.getElementById(elId) as HTMLInputElement;
+        const el = document.getElementById(elId);
         if (el && settings[dbKey] !== undefined) el.checked = settings[dbKey] === '1';
       });
 
       // Restore text inputs
-      const inputMap: Record<string,string> = {
+      const inputMap = {
         'community_name':'setting-name', 'home_city':'setting-city',
         'discord_link':'setting-discord', 'max_group_size':'setting-groupsize',
         'admin_email':'setting-admin-email',
@@ -893,14 +898,14 @@ const typeEmoji: Record<string,string> = {
         'hero_cta':'content-cta', 'member_count_label':'content-membercount',
       };
       Object.entries(inputMap).forEach(([dbKey, elId]) => {
-        const el = document.getElementById(elId) as HTMLInputElement | HTMLSelectElement;
+        const el = document.getElementById(elId) | HTMLSelectElement;
         if (el && settings[dbKey]) el.value = settings[dbKey];
       });
     } catch {}
   }
 
   // ─── Danger Zone actions ───
-  async function confirmAction(msg: string, action: string) {
+  async function confirmAction(msg, action) {
     if (!confirm(msg)) return;
 
     if (action === 'exportMembers') {
@@ -925,7 +930,7 @@ const typeEmoji: Record<string,string> = {
         a.href = url; a.download = `dsn-members-${new Date().toISOString().slice(0,10)}.csv`;
         a.click(); URL.revokeObjectURL(url);
         toast('CSV downloaded ✓');
-      } catch (e: any) {
+      } catch (e) {
         toast(`Export failed: ${e.message}`, true);
       }
     } else if (action === 'clearPending') {
