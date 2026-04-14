@@ -28,119 +28,248 @@ const typeEmoji: Record<string, string> = {
 ---
 <AdminBase title="Dashboard — Denver Social">
 <style>
-  :root {
-    --bg:#07090f; --s1:#0d0f16; --s2:#12141c; --s3:#181b24;
-    --border:rgba(255,255,255,.06); --coral:#F05A28; --coral-dim:rgba(240,90,40,.08);
-    --text:#e8ecf4; --muted:#5a6478; --green:#34d399; --red:#f87171;
-    --blue:#60a5fa; --sw:250px; --radius:14px;
-  }
-  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-  body { background:var(--bg) !important; color:var(--text); font-family:'DM Sans',sans-serif; overflow:auto !important; height:auto !important; display:block !important; }
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
+  :root {
+    --bg:#06080e; --s1:rgba(255,255,255,.028); --s2:rgba(255,255,255,.045);
+    --glass:rgba(255,255,255,.035); --glass-border:rgba(255,255,255,.07);
+    --text:#eaecf2; --dim:#8892a4; --faint:#4b5263;
+    --accent:#e8943a; --accent-dim:rgba(232,148,58,.1); --accent-glow:rgba(232,148,58,.25);
+    --green:#4ade80; --red:#fb7185; --blue:#60a5fa;
+    --sw:260px; --radius:16px; --radius-sm:10px;
+    --font-display:'Playfair Display',Georgia,serif;
+    --font-body:'DM Sans',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    background:var(--bg) !important; color:var(--text); font-family:var(--font-body);
+    overflow:auto !important; height:auto !important; display:block !important;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* Noise grain overlay */
+  body::after {
+    content:''; position:fixed; inset:0; z-index:9999; pointer-events:none; opacity:.035;
+    background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ═══ LAYOUT ═══ */
   .shell { display:flex; min-height:100vh; }
   .main { margin-left:var(--sw); flex:1; min-width:0; }
-  .sidebar {
-    width:var(--sw); position:fixed; top:0; left:0; bottom:0;
-    background:var(--s1); border-right:1px solid var(--border);
-    display:flex; flex-direction:column; z-index:100; transition:transform .25s ease;
-  }
-  .sb-top { padding:22px 20px; border-bottom:1px solid var(--border); }
-  .sb-brand { display:flex; align-items:center; gap:12px; text-decoration:none; }
-  .sb-icon { width:36px; height:36px; background:linear-gradient(135deg,var(--coral),#ff7a4a); border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:17px; }
-  .sb-name { font-family:'Instrument Serif',serif; font-size:17px; font-weight:900; color:var(--text); line-height:1.2; }
-  .sb-name small { display:block; font-family:'DM Sans',sans-serif; font-size:9px; font-weight:600; color:var(--coral); letter-spacing:2px; text-transform:uppercase; }
-  .sb-nav { flex:1; padding:16px 10px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
-  .sb-section { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--muted); padding:16px 12px 6px; }
-  .sb-link { display:flex; align-items:center; gap:11px; padding:11px 14px; border-radius:11px; color:var(--muted); font-size:13px; font-weight:500; cursor:pointer; border:none; background:none; width:100%; text-align:left; font-family:inherit; transition:all .15s; }
-  .sb-link:hover { background:var(--s2); color:var(--text); }
-  .sb-link.active { background:var(--coral-dim); color:var(--coral); font-weight:600; }
-  .sb-link-icon { font-size:17px; width:22px; text-align:center; }
-  .sb-badge { margin-left:auto; background:var(--s3); color:var(--muted); font-size:10px; font-weight:700; padding:2px 8px; border-radius:50px; }
-  .sb-bottom { padding:14px 10px; border-top:1px solid var(--border); }
-  .sb-user { display:flex; align-items:center; gap:11px; padding:10px 14px; }
-  .sb-avatar { width:34px; height:34px; background:linear-gradient(135deg,var(--coral),#ff7a4a); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:#fff; }
-  .sb-user-name { font-size:13px; font-weight:600; }
-  .sb-user-role { font-size:10px; color:var(--muted); }
 
-  .topbar { height:58px; border-bottom:1px solid var(--border); background:rgba(7,9,15,.85); backdrop-filter:blur(16px); display:flex; align-items:center; justify-content:space-between; padding:0 30px; position:sticky; top:0; z-index:50; }
-  .topbar-left { display:flex; align-items:center; gap:14px; }
+  /* ═══ SIDEBAR ═══ */
+  .sidebar {
+    width:var(--sw); position:fixed; top:0; left:0; bottom:0; z-index:100;
+    background:linear-gradient(180deg, #0a0c14 0%, #080a11 100%);
+    border-right:1px solid var(--glass-border);
+    display:flex; flex-direction:column; transition:transform .3s cubic-bezier(.4,0,.2,1);
+  }
+  .sb-top { padding:28px 24px 24px; }
+  .sb-brand { display:flex; align-items:center; gap:14px; text-decoration:none; }
+  .sb-icon {
+    width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    font-size:18px; background:linear-gradient(135deg, var(--accent), #d4782a);
+    box-shadow:0 4px 20px var(--accent-glow);
+  }
+  .sb-name { font-family:var(--font-display); font-size:18px; font-weight:900; color:var(--text); letter-spacing:-.02em; }
+  .sb-name small { display:block; font-family:var(--font-mono); font-size:9px; font-weight:400; color:var(--accent); letter-spacing:.15em; text-transform:uppercase; margin-top:2px; }
+
+  .sb-divider { height:1px; background:var(--glass-border); margin:0 20px; }
+
+  .sb-nav { flex:1; padding:20px 12px; overflow-y:auto; display:flex; flex-direction:column; gap:1px; }
+  .sb-section { font-family:var(--font-mono); font-size:9px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); padding:20px 14px 8px; }
+  .sb-link {
+    display:flex; align-items:center; gap:12px; padding:11px 16px; border-radius:var(--radius-sm);
+    color:var(--dim); font-size:13px; font-weight:500; cursor:pointer;
+    border:none; background:none; width:100%; text-align:left; font-family:var(--font-body);
+    transition:all .2s ease; position:relative;
+  }
+  .sb-link:hover { background:var(--s1); color:var(--text); }
+  .sb-link.active { background:var(--accent-dim); color:var(--accent); }
+  .sb-link.active::before {
+    content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px;
+    background:var(--accent); border-radius:0 3px 3px 0;
+  }
+  .sb-link-icon { font-size:16px; width:22px; text-align:center; flex-shrink:0; }
+  .sb-badge { margin-left:auto; font-family:var(--font-mono); background:var(--s2); color:var(--faint); font-size:10px; font-weight:500; padding:2px 8px; border-radius:50px; }
+  .sb-link.active .sb-badge { background:var(--accent-dim); color:var(--accent); }
+
+  .sb-bottom { padding:16px 12px; border-top:1px solid var(--glass-border); }
+  .sb-user { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:var(--radius-sm); }
+  .sb-avatar {
+    width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:14px; color:#fff;
+    background:linear-gradient(135deg, var(--accent), #d4782a);
+  }
+  .sb-user-name { font-size:13px; font-weight:600; }
+  .sb-user-role { font-family:var(--font-mono); font-size:10px; color:var(--faint); letter-spacing:.05em; }
+
+  /* ═══ TOPBAR ═══ */
+  .topbar {
+    height:64px; border-bottom:1px solid var(--glass-border);
+    background:rgba(6,8,14,.8); backdrop-filter:blur(24px) saturate(1.4);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 32px; position:sticky; top:0; z-index:50;
+  }
+  .topbar-left { display:flex; align-items:center; gap:16px; }
   .hamburger { display:none; background:none; border:none; color:var(--text); font-size:22px; cursor:pointer; }
-  .topbar-title { font-family:'Instrument Serif',serif; font-size:22px; font-weight:900; }
+  .topbar-title { font-family:var(--font-display); font-size:24px; font-weight:900; letter-spacing:-.02em; }
   .topbar-right { display:flex; align-items:center; gap:10px; }
-  .topbar-btn { background:none; border:1px solid var(--border); border-radius:9px; padding:7px 16px; font-size:12px; font-weight:500; color:var(--muted); cursor:pointer; font-family:inherit; transition:all .15s; text-decoration:none; }
-  .topbar-btn:hover { border-color:rgba(255,255,255,.15); color:var(--text); }
+  .topbar-btn {
+    background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius-sm);
+    padding:8px 18px; font-size:12px; font-weight:500; color:var(--dim); cursor:pointer;
+    font-family:var(--font-body); transition:all .2s; text-decoration:none;
+    backdrop-filter:blur(8px);
+  }
+  .topbar-btn:hover { border-color:rgba(255,255,255,.14); color:var(--text); background:var(--s2); }
   .topbar-btn.danger:hover { border-color:var(--red); color:var(--red); }
 
-  .content { padding:30px; }
+  /* ═══ CONTENT ═══ */
+  .content { padding:32px; }
   .panel { display:none; }
-  .panel.active { display:block; animation:fadeUp .2s ease; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  .panel.active { display:block; }
+  .panel.active > * { animation:rise .4s cubic-bezier(.16,1,.3,1) both; }
+  .panel.active > *:nth-child(2) { animation-delay:.06s; }
+  .panel.active > *:nth-child(3) { animation-delay:.12s; }
+  .panel.active > *:nth-child(4) { animation-delay:.18s; }
+  @keyframes rise { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
-  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:30px; }
-  .stat-card { background:var(--s1); border:1px solid var(--border); border-radius:var(--radius); padding:22px; }
-  .stat-card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .stat-icon { font-size:22px; }
-  .stat-trend { font-size:11px; color:var(--green); font-weight:600; }
-  .stat-num { font-family:'Instrument Serif',serif; font-size:36px; font-weight:900; line-height:1; margin-bottom:4px; }
-  .stat-lbl { font-size:12px; color:var(--muted); font-weight:500; }
+  /* ═══ STAT CARDS ═══ */
+  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:32px; }
+  .stat-card {
+    background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius);
+    padding:24px 26px; backdrop-filter:blur(12px); position:relative; overflow:hidden;
+  }
+  .stat-card::before {
+    content:''; position:absolute; top:-40px; right:-40px; width:100px; height:100px;
+    background:radial-gradient(circle, var(--accent-glow), transparent 70%); opacity:.3;
+  }
+  .stat-card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; position:relative; }
+  .stat-icon { font-size:24px; }
+  .stat-trend { font-family:var(--font-mono); font-size:11px; color:var(--green); font-weight:500; }
+  .stat-num { font-family:var(--font-display); font-size:40px; font-weight:900; line-height:1; margin-bottom:6px; letter-spacing:-.02em; position:relative; }
+  .stat-lbl { font-size:12px; color:var(--dim); font-weight:500; letter-spacing:.02em; position:relative; }
 
-  .table-card { background:var(--s1); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:24px; }
-  .table-head { padding:18px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-  .table-title { font-size:15px; font-weight:700; }
-  .table-search { background:var(--s2); border:1px solid var(--border); border-radius:9px; padding:8px 14px; font-size:13px; color:var(--text); font-family:inherit; outline:none; width:200px; }
-  .table-search:focus { border-color:var(--coral); }
-  .table-search::placeholder { color:var(--muted); }
+  /* ═══ TABLE CARDS ═══ */
+  .table-card {
+    background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius);
+    overflow:hidden; margin-bottom:24px; backdrop-filter:blur(12px);
+  }
+  .table-head {
+    padding:20px 26px; border-bottom:1px solid var(--glass-border);
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  }
+  .table-title { font-family:var(--font-display); font-size:17px; font-weight:700; letter-spacing:-.01em; }
+  .table-search {
+    background:rgba(255,255,255,.04); border:1px solid var(--glass-border); border-radius:var(--radius-sm);
+    padding:9px 16px; font-size:13px; color:var(--text); font-family:var(--font-body);
+    outline:none; width:200px; transition:all .2s;
+  }
+  .table-search:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+  .table-search::placeholder { color:var(--faint); }
+
   table { width:100%; border-collapse:collapse; }
-  th { padding:11px 22px; text-align:left; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); font-weight:700; background:var(--s2); }
-  td { padding:14px 22px; font-size:13px; border-bottom:1px solid var(--border); }
+  th {
+    padding:12px 24px; text-align:left; font-family:var(--font-mono); font-size:10px;
+    letter-spacing:.15em; text-transform:uppercase; color:var(--faint); font-weight:500;
+    background:rgba(255,255,255,.015); border-bottom:1px solid var(--glass-border);
+  }
+  td { padding:15px 24px; font-size:13px; border-bottom:1px solid rgba(255,255,255,.03); }
   tr:last-child td { border-bottom:none; }
-  .td-name { font-weight:600; }
-  .td-muted { color:var(--muted); }
-  .badge { display:inline-block; font-size:10px; font-weight:700; padding:3px 10px; border-radius:50px; }
-  .badge-green { background:rgba(52,211,153,.1); color:var(--green); }
-  .badge-muted { background:rgba(255,255,255,.04); color:var(--muted); }
-  .badge-coral { background:var(--coral-dim); color:var(--coral); }
-  .badge-blue { background:rgba(96,165,250,.1); color:var(--blue); }
-  .action-btn { background:none; border:1px solid var(--border); border-radius:8px; padding:5px 11px; font-size:11px; font-weight:600; cursor:pointer; font-family:inherit; color:var(--muted); transition:all .15s; }
-  .action-btn:hover { border-color:var(--coral); color:var(--coral); }
+  tr:hover td { background:rgba(255,255,255,.015); }
+  .td-name { font-weight:600; color:var(--text); }
+  .td-muted { color:var(--dim); }
+
+  /* Badges */
+  .badge { display:inline-flex; align-items:center; font-family:var(--font-mono); font-size:10px; font-weight:500; padding:4px 10px; border-radius:50px; letter-spacing:.02em; }
+  .badge-green { background:rgba(74,222,128,.08); color:var(--green); }
+  .badge-muted { background:rgba(255,255,255,.04); color:var(--faint); }
+  .badge-accent { background:var(--accent-dim); color:var(--accent); }
+  .badge-blue { background:rgba(96,165,250,.08); color:var(--blue); }
+
+  /* Action buttons */
+  .action-btn {
+    background:none; border:1px solid var(--glass-border); border-radius:8px;
+    padding:6px 13px; font-size:11px; font-weight:600; cursor:pointer;
+    font-family:var(--font-body); color:var(--dim); transition:all .2s;
+  }
+  .action-btn:hover { border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
   .action-btn.del:hover { border-color:var(--red); color:var(--red); }
 
+  /* ═══ SETTINGS ═══ */
   .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-  .settings-card { background:var(--s1); border:1px solid var(--border); border-radius:var(--radius); padding:26px; }
-  .settings-card-title { font-size:15px; font-weight:700; margin-bottom:4px; }
-  .settings-card-sub { font-size:12px; color:var(--muted); margin-bottom:20px; line-height:1.6; }
-  .settings-field { margin-bottom:16px; }
-  .settings-label { display:block; font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
-  .settings-input { width:100%; background:var(--s2); border:1px solid var(--border); border-radius:10px; padding:11px 14px; font-size:13px; color:var(--text); font-family:inherit; outline:none; }
-  .settings-input:focus { border-color:var(--coral); }
-  .settings-input::placeholder { color:var(--muted); }
-  .settings-select { width:100%; background:var(--s2); border:1px solid var(--border); border-radius:10px; padding:11px 14px; font-size:13px; color:var(--text); font-family:inherit; outline:none; cursor:pointer; }
-  .settings-toggle { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--border); }
-  .settings-toggle:last-of-type { border-bottom:none; }
-  .settings-toggle-label { font-size:13px; font-weight:600; margin-bottom:2px; }
-  .settings-toggle-desc { font-size:12px; color:var(--muted); }
-  .toggle-switch { position:relative; width:40px; height:22px; flex-shrink:0; }
+  .settings-card { background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius); padding:28px; backdrop-filter:blur(12px); }
+  .settings-card-title { font-family:var(--font-display); font-size:17px; font-weight:700; margin-bottom:4px; letter-spacing:-.01em; }
+  .settings-card-sub { font-size:13px; color:var(--dim); margin-bottom:22px; line-height:1.6; }
+  .settings-field { margin-bottom:18px; }
+  .settings-label { display:block; font-family:var(--font-mono); font-size:9px; font-weight:500; letter-spacing:.15em; text-transform:uppercase; color:var(--faint); margin-bottom:8px; }
+  .settings-input {
+    width:100%; background:rgba(255,255,255,.03); border:1px solid var(--glass-border);
+    border-radius:var(--radius-sm); padding:12px 16px; font-size:13px; color:var(--text);
+    font-family:var(--font-body); outline:none; transition:all .2s;
+  }
+  .settings-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+  .settings-input::placeholder { color:var(--faint); }
+  .settings-select { width:100%; background:rgba(255,255,255,.03); border:1px solid var(--glass-border); border-radius:var(--radius-sm); padding:12px 16px; font-size:13px; color:var(--text); font-family:var(--font-body); outline:none; cursor:pointer; }
+  .settings-toggle { display:flex; align-items:center; justify-content:space-between; padding:15px 0; border-bottom:1px solid rgba(255,255,255,.04); }
+  .settings-toggle:last-of-type { border-bottom:none; padding-bottom:0; }
+  .settings-toggle-label { font-size:13px; font-weight:600; margin-bottom:3px; }
+  .settings-toggle-desc { font-size:12px; color:var(--faint); }
+  .toggle-switch { position:relative; width:44px; height:24px; flex-shrink:0; }
   .toggle-switch input { opacity:0; width:0; height:0; }
-  .toggle-track { position:absolute; inset:0; background:var(--s3); border-radius:50px; cursor:pointer; transition:background .2s; border:1px solid var(--border); }
-  .toggle-track::after { content:''; position:absolute; width:16px; height:16px; background:#fff; border-radius:50%; top:2px; left:2px; transition:transform .2s; }
-  input:checked + .toggle-track { background:var(--coral); border-color:var(--coral); }
-  input:checked + .toggle-track::after { transform:translateX(18px); }
-  .save-btn { background:var(--coral); color:#fff; border:none; border-radius:50px; padding:11px 26px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; transition:opacity .2s; margin-top:16px; }
-  .save-btn:hover { opacity:.88; }
-  .add-btn { background:var(--coral); color:#fff; border:none; font-size:12px; font-weight:700; padding:8px 18px; border-radius:9px; cursor:pointer; font-family:inherit; }
+  .toggle-track {
+    position:absolute; inset:0; background:var(--s2); border-radius:50px; cursor:pointer;
+    transition:all .25s cubic-bezier(.4,0,.2,1); border:1px solid var(--glass-border);
+  }
+  .toggle-track::after {
+    content:''; position:absolute; width:18px; height:18px; background:#fff;
+    border-radius:50%; top:2px; left:2px; transition:all .25s cubic-bezier(.4,0,.2,1);
+    box-shadow:0 1px 4px rgba(0,0,0,.3);
+  }
+  input:checked + .toggle-track { background:var(--accent); border-color:var(--accent); }
+  input:checked + .toggle-track::after { transform:translateX(20px); }
 
-  .create-form { background:var(--s1); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:24px; display:none; }
-  .create-form.open { display:block; }
-  .create-form-body { padding:22px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .save-btn {
+    background:linear-gradient(135deg, var(--accent), #d4782a); color:#fff; border:none;
+    border-radius:50px; padding:12px 28px; font-size:13px; font-weight:700; cursor:pointer;
+    font-family:var(--font-body); transition:all .2s; margin-top:18px;
+    box-shadow:0 4px 16px var(--accent-glow);
+  }
+  .save-btn:hover { transform:translateY(-1px); box-shadow:0 6px 24px var(--accent-glow); }
+  .add-btn {
+    background:linear-gradient(135deg, var(--accent), #d4782a); color:#fff; border:none;
+    font-size:12px; font-weight:700; padding:9px 20px; border-radius:var(--radius-sm);
+    cursor:pointer; font-family:var(--font-body); transition:all .2s;
+    box-shadow:0 2px 12px var(--accent-glow);
+  }
+  .add-btn:hover { transform:translateY(-1px); }
+
+  /* ═══ CREATE FORM ═══ */
+  .create-form {
+    background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius);
+    overflow:hidden; margin-bottom:24px; display:none; backdrop-filter:blur(12px);
+  }
+  .create-form.open { display:block; animation:rise .3s cubic-bezier(.16,1,.3,1); }
+  .create-form-body { padding:24px; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   .span2 { grid-column:span 2; }
 
-  .empty { padding:48px; text-align:center; color:var(--muted); }
-  .empty-icon { font-size:40px; margin-bottom:14px; }
-  .toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--s2); border:1px solid var(--border); border-radius:50px; padding:12px 24px; font-size:13px; font-weight:500; color:var(--text); z-index:999; opacity:0; transition:all .3s; pointer-events:none; }
+  /* ═══ EMPTY / TOAST ═══ */
+  .empty { padding:56px; text-align:center; color:var(--faint); }
+  .empty-icon { font-size:44px; margin-bottom:16px; opacity:.6; }
+  .toast {
+    position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(24px);
+    background:rgba(12,14,22,.95); border:1px solid var(--glass-border); border-radius:var(--radius);
+    padding:14px 28px; font-size:13px; font-weight:500; color:var(--text); z-index:9998;
+    opacity:0; transition:all .35s cubic-bezier(.16,1,.3,1); pointer-events:none;
+    backdrop-filter:blur(20px); box-shadow:0 8px 40px rgba(0,0,0,.5);
+  }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
   .toast.error { border-color:var(--red); }
-  .sb-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:99; }
 
+  .sb-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:99; backdrop-filter:blur(4px); }
+
+  /* ═══ RESPONSIVE ═══ */
   @media(max-width:900px) {
     .sidebar { transform:translateX(-100%); }
     .sidebar.open { transform:translateX(0); }
@@ -148,16 +277,17 @@ const typeEmoji: Record<string, string> = {
     .hamburger { display:block; }
     .stats-row { grid-template-columns:1fr 1fr; }
     .settings-grid { grid-template-columns:1fr; }
-    .content { padding:18px; }
+    .content { padding:20px; }
     .create-form-body { grid-template-columns:1fr; }
     .span2 { grid-column:span 1; }
   }
-  @media(max-width:480px) { .stats-row { grid-template-columns:1fr; } }
+  @media(max-width:480px) { .stats-row { grid-template-columns:1fr; } th,td { padding:10px 16px; } }
 </style>
 
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="sb-top"><a href="/" class="sb-brand"><div class="sb-icon">🌆</div><div class="sb-name">Denver Social<small>Admin Panel</small></div></a></div>
+    <div class="sb-top"><a href="/" class="sb-brand"><div class="sb-icon">🌆</div><div class="sb-name">Denver Social<small>admin panel</small></div></a></div>
+    <div class="sb-divider"></div>
     <nav class="sb-nav">
       <div class="sb-section">Overview</div>
       <button class="sb-link active" data-panel="overview"><span class="sb-link-icon">📊</span> Dashboard</button>
@@ -169,7 +299,7 @@ const typeEmoji: Record<string, string> = {
       <button class="sb-link" data-panel="settings"><span class="sb-link-icon">⚙️</span> Settings</button>
       <button class="sb-link" data-panel="content"><span class="sb-link-icon">✏️</span> Site Content</button>
     </nav>
-    <div class="sb-bottom"><div class="sb-user"><div class="sb-avatar">S</div><div><div class="sb-user-name">Seth</div><div class="sb-user-role">Administrator</div></div></div></div>
+    <div class="sb-bottom"><div class="sb-user"><div class="sb-avatar">S</div><div><div class="sb-user-name">Seth</div><div class="sb-user-role">administrator</div></div></div></div>
   </aside>
   <div class="sb-overlay" id="sbOverlay"></div>
 
@@ -180,7 +310,7 @@ const typeEmoji: Record<string, string> = {
     </div>
     <div class="content">
 
-      <!-- OVERVIEW -->
+      <!-- ═══ OVERVIEW ═══ -->
       <div class="panel active" id="panel-overview">
         <div class="stats-row">
           <div class="stat-card"><div class="stat-card-top"><span class="stat-icon">👥</span><span class="stat-trend">↑ growing</span></div><div class="stat-num">{members.length}</div><div class="stat-lbl">Total Members</div></div>
@@ -190,35 +320,32 @@ const typeEmoji: Record<string, string> = {
         </div>
         <div class="table-card">
           <div class="table-head"><div class="table-title">Recent Members</div><button class="action-btn" data-panel="members">View all →</button></div>
-          {members.length === 0 ? <div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div> : (
+          {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
             <table><thead><tr><th>Name</th><th>Email</th><th>Neighborhood</th><th>Status</th></tr></thead><tbody>
-              {members.slice(0,5).map((m:any) => <tr><td class="td-name">{m.name||'—'}</td><td class="td-muted">{m.email}</td><td class="td-muted">{m.neighborhood||'—'}</td><td><span class={`badge ${m.onboarding_done?'badge-green':'badge-muted'}`}>{m.onboarding_done?'✓ Active':'Pending'}</span></td></tr>)}
-            </tbody></table>
-          )}
+              {members.slice(0,5).map((m:any)=><tr><td class="td-name">{m.name||'—'}</td><td class="td-muted">{m.email}</td><td class="td-muted">{m.neighborhood||'—'}</td><td><span class={`badge ${m.onboarding_done?'badge-green':'badge-muted'}`}>{m.onboarding_done?'✓ Active':'Pending'}</span></td></tr>)}
+            </tbody></table>)}
         </div>
         <div class="table-card">
           <div class="table-head"><div class="table-title">Upcoming Events</div><button class="action-btn" data-panel="events">View all →</button></div>
-          {events.length === 0 ? <div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div> : (
+          {events.length===0?<div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div>:(
             <table><thead><tr><th>Event</th><th>Date</th><th>Location</th><th>Type</th></tr></thead><tbody>
-              {events.slice(0,5).map((e:any) => <tr><td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td><td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td><td class="td-muted">{e.location||'—'}</td><td><span class={`badge ${e.featured?'badge-coral':'badge-muted'}`}>{e.featured?'⭐ Featured':(e.event_type||'event')}</span></td></tr>)}
-            </tbody></table>
-          )}
+              {events.slice(0,5).map((e:any)=><tr><td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td><td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td><td class="td-muted">{e.location||'—'}</td><td><span class={`badge ${e.featured?'badge-accent':'badge-muted'}`}>{e.featured?'⭐ Featured':(e.event_type||'event')}</span></td></tr>)}
+            </tbody></table>)}
         </div>
       </div>
 
-      <!-- MEMBERS -->
+      <!-- ═══ MEMBERS ═══ -->
       <div class="panel" id="panel-members">
         <div class="table-card">
           <div class="table-head"><div class="table-title">All Members ({members.length})</div><input class="table-search" id="search-members" placeholder="Search members..." /></div>
-          {members.length === 0 ? <div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div> : (
+          {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
             <table id="members-table"><thead><tr><th>Name</th><th>Email</th><th>Neighborhood</th><th>Bio</th><th>Status</th><th></th></tr></thead><tbody>
-              {members.map((m:any) => <tr data-search={`${m.name} ${m.email} ${m.neighborhood}`}><td class="td-name">{m.name||'—'}</td><td class="td-muted" style="font-size:12px">{m.email}</td><td class="td-muted">{m.neighborhood||'—'}</td><td class="td-muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">{m.bio||'—'}</td><td><span class={`badge ${m.onboarding_done?'badge-green':'badge-muted'}`}>{m.onboarding_done?'✓ Active':'Pending'}</span></td><td><button class="action-btn del" data-action="remove-member" data-id={m.id} data-name={m.name||m.email}>Remove</button></td></tr>)}
-            </tbody></table>
-          )}
+              {members.map((m:any)=><tr data-search={`${m.name} ${m.email} ${m.neighborhood}`}><td class="td-name">{m.name||'—'}</td><td class="td-muted" style="font-size:12px">{m.email}</td><td class="td-muted">{m.neighborhood||'—'}</td><td class="td-muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">{m.bio||'—'}</td><td><span class={`badge ${m.onboarding_done?'badge-green':'badge-muted'}`}>{m.onboarding_done?'✓ Active':'Pending'}</span></td><td><button class="action-btn del" data-action="remove-member" data-id={m.id} data-name={m.name||m.email}>Remove</button></td></tr>)}
+            </tbody></table>)}
         </div>
       </div>
 
-      <!-- EVENTS -->
+      <!-- ═══ EVENTS ═══ -->
       <div class="panel" id="panel-events">
         <div class="create-form" id="create-event-form">
           <div class="table-head"><div class="table-title">Create New Event</div><button class="action-btn" id="cancel-create">✕ Cancel</button></div>
@@ -232,32 +359,30 @@ const typeEmoji: Record<string, string> = {
             <div class="settings-field"><label class="settings-label">Spots</label><input class="settings-input" id="evt-spots" type="number" value="10" min="1" /></div>
             <div class="settings-field"><label class="settings-label">Price Cap</label><input class="settings-input" id="evt-price" placeholder="e.g. $25" /></div>
             <div class="settings-field span2"><label class="settings-label">Description</label><textarea class="settings-input" id="evt-desc" rows="3" placeholder="What's the plan?" style="resize:vertical"></textarea></div>
-            <div class="span2" style="display:flex;align-items:center;gap:16px"><label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer"><input type="checkbox" id="evt-featured" /> ⭐ Featured</label><button class="save-btn" style="margin:0;margin-left:auto" id="submit-event">Create Event</button></div>
+            <div class="span2" style="display:flex;align-items:center;gap:16px"><label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);cursor:pointer"><input type="checkbox" id="evt-featured" /> ⭐ Featured</label><button class="save-btn" style="margin:0;margin-left:auto" id="submit-event">Create Event</button></div>
           </div>
         </div>
         <div class="table-card">
           <div class="table-head"><div class="table-title">All Events ({events.length})</div><div style="display:flex;gap:8px;align-items:center"><input class="table-search" id="search-events" placeholder="Search events..." /><button class="add-btn" id="toggle-create">+ Add Event</button></div></div>
-          {events.length === 0 ? <div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div> : (
+          {events.length===0?<div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div>:(
             <table id="events-table"><thead><tr><th>Title</th><th>Date</th><th>Location</th><th>Spots</th><th>Status</th><th></th></tr></thead><tbody>
-              {events.map((e:any) => <tr data-search={`${e.title} ${e.location} ${e.event_type}`} data-eid={e.id}><td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td><td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td><td class="td-muted">{e.location||'—'}</td><td class="td-muted">{e.spots?`${e.spots} max`:'—'}</td><td><span class={`badge ${e.featured?'badge-coral':'badge-muted'}`}>{e.featured?'⭐ Featured':(e.event_type||'event')}</span></td><td style="display:flex;gap:6px"><button class="action-btn" data-action="toggle-feature" data-id={e.id} data-featured={e.featured?'1':'0'}>{e.featured?'Unfeature':'⭐ Feature'}</button><button class="action-btn del" data-action="delete-event" data-id={e.id} data-title={e.title}>Delete</button></td></tr>)}
-            </tbody></table>
-          )}
+              {events.map((e:any)=><tr data-search={`${e.title} ${e.location} ${e.event_type}`} data-eid={e.id}><td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td><td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td><td class="td-muted">{e.location||'—'}</td><td class="td-muted">{e.spots?`${e.spots} max`:'—'}</td><td><span class={`badge ${e.featured?'badge-accent':'badge-muted'}`}>{e.featured?'⭐ Featured':(e.event_type||'event')}</span></td><td style="display:flex;gap:6px"><button class="action-btn" data-action="toggle-feature" data-id={e.id} data-featured={e.featured?'1':'0'}>{e.featured?'Unfeature':'⭐ Feature'}</button><button class="action-btn del" data-action="delete-event" data-id={e.id} data-title={e.title}>Delete</button></td></tr>)}
+            </tbody></table>)}
         </div>
       </div>
 
-      <!-- SUGGESTIONS -->
+      <!-- ═══ SUGGESTIONS ═══ -->
       <div class="panel" id="panel-suggestions">
         <div class="table-card">
           <div class="table-head"><div class="table-title">Community Suggestions</div></div>
-          {suggestions.length === 0 ? <div class="empty"><div class="empty-icon">💡</div><p>No suggestions yet.</p></div> : (
+          {suggestions.length===0?<div class="empty"><div class="empty-icon">💡</div><p>No suggestions yet.</p></div>:(
             <table><thead><tr><th>Idea</th><th>Votes</th><th>Status</th><th></th></tr></thead><tbody>
-              {suggestions.map((s:any) => <tr data-sid={s.id}><td class="td-name">{s.text||s.title||'—'}</td><td><span class="badge badge-blue">▲ {s.votes||0}</span></td><td><span class={`badge ${s.status==='planned'?'badge-coral':s.status==='done'?'badge-green':'badge-muted'}`}>{s.status||'open'}</span></td><td style="display:flex;gap:6px"><button class="action-btn" data-action="mark-suggestion" data-id={s.id} data-status="planned">Plan</button><button class="action-btn" data-action="mark-suggestion" data-id={s.id} data-status="done">Done</button><button class="action-btn del" data-action="delete-suggestion" data-id={s.id}>Delete</button></td></tr>)}
-            </tbody></table>
-          )}
+              {suggestions.map((s:any)=><tr data-sid={s.id}><td class="td-name">{s.text||s.title||'—'}</td><td><span class="badge badge-blue">▲ {s.votes||0}</span></td><td><span class={`badge ${s.status==='planned'?'badge-accent':s.status==='done'?'badge-green':'badge-muted'}`}>{s.status||'open'}</span></td><td style="display:flex;gap:6px"><button class="action-btn" data-action="mark-suggestion" data-id={s.id} data-status="planned">Plan</button><button class="action-btn" data-action="mark-suggestion" data-id={s.id} data-status="done">Done</button><button class="action-btn del" data-action="delete-suggestion" data-id={s.id}>Delete</button></td></tr>)}
+            </tbody></table>)}
         </div>
       </div>
 
-      <!-- SETTINGS -->
+      <!-- ═══ SETTINGS ═══ -->
       <div class="panel" id="panel-settings">
         <div class="settings-grid">
           <div class="settings-card">
@@ -285,15 +410,15 @@ const typeEmoji: Record<string, string> = {
           </div>
           <div class="settings-card">
             <div class="settings-card-title">Danger Zone</div><div class="settings-card-sub">Irreversible actions.</div>
-            <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
-              <button class="action-btn del" style="width:100%;padding:12px;font-size:13px" id="clear-pending">Clear Pending Members</button>
-              <button class="action-btn del" style="width:100%;padding:12px;font-size:13px" id="export-csv">Export Member Data (CSV)</button>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
+              <button class="action-btn del" style="width:100%;padding:13px;font-size:13px" id="clear-pending">Clear Pending Members</button>
+              <button class="action-btn del" style="width:100%;padding:13px;font-size:13px" id="export-csv">Export Member Data (CSV)</button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- SITE CONTENT -->
+      <!-- ═══ SITE CONTENT ═══ -->
       <div class="panel" id="panel-content">
         <div class="settings-grid">
           <div class="settings-card" style="grid-column:span 2">
@@ -324,159 +449,6 @@ const typeEmoji: Record<string, string> = {
 <div class="toast" id="toast"></div>
 
 <script is:inline>
-(function() {
-  var $ = function(s) { return document.querySelector(s); };
-  var $$ = function(s) { return document.querySelectorAll(s); };
-
-  function toast(msg, err) {
-    var el = $('#toast');
-    if (!el) return;
-    el.textContent = msg;
-    el.className = err ? 'toast show error' : 'toast show';
-    setTimeout(function() { el.className = 'toast'; }, 3000);
-  }
-
-  function api(url, body) {
-    return fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (d.error) throw new Error(d.error); return d; });
-  }
-
-  // Panel nav
-  var titles = { overview:'Dashboard', members:'Members', events:'Events', suggestions:'Suggestions', settings:'Settings', content:'Site Content' };
-  function showPanel(id) {
-    $$('.panel').forEach(function(p) { p.classList.remove('active'); });
-    var t = $('#panel-' + id);
-    if (t) t.classList.add('active');
-    $$('.sb-link').forEach(function(b) { b.classList.remove('active'); });
-    $$('[data-panel="' + id + '"]').forEach(function(b) { if (b.classList.contains('sb-link')) b.classList.add('active'); });
-    var h = $('#topbarTitle');
-    if (h) h.textContent = titles[id] || 'Dashboard';
-    closeSidebar();
-  }
-  $$('[data-panel]').forEach(function(b) { b.addEventListener('click', function() { showPanel(this.getAttribute('data-panel')); }); });
-
-  // Sidebar
-  function closeSidebar() { $('#sidebar').classList.remove('open'); $('#sbOverlay').style.display = 'none'; }
-  $('#hamburger').addEventListener('click', function() { $('#sidebar').classList.toggle('open'); $('#sbOverlay').style.display = $('#sidebar').classList.contains('open') ? 'block' : 'none'; });
-  $('#sbOverlay').addEventListener('click', closeSidebar);
-
-  // Search
-  function bindSearch(iid, tid) {
-    var inp = $('#' + iid);
-    if (!inp) return;
-    inp.addEventListener('input', function() {
-      var q = this.value.toLowerCase();
-      $$('#' + tid + ' tr[data-search]').forEach(function(r) { r.style.display = (r.getAttribute('data-search') || '').toLowerCase().indexOf(q) >= 0 ? '' : 'none'; });
-    });
-  }
-  bindSearch('search-members', 'members-table');
-  bindSearch('search-events', 'events-table');
-
-  // Action delegation
-  document.addEventListener('click', function(e) {
-    var btn = e.target.closest('[data-action]');
-    if (!btn) return;
-    var act = btn.getAttribute('data-action');
-    var id = btn.getAttribute('data-id');
-
-    if (act === 'remove-member') {
-      var nm = btn.getAttribute('data-name');
-      if (!confirm('Remove ' + nm + '?')) return;
-      btn.disabled = true; btn.textContent = '...';
-      api('/api/admin/member', { action:'delete', id:parseInt(id) })
-        .then(function() { toast(nm + ' removed.'); var r = btn.closest('tr'); if (r) r.remove(); })
-        .catch(function(err) { toast('Failed: ' + err.message, true); btn.disabled = false; btn.textContent = 'Remove'; });
-    }
-    if (act === 'delete-event') {
-      var tt = btn.getAttribute('data-title');
-      if (!confirm('Delete "' + tt + '"?')) return;
-      btn.disabled = true; btn.textContent = '...';
-      api('/api/admin/event', { action:'delete', id:parseInt(id) })
-        .then(function() { toast('"' + tt + '" deleted.'); var r = btn.closest('tr'); if (r) r.remove(); })
-        .catch(function(err) { toast('Failed: ' + err.message, true); btn.disabled = false; btn.textContent = 'Delete'; });
-    }
-    if (act === 'toggle-feature') {
-      var f = btn.getAttribute('data-featured') === '1';
-      api('/api/admin/event', { action:'feature', id:parseInt(id), featured:!f })
-        .then(function() { toast(f ? 'Unfeatured' : 'Featured ⭐'); setTimeout(function() { location.reload(); }, 400); })
-        .catch(function(err) { toast('Failed: ' + err.message, true); });
-    }
-    if (act === 'mark-suggestion') {
-      var st = btn.getAttribute('data-status');
-      api('/api/admin/suggestion', { action:'status', id:parseInt(id), status:st })
-        .then(function() { toast('Marked ' + st + ' ✓'); setTimeout(function() { location.reload(); }, 400); })
-        .catch(function(err) { toast('Failed: ' + err.message, true); });
-    }
-    if (act === 'delete-suggestion') {
-      if (!confirm('Delete this suggestion?')) return;
-      api('/api/admin/suggestion', { action:'delete', id:parseInt(id) })
-        .then(function() { toast('Deleted.'); var r = btn.closest('tr'); if (r) r.remove(); })
-        .catch(function(err) { toast('Failed: ' + err.message, true); });
-    }
-  });
-
-  // Create event
-  $('#toggle-create').addEventListener('click', function() { $('#create-event-form').classList.toggle('open'); });
-  $('#cancel-create').addEventListener('click', function() { $('#create-event-form').classList.remove('open'); });
-  $('#submit-event').addEventListener('click', function() {
-    var t = $('#evt-title').value.trim();
-    if (!t) { toast('Title required.', true); return; }
-    api('/api/admin/event', { action:'create', title:t, event_type:$('#evt-type').value, location:$('#evt-location').value.trim(), zone:$('#evt-zone').value.trim(), event_month:$('#evt-month').value.trim(), event_day:$('#evt-day').value.trim(), spots:$('#evt-spots').value, price_cap:$('#evt-price').value.trim(), description:$('#evt-desc').value.trim(), featured:$('#evt-featured').checked })
-      .then(function() { toast('Event created! 🎉'); setTimeout(function() { location.reload(); }, 500); })
-      .catch(function(err) { toast('Failed: ' + err.message, true); });
-  });
-
-  // Settings
-  function gatherAll() {
-    var s = {};
-    $$('[data-setting]').forEach(function(el) {
-      var k = el.getAttribute('data-setting');
-      s[k] = el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value;
-    });
-    return s;
-  }
-  function doSave() {
-    api('/api/admin/settings', gatherAll())
-      .then(function() { toast('Settings saved ✓'); })
-      .catch(function(err) { toast('Failed: ' + err.message, true); });
-  }
-  $$('.js-save').forEach(function(b) { b.addEventListener('click', doSave); });
-
-  // Load settings
-  fetch('/api/admin/settings').then(function(r) { return r.json(); }).then(function(d) {
-    if (d.error) return;
-    $$('[data-setting]').forEach(function(el) {
-      var k = el.getAttribute('data-setting');
-      if (d[k] === undefined) return;
-      if (el.type === 'checkbox') el.checked = d[k] === '1';
-      else el.value = d[k];
-    });
-  }).catch(function() {});
-
-  // Danger zone
-  $('#clear-pending').addEventListener('click', function() {
-    if (!confirm('Clear all pending members?')) return;
-    api('/api/admin/member', { action:'clear_pending' })
-      .then(function() { toast('Cleared.'); setTimeout(function() { location.reload(); }, 500); })
-      .catch(function(err) { toast('Failed: ' + err.message, true); });
-  });
-  $('#export-csv').addEventListener('click', function() {
-    var rows = $$('#members-table tbody tr');
-    if (!rows.length) { toast('No members.', true); return; }
-    var csv = 'Name,Email,Neighborhood,Bio,Status\n';
-    rows.forEach(function(row) {
-      var cells = row.querySelectorAll('td');
-      var vals = [];
-      for (var i = 0; i < 5; i++) vals.push('"' + (cells[i] ? cells[i].textContent.trim().replace(/"/g,'""') : '') + '"');
-      csv += vals.join(',') + '\n';
-    });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv' }));
-    a.download = 'dsn-members-' + new Date().toISOString().slice(0,10) + '.csv';
-    a.click();
-    toast('CSV downloaded ✓');
-  });
-})();
+(function(){var $=function(s){return document.querySelector(s)},$$=function(s){return document.querySelectorAll(s)};function toast(m,e){var el=$('#toast');if(!el)return;el.textContent=m;el.className=e?'toast show error':'toast show';setTimeout(function(){el.className='toast'},3000)}function api(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);return d})}var titles={overview:'Dashboard',members:'Members',events:'Events',suggestions:'Suggestions',settings:'Settings',content:'Site Content'};function showPanel(id){$$('.panel').forEach(function(p){p.classList.remove('active')});var t=$('#panel-'+id);if(t)t.classList.add('active');$$('.sb-link').forEach(function(b){b.classList.remove('active')});$$('.sb-link[data-panel="'+id+'"]').forEach(function(b){b.classList.add('active')});var h=$('#topbarTitle');if(h)h.textContent=titles[id]||'Dashboard';closeSidebar()}$$('[data-panel]').forEach(function(b){b.addEventListener('click',function(){showPanel(this.getAttribute('data-panel'))})});function closeSidebar(){$('#sidebar').classList.remove('open');$('#sbOverlay').style.display='none'}$('#hamburger').addEventListener('click',function(){$('#sidebar').classList.toggle('open');$('#sbOverlay').style.display=$('#sidebar').classList.contains('open')?'block':'none'});$('#sbOverlay').addEventListener('click',closeSidebar);function bindSearch(i,t){var inp=$('#'+i);if(!inp)return;inp.addEventListener('input',function(){var q=this.value.toLowerCase();$$('#'+t+' tr[data-search]').forEach(function(r){r.style.display=(r.getAttribute('data-search')||'').toLowerCase().indexOf(q)>=0?'':'none'})})}bindSearch('search-members','members-table');bindSearch('search-events','events-table');document.addEventListener('click',function(e){var btn=e.target.closest('[data-action]');if(!btn)return;var act=btn.getAttribute('data-action'),id=btn.getAttribute('data-id');if(act==='remove-member'){var nm=btn.getAttribute('data-name');if(!confirm('Remove '+nm+'?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/member',{action:'delete',id:parseInt(id)}).then(function(){toast(nm+' removed.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Remove'})}if(act==='delete-event'){var tt=btn.getAttribute('data-title');if(!confirm('Delete "'+tt+'"?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/event',{action:'delete',id:parseInt(id)}).then(function(){toast('"'+tt+'" deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Delete'})}if(act==='toggle-feature'){var f=btn.getAttribute('data-featured')==='1';api('/api/admin/event',{action:'feature',id:parseInt(id),featured:!f}).then(function(){toast(f?'Unfeatured':'Featured ⭐');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}if(act==='mark-suggestion'){var st=btn.getAttribute('data-status');api('/api/admin/suggestion',{action:'status',id:parseInt(id),status:st}).then(function(){toast('Marked '+st+' ✓');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}if(act==='delete-suggestion'){if(!confirm('Delete this suggestion?'))return;api('/api/admin/suggestion',{action:'delete',id:parseInt(id)}).then(function(){toast('Deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true)})}});$('#toggle-create').addEventListener('click',function(){$('#create-event-form').classList.toggle('open')});$('#cancel-create').addEventListener('click',function(){$('#create-event-form').classList.remove('open')});$('#submit-event').addEventListener('click',function(){var t=$('#evt-title').value.trim();if(!t){toast('Title required.',true);return}api('/api/admin/event',{action:'create',title:t,event_type:$('#evt-type').value,location:$('#evt-location').value.trim(),zone:$('#evt-zone').value.trim(),event_month:$('#evt-month').value.trim(),event_day:$('#evt-day').value.trim(),spots:$('#evt-spots').value,price_cap:$('#evt-price').value.trim(),description:$('#evt-desc').value.trim(),featured:$('#evt-featured').checked}).then(function(){toast('Event created! 🎉');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});function gatherAll(){var s={};$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');s[k]=el.type==='checkbox'?(el.checked?'1':'0'):el.value});return s}function doSave(){api('/api/admin/settings',gatherAll()).then(function(){toast('Settings saved ✓')}).catch(function(err){toast('Failed: '+err.message,true)})}$$('.js-save').forEach(function(b){b.addEventListener('click',doSave)});fetch('/api/admin/settings').then(function(r){return r.json()}).then(function(d){if(d.error)return;$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');if(d[k]===undefined)return;if(el.type==='checkbox')el.checked=d[k]==='1';else el.value=d[k]})}).catch(function(){});$('#clear-pending').addEventListener('click',function(){if(!confirm('Clear all pending members?'))return;api('/api/admin/member',{action:'clear_pending'}).then(function(){toast('Cleared.');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});$('#export-csv').addEventListener('click',function(){var rows=$$('#members-table tbody tr');if(!rows.length){toast('No members.',true);return}var csv='Name,Email,Neighborhood,Bio,Status\n';rows.forEach(function(row){var cells=row.querySelectorAll('td');var vals=[];for(var i=0;i<5;i++)vals.push('"'+(cells[i]?cells[i].textContent.trim().replace(/"/g,'""'):'')+'"');csv+=vals.join(',')+'\n'});var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='dsn-members-'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('CSV downloaded ✓')})})();
 </script>
 </AdminBase>
