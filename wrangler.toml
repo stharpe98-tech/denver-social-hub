@@ -8,6 +8,10 @@ binding = "DB"
 database_name = "denver-social"
 database_id = "402f83a5-8907-4666-8343-7d12e90ef9c3"
 
+[[kv_namespaces]]
+binding = "SESSION"
+id = "4a5f93d2399b43d9bae85d0b61023857"
+
 [assets]
 binding = "ASSETS"
 directory = "./dist"
