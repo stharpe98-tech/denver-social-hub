@@ -187,14 +187,14 @@ const typeEmoji: Record<string,string> = {
     </div>
     <nav class="sb-nav">
       <div class="sb-section">Overview</div>
-      <button class="sb-link active" onclick="showPanel('overview',this)"><span class="sb-link-icon">📊</span> Dashboard</button>
+      <button class="sb-link active" onclick="(window as any).showPanel('overview',this)"><span class="sb-link-icon">📊</span> Dashboard</button>
       <div class="sb-section">Manage</div>
-      <button class="sb-link" onclick="showPanel('members',this)"><span class="sb-link-icon">👥</span> Members <span class="sb-badge" id="memberBadge">{members.length}</span></button>
-      <button class="sb-link" onclick="showPanel('events',this)"><span class="sb-link-icon">📅</span> Events <span class="sb-badge" id="eventBadge">{events.length}</span></button>
-      <button class="sb-link" onclick="showPanel('suggestions',this)"><span class="sb-link-icon">💡</span> Suggestions</button>
+      <button class="sb-link" onclick="(window as any).showPanel('members',this)"><span class="sb-link-icon">👥</span> Members <span class="sb-badge" id="memberBadge">{members.length}</span></button>
+      <button class="sb-link" onclick="(window as any).showPanel('events',this)"><span class="sb-link-icon">📅</span> Events <span class="sb-badge" id="eventBadge">{events.length}</span></button>
+      <button class="sb-link" onclick="(window as any).showPanel('suggestions',this)"><span class="sb-link-icon">💡</span> Suggestions</button>
       <div class="sb-section">Config</div>
-      <button class="sb-link" onclick="showPanel('settings',this)"><span class="sb-link-icon">⚙️</span> Settings</button>
-      <button class="sb-link" onclick="showPanel('content',this)"><span class="sb-link-icon">✏️</span> Site Content</button>
+      <button class="sb-link" onclick="(window as any).showPanel('settings',this)"><span class="sb-link-icon">⚙️</span> Settings</button>
+      <button class="sb-link" onclick="(window as any).showPanel('content',this)"><span class="sb-link-icon">✏️</span> Site Content</button>
     </nav>
     <div class="sb-bottom">
       <div class="sb-user">
@@ -206,13 +206,13 @@ const typeEmoji: Record<string,string> = {
       </div>
     </div>
   </aside>
-  <div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+  <div class="sb-overlay" id="sbOverlay" onclick="(window as any).closeSidebar()"></div>
 
   <!-- MAIN -->
   <div class="main">
     <div class="topbar">
       <div class="topbar-left">
-        <button class="hamburger" onclick="toggleSidebar()">☰</button>
+        <button class="hamburger" onclick="(window as any).toggleSidebar()">☰</button>
         <div class="topbar-title" id="topbarTitle">Dashboard</div>
       </div>
       <div class="topbar-right">
@@ -250,7 +250,7 @@ const typeEmoji: Record<string,string> = {
 
         <!-- Recent members -->
         <div class="table-card">
-          <div class="table-head"><div class="table-title">Recent Members</div><a href="#" onclick="showPanel('members',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
+          <div class="table-head"><div class="table-title">Recent Members</div><a href="#" onclick="(window as any).showPanel('members',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
           {members.length === 0 ? (
             <div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>
           ) : (
@@ -272,7 +272,7 @@ const typeEmoji: Record<string,string> = {
 
         <!-- Recent events -->
         <div class="table-card">
-          <div class="table-head"><div class="table-title">Upcoming Events</div><a href="#" onclick="showPanel('events',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
+          <div class="table-head"><div class="table-title">Upcoming Events</div><a href="#" onclick="(window as any).showPanel('events',null)" style="font-size:12px;color:var(--coral);text-decoration:none;">View all →</a></div>
           {events.length === 0 ? (
             <div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div>
           ) : (
@@ -298,7 +298,7 @@ const typeEmoji: Record<string,string> = {
         <div class="table-card">
           <div class="table-head">
             <div class="table-title">All Members ({members.length})</div>
-            <input class="table-search" placeholder="Search members..." oninput="filterTable('members-table',this.value)" />
+            <input class="table-search" placeholder="Search members..." oninput="(window as any).filterTable('members-table',this.value)" />
           </div>
           {members.length === 0 ? (
             <div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>
@@ -313,7 +313,7 @@ const typeEmoji: Record<string,string> = {
                     <td class="td-muted">{m.neighborhood || '—'}</td>
                     <td class="td-muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">{m.bio || '—'}</td>
                     <td><span class={`badge ${m.onboarding_done ? 'badge-green' : 'badge-muted'}`}>{m.onboarding_done ? '✓ Active' : 'Pending'}</span></td>
-                    <td><button class="action-btn del" onclick={`removeMember('${m.id}','${m.name||m.email}')`}>Remove</button></td>
+                    <td><button class="action-btn del" data-id={m.id} data-name={m.name||m.email} onclick="(window as any).removeMember(this.dataset.id,this.dataset.name)">Remove</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -328,7 +328,7 @@ const typeEmoji: Record<string,string> = {
           <div class="table-head">
             <div class="table-title">All Events ({events.length})</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <input class="table-search" placeholder="Search events..." oninput="filterTable('events-table',this.value)" />
+              <input class="table-search" placeholder="Search events..." oninput="(window as any).filterTable('events-table',this.value)" />
               <a href="/events/new" style="background:var(--coral);color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;white-space:nowrap">+ Add Event</a>
             </div>
           </div>
@@ -351,7 +351,7 @@ const typeEmoji: Record<string,string> = {
                     </td>
                     <td style="display:flex;gap:6px">
                       <a href={`/events/${e.id}`} class="action-btn" style="text-decoration:none">View</a>
-                      <button class="action-btn del" onclick={`deleteEvent('${e.id}','${e.title}')`}>Delete</button>
+                      <button class="action-btn del" data-id={e.id} data-title={e.title} onclick="(window as any).deleteEvent(this.dataset.id,this.dataset.title)">Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -377,9 +377,9 @@ const typeEmoji: Record<string,string> = {
                     <td><span class="badge badge-blue">▲ {s.votes || 0}</span></td>
                     <td><span class={`badge ${s.status === 'planned' ? 'badge-coral' : s.status === 'done' ? 'badge-green' : 'badge-muted'}`}>{s.status || 'open'}</span></td>
                     <td style="display:flex;gap:6px">
-                      <button class="action-btn" onclick={`markSuggestion('${s.id}','planned')`}>Plan</button>
-                      <button class="action-btn" onclick={`markSuggestion('${s.id}','done')`}>Done</button>
-                      <button class="action-btn del" onclick={`deleteSuggestion('${s.id}')`}>Delete</button>
+                      <button class="action-btn" data-id={s.id} onclick="(window as any).markSuggestion(this.dataset.id,'planned')">Plan</button>
+                      <button class="action-btn" data-id={s.id} onclick="(window as any).markSuggestion(this.dataset.id,'done')">Done</button>
+                      <button class="action-btn del" data-id={s.id} onclick="(window as any).deleteSuggestion(this.dataset.id)">Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -401,28 +401,28 @@ const typeEmoji: Record<string,string> = {
                 <div class="settings-toggle-label">Maintenance Mode</div>
                 <div class="settings-toggle-desc">Show a "coming soon" page to visitors</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-maintenance" onchange="saveSetting('maintenance',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-maintenance" onchange="(window as any).saveSetting('maintenance',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">New Member Signups</div>
                 <div class="settings-toggle-desc">Allow new people to join the community</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-signups" checked onchange="saveSetting('signups',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-signups" checked onchange="(window as any).saveSetting('signups',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">Show Member Directory</div>
                 <div class="settings-toggle-desc">Display the public members page</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-directory" checked onchange="saveSetting('directory',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-directory" checked onchange="(window as any).saveSetting('directory',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">Discord RSVP Required</div>
                 <div class="settings-toggle-desc">Require Discord for event RSVPs</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-discord-rsvp" checked onchange="saveSetting('discord_rsvp',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-discord-rsvp" checked onchange="(window as any).saveSetting('discord_rsvp',this.checked)"><span class="toggle-track"></span></label>
             </div>
           </div>
 
@@ -451,7 +451,7 @@ const typeEmoji: Record<string,string> = {
                 <option value="20">Up to 20 people</option>
               </select>
             </div>
-            <button class="save-btn" onclick="saveSettings()">Save Changes</button>
+            <button class="save-btn" onclick="(window as any).saveSettings()">Save Changes</button>
           </div>
 
           <div class="settings-card">
@@ -462,35 +462,35 @@ const typeEmoji: Record<string,string> = {
                 <div class="settings-toggle-label">New Member Joined</div>
                 <div class="settings-toggle-desc">Email me when someone signs up</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-member" checked onchange="saveSetting('notif_member',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-member" checked onchange="(window as any).saveSetting('notif_member',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">New Suggestion Posted</div>
                 <div class="settings-toggle-desc">Email me on new community suggestions</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-suggestion" onchange="saveSetting('notif_suggestion',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-suggestion" onchange="(window as any).saveSetting('notif_suggestion',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-toggle">
               <div class="settings-toggle-info">
                 <div class="settings-toggle-label">Event RSVP Alert</div>
                 <div class="settings-toggle-desc">Email me when an event fills up</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-rsvp" checked onchange="saveSetting('notif_rsvp',this.checked)"><span class="toggle-track"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="toggle-notif-rsvp" checked onchange="(window as any).saveSetting('notif_rsvp',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div class="settings-field" style="margin-top:16px">
               <label class="settings-label">Admin Email</label>
               <input class="settings-input" id="setting-admin-email" value="stharpe98@gmail.com" placeholder="your@email.com" />
             </div>
-            <button class="save-btn" onclick="saveSettings()">Save Changes</button>
+            <button class="save-btn" onclick="(window as any).saveSettings()">Save Changes</button>
           </div>
 
           <div class="settings-card">
             <div class="settings-card-title">Danger Zone</div>
             <div class="settings-card-sub">Irreversible actions. Be careful.</div>
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
-              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="confirmAction('Clear all pending member signups?','clearPending')">Clear Pending Members</button>
-              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="confirmAction('Export all member data as CSV?','exportMembers')">Export Member Data</button>
+              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="(window as any).confirmAction('Clear all pending member signups?','clearPending')">Clear Pending Members</button>
+              <button class="action-btn del" style="width:100%;padding:11px;font-size:13px" onclick="(window as any).confirmAction('Export all member data as CSV?','exportMembers')">Export Member Data</button>
             </div>
           </div>
 
@@ -515,7 +515,7 @@ const typeEmoji: Record<string,string> = {
               <label class="settings-label">CTA Button Text</label>
               <input class="settings-input" id="content-cta" value="Join Free →" />
             </div>
-            <button class="save-btn" onclick="saveSettings()">Save Changes</button>
+            <button class="save-btn" onclick="(window as any).saveSettings()">Save Changes</button>
           </div>
           <div class="settings-card">
             <div class="settings-card-title">About Section</div>
@@ -528,7 +528,7 @@ const typeEmoji: Record<string,string> = {
               <label class="settings-label">Member Count Label</label>
               <input class="settings-input" id="content-membercount" value="88+ locals" />
             </div>
-            <button class="save-btn" onclick="saveSettings()">Save Changes</button>
+            <button class="save-btn" onclick="(window as any).saveSettings()">Save Changes</button>
           </div>
           <div class="settings-card">
             <div class="settings-card-title">Footer</div>
@@ -541,7 +541,7 @@ const typeEmoji: Record<string,string> = {
               <label class="settings-label">Contact Email</label>
               <input class="settings-input" value="hello@denversocial.com" />
             </div>
-            <button class="save-btn" onclick="saveSettings()">Save Changes</button>
+            <button class="save-btn" onclick="(window as any).saveSettings()">Save Changes</button>
           </div>
         </div>
       </div>
@@ -553,6 +553,19 @@ const typeEmoji: Record<string,string> = {
 <div class="toast" id="toast"></div>
 
 <script>
+  // Expose all functions globally so inline onclick works in Astro
+  (window as any).showPanel = showPanel;
+  (window as any).filterTable = filterTable;
+  (window as any).removeMember = removeMember;
+  (window as any).deleteEvent = deleteEvent;
+  (window as any).markSuggestion = markSuggestion;
+  (window as any).deleteSuggestion = deleteSuggestion;
+  (window as any).saveSetting = saveSetting;
+  (window as any).saveSettings = saveSettings;
+  (window as any).confirmAction = confirmAction;
+  (window as any).toggleSidebar = toggleSidebar;
+  (window as any).closeSidebar = closeSidebar;
+
   // Panel navigation
   function showPanel(id: string, btn: HTMLElement | null) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
