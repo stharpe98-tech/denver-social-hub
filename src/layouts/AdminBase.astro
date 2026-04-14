@@ -1,5 +1,5 @@
 ---
-const { title = "Admin — Denver Social" } = Astro.props;
+const { title = "Admin — Denver Social", centered = false } = Astro.props;
 ---
 <html lang="en">
 <head>
@@ -12,16 +12,25 @@ const { title = "Admin — Denver Social" } = Astro.props;
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; font-family: 'DM Sans', sans-serif; }
+    html { font-family: 'DM Sans', sans-serif; }
+    html, body { min-height: 100vh; }
     body {
-      min-height: 100vh;
       background: #05070d;
       color: #e8ecf4;
+      position: relative;
+    }
+    /* Centered mode (login page) */
+    body.centered {
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
+      height: 100vh;
       overflow: hidden;
+    }
+    /* Dashboard mode (default) — full-page scrollable */
+    body:not(.centered) {
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     /* animated background */
@@ -54,6 +63,7 @@ const { title = "Admin — Denver Social" } = Astro.props;
       position: relative;
       z-index: 1;
       width: 100%;
+      min-height: 100vh;
     }
 
     .input {
@@ -70,7 +80,7 @@ const { title = "Admin — Denver Social" } = Astro.props;
     .input:focus { border-color: #F05A28; outline: none; background: rgba(255,255,255,.06); }
   </style>
 </head>
-<body>
+<body class={centered ? 'centered' : ''}>
   <div class="admin-wrap">
     <slot />
   </div>
