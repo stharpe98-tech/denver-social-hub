@@ -111,7 +111,7 @@ const activities = [
   </div>
   <div class="activity-grid">
     {activities.map((a) => (
-      <a href="/events" class="activity-card fade-up">
+      <div class="activity-card fade-up">
         <img src={a.img} alt={a.title} class="activity-img" loading="lazy" />
         <div class="activity-overlay"></div>
         <div class="activity-content">
@@ -119,8 +119,7 @@ const activities = [
           <h3 class="activity-title">{a.title}</h3>
           <p class="activity-desc">{a.desc}</p>
         </div>
-        <div class="activity-arrow">→</div>
-      </a>
+      </div>
     ))}
   </div>
 </section>
@@ -420,14 +419,9 @@ const activities = [
   .activity-card {
     position: relative; border-radius: 18px; overflow: hidden;
     height: 220px; display: flex;
-    transition: transform .3s cubic-bezier(.22,1,.36,1);
   }
-  .activity-card:hover { transform: translateY(-4px); }
-  .activity-card:hover .activity-img { transform: scale(1.06); }
-  .activity-card:hover .activity-arrow { opacity: 1; transform: translateX(0); }
   .activity-img {
     position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-    transition: transform .5s ease;
   }
   .activity-overlay {
     position: absolute; inset: 0;

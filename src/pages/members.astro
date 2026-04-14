@@ -5,46 +5,174 @@ import { getLevel } from '../lib/levels';
 
 const db = getDB();
 let members: any[] = [];
+let totalMembers = 0;
 try {
   if (db) {
     const r = await db.prepare("SELECT m.id,m.name,m.email,m.neighborhood,m.points,m.role,s.current_streak,s.total_events FROM members m LEFT JOIN member_streaks s ON m.email=s.email WHERE m.name IS NOT NULL AND m.name!='' ORDER BY m.points DESC LIMIT 50").all();
     members = r?.results || [];
+    totalMembers = members.length;
   }
 } catch {}
-const tab = Astro.url.searchParams.get("tab") || "members";
-const colors = ["#3b82f6","#8b5cf6","#ec4899","#f59e0b","#10b981","#ef4444","#6366f1"];
+
+const colors = ["#3b82f6","#8b5cf6","#ec4899","#f59e0b","#10b981","#ef4444","#6366f1","#F05A28"];
+
+function getInitials(name: string): string {
+  const parts = (name || '?').trim().split(' ');
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (name || '?')[0].toUpperCase();
+}
 ---
 <Base title="The Crew">
-  <div style="max-width:600px;margin:0 auto;padding:24px 20px">
-    <div style="text-align:center;margin-bottom:16px">
-      <div style="font-size:36px">👥</div>
-      <h1 style="font-size:28px;color:#fff;margin-bottom:4px">The Crew</h1>
-      <p class="muted" style="font-size:13px">Denver locals building something real together.</p>
+
+<div class="crew-page">
+
+  <!-- HERO -->
+  <section class="crew-hero">
+    <h1 class="crew-h1">The <em>Crew</em></h1>
+    <p class="crew-sub">Denver locals building real connections, one hangout at a time.</p>
+    <div class="crew-stats">
+      <div class="crew-stat">
+        <span class="crew-stat-num">{totalMembers}</span>
+        <span class="crew-stat-label">Members</span>
+      </div>
+      <div class="crew-stat-dot"></div>
+      <div class="crew-stat">
+        <span class="crew-stat-num">88+</span>
+        <span class="crew-stat-label">In Discord</span>
+      </div>
+      <div class="crew-stat-dot"></div>
+      <div class="crew-stat">
+        <span class="crew-stat-num">Free</span>
+        <span class="crew-stat-label">To join</span>
+      </div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px">
-      <a href="/members" style={`padding:10px 16px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;${tab==='members'?'background:#3b82f6;color:#fff':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>👥 Members</a>
-      <a href="/members?tab=regulars" style={`padding:10px 16px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;${tab==='regulars'?'background:#3b82f6;color:#fff':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>🏆 Regulars</a>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      {members.map((m, i) => {
-        const lvl = getLevel(m.total_events||0);
+  </section>
+
+  <!-- MEMBERS LIST -->
+  {members.length > 0 ? (
+    <section class="crew-list">
+      {members.map((m: any, i: number) => {
+        const lvl = getLevel(m.total_events || 0);
+        const color = colors[i % colors.length];
         return (
-          <div style="display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)">
-            <div style={`width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;background:${colors[i%colors.length]};flex-shrink:0`}>{(m.name||'?')[0]}</div>
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                <b style="font-family:'Instrument Serif',serif;font-size:16px;color:#fff;font-weight:400">{m.name}</b>
-                {m.role==='admin' && <span style="font-size:10px;padding:2px 8px;border-radius:6px;background:rgba(74,222,128,.1);color:#4ade80;font-weight:700">Organizer</span>}
-                {lvl.number>1 && <span style={`font-size:10px;padding:2px 8px;border-radius:6px;background:${lvl.color}22;color:${lvl.color};font-weight:700`}>{lvl.emoji} {lvl.name}</span>}
-                {(m.current_streak||0)>=3 && <span style="font-size:10px;padding:2px 8px;border-radius:6px;background:rgba(251,191,36,.1);color:#fbbf24;font-weight:700">🔥{m.current_streak}</span>}
-              </div>
-              <div style="font-size:12px;color:#4a5568">{m.neighborhood||'Denver'}</div>
+          <div class="crew-card">
+            <div class="crew-card-avatar" style={`background:${color}20;color:${color}`}>
+              {getInitials(m.name)}
             </div>
-            <div style="font-size:14px;color:#fbbf24;font-family:'Instrument Serif',serif">{m.points||0}pts</div>
+            <div class="crew-card-body">
+              <div class="crew-card-name-row">
+                <span class="crew-card-name">{m.name}</span>
+                {m.role === 'admin' && <span class="crew-badge organizer">Organizer</span>}
+                {lvl.number > 1 && <span class="crew-badge" style={`background:${lvl.color}15;color:${lvl.color}`}>{lvl.emoji} {lvl.name}</span>}
+                {(m.current_streak || 0) >= 3 && <span class="crew-badge streak">🔥 {m.current_streak} streak</span>}
+              </div>
+              <div class="crew-card-meta">
+                <span>📍 {m.neighborhood || 'Denver'}</span>
+                {(m.points || 0) > 0 && <span>· {m.points} pts</span>}
+              </div>
+            </div>
           </div>
         );
       })}
-      {members.length===0 && <p style="text-align:center;color:#4a5568;padding:40px">No members yet. Be the first!</p>}
+    </section>
+  ) : (
+    <section class="crew-empty">
+      <div class="crew-empty-icon">👥</div>
+      <h2>The crew is just getting started</h2>
+      <p>Be one of the founding members.</p>
+    </section>
+  )}
+
+  <!-- JOIN CTA -->
+  <section class="crew-cta">
+    <div class="crew-cta-card">
+      <h2>Your spot is <em>open.</em></h2>
+      <p>Denver Social is free to join. We're a small group right now — which means you'll actually know everyone.</p>
+      <div class="crew-cta-btns">
+        <a href="/login?mode=join" class="crew-cta-btn primary">Join the Crew →</a>
+        <a href="https://discord.gg/S8SFNkdSgK" class="crew-cta-btn ghost" target="_blank" rel="noopener">Discord</a>
+      </div>
     </div>
-  </div>
+  </section>
+
+</div>
+
+<style>
+  .crew-page { max-width:600px; margin:0 auto; padding:0 20px; }
+
+  /* ─── HERO ─── */
+  .crew-hero { text-align:center; padding:32px 0 28px; }
+  .crew-h1 {
+    font-family:'Instrument Serif',serif; font-size:clamp(30px,5vw,40px);
+    color:#fff; font-weight:400; margin-bottom:6px;
+  }
+  .crew-h1 em { font-style:italic; color:#4ade80; }
+  .crew-sub { font-size:14px; color:rgba(255,255,255,.35); margin-bottom:20px; }
+  .crew-stats { display:flex; align-items:center; justify-content:center; gap:16px; }
+  .crew-stat { text-align:center; }
+  .crew-stat-num { display:block; font-family:'Instrument Serif',serif; font-size:22px; color:#fff; line-height:1; }
+  .crew-stat-label { font-size:10px; color:rgba(255,255,255,.25); text-transform:uppercase; letter-spacing:.1em; }
+  .crew-stat-dot { width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,.15); }
+
+  /* ─── MEMBER CARDS ─── */
+  .crew-list { display:flex; flex-direction:column; gap:8px; margin-bottom:28px; }
+  .crew-card {
+    display:flex; align-items:center; gap:14px;
+    padding:16px 18px; border-radius:16px;
+    background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.05);
+    transition:border-color .2s, background .2s;
+  }
+  .crew-card:hover { border-color:rgba(255,255,255,.1); background:rgba(255,255,255,.035); }
+  .crew-card-avatar {
+    width:46px; height:46px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:700; flex-shrink:0;
+    letter-spacing:.5px;
+  }
+  .crew-card-body { flex:1; min-width:0; }
+  .crew-card-name-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:3px; }
+  .crew-card-name { font-size:15px; color:#fff; font-weight:600; }
+  .crew-badge {
+    font-size:10px; padding:2px 8px; border-radius:6px; font-weight:700;
+    white-space:nowrap;
+  }
+  .crew-badge.organizer { background:rgba(74,222,128,.1); color:#4ade80; }
+  .crew-badge.streak { background:rgba(251,191,36,.1); color:#fbbf24; }
+  .crew-card-meta { font-size:12px; color:rgba(255,255,255,.3); display:flex; gap:4px; }
+
+  /* ─── EMPTY ─── */
+  .crew-empty {
+    text-align:center; padding:48px 20px; margin-bottom:28px;
+    border-radius:18px; background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.04);
+  }
+  .crew-empty-icon { font-size:36px; margin-bottom:10px; }
+  .crew-empty h2 { font-family:'Instrument Serif',serif; font-size:22px; color:#fff; margin-bottom:4px; font-weight:400; }
+  .crew-empty p { font-size:13px; color:rgba(255,255,255,.3); }
+
+  /* ─── JOIN CTA ─── */
+  .crew-cta { margin-bottom:40px; }
+  .crew-cta-card {
+    padding:32px; border-radius:20px; text-align:center;
+    background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(74,222,128,.04));
+    border:1px solid rgba(59,130,246,.1);
+  }
+  .crew-cta-card h2 {
+    font-family:'Instrument Serif',serif; font-size:26px; color:#fff;
+    margin-bottom:8px; font-weight:400;
+  }
+  .crew-cta-card h2 em { font-style:italic; color:#4ade80; }
+  .crew-cta-card p {
+    font-size:13px; color:rgba(255,255,255,.4); line-height:1.7;
+    margin-bottom:20px; max-width:380px; margin-left:auto; margin-right:auto;
+  }
+  .crew-cta-btns { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .crew-cta-btn {
+    display:inline-block; padding:12px 24px; border-radius:12px;
+    font-size:14px; font-weight:700; text-decoration:none; transition:transform .2s;
+  }
+  .crew-cta-btn:hover { transform:translateY(-2px); }
+  .crew-cta-btn.primary { background:#3b82f6; color:#fff; }
+  .crew-cta-btn.ghost { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.5); }
+</style>
+
 </Base>

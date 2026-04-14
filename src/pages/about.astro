@@ -1,57 +1,292 @@
 ---
 import Base from '../layouts/Base.astro';
-const tab = Astro.url.searchParams.get("tab") || "story";
 const faqs = [
   { q:"Is this free to join?", a:"Completely free. No membership fees, no subscriptions, no hidden costs. Denver Social will always be free to join." },
-  { q:"Do I need to know anyone?", a:"Nope — that's the whole point. Most people come solo. We keep groups small so nobody gets lost in the crowd." },
-  { q:"How small are the groups?", a:"Usually 6–12 people per event. Big enough to have energy, small enough that you actually talk to everyone." },
-  { q:"What kind of events do you do?", a:"Dinners are our bread and butter. Also brewery crawls, game nights, hikes, and more." },
-  { q:"How do I RSVP?", a:"Create a free profile and hit the RSVP button on any event page. Discord is the fastest way to hear about new events first." },
-  { q:"What does it cost to attend?", a:"Each event shows the price upfront. Dinners are usually $25–35/person. Some events are free." },
-  { q:"What if I can't afford it?", a:"We built the Spot a Stranger fund for exactly this. Community members chip in — completely anonymous, no questions asked." },
+  { q:"Do I need to know anyone?", a:"Nope — that's the whole point. Most people come solo. We keep groups small (6–12) so nobody gets lost in the crowd." },
+  { q:"What kind of events do you do?", a:"Dinners, bowling nights, hikes, pottery, game nights, food truck crawls, park hangouts, and more. We're always trying new things based on what the crew suggests." },
+  { q:"How do I RSVP?", a:"Create a free profile, browse the events page, and hit RSVP. You can also join our Discord — that's where new events drop first and plans come together." },
+  { q:"What does it cost to attend?", a:"Each event shows the price upfront. Many events are free. Dinners run $20–35/person. We always include the cost so there are no surprises." },
+  { q:"What if I can't make it after RSVPing?", a:"Just cancel your RSVP so someone else can grab the spot. We get it — life happens. Just don't no-show repeatedly." },
+  { q:"Is this a dating thing?", a:"No. It's a friendship thing. People of all ages, backgrounds, and relationship statuses come out. The goal is real connections, not romance." },
 ];
 ---
 <Base title="About">
-  <div style="max-width:600px;margin:0 auto;padding:24px 20px">
-    <div style="text-align:center;margin-bottom:16px">
-      <div style="font-size:36px">🏙️</div>
-      <h1 style="font-size:28px;color:#fff;margin-bottom:4px">About DSN</h1>
-      <p class="muted" style="font-size:13px">Real people. Real places. Zero pressure.</p>
+
+<div class="about-page">
+
+  <!-- HERO -->
+  <section class="about-hero">
+    <div class="about-hero-inner">
+      <div class="about-hero-tag">About Denver Social</div>
+      <h1 class="about-hero-h1">We got tired of<br>not knowing anyone.<br>So we <em>fixed it.</em></h1>
+      <p class="about-hero-sub">Denver Social is a free community that organizes small-group hangouts across Denver. No algorithms. No awkwardness. Just real people showing up.</p>
     </div>
-    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px">
-      <a href="/about" style={`padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;${tab==='story'?'background:#3b82f6;color:#fff':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>Our Story</a>
-      <a href="/about?tab=faq" style={`padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;${tab==='faq'?'background:#3b82f6;color:#fff':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>FAQ</a>
-      <a href="/about?tab=contact" style={`padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;${tab==='contact'?'background:#3b82f6;color:#fff':'background:rgba(255,255,255,.04);color:#6b7a8e'}`}>Contact</a>
+  </section>
+
+  <!-- STATS -->
+  <section class="about-stats">
+    <div class="about-stat">
+      <span class="about-stat-num">88+</span>
+      <span class="about-stat-label">People in Discord</span>
     </div>
-    {tab==='story' && (
+    <div class="about-stat-divider"></div>
+    <div class="about-stat">
+      <span class="about-stat-num">6–12</span>
+      <span class="about-stat-label">People per event</span>
+    </div>
+    <div class="about-stat-divider"></div>
+    <div class="about-stat">
+      <span class="about-stat-num">Free</span>
+      <span class="about-stat-label">To join, forever</span>
+    </div>
+  </section>
+
+  <!-- FOUNDER STORY -->
+  <section class="about-story">
+    <div class="about-story-head">
+      <div class="about-story-avatar">S</div>
       <div>
-        <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
-          <div style="font-size:24px">👋</div>
-          <div><b style="font-family:'Instrument Serif',serif;font-size:16px;color:#fff">Seth Tharpe</b><br/><span style="font-size:12px;color:#4a5568">Founder · Denver Social</span></div>
+        <strong>Seth Tharpe</strong>
+        <span>Founder · Denver Social</span>
+      </div>
+    </div>
+    <div class="about-story-body">
+      <h2>The problem</h2>
+      <p>Denver has incredible people. But meeting them — actually meeting them — is weirdly hard.</p>
+      <p>I moved here and kept hitting the same wall: bars are loud, Meetup groups are huge and impersonal, apps are exhausting. I just wanted a small group of people to grab dinner with.</p>
+      <h2>The fix</h2>
+      <p>So I started organizing dinners. 8 people, one long table, no agenda. Just show up and see what happens.</p>
+      <p>It worked. People kept coming back. They brought friends. We started doing more — bowling, hikes, pottery, game nights. Now it's a whole community.</p>
+      <h2>The rules</h2>
+      <p>We keep it simple: small groups (6–12 people), every member is verified, locations stay private until you RSVP, and there's a one-strike policy for bad behavior. That's it.</p>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="about-how">
+    <div class="about-section-tag">How it works</div>
+    <h2 class="about-section-h2">Three steps. <em>That's it.</em></h2>
+    <div class="about-steps">
+      <div class="about-step">
+        <div class="about-step-num">1</div>
+        <h3>Join free</h3>
+        <p>60 seconds — connect with Discord and tell us what you're into. No credit card, ever.</p>
+      </div>
+      <div class="about-step">
+        <div class="about-step-num">2</div>
+        <h3>Pick something</h3>
+        <p>Browse the events page or watch the Discord. Pottery, dinner, hike — whatever sounds fun.</p>
+      </div>
+      <div class="about-step">
+        <div class="about-step-num">3</div>
+        <h3>Show up</h3>
+        <p>Small group, real people. Walk-ins welcome. No icebreakers, we promise.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST -->
+  <section class="about-trust">
+    <div class="about-section-tag">Safety first</div>
+    <h2 class="about-section-h2">Built for <em>trust.</em></h2>
+    <div class="about-trust-grid">
+      <div class="about-trust-item">
+        <div class="about-trust-icon">✓</div>
+        <div>
+          <strong>Verified members</strong>
+          <p>Every member is approved before they can RSVP to events.</p>
         </div>
-        <h3 style="font-size:20px;color:#fff;margin-bottom:8px">The problem</h3>
-        <p style="font-size:14px;color:#6b7a8e;line-height:1.8;margin-bottom:12px">Denver has incredible people. But meeting them — actually meeting them — is weirdly hard.</p>
-        <p style="font-size:14px;color:#6b7a8e;line-height:1.8;margin-bottom:12px">I moved here and kept hitting the same wall: bars are loud, Meetup groups are huge and impersonal, dating apps are exhausting.</p>
-        <h3 style="font-size:20px;color:#fff;margin:20px 0 8px">The solution</h3>
-        <p style="font-size:14px;color:#6b7a8e;line-height:1.8">Small groups. Real venues. No awkwardness. Every member is approved. Groups cap at 12. One-strike policy for bad behavior.</p>
       </div>
-    )}
-    {tab==='faq' && (
-      <div style="display:flex;flex-direction:column;gap:12px">
-        {faqs.map(f => (
-          <div class="card" style="padding:16px">
-            <b style="font-size:14px;color:#fff;display:block;margin-bottom:6px">{f.q}</b>
-            <p style="font-size:13px;color:#6b7a8e;line-height:1.7">{f.a}</p>
-          </div>
-        ))}
+      <div class="about-trust-item">
+        <div class="about-trust-icon">✓</div>
+        <div>
+          <strong>Private locations</strong>
+          <p>Exact venue details are only shared with people who RSVP.</p>
+        </div>
       </div>
-    )}
-    {tab==='contact' && (
-      <div class="card">
-        <h3 style="font-size:18px;color:#fff;margin-bottom:12px">Say hey 👋</h3>
-        <p style="font-size:14px;color:#6b7a8e;line-height:1.7;margin-bottom:16px">Best way to reach Seth is on <a href="https://discord.gg/S8SFNkdSgK" style="color:#60a5fa">Discord</a> or by email at <a href="mailto:stharpe98@gmail.com" style="color:#60a5fa">stharpe98@gmail.com</a>.</p>
-        <a href="https://discord.gg/S8SFNkdSgK" style="display:inline-block;padding:12px 24px;background:#5865F2;color:#fff;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none">Join the Discord →</a>
+      <div class="about-trust-item">
+        <div class="about-trust-icon">✓</div>
+        <div>
+          <strong>Small groups only</strong>
+          <p>6 to 12 people per event. Big enough for energy, small enough to connect.</p>
+        </div>
       </div>
-    )}
-  </div>
+      <div class="about-trust-item">
+        <div class="about-trust-icon">✓</div>
+        <div>
+          <strong>One-strike policy</strong>
+          <p>Be respectful or you're out. No warnings for serious issues.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="about-faq">
+    <div class="about-section-tag">Questions</div>
+    <h2 class="about-section-h2">Frequently <em>asked</em></h2>
+    <div class="about-faq-list">
+      {faqs.map((f, i) => (
+        <details class="about-faq-item">
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+
+  <!-- CONTACT / CTA -->
+  <section class="about-contact">
+    <div class="about-contact-card">
+      <span class="about-contact-icon">💬</span>
+      <h2>Come say hey</h2>
+      <p>The best way to reach us is on Discord. That's where plans happen, ideas get tossed around, and the crew hangs out between events.</p>
+      <div class="about-contact-btns">
+        <a href="https://discord.gg/S8SFNkdSgK" class="about-contact-btn primary" target="_blank" rel="noopener">Join the Discord →</a>
+        <a href="mailto:stharpe98@gmail.com" class="about-contact-btn ghost">Email Seth</a>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<style>
+  .about-page { max-width:640px; margin:0 auto; padding:0 20px; }
+
+  /* ─── HERO ─── */
+  .about-hero { padding:32px 0 28px; }
+  .about-hero-tag {
+    display:inline-block; font-size:10px; text-transform:uppercase; letter-spacing:.2em;
+    color:#3b82f6; font-weight:700; margin-bottom:14px;
+    padding:5px 12px; background:rgba(59,130,246,.08); border-radius:6px;
+  }
+  .about-hero-h1 {
+    font-family:'Instrument Serif',serif; font-size:clamp(28px,5vw,38px);
+    color:#fff; line-height:1.1; margin-bottom:14px; font-weight:400;
+  }
+  .about-hero-h1 em { font-style:italic; color:#4ade80; }
+  .about-hero-sub { font-size:15px; color:rgba(255,255,255,.4); line-height:1.7; max-width:480px; }
+
+  /* ─── STATS ─── */
+  .about-stats {
+    display:flex; align-items:center; justify-content:center; gap:0;
+    padding:24px; border-radius:16px; margin-bottom:36px;
+    background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.05);
+  }
+  .about-stat { flex:1; text-align:center; }
+  .about-stat-num { display:block; font-family:'Instrument Serif',serif; font-size:26px; color:#fff; line-height:1; margin-bottom:4px; }
+  .about-stat-label { font-size:11px; color:rgba(255,255,255,.3); }
+  .about-stat-divider { width:1px; height:36px; background:rgba(255,255,255,.06); flex-shrink:0; }
+
+  /* ─── STORY ─── */
+  .about-story {
+    padding:28px; border-radius:18px; margin-bottom:36px;
+    background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.05);
+  }
+  .about-story-head {
+    display:flex; align-items:center; gap:14px;
+    padding-bottom:18px; margin-bottom:18px;
+    border-bottom:1px solid rgba(255,255,255,.05);
+  }
+  .about-story-avatar {
+    width:44px; height:44px; border-radius:50%; background:rgba(59,130,246,.15);
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; font-weight:700; color:#60a5fa; flex-shrink:0;
+  }
+  .about-story-head strong { display:block; font-size:15px; color:#fff; }
+  .about-story-head span { font-size:12px; color:rgba(255,255,255,.3); }
+  .about-story-body h2 { font-family:'Instrument Serif',serif; font-size:20px; color:#fff; margin:20px 0 8px; font-weight:400; }
+  .about-story-body h2:first-child { margin-top:0; }
+  .about-story-body p { font-size:14px; color:rgba(255,255,255,.45); line-height:1.8; margin-bottom:8px; }
+
+  /* ─── SECTION HEADS ─── */
+  .about-section-tag {
+    display:inline-block; font-size:10px; text-transform:uppercase; letter-spacing:.2em;
+    color:#3b82f6; font-weight:700; margin-bottom:8px;
+    padding:5px 12px; background:rgba(59,130,246,.08); border-radius:6px;
+  }
+  .about-section-h2 {
+    font-family:'Instrument Serif',serif; font-size:clamp(24px,4vw,32px);
+    color:#fff; margin-bottom:20px; font-weight:400;
+  }
+  .about-section-h2 em { font-style:italic; color:#4ade80; }
+
+  /* ─── HOW IT WORKS ─── */
+  .about-how { margin-bottom:36px; }
+  .about-steps { display:flex; flex-direction:column; gap:14px; }
+  .about-step {
+    display:flex; align-items:flex-start; gap:16px;
+    padding:20px; border-radius:14px;
+    background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.04);
+  }
+  .about-step-num {
+    width:36px; height:36px; flex-shrink:0; border-radius:10px;
+    background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,.15);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Instrument Serif',serif; font-size:18px; color:#60a5fa;
+  }
+  .about-step h3 { font-size:15px; color:#fff; margin-bottom:4px; }
+  .about-step p { font-size:13px; color:rgba(255,255,255,.4); line-height:1.6; }
+
+  /* ─── TRUST ─── */
+  .about-trust { margin-bottom:36px; }
+  .about-trust-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .about-trust-item {
+    display:flex; align-items:flex-start; gap:12px;
+    padding:18px; border-radius:14px;
+    background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.04);
+  }
+  .about-trust-icon {
+    width:28px; height:28px; flex-shrink:0; border-radius:8px;
+    background:rgba(74,222,128,.1); display:flex; align-items:center; justify-content:center;
+    color:#4ade80; font-size:12px; font-weight:700;
+  }
+  .about-trust-item strong { display:block; font-size:13px; color:#fff; margin-bottom:2px; }
+  .about-trust-item p { font-size:12px; color:rgba(255,255,255,.35); line-height:1.5; }
+
+  /* ─── FAQ ─── */
+  .about-faq { margin-bottom:36px; }
+  .about-faq-list { display:flex; flex-direction:column; gap:8px; }
+  .about-faq-item {
+    border-radius:14px; background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.04);
+    overflow:hidden; transition:border-color .2s;
+  }
+  .about-faq-item[open] { border-color:rgba(255,255,255,.08); }
+  .about-faq-item summary {
+    padding:16px 20px; font-size:14px; font-weight:600; color:#fff;
+    cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;
+    transition:background .2s;
+  }
+  .about-faq-item summary:hover { background:rgba(255,255,255,.02); }
+  .about-faq-item summary::after { content:'+'; font-size:18px; color:rgba(255,255,255,.2); flex-shrink:0; margin-left:12px; transition:transform .2s; }
+  .about-faq-item[open] summary::after { content:'−'; color:rgba(255,255,255,.4); }
+  .about-faq-item summary::-webkit-details-marker { display:none; }
+  .about-faq-item p { padding:0 20px 16px; font-size:13px; color:rgba(255,255,255,.4); line-height:1.7; }
+
+  /* ─── CONTACT ─── */
+  .about-contact { margin-bottom:40px; }
+  .about-contact-card {
+    padding:32px; border-radius:20px; text-align:center;
+    background:linear-gradient(135deg, rgba(88,101,242,.08) 0%, rgba(59,130,246,.06) 100%);
+    border:1px solid rgba(88,101,242,.12);
+  }
+  .about-contact-icon { font-size:32px; display:block; margin-bottom:12px; }
+  .about-contact-card h2 { font-family:'Instrument Serif',serif; font-size:24px; color:#fff; margin-bottom:8px; font-weight:400; }
+  .about-contact-card p { font-size:13px; color:rgba(255,255,255,.4); line-height:1.7; margin-bottom:20px; max-width:400px; margin-left:auto; margin-right:auto; }
+  .about-contact-btns { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .about-contact-btn {
+    display:inline-block; padding:12px 24px; border-radius:12px;
+    font-size:14px; font-weight:700; text-decoration:none; transition:transform .2s;
+  }
+  .about-contact-btn:hover { transform:translateY(-2px); }
+  .about-contact-btn.primary { background:#5865F2; color:#fff; }
+  .about-contact-btn.ghost { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.5); }
+
+  @media (max-width:600px) {
+    .about-trust-grid { grid-template-columns:1fr; }
+    .about-stats { flex-direction:column; gap:16px; }
+    .about-stat-divider { width:60px; height:1px; }
+  }
+</style>
+
 </Base>
