@@ -28,427 +28,385 @@ const typeEmoji: Record<string, string> = {
 ---
 <AdminBase title="Dashboard — Denver Social">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
   :root {
-    --bg:#06080e; --s1:rgba(255,255,255,.028); --s2:rgba(255,255,255,.045);
-    --glass:rgba(255,255,255,.035); --glass-border:rgba(255,255,255,.07);
-    --text:#eaecf2; --dim:#8892a4; --faint:#4b5263;
-    --accent:#e8943a; --accent-dim:rgba(232,148,58,.1); --accent-glow:rgba(232,148,58,.25);
-    --green:#4ade80; --red:#fb7185; --blue:#60a5fa;
-    --sw:260px; --radius:16px; --radius-sm:10px;
-    --font-display:'Playfair Display',Georgia,serif;
-    --font-body:'DM Sans',system-ui,sans-serif;
-    --font-mono:'JetBrains Mono',monospace;
+    --bg:#f8f7f4; --white:#ffffff; --card:#ffffff;
+    --border:#e8e5df; --border-light:#f0ede8;
+    --text:#1a1a1a; --text-secondary:#6b6560; --text-hint:#a09a93;
+    --accent:#e07830; --accent-light:#fef3eb; --accent-hover:#c96520;
+    --green:#16a34a; --green-light:#f0fdf4;
+    --red:#dc2626; --red-light:#fef2f2;
+    --blue:#2563eb; --blue-light:#eff6ff;
+    --radius:12px; --radius-sm:8px;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.04);
+    --shadow:0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-lg:0 4px 12px rgba(0,0,0,.06);
+    --font:'Outfit',system-ui,-apple-system,sans-serif;
   }
 
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   body {
-    background:var(--bg) !important; color:var(--text); font-family:var(--font-body);
+    background:var(--bg) !important; color:var(--text) !important; font-family:var(--font) !important;
     overflow:auto !important; height:auto !important; display:block !important;
-    -webkit-font-smoothing:antialiased;
+    -webkit-font-smoothing:antialiased; line-height:1.5;
   }
-  /* Noise grain overlay */
-  body::after {
-    content:''; position:fixed; inset:0; z-index:9999; pointer-events:none; opacity:.035;
-    background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
+  body::before, body::after { display:none !important; }
 
-  /* ═══ LAYOUT ═══ */
-  .shell { display:flex; min-height:100vh; }
-  .main { margin-left:var(--sw); flex:1; min-width:0; }
+  /* ═══ TOP NAV ═══ */
+  .topnav {
+    background:var(--white); border-bottom:1px solid var(--border);
+    position:sticky; top:0; z-index:100;
+  }
+  .topnav-inner {
+    max-width:1200px; margin:0 auto; padding:0 32px;
+    display:flex; align-items:center; height:60px; gap:32px;
+  }
+  .brand { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); flex-shrink:0; }
+  .brand-icon {
+    width:32px; height:32px; background:var(--accent); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; font-size:15px;
+  }
+  .brand-name { font-size:16px; font-weight:700; letter-spacing:-.02em; }
+  .brand-tag { font-size:10px; font-weight:500; color:var(--accent); background:var(--accent-light); padding:2px 8px; border-radius:50px; margin-left:4px; }
 
-  /* ═══ SIDEBAR ═══ */
-  .sidebar {
-    width:var(--sw); position:fixed; top:0; left:0; bottom:0; z-index:100;
-    background:linear-gradient(180deg, #0a0c14 0%, #080a11 100%);
-    border-right:1px solid var(--glass-border);
-    display:flex; flex-direction:column; transition:transform .3s cubic-bezier(.4,0,.2,1);
+  .tabs { display:flex; gap:2px; margin-left:24px; }
+  .tab {
+    padding:8px 16px; font-size:13px; font-weight:500; color:var(--text-secondary);
+    border-radius:var(--radius-sm); cursor:pointer; border:none; background:none;
+    font-family:var(--font); transition:all .15s; position:relative;
   }
-  .sb-top { padding:28px 24px 24px; }
-  .sb-brand { display:flex; align-items:center; gap:14px; text-decoration:none; }
-  .sb-icon {
-    width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center;
-    font-size:18px; background:linear-gradient(135deg, var(--accent), #d4782a);
-    box-shadow:0 4px 20px var(--accent-glow);
-  }
-  .sb-name { font-family:var(--font-display); font-size:18px; font-weight:900; color:var(--text); letter-spacing:-.02em; }
-  .sb-name small { display:block; font-family:var(--font-mono); font-size:9px; font-weight:400; color:var(--accent); letter-spacing:.15em; text-transform:uppercase; margin-top:2px; }
+  .tab:hover { color:var(--text); background:var(--bg); }
+  .tab.active { color:var(--accent); background:var(--accent-light); font-weight:600; }
 
-  .sb-divider { height:1px; background:var(--glass-border); margin:0 20px; }
-
-  .sb-nav { flex:1; padding:20px 12px; overflow-y:auto; display:flex; flex-direction:column; gap:1px; }
-  .sb-section { font-family:var(--font-mono); font-size:9px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); padding:20px 14px 8px; }
-  .sb-link {
-    display:flex; align-items:center; gap:12px; padding:11px 16px; border-radius:var(--radius-sm);
-    color:var(--dim); font-size:13px; font-weight:500; cursor:pointer;
-    border:none; background:none; width:100%; text-align:left; font-family:var(--font-body);
-    transition:all .2s ease; position:relative;
+  .nav-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .nav-btn {
+    padding:7px 14px; font-size:12px; font-weight:500; color:var(--text-secondary);
+    border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--white);
+    cursor:pointer; font-family:var(--font); transition:all .15s; text-decoration:none;
   }
-  .sb-link:hover { background:var(--s1); color:var(--text); }
-  .sb-link.active { background:var(--accent-dim); color:var(--accent); }
-  .sb-link.active::before {
-    content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px;
-    background:var(--accent); border-radius:0 3px 3px 0;
+  .nav-btn:hover { border-color:#ccc; color:var(--text); }
+  .nav-btn.danger:hover { border-color:var(--red); color:var(--red); }
+  .avatar {
+    width:30px; height:30px; border-radius:50%; background:var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:600; color:#fff; cursor:default;
   }
-  .sb-link-icon { font-size:16px; width:22px; text-align:center; flex-shrink:0; }
-  .sb-badge { margin-left:auto; font-family:var(--font-mono); background:var(--s2); color:var(--faint); font-size:10px; font-weight:500; padding:2px 8px; border-radius:50px; }
-  .sb-link.active .sb-badge { background:var(--accent-dim); color:var(--accent); }
-
-  .sb-bottom { padding:16px 12px; border-top:1px solid var(--glass-border); }
-  .sb-user { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:var(--radius-sm); }
-  .sb-avatar {
-    width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:14px; color:#fff;
-    background:linear-gradient(135deg, var(--accent), #d4782a);
-  }
-  .sb-user-name { font-size:13px; font-weight:600; }
-  .sb-user-role { font-family:var(--font-mono); font-size:10px; color:var(--faint); letter-spacing:.05em; }
-
-  /* ═══ TOPBAR ═══ */
-  .topbar {
-    height:64px; border-bottom:1px solid var(--glass-border);
-    background:rgba(6,8,14,.8); backdrop-filter:blur(24px) saturate(1.4);
-    display:flex; align-items:center; justify-content:space-between;
-    padding:0 32px; position:sticky; top:0; z-index:50;
-  }
-  .topbar-left { display:flex; align-items:center; gap:16px; }
-  .hamburger { display:none; background:none; border:none; color:var(--text); font-size:22px; cursor:pointer; }
-  .topbar-title { font-family:var(--font-display); font-size:24px; font-weight:900; letter-spacing:-.02em; }
-  .topbar-right { display:flex; align-items:center; gap:10px; }
-  .topbar-btn {
-    background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius-sm);
-    padding:8px 18px; font-size:12px; font-weight:500; color:var(--dim); cursor:pointer;
-    font-family:var(--font-body); transition:all .2s; text-decoration:none;
-    backdrop-filter:blur(8px);
-  }
-  .topbar-btn:hover { border-color:rgba(255,255,255,.14); color:var(--text); background:var(--s2); }
-  .topbar-btn.danger:hover { border-color:var(--red); color:var(--red); }
 
   /* ═══ CONTENT ═══ */
-  .content { padding:32px; }
+  .page { max-width:1200px; margin:0 auto; padding:28px 32px 60px; }
   .panel { display:none; }
-  .panel.active { display:block; }
-  .panel.active > * { animation:rise .4s cubic-bezier(.16,1,.3,1) both; }
-  .panel.active > *:nth-child(2) { animation-delay:.06s; }
-  .panel.active > *:nth-child(3) { animation-delay:.12s; }
-  .panel.active > *:nth-child(4) { animation-delay:.18s; }
-  @keyframes rise { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  .panel.active { display:block; animation:fadeIn .25s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 
-  /* ═══ STAT CARDS ═══ */
-  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:32px; }
-  .stat-card {
-    background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius);
-    padding:24px 26px; backdrop-filter:blur(12px); position:relative; overflow:hidden;
+  /* ═══ STATS ═══ */
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:28px; }
+  .stat {
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px 22px; box-shadow:var(--shadow-sm);
   }
-  .stat-card::before {
-    content:''; position:absolute; top:-40px; right:-40px; width:100px; height:100px;
-    background:radial-gradient(circle, var(--accent-glow), transparent 70%); opacity:.3;
-  }
-  .stat-card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; position:relative; }
-  .stat-icon { font-size:24px; }
-  .stat-trend { font-family:var(--font-mono); font-size:11px; color:var(--green); font-weight:500; }
-  .stat-num { font-family:var(--font-display); font-size:40px; font-weight:900; line-height:1; margin-bottom:6px; letter-spacing:-.02em; position:relative; }
-  .stat-lbl { font-size:12px; color:var(--dim); font-weight:500; letter-spacing:.02em; position:relative; }
+  .stat-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .stat-icon { font-size:20px; }
+  .stat-trend { font-size:11px; font-weight:600; color:var(--green); }
+  .stat-num { font-size:32px; font-weight:700; letter-spacing:-.03em; line-height:1; margin-bottom:2px; color:var(--text); }
+  .stat-label { font-size:12px; font-weight:500; color:var(--text-hint); }
 
-  /* ═══ TABLE CARDS ═══ */
-  .table-card {
-    background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius);
-    overflow:hidden; margin-bottom:24px; backdrop-filter:blur(12px);
+  /* ═══ CARDS / TABLES ═══ */
+  .card {
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    overflow:hidden; margin-bottom:20px; box-shadow:var(--shadow-sm);
   }
-  .table-head {
-    padding:20px 26px; border-bottom:1px solid var(--glass-border);
-    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  .card-head {
+    padding:16px 22px; display:flex; align-items:center; justify-content:space-between;
+    gap:12px; flex-wrap:wrap; border-bottom:1px solid var(--border-light);
   }
-  .table-title { font-family:var(--font-display); font-size:17px; font-weight:700; letter-spacing:-.01em; }
-  .table-search {
-    background:rgba(255,255,255,.04); border:1px solid var(--glass-border); border-radius:var(--radius-sm);
-    padding:9px 16px; font-size:13px; color:var(--text); font-family:var(--font-body);
-    outline:none; width:200px; transition:all .2s;
+  .card-title { font-size:15px; font-weight:600; color:var(--text); }
+  .search-input {
+    padding:7px 14px; font-size:13px; color:var(--text); font-family:var(--font);
+    border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg);
+    outline:none; width:200px; transition:border-color .15s;
   }
-  .table-search:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
-  .table-search::placeholder { color:var(--faint); }
+  .search-input:focus { border-color:var(--accent); }
+  .search-input::placeholder { color:var(--text-hint); }
 
   table { width:100%; border-collapse:collapse; }
   th {
-    padding:12px 24px; text-align:left; font-family:var(--font-mono); font-size:10px;
-    letter-spacing:.15em; text-transform:uppercase; color:var(--faint); font-weight:500;
-    background:rgba(255,255,255,.015); border-bottom:1px solid var(--glass-border);
+    padding:10px 22px; text-align:left; font-size:11px; font-weight:600;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--text-hint);
+    background:var(--bg); border-bottom:1px solid var(--border-light);
   }
-  td { padding:15px 24px; font-size:13px; border-bottom:1px solid rgba(255,255,255,.03); }
+  td { padding:12px 22px; font-size:13px; border-bottom:1px solid var(--border-light); color:var(--text); }
   tr:last-child td { border-bottom:none; }
-  tr:hover td { background:rgba(255,255,255,.015); }
-  .td-name { font-weight:600; color:var(--text); }
-  .td-muted { color:var(--dim); }
+  tr:hover td { background:#faf9f7; }
+  .td-name { font-weight:600; }
+  .td-muted { color:var(--text-secondary); }
 
-  /* Badges */
-  .badge { display:inline-flex; align-items:center; font-family:var(--font-mono); font-size:10px; font-weight:500; padding:4px 10px; border-radius:50px; letter-spacing:.02em; }
-  .badge-green { background:rgba(74,222,128,.08); color:var(--green); }
-  .badge-muted { background:rgba(255,255,255,.04); color:var(--faint); }
-  .badge-accent { background:var(--accent-dim); color:var(--accent); }
-  .badge-blue { background:rgba(96,165,250,.08); color:var(--blue); }
+  .badge { display:inline-flex; align-items:center; font-size:11px; font-weight:600; padding:3px 10px; border-radius:50px; }
+  .badge-green { background:var(--green-light); color:var(--green); }
+  .badge-muted { background:var(--bg); color:var(--text-hint); }
+  .badge-accent { background:var(--accent-light); color:var(--accent); }
+  .badge-blue { background:var(--blue-light); color:var(--blue); }
 
-  /* Action buttons */
-  .action-btn {
-    background:none; border:1px solid var(--glass-border); border-radius:8px;
-    padding:6px 13px; font-size:11px; font-weight:600; cursor:pointer;
-    font-family:var(--font-body); color:var(--dim); transition:all .2s;
+  .btn {
+    padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;
+    font-family:var(--font); border-radius:var(--radius-sm); transition:all .15s;
+    border:1px solid var(--border); background:var(--white); color:var(--text-secondary);
   }
-  .action-btn:hover { border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
-  .action-btn.del:hover { border-color:var(--red); color:var(--red); }
+  .btn:hover { border-color:#bbb; color:var(--text); }
+  .btn.del:hover { border-color:var(--red); color:var(--red); background:var(--red-light); }
+  .btn-primary {
+    background:var(--accent); color:#fff; border:none; padding:8px 20px;
+    font-size:13px; font-weight:600; border-radius:var(--radius-sm); cursor:pointer;
+    font-family:var(--font); transition:all .15s;
+  }
+  .btn-primary:hover { background:var(--accent-hover); }
 
   /* ═══ SETTINGS ═══ */
-  .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-  .settings-card { background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius); padding:28px; backdrop-filter:blur(12px); }
-  .settings-card-title { font-family:var(--font-display); font-size:17px; font-weight:700; margin-bottom:4px; letter-spacing:-.01em; }
-  .settings-card-sub { font-size:13px; color:var(--dim); margin-bottom:22px; line-height:1.6; }
-  .settings-field { margin-bottom:18px; }
-  .settings-label { display:block; font-family:var(--font-mono); font-size:9px; font-weight:500; letter-spacing:.15em; text-transform:uppercase; color:var(--faint); margin-bottom:8px; }
-  .settings-input {
-    width:100%; background:rgba(255,255,255,.03); border:1px solid var(--glass-border);
-    border-radius:var(--radius-sm); padding:12px 16px; font-size:13px; color:var(--text);
-    font-family:var(--font-body); outline:none; transition:all .2s;
+  .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .settings-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow-sm); }
+  .settings-title { font-size:15px; font-weight:600; margin-bottom:3px; }
+  .settings-sub { font-size:13px; color:var(--text-secondary); margin-bottom:20px; }
+  .field { margin-bottom:16px; }
+  .field-label { display:block; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-hint); margin-bottom:6px; }
+  .field-input {
+    width:100%; padding:10px 14px; font-size:13px; color:var(--text); font-family:var(--font);
+    border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--white); outline:none;
   }
-  .settings-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
-  .settings-input::placeholder { color:var(--faint); }
-  .settings-select { width:100%; background:rgba(255,255,255,.03); border:1px solid var(--glass-border); border-radius:var(--radius-sm); padding:12px 16px; font-size:13px; color:var(--text); font-family:var(--font-body); outline:none; cursor:pointer; }
-  .settings-toggle { display:flex; align-items:center; justify-content:space-between; padding:15px 0; border-bottom:1px solid rgba(255,255,255,.04); }
-  .settings-toggle:last-of-type { border-bottom:none; padding-bottom:0; }
-  .settings-toggle-label { font-size:13px; font-weight:600; margin-bottom:3px; }
-  .settings-toggle-desc { font-size:12px; color:var(--faint); }
-  .toggle-switch { position:relative; width:44px; height:24px; flex-shrink:0; }
-  .toggle-switch input { opacity:0; width:0; height:0; }
+  .field-input:focus { border-color:var(--accent); }
+  .field-input::placeholder { color:var(--text-hint); }
+  .field-select { width:100%; padding:10px 14px; font-size:13px; color:var(--text); font-family:var(--font); border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--white); outline:none; cursor:pointer; }
+
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--border-light); }
+  .toggle-row:last-of-type { border-bottom:none; padding-bottom:0; }
+  .toggle-label { font-size:13px; font-weight:600; color:var(--text); }
+  .toggle-desc { font-size:12px; color:var(--text-hint); margin-top:1px; }
+  .toggle { position:relative; width:42px; height:24px; flex-shrink:0; }
+  .toggle input { opacity:0; width:0; height:0; }
   .toggle-track {
-    position:absolute; inset:0; background:var(--s2); border-radius:50px; cursor:pointer;
-    transition:all .25s cubic-bezier(.4,0,.2,1); border:1px solid var(--glass-border);
+    position:absolute; inset:0; background:#ddd; border-radius:50px; cursor:pointer;
+    transition:background .2s;
   }
   .toggle-track::after {
     content:''; position:absolute; width:18px; height:18px; background:#fff;
-    border-radius:50%; top:2px; left:2px; transition:all .25s cubic-bezier(.4,0,.2,1);
-    box-shadow:0 1px 4px rgba(0,0,0,.3);
+    border-radius:50%; top:3px; left:3px; transition:transform .2s; box-shadow:var(--shadow);
   }
-  input:checked + .toggle-track { background:var(--accent); border-color:var(--accent); }
-  input:checked + .toggle-track::after { transform:translateX(20px); }
-
-  .save-btn {
-    background:linear-gradient(135deg, var(--accent), #d4782a); color:#fff; border:none;
-    border-radius:50px; padding:12px 28px; font-size:13px; font-weight:700; cursor:pointer;
-    font-family:var(--font-body); transition:all .2s; margin-top:18px;
-    box-shadow:0 4px 16px var(--accent-glow);
-  }
-  .save-btn:hover { transform:translateY(-1px); box-shadow:0 6px 24px var(--accent-glow); }
-  .add-btn {
-    background:linear-gradient(135deg, var(--accent), #d4782a); color:#fff; border:none;
-    font-size:12px; font-weight:700; padding:9px 20px; border-radius:var(--radius-sm);
-    cursor:pointer; font-family:var(--font-body); transition:all .2s;
-    box-shadow:0 2px 12px var(--accent-glow);
-  }
-  .add-btn:hover { transform:translateY(-1px); }
+  input:checked + .toggle-track { background:var(--accent); }
+  input:checked + .toggle-track::after { transform:translateX(18px); }
 
   /* ═══ CREATE FORM ═══ */
-  .create-form {
-    background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius);
-    overflow:hidden; margin-bottom:24px; display:none; backdrop-filter:blur(12px);
-  }
-  .create-form.open { display:block; animation:rise .3s cubic-bezier(.16,1,.3,1); }
-  .create-form-body { padding:24px; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .create-form { display:none; margin-bottom:20px; }
+  .create-form.open { display:block; animation:fadeIn .2s ease; }
+  .form-grid { padding:20px 22px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   .span2 { grid-column:span 2; }
 
   /* ═══ EMPTY / TOAST ═══ */
-  .empty { padding:56px; text-align:center; color:var(--faint); }
-  .empty-icon { font-size:44px; margin-bottom:16px; opacity:.6; }
+  .empty { padding:48px; text-align:center; color:var(--text-hint); }
+  .empty-icon { font-size:36px; margin-bottom:12px; opacity:.5; }
   .toast {
-    position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(24px);
-    background:rgba(12,14,22,.95); border:1px solid var(--glass-border); border-radius:var(--radius);
-    padding:14px 28px; font-size:13px; font-weight:500; color:var(--text); z-index:9998;
-    opacity:0; transition:all .35s cubic-bezier(.16,1,.3,1); pointer-events:none;
-    backdrop-filter:blur(20px); box-shadow:0 8px 40px rgba(0,0,0,.5);
+    position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--text); color:#fff; border-radius:var(--radius); padding:12px 24px;
+    font-size:13px; font-weight:500; z-index:9999; opacity:0; transition:all .3s ease;
+    pointer-events:none; box-shadow:var(--shadow-lg);
   }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-  .toast.error { border-color:var(--red); }
+  .toast.error { background:var(--red); }
 
-  .sb-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:99; backdrop-filter:blur(4px); }
-
-  /* ═══ RESPONSIVE ═══ */
-  @media(max-width:900px) {
-    .sidebar { transform:translateX(-100%); }
-    .sidebar.open { transform:translateX(0); }
-    .main { margin-left:0; }
-    .hamburger { display:block; }
-    .stats-row { grid-template-columns:1fr 1fr; }
+  /* ═══ MOBILE ═══ */
+  .mob-menu { display:none; background:none; border:none; font-size:20px; cursor:pointer; color:var(--text); }
+  .mob-tabs { display:none; }
+  @media(max-width:768px) {
+    .tabs { display:none; }
+    .mob-menu { display:block; }
+    .mob-tabs.open { display:flex; flex-direction:column; position:absolute; top:60px; left:0; right:0; background:var(--white); border-bottom:1px solid var(--border); padding:8px 16px; z-index:99; box-shadow:var(--shadow-lg); }
+    .mob-tabs .tab { width:100%; text-align:left; padding:12px 16px; border-radius:var(--radius-sm); }
+    .topnav-inner { padding:0 16px; }
+    .page { padding:20px 16px 60px; }
+    .stats { grid-template-columns:1fr 1fr; }
     .settings-grid { grid-template-columns:1fr; }
-    .content { padding:20px; }
-    .create-form-body { grid-template-columns:1fr; }
+    .form-grid { grid-template-columns:1fr; }
     .span2 { grid-column:span 1; }
+    .nav-btn.view-site { display:none; }
   }
-  @media(max-width:480px) { .stats-row { grid-template-columns:1fr; } th,td { padding:10px 16px; } }
+  @media(max-width:480px) { .stats { grid-template-columns:1fr; } }
 </style>
 
-<div class="shell">
-  <aside class="sidebar" id="sidebar">
-    <div class="sb-top"><a href="/" class="sb-brand"><div class="sb-icon">🌆</div><div class="sb-name">Denver Social<small>admin panel</small></div></a></div>
-    <div class="sb-divider"></div>
-    <nav class="sb-nav">
-      <div class="sb-section">Overview</div>
-      <button class="sb-link active" data-panel="overview"><span class="sb-link-icon">📊</span> Dashboard</button>
-      <div class="sb-section">Manage</div>
-      <button class="sb-link" data-panel="members"><span class="sb-link-icon">👥</span> Members <span class="sb-badge">{members.length}</span></button>
-      <button class="sb-link" data-panel="events"><span class="sb-link-icon">📅</span> Events <span class="sb-badge">{events.length}</span></button>
-      <button class="sb-link" data-panel="suggestions"><span class="sb-link-icon">💡</span> Suggestions</button>
-      <div class="sb-section">Config</div>
-      <button class="sb-link" data-panel="settings"><span class="sb-link-icon">⚙️</span> Settings</button>
-      <button class="sb-link" data-panel="content"><span class="sb-link-icon">✏️</span> Site Content</button>
-    </nav>
-    <div class="sb-bottom"><div class="sb-user"><div class="sb-avatar">S</div><div><div class="sb-user-name">Seth</div><div class="sb-user-role">administrator</div></div></div></div>
-  </aside>
-  <div class="sb-overlay" id="sbOverlay"></div>
+<!-- ═══ TOP NAVIGATION ═══ -->
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a href="/" class="brand">
+      <div class="brand-icon">🌆</div>
+      <span class="brand-name">Denver Social</span>
+      <span class="brand-tag">Admin</span>
+    </a>
 
-  <div class="main">
-    <div class="topbar">
-      <div class="topbar-left"><button class="hamburger" id="hamburger">☰</button><div class="topbar-title" id="topbarTitle">Dashboard</div></div>
-      <div class="topbar-right"><a href="/" class="topbar-btn" target="_blank">← View Site</a><a href="/api/logout" class="topbar-btn danger">Log Out</a></div>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-panel="overview">Overview</button>
+      <button class="tab" data-panel="members">Members</button>
+      <button class="tab" data-panel="events">Events</button>
+      <button class="tab" data-panel="suggestions">Suggestions</button>
+      <button class="tab" data-panel="settings">Settings</button>
+      <button class="tab" data-panel="content">Content</button>
     </div>
-    <div class="content">
 
-      <!-- ═══ OVERVIEW ═══ -->
-      <div class="panel active" id="panel-overview">
-        <div class="stats-row">
-          <div class="stat-card"><div class="stat-card-top"><span class="stat-icon">👥</span><span class="stat-trend">↑ growing</span></div><div class="stat-num">{members.length}</div><div class="stat-lbl">Total Members</div></div>
-          <div class="stat-card"><div class="stat-card-top"><span class="stat-icon">✅</span><span class="stat-trend">{members.length > 0 ? Math.round(onboarded / members.length * 100) : 0}%</span></div><div class="stat-num">{onboarded}</div><div class="stat-lbl">Onboarded</div></div>
-          <div class="stat-card"><div class="stat-card-top"><span class="stat-icon">📅</span><span class="stat-trend">active</span></div><div class="stat-num">{events.length}</div><div class="stat-lbl">Total Events</div></div>
-          <div class="stat-card"><div class="stat-card-top"><span class="stat-icon">💡</span><span class="stat-trend">from crew</span></div><div class="stat-num">{suggestions.length}</div><div class="stat-lbl">Suggestions</div></div>
-        </div>
-        <div class="table-card">
-          <div class="table-head"><div class="table-title">Recent Members</div><button class="action-btn" data-panel="members">View all →</button></div>
-          {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
-            <table><thead><tr><th>Name</th><th>Email</th><th>Neighborhood</th><th>Status</th></tr></thead><tbody>
-              {members.slice(0,5).map((m:any)=><tr><td class="td-name">{m.name||'—'}</td><td class="td-muted">{m.email}</td><td class="td-muted">{m.neighborhood||'—'}</td><td><span class={`badge ${m.onboarding_done?'badge-green':'badge-muted'}`}>{m.onboarding_done?'✓ Active':'Pending'}</span></td></tr>)}
-            </tbody></table>)}
-        </div>
-        <div class="table-card">
-          <div class="table-head"><div class="table-title">Upcoming Events</div><button class="action-btn" data-panel="events">View all →</button></div>
-          {events.length===0?<div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div>:(
-            <table><thead><tr><th>Event</th><th>Date</th><th>Location</th><th>Type</th></tr></thead><tbody>
-              {events.slice(0,5).map((e:any)=><tr><td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td><td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td><td class="td-muted">{e.location||'—'}</td><td><span class={`badge ${e.featured?'badge-accent':'badge-muted'}`}>{e.featured?'⭐ Featured':(e.event_type||'event')}</span></td></tr>)}
-            </tbody></table>)}
-        </div>
-      </div>
+    <button class="mob-menu" id="mob-menu">☰</button>
 
-      <!-- ═══ MEMBERS ═══ -->
-      <div class="panel" id="panel-members">
-        <div class="table-card">
-          <div class="table-head"><div class="table-title">All Members ({members.length})</div><input class="table-search" id="search-members" placeholder="Search members..." /></div>
-          {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
-            <table id="members-table"><thead><tr><th>Name</th><th>Email</th><th>Neighborhood</th><th>Bio</th><th>Status</th><th></th></tr></thead><tbody>
-              {members.map((m:any)=><tr data-search={`${m.name} ${m.email} ${m.neighborhood}`}><td class="td-name">{m.name||'—'}</td><td class="td-muted" style="font-size:12px">{m.email}</td><td class="td-muted">{m.neighborhood||'—'}</td><td class="td-muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">{m.bio||'—'}</td><td><span class={`badge ${m.onboarding_done?'badge-green':'badge-muted'}`}>{m.onboarding_done?'✓ Active':'Pending'}</span></td><td><button class="action-btn del" data-action="remove-member" data-id={m.id} data-name={m.name||m.email}>Remove</button></td></tr>)}
-            </tbody></table>)}
-        </div>
-      </div>
-
-      <!-- ═══ EVENTS ═══ -->
-      <div class="panel" id="panel-events">
-        <div class="create-form" id="create-event-form">
-          <div class="table-head"><div class="table-title">Create New Event</div><button class="action-btn" id="cancel-create">✕ Cancel</button></div>
-          <div class="create-form-body">
-            <div class="settings-field span2"><label class="settings-label">Title</label><input class="settings-input" id="evt-title" placeholder="e.g. Friday Night Bowling" /></div>
-            <div class="settings-field"><label class="settings-label">Type</label><select class="settings-select" id="evt-type"><option value="social">🎉 Social</option><option value="dinner">🍽️ Dinner</option><option value="game_night">🎲 Game Night</option><option value="outdoor">🏔️ Outdoor</option><option value="brewery">🍺 Brewery</option><option value="bowling">🎳 Bowling</option><option value="arts">🎨 Arts</option><option value="music">🎵 Music</option><option value="sports">⚾ Sports</option><option value="coffee">☕ Coffee</option><option value="casino">🎰 Casino</option><option value="other">📅 Other</option></select></div>
-            <div class="settings-field"><label class="settings-label">Location</label><input class="settings-input" id="evt-location" placeholder="e.g. Elitch Lanes" /></div>
-            <div class="settings-field"><label class="settings-label">Zone</label><input class="settings-input" id="evt-zone" placeholder="e.g. LoHi" /></div>
-            <div class="settings-field"><label class="settings-label">Month</label><input class="settings-input" id="evt-month" placeholder="e.g. May" /></div>
-            <div class="settings-field"><label class="settings-label">Day</label><input class="settings-input" id="evt-day" placeholder="e.g. 17th" /></div>
-            <div class="settings-field"><label class="settings-label">Spots</label><input class="settings-input" id="evt-spots" type="number" value="10" min="1" /></div>
-            <div class="settings-field"><label class="settings-label">Price Cap</label><input class="settings-input" id="evt-price" placeholder="e.g. $25" /></div>
-            <div class="settings-field span2"><label class="settings-label">Description</label><textarea class="settings-input" id="evt-desc" rows="3" placeholder="What's the plan?" style="resize:vertical"></textarea></div>
-            <div class="span2" style="display:flex;align-items:center;gap:16px"><label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);cursor:pointer"><input type="checkbox" id="evt-featured" /> ⭐ Featured</label><button class="save-btn" style="margin:0;margin-left:auto" id="submit-event">Create Event</button></div>
-          </div>
-        </div>
-        <div class="table-card">
-          <div class="table-head"><div class="table-title">All Events ({events.length})</div><div style="display:flex;gap:8px;align-items:center"><input class="table-search" id="search-events" placeholder="Search events..." /><button class="add-btn" id="toggle-create">+ Add Event</button></div></div>
-          {events.length===0?<div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div>:(
-            <table id="events-table"><thead><tr><th>Title</th><th>Date</th><th>Location</th><th>Spots</th><th>Status</th><th></th></tr></thead><tbody>
-              {events.map((e:any)=><tr data-search={`${e.title} ${e.location} ${e.event_type}`} data-eid={e.id}><td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td><td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td><td class="td-muted">{e.location||'—'}</td><td class="td-muted">{e.spots?`${e.spots} max`:'—'}</td><td><span class={`badge ${e.featured?'badge-accent':'badge-muted'}`}>{e.featured?'⭐ Featured':(e.event_type||'event')}</span></td><td style="display:flex;gap:6px"><button class="action-btn" data-action="toggle-feature" data-id={e.id} data-featured={e.featured?'1':'0'}>{e.featured?'Unfeature':'⭐ Feature'}</button><button class="action-btn del" data-action="delete-event" data-id={e.id} data-title={e.title}>Delete</button></td></tr>)}
-            </tbody></table>)}
-        </div>
-      </div>
-
-      <!-- ═══ SUGGESTIONS ═══ -->
-      <div class="panel" id="panel-suggestions">
-        <div class="table-card">
-          <div class="table-head"><div class="table-title">Community Suggestions</div></div>
-          {suggestions.length===0?<div class="empty"><div class="empty-icon">💡</div><p>No suggestions yet.</p></div>:(
-            <table><thead><tr><th>Idea</th><th>Votes</th><th>Status</th><th></th></tr></thead><tbody>
-              {suggestions.map((s:any)=><tr data-sid={s.id}><td class="td-name">{s.text||s.title||'—'}</td><td><span class="badge badge-blue">▲ {s.votes||0}</span></td><td><span class={`badge ${s.status==='planned'?'badge-accent':s.status==='done'?'badge-green':'badge-muted'}`}>{s.status||'open'}</span></td><td style="display:flex;gap:6px"><button class="action-btn" data-action="mark-suggestion" data-id={s.id} data-status="planned">Plan</button><button class="action-btn" data-action="mark-suggestion" data-id={s.id} data-status="done">Done</button><button class="action-btn del" data-action="delete-suggestion" data-id={s.id}>Delete</button></td></tr>)}
-            </tbody></table>)}
-        </div>
-      </div>
-
-      <!-- ═══ SETTINGS ═══ -->
-      <div class="panel" id="panel-settings">
-        <div class="settings-grid">
-          <div class="settings-card">
-            <div class="settings-card-title">Site Settings</div><div class="settings-card-sub">Control how the public site behaves.</div>
-            <div class="settings-toggle"><div><div class="settings-toggle-label">Maintenance Mode</div><div class="settings-toggle-desc">Show "coming soon" page</div></div><label class="toggle-switch"><input type="checkbox" data-setting="toggle_maintenance"><span class="toggle-track"></span></label></div>
-            <div class="settings-toggle"><div><div class="settings-toggle-label">New Member Signups</div><div class="settings-toggle-desc">Allow new people to join</div></div><label class="toggle-switch"><input type="checkbox" data-setting="toggle_signups" checked><span class="toggle-track"></span></label></div>
-            <div class="settings-toggle"><div><div class="settings-toggle-label">Show Member Directory</div><div class="settings-toggle-desc">Display public members page</div></div><label class="toggle-switch"><input type="checkbox" data-setting="toggle_directory" checked><span class="toggle-track"></span></label></div>
-            <div class="settings-toggle"><div><div class="settings-toggle-label">Discord RSVP Required</div><div class="settings-toggle-desc">Require Discord for RSVPs</div></div><label class="toggle-switch"><input type="checkbox" data-setting="toggle_discord_rsvp" checked><span class="toggle-track"></span></label></div>
-          </div>
-          <div class="settings-card">
-            <div class="settings-card-title">Community Info</div><div class="settings-card-sub">Public-facing details.</div>
-            <div class="settings-field"><label class="settings-label">Community Name</label><input class="settings-input" data-setting="community_name" value="Denver Social" /></div>
-            <div class="settings-field"><label class="settings-label">Home City</label><input class="settings-input" data-setting="home_city" value="Denver, CO" /></div>
-            <div class="settings-field"><label class="settings-label">Discord Invite Link</label><input class="settings-input" data-setting="discord_link" value="https://discord.gg/S8SFNkdSgK" /></div>
-            <div class="settings-field"><label class="settings-label">Max Group Size</label><select class="settings-select" data-setting="max_group_size"><option value="8">Up to 8</option><option value="10" selected>Up to 10</option><option value="12">Up to 12</option><option value="15">Up to 15</option><option value="20">Up to 20</option></select></div>
-            <button class="save-btn js-save">Save Changes</button>
-          </div>
-          <div class="settings-card">
-            <div class="settings-card-title">Notifications</div><div class="settings-card-sub">Get notified when things happen.</div>
-            <div class="settings-toggle"><div><div class="settings-toggle-label">New Member Joined</div><div class="settings-toggle-desc">Email on new signup</div></div><label class="toggle-switch"><input type="checkbox" data-setting="toggle_notif_member" checked><span class="toggle-track"></span></label></div>
-            <div class="settings-toggle"><div><div class="settings-toggle-label">New Suggestion</div><div class="settings-toggle-desc">Email on new suggestion</div></div><label class="toggle-switch"><input type="checkbox" data-setting="toggle_notif_suggestion"><span class="toggle-track"></span></label></div>
-            <div class="settings-toggle"><div><div class="settings-toggle-label">Event RSVP Alert</div><div class="settings-toggle-desc">Email when event fills</div></div><label class="toggle-switch"><input type="checkbox" data-setting="toggle_notif_rsvp" checked><span class="toggle-track"></span></label></div>
-            <div class="settings-field" style="margin-top:16px"><label class="settings-label">Admin Email</label><input class="settings-input" data-setting="admin_email" value="stharpe98@gmail.com" /></div>
-            <button class="save-btn js-save">Save Changes</button>
-          </div>
-          <div class="settings-card">
-            <div class="settings-card-title">Danger Zone</div><div class="settings-card-sub">Irreversible actions.</div>
-            <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
-              <button class="action-btn del" style="width:100%;padding:13px;font-size:13px" id="clear-pending">Clear Pending Members</button>
-              <button class="action-btn del" style="width:100%;padding:13px;font-size:13px" id="export-csv">Export Member Data (CSV)</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ SITE CONTENT ═══ -->
-      <div class="panel" id="panel-content">
-        <div class="settings-grid">
-          <div class="settings-card" style="grid-column:span 2">
-            <div class="settings-card-title">Hero Section</div><div class="settings-card-sub">Homepage headline and subtext.</div>
-            <div class="settings-field"><label class="settings-label">Headline</label><input class="settings-input" data-setting="hero_headline" value="Show up. See what happens." /></div>
-            <div class="settings-field"><label class="settings-label">Subheadline</label><input class="settings-input" data-setting="hero_sub" value="Small-group hangouts across Denver — hikes, dinners, pottery, game nights. Free forever." /></div>
-            <div class="settings-field"><label class="settings-label">CTA Button Text</label><input class="settings-input" data-setting="hero_cta" value="Join Free →" /></div>
-            <button class="save-btn js-save">Save Changes</button>
-          </div>
-          <div class="settings-card">
-            <div class="settings-card-title">About Section</div><div class="settings-card-sub">About page text.</div>
-            <div class="settings-field"><label class="settings-label">Tagline</label><input class="settings-input" data-setting="about_tagline" value="Real small-group events across Denver." /></div>
-            <div class="settings-field"><label class="settings-label">Member Count Label</label><input class="settings-input" data-setting="member_count_label" value="88+ locals" /></div>
-            <button class="save-btn js-save">Save Changes</button>
-          </div>
-          <div class="settings-card">
-            <div class="settings-card-title">Footer</div><div class="settings-card-sub">Bottom of every page.</div>
-            <div class="settings-field"><label class="settings-label">Footer Tagline</label><input class="settings-input" data-setting="footer_tagline" value="Real connections, real city." /></div>
-            <div class="settings-field"><label class="settings-label">Contact Email</label><input class="settings-input" data-setting="footer_email" value="hello@denversocial.com" /></div>
-            <button class="save-btn js-save">Save Changes</button>
-          </div>
-        </div>
-      </div>
-
+    <div class="nav-right">
+      <a href="/" class="nav-btn view-site" target="_blank">← View Site</a>
+      <a href="/api/logout" class="nav-btn danger">Log Out</a>
+      <div class="avatar">S</div>
     </div>
   </div>
+  <div class="mob-tabs" id="mob-tabs">
+    <button class="tab active" data-panel="overview">Overview</button>
+    <button class="tab" data-panel="members">Members</button>
+    <button class="tab" data-panel="events">Events</button>
+    <button class="tab" data-panel="suggestions">Suggestions</button>
+    <button class="tab" data-panel="settings">Settings</button>
+    <button class="tab" data-panel="content">Content</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- ═══ OVERVIEW ═══ -->
+  <div class="panel active" id="panel-overview">
+    <div class="stats">
+      <div class="stat"><div class="stat-top"><span class="stat-icon">👥</span><span class="stat-trend">↑ growing</span></div><div class="stat-num">{members.length}</div><div class="stat-label">Total members</div></div>
+      <div class="stat"><div class="stat-top"><span class="stat-icon">✅</span><span class="stat-trend">{members.length > 0 ? Math.round(onboarded / members.length * 100) : 0}%</span></div><div class="stat-num">{onboarded}</div><div class="stat-label">Onboarded</div></div>
+      <div class="stat"><div class="stat-top"><span class="stat-icon">📅</span><span class="stat-trend">active</span></div><div class="stat-num">{events.length}</div><div class="stat-label">Total events</div></div>
+      <div class="stat"><div class="stat-top"><span class="stat-icon">💡</span><span class="stat-trend">from crew</span></div><div class="stat-num">{suggestions.length}</div><div class="stat-label">Suggestions</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Recent members</div><button class="btn" data-panel="members">View all →</button></div>
+      {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
+        <table><thead><tr><th>Name</th><th>Email</th><th>Neighborhood</th><th>Status</th></tr></thead><tbody>
+          {members.slice(0,5).map((m:any)=><tr><td class="td-name">{m.name||'—'}</td><td class="td-muted">{m.email}</td><td class="td-muted">{m.neighborhood||'—'}</td><td><span class={`badge ${m.onboarding_done?'badge-green':'badge-muted'}`}>{m.onboarding_done?'✓ Active':'Pending'}</span></td></tr>)}
+        </tbody></table>)}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Upcoming events</div><button class="btn" data-panel="events">View all →</button></div>
+      {events.length===0?<div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div>:(
+        <table><thead><tr><th>Event</th><th>Date</th><th>Location</th><th>Type</th></tr></thead><tbody>
+          {events.slice(0,5).map((e:any)=><tr><td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td><td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td><td class="td-muted">{e.location||'—'}</td><td><span class={`badge ${e.featured?'badge-accent':'badge-muted'}`}>{e.featured?'⭐ Featured':(e.event_type||'event')}</span></td></tr>)}
+        </tbody></table>)}
+    </div>
+  </div>
+
+  <!-- ═══ MEMBERS ═══ -->
+  <div class="panel" id="panel-members">
+    <div class="card">
+      <div class="card-head"><div class="card-title">All members ({members.length})</div><input class="search-input" id="search-members" placeholder="Search members..." /></div>
+      {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
+        <table id="members-table"><thead><tr><th>Name</th><th>Email</th><th>Neighborhood</th><th>Bio</th><th>Status</th><th></th></tr></thead><tbody>
+          {members.map((m:any)=><tr data-search={`${m.name} ${m.email} ${m.neighborhood}`}><td class="td-name">{m.name||'—'}</td><td class="td-muted" style="font-size:12px">{m.email}</td><td class="td-muted">{m.neighborhood||'—'}</td><td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">{m.bio||'—'}</td><td><span class={`badge ${m.onboarding_done?'badge-green':'badge-muted'}`}>{m.onboarding_done?'✓ Active':'Pending'}</span></td><td><button class="btn del" data-action="remove-member" data-id={m.id} data-name={m.name||m.email}>Remove</button></td></tr>)}
+        </tbody></table>)}
+    </div>
+  </div>
+
+  <!-- ═══ EVENTS ═══ -->
+  <div class="panel" id="panel-events">
+    <div class="create-form card" id="create-event-form">
+      <div class="card-head"><div class="card-title">Create new event</div><button class="btn" id="cancel-create">✕ Cancel</button></div>
+      <div class="form-grid">
+        <div class="field span2"><label class="field-label">Title</label><input class="field-input" id="evt-title" placeholder="e.g. Friday Night Bowling" /></div>
+        <div class="field"><label class="field-label">Type</label><select class="field-select" id="evt-type"><option value="social">🎉 Social</option><option value="dinner">🍽️ Dinner</option><option value="game_night">🎲 Game Night</option><option value="outdoor">🏔️ Outdoor</option><option value="brewery">🍺 Brewery</option><option value="bowling">🎳 Bowling</option><option value="arts">🎨 Arts</option><option value="music">🎵 Music</option><option value="sports">⚾ Sports</option><option value="coffee">☕ Coffee</option><option value="casino">🎰 Casino</option><option value="other">📅 Other</option></select></div>
+        <div class="field"><label class="field-label">Location</label><input class="field-input" id="evt-location" placeholder="e.g. Elitch Lanes" /></div>
+        <div class="field"><label class="field-label">Zone</label><input class="field-input" id="evt-zone" placeholder="e.g. LoHi" /></div>
+        <div class="field"><label class="field-label">Month</label><input class="field-input" id="evt-month" placeholder="e.g. May" /></div>
+        <div class="field"><label class="field-label">Day</label><input class="field-input" id="evt-day" placeholder="e.g. 17th" /></div>
+        <div class="field"><label class="field-label">Spots</label><input class="field-input" id="evt-spots" type="number" value="10" min="1" /></div>
+        <div class="field"><label class="field-label">Price Cap</label><input class="field-input" id="evt-price" placeholder="e.g. $25" /></div>
+        <div class="field span2"><label class="field-label">Description</label><textarea class="field-input" id="evt-desc" rows="3" placeholder="What's the plan?" style="resize:vertical"></textarea></div>
+        <div class="span2" style="display:flex;align-items:center;gap:16px"><label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);cursor:pointer"><input type="checkbox" id="evt-featured" /> ⭐ Featured</label><button class="btn-primary" style="margin-left:auto" id="submit-event">Create Event</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">All events ({events.length})</div><div style="display:flex;gap:8px;align-items:center"><input class="search-input" id="search-events" placeholder="Search events..." /><button class="btn-primary" id="toggle-create">+ Add Event</button></div></div>
+      {events.length===0?<div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div>:(
+        <table id="events-table"><thead><tr><th>Title</th><th>Date</th><th>Location</th><th>Spots</th><th>Status</th><th></th></tr></thead><tbody>
+          {events.map((e:any)=><tr data-search={`${e.title} ${e.location} ${e.event_type}`} data-eid={e.id}><td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td><td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td><td class="td-muted">{e.location||'—'}</td><td class="td-muted">{e.spots?`${e.spots} max`:'—'}</td><td><span class={`badge ${e.featured?'badge-accent':'badge-muted'}`}>{e.featured?'⭐ Featured':(e.event_type||'event')}</span></td><td style="display:flex;gap:6px"><button class="btn" data-action="toggle-feature" data-id={e.id} data-featured={e.featured?'1':'0'}>{e.featured?'Unfeature':'⭐ Feature'}</button><button class="btn del" data-action="delete-event" data-id={e.id} data-title={e.title}>Delete</button></td></tr>)}
+        </tbody></table>)}
+    </div>
+  </div>
+
+  <!-- ═══ SUGGESTIONS ═══ -->
+  <div class="panel" id="panel-suggestions">
+    <div class="card">
+      <div class="card-head"><div class="card-title">Community suggestions</div></div>
+      {suggestions.length===0?<div class="empty"><div class="empty-icon">💡</div><p>No suggestions yet.</p></div>:(
+        <table><thead><tr><th>Idea</th><th>Votes</th><th>Status</th><th></th></tr></thead><tbody>
+          {suggestions.map((s:any)=><tr data-sid={s.id}><td class="td-name">{s.text||s.title||'—'}</td><td><span class="badge badge-blue">▲ {s.votes||0}</span></td><td><span class={`badge ${s.status==='planned'?'badge-accent':s.status==='done'?'badge-green':'badge-muted'}`}>{s.status||'open'}</span></td><td style="display:flex;gap:6px"><button class="btn" data-action="mark-suggestion" data-id={s.id} data-status="planned">Plan</button><button class="btn" data-action="mark-suggestion" data-id={s.id} data-status="done">Done</button><button class="btn del" data-action="delete-suggestion" data-id={s.id}>Delete</button></td></tr>)}
+        </tbody></table>)}
+    </div>
+  </div>
+
+  <!-- ═══ SETTINGS ═══ -->
+  <div class="panel" id="panel-settings">
+    <div class="settings-grid">
+      <div class="settings-card">
+        <div class="settings-title">Site settings</div><div class="settings-sub">Control how the public site behaves.</div>
+        <div class="toggle-row"><div><div class="toggle-label">Maintenance mode</div><div class="toggle-desc">Show "coming soon" page</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_maintenance"><span class="toggle-track"></span></label></div>
+        <div class="toggle-row"><div><div class="toggle-label">New member signups</div><div class="toggle-desc">Allow new people to join</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_signups" checked><span class="toggle-track"></span></label></div>
+        <div class="toggle-row"><div><div class="toggle-label">Show member directory</div><div class="toggle-desc">Display public members page</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_directory" checked><span class="toggle-track"></span></label></div>
+        <div class="toggle-row"><div><div class="toggle-label">Discord RSVP required</div><div class="toggle-desc">Require Discord for RSVPs</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_discord_rsvp" checked><span class="toggle-track"></span></label></div>
+      </div>
+      <div class="settings-card">
+        <div class="settings-title">Community info</div><div class="settings-sub">Public-facing details.</div>
+        <div class="field"><label class="field-label">Community name</label><input class="field-input" data-setting="community_name" value="Denver Social" /></div>
+        <div class="field"><label class="field-label">Home city</label><input class="field-input" data-setting="home_city" value="Denver, CO" /></div>
+        <div class="field"><label class="field-label">Discord invite link</label><input class="field-input" data-setting="discord_link" value="https://discord.gg/S8SFNkdSgK" /></div>
+        <div class="field"><label class="field-label">Max group size</label><select class="field-select" data-setting="max_group_size"><option value="8">Up to 8</option><option value="10" selected>Up to 10</option><option value="12">Up to 12</option><option value="15">Up to 15</option><option value="20">Up to 20</option></select></div>
+        <button class="btn-primary js-save" style="margin-top:16px">Save Changes</button>
+      </div>
+      <div class="settings-card">
+        <div class="settings-title">Notifications</div><div class="settings-sub">Get notified when things happen.</div>
+        <div class="toggle-row"><div><div class="toggle-label">New member joined</div><div class="toggle-desc">Email on new signup</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_member" checked><span class="toggle-track"></span></label></div>
+        <div class="toggle-row"><div><div class="toggle-label">New suggestion</div><div class="toggle-desc">Email on new suggestion</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_suggestion"><span class="toggle-track"></span></label></div>
+        <div class="toggle-row"><div><div class="toggle-label">Event RSVP alert</div><div class="toggle-desc">Email when event fills</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_rsvp" checked><span class="toggle-track"></span></label></div>
+        <div class="field" style="margin-top:16px"><label class="field-label">Admin email</label><input class="field-input" data-setting="admin_email" value="stharpe98@gmail.com" /></div>
+        <button class="btn-primary js-save" style="margin-top:16px">Save Changes</button>
+      </div>
+      <div class="settings-card">
+        <div class="settings-title">Danger zone</div><div class="settings-sub">Irreversible actions.</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+          <button class="btn del" style="width:100%;padding:12px;font-size:13px" id="clear-pending">Clear Pending Members</button>
+          <button class="btn del" style="width:100%;padding:12px;font-size:13px" id="export-csv">Export Member Data (CSV)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CONTENT ═══ -->
+  <div class="panel" id="panel-content">
+    <div class="settings-grid">
+      <div class="settings-card" style="grid-column:span 2">
+        <div class="settings-title">Hero section</div><div class="settings-sub">Homepage headline and subtext.</div>
+        <div class="field"><label class="field-label">Headline</label><input class="field-input" data-setting="hero_headline" value="Show up. See what happens." /></div>
+        <div class="field"><label class="field-label">Subheadline</label><input class="field-input" data-setting="hero_sub" value="Small-group hangouts across Denver — hikes, dinners, pottery, game nights. Free forever." /></div>
+        <div class="field"><label class="field-label">CTA button text</label><input class="field-input" data-setting="hero_cta" value="Join Free →" /></div>
+        <button class="btn-primary js-save" style="margin-top:16px">Save Changes</button>
+      </div>
+      <div class="settings-card">
+        <div class="settings-title">About section</div><div class="settings-sub">About page text.</div>
+        <div class="field"><label class="field-label">Tagline</label><input class="field-input" data-setting="about_tagline" value="Real small-group events across Denver." /></div>
+        <div class="field"><label class="field-label">Member count label</label><input class="field-input" data-setting="member_count_label" value="88+ locals" /></div>
+        <button class="btn-primary js-save" style="margin-top:16px">Save Changes</button>
+      </div>
+      <div class="settings-card">
+        <div class="settings-title">Footer</div><div class="settings-sub">Bottom of every page.</div>
+        <div class="field"><label class="field-label">Footer tagline</label><input class="field-input" data-setting="footer_tagline" value="Real connections, real city." /></div>
+        <div class="field"><label class="field-label">Contact email</label><input class="field-input" data-setting="footer_email" value="hello@denversocial.com" /></div>
+        <button class="btn-primary js-save" style="margin-top:16px">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 <div class="toast" id="toast"></div>
 
 <script is:inline>
-(function(){var $=function(s){return document.querySelector(s)},$$=function(s){return document.querySelectorAll(s)};function toast(m,e){var el=$('#toast');if(!el)return;el.textContent=m;el.className=e?'toast show error':'toast show';setTimeout(function(){el.className='toast'},3000)}function api(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);return d})}var titles={overview:'Dashboard',members:'Members',events:'Events',suggestions:'Suggestions',settings:'Settings',content:'Site Content'};function showPanel(id){$$('.panel').forEach(function(p){p.classList.remove('active')});var t=$('#panel-'+id);if(t)t.classList.add('active');$$('.sb-link').forEach(function(b){b.classList.remove('active')});$$('.sb-link[data-panel="'+id+'"]').forEach(function(b){b.classList.add('active')});var h=$('#topbarTitle');if(h)h.textContent=titles[id]||'Dashboard';closeSidebar()}$$('[data-panel]').forEach(function(b){b.addEventListener('click',function(){showPanel(this.getAttribute('data-panel'))})});function closeSidebar(){$('#sidebar').classList.remove('open');$('#sbOverlay').style.display='none'}$('#hamburger').addEventListener('click',function(){$('#sidebar').classList.toggle('open');$('#sbOverlay').style.display=$('#sidebar').classList.contains('open')?'block':'none'});$('#sbOverlay').addEventListener('click',closeSidebar);function bindSearch(i,t){var inp=$('#'+i);if(!inp)return;inp.addEventListener('input',function(){var q=this.value.toLowerCase();$$('#'+t+' tr[data-search]').forEach(function(r){r.style.display=(r.getAttribute('data-search')||'').toLowerCase().indexOf(q)>=0?'':'none'})})}bindSearch('search-members','members-table');bindSearch('search-events','events-table');document.addEventListener('click',function(e){var btn=e.target.closest('[data-action]');if(!btn)return;var act=btn.getAttribute('data-action'),id=btn.getAttribute('data-id');if(act==='remove-member'){var nm=btn.getAttribute('data-name');if(!confirm('Remove '+nm+'?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/member',{action:'delete',id:parseInt(id)}).then(function(){toast(nm+' removed.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Remove'})}if(act==='delete-event'){var tt=btn.getAttribute('data-title');if(!confirm('Delete "'+tt+'"?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/event',{action:'delete',id:parseInt(id)}).then(function(){toast('"'+tt+'" deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Delete'})}if(act==='toggle-feature'){var f=btn.getAttribute('data-featured')==='1';api('/api/admin/event',{action:'feature',id:parseInt(id),featured:!f}).then(function(){toast(f?'Unfeatured':'Featured ⭐');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}if(act==='mark-suggestion'){var st=btn.getAttribute('data-status');api('/api/admin/suggestion',{action:'status',id:parseInt(id),status:st}).then(function(){toast('Marked '+st+' ✓');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}if(act==='delete-suggestion'){if(!confirm('Delete this suggestion?'))return;api('/api/admin/suggestion',{action:'delete',id:parseInt(id)}).then(function(){toast('Deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true)})}});$('#toggle-create').addEventListener('click',function(){$('#create-event-form').classList.toggle('open')});$('#cancel-create').addEventListener('click',function(){$('#create-event-form').classList.remove('open')});$('#submit-event').addEventListener('click',function(){var t=$('#evt-title').value.trim();if(!t){toast('Title required.',true);return}api('/api/admin/event',{action:'create',title:t,event_type:$('#evt-type').value,location:$('#evt-location').value.trim(),zone:$('#evt-zone').value.trim(),event_month:$('#evt-month').value.trim(),event_day:$('#evt-day').value.trim(),spots:$('#evt-spots').value,price_cap:$('#evt-price').value.trim(),description:$('#evt-desc').value.trim(),featured:$('#evt-featured').checked}).then(function(){toast('Event created! 🎉');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});function gatherAll(){var s={};$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');s[k]=el.type==='checkbox'?(el.checked?'1':'0'):el.value});return s}function doSave(){api('/api/admin/settings',gatherAll()).then(function(){toast('Settings saved ✓')}).catch(function(err){toast('Failed: '+err.message,true)})}$$('.js-save').forEach(function(b){b.addEventListener('click',doSave)});fetch('/api/admin/settings').then(function(r){return r.json()}).then(function(d){if(d.error)return;$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');if(d[k]===undefined)return;if(el.type==='checkbox')el.checked=d[k]==='1';else el.value=d[k]})}).catch(function(){});$('#clear-pending').addEventListener('click',function(){if(!confirm('Clear all pending members?'))return;api('/api/admin/member',{action:'clear_pending'}).then(function(){toast('Cleared.');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});$('#export-csv').addEventListener('click',function(){var rows=$$('#members-table tbody tr');if(!rows.length){toast('No members.',true);return}var csv='Name,Email,Neighborhood,Bio,Status\n';rows.forEach(function(row){var cells=row.querySelectorAll('td');var vals=[];for(var i=0;i<5;i++)vals.push('"'+(cells[i]?cells[i].textContent.trim().replace(/"/g,'""'):'')+'"');csv+=vals.join(',')+'\n'});var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='dsn-members-'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('CSV downloaded ✓')})})();
+(function(){var $=function(s){return document.querySelector(s)},$$=function(s){return document.querySelectorAll(s)};function toast(m,e){var el=$('#toast');if(!el)return;el.textContent=m;el.className=e?'toast show error':'toast show';setTimeout(function(){el.className='toast'},3000)}function api(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);return d})}var titles={overview:'Overview',members:'Members',events:'Events',suggestions:'Suggestions',settings:'Settings',content:'Content'};function showPanel(id){$$('.panel').forEach(function(p){p.classList.remove('active')});var t=$('#panel-'+id);if(t)t.classList.add('active');$$('.tab').forEach(function(b){b.classList.remove('active')});$$('.tab[data-panel="'+id+'"]').forEach(function(b){b.classList.add('active')});var mob=$('#mob-tabs');if(mob)mob.classList.remove('open')}$$('[data-panel]').forEach(function(b){b.addEventListener('click',function(){showPanel(this.getAttribute('data-panel'))})});var mobMenu=$('#mob-menu'),mobTabs=$('#mob-tabs');if(mobMenu)mobMenu.addEventListener('click',function(){mobTabs.classList.toggle('open')});function bindSearch(i,t){var inp=$('#'+i);if(!inp)return;inp.addEventListener('input',function(){var q=this.value.toLowerCase();$$('#'+t+' tr[data-search]').forEach(function(r){r.style.display=(r.getAttribute('data-search')||'').toLowerCase().indexOf(q)>=0?'':'none'})})}bindSearch('search-members','members-table');bindSearch('search-events','events-table');document.addEventListener('click',function(e){var btn=e.target.closest('[data-action]');if(!btn)return;var act=btn.getAttribute('data-action'),id=btn.getAttribute('data-id');if(act==='remove-member'){var nm=btn.getAttribute('data-name');if(!confirm('Remove '+nm+'?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/member',{action:'delete',id:parseInt(id)}).then(function(){toast(nm+' removed.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Remove'})}if(act==='delete-event'){var tt=btn.getAttribute('data-title');if(!confirm('Delete "'+tt+'"?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/event',{action:'delete',id:parseInt(id)}).then(function(){toast('"'+tt+'" deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Delete'})}if(act==='toggle-feature'){var f=btn.getAttribute('data-featured')==='1';api('/api/admin/event',{action:'feature',id:parseInt(id),featured:!f}).then(function(){toast(f?'Unfeatured':'Featured ⭐');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}if(act==='mark-suggestion'){var st=btn.getAttribute('data-status');api('/api/admin/suggestion',{action:'status',id:parseInt(id),status:st}).then(function(){toast('Marked '+st+' ✓');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}if(act==='delete-suggestion'){if(!confirm('Delete this suggestion?'))return;api('/api/admin/suggestion',{action:'delete',id:parseInt(id)}).then(function(){toast('Deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true)})}});$('#toggle-create').addEventListener('click',function(){$('#create-event-form').classList.toggle('open')});$('#cancel-create').addEventListener('click',function(){$('#create-event-form').classList.remove('open')});$('#submit-event').addEventListener('click',function(){var t=$('#evt-title').value.trim();if(!t){toast('Title required.',true);return}api('/api/admin/event',{action:'create',title:t,event_type:$('#evt-type').value,location:$('#evt-location').value.trim(),zone:$('#evt-zone').value.trim(),event_month:$('#evt-month').value.trim(),event_day:$('#evt-day').value.trim(),spots:$('#evt-spots').value,price_cap:$('#evt-price').value.trim(),description:$('#evt-desc').value.trim(),featured:$('#evt-featured').checked}).then(function(){toast('Event created! 🎉');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});function gatherAll(){var s={};$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');s[k]=el.type==='checkbox'?(el.checked?'1':'0'):el.value});return s}function doSave(){api('/api/admin/settings',gatherAll()).then(function(){toast('Settings saved ✓')}).catch(function(err){toast('Failed: '+err.message,true)})}$$('.js-save').forEach(function(b){b.addEventListener('click',doSave)});fetch('/api/admin/settings').then(function(r){return r.json()}).then(function(d){if(d.error)return;$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');if(d[k]===undefined)return;if(el.type==='checkbox')el.checked=d[k]==='1';else el.value=d[k]})}).catch(function(){});$('#clear-pending').addEventListener('click',function(){if(!confirm('Clear all pending members?'))return;api('/api/admin/member',{action:'clear_pending'}).then(function(){toast('Cleared.');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});$('#export-csv').addEventListener('click',function(){var rows=$$('#members-table tbody tr');if(!rows.length){toast('No members.',true);return}var csv='Name,Email,Neighborhood,Bio,Status\n';rows.forEach(function(row){var cells=row.querySelectorAll('td');var vals=[];for(var i=0;i<5;i++)vals.push('"'+(cells[i]?cells[i].textContent.trim().replace(/"/g,'""'):'')+'"');csv+=vals.join(',')+'\n'});var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='dsn-members-'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('CSV downloaded ✓')})})();
 </script>
 </AdminBase>
