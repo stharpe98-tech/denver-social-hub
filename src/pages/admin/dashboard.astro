@@ -11,7 +11,7 @@ if (userMatch) {
 if (!isAdmin) return Astro.redirect('/admin');
 
 const db = getDB();
-let members[] = [], events[] = [], suggestions[] = [];
+let members: any[] = [], events: any[] = [], suggestions: any[] = [];
 if (db) {
   try {
     members    = (await db.prepare(`SELECT * FROM members ORDER BY id DESC`).all())?.results || [];
