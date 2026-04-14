@@ -1,0 +1,146 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDB } from '../lib/db';
+
+const db = getDB();
+let events: any[] = [];
+let rsvpCounts: Record<number, number> = {};
+try {
+  if (db) {
+    events = (await db.prepare("SELECT * FROM events WHERE is_past IS NULL OR is_past=0 ORDER BY id DESC").all())?.results || [];
+    const counts = (await db.prepare("SELECT event_id, COUNT(*) as cnt FROM event_rsvps GROUP BY event_id").all())?.results || [];
+    counts.forEach((c: any) => { rsvpCounts[c.event_id] = c.cnt; });
+  }
+} catch {}
+
+const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",potluck:"🍲",other:"📅" };
+
+function spotsLeft(ev: any): number {
+  const total = parseInt(ev.spots) || 10;
+  const taken = rsvpCounts[ev.id] || 0;
+  return Math.max(0, total - taken);
+}
+
+function priceLabel(ev: any): string {
+  if (!ev.price_cap || ev.price_cap === 'Free' || ev.price_cap === '$0') return 'Free';
+  return ev.price_cap;
+}
+---
+<Base title="Events">
+
+<div class="ev-page">
+
+  <div class="ev-header">
+    <h1 class="ev-h1">What's <em>happening</em></h1>
+    <p class="ev-sub">Small-group hangouts across Denver. Pick one and show up.</p>
+  </div>
+
+  {events.length === 0 ? (
+    <div class="ev-empty">
+      <div class="ev-empty-icon">🗓️</div>
+      <h2>Nothing scheduled yet</h2>
+      <p>New events drop every week in Discord. Join to be the first to know.</p>
+      <a href="https://discord.gg/S8SFNkdSgK" class="ev-empty-btn" target="_blank" rel="noopener">Join the Discord →</a>
+    </div>
+  ) : (
+    <>
+      <div class="ev-count">{events.length} events coming up</div>
+      <div class="ev-list">
+        {events.map((ev: any) => (
+          <a href={`/events/${ev.id}`} class="ev-card">
+            <div class="ev-card-date">
+              <span class="ev-card-month">{(ev.event_month || 'TBD').slice(0, 3)}</span>
+              <span class="ev-card-day">{ev.event_day || '—'}</span>
+            </div>
+            <div class="ev-card-body">
+              <div class="ev-card-type">
+                <span>{typeEmoji[ev.event_type] || '📅'}</span>
+                <span class="ev-card-type-label">{(ev.event_type || '').replace('_', ' ')}</span>
+                {ev.featured ? <span class="ev-card-featured">⭐ Featured</span> : null}
+              </div>
+              <h3 class="ev-card-title">{ev.title}</h3>
+              <div class="ev-card-meta">{ev.location || ev.zone} · up to {ev.spots} people</div>
+            </div>
+            <div class="ev-card-right">
+              <span class={`ev-card-price ${priceLabel(ev) === 'Free' ? 'free' : ''}`}>{priceLabel(ev)}</span>
+              <span class="ev-card-spots">{spotsLeft(ev)} left</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </>
+  )}
+
+  <div class="ev-discord">
+    <span class="ev-discord-icon">💬</span>
+    <div class="ev-discord-text">
+      <strong>Plans happen in Discord first</strong>
+      <span>88 locals and growing</span>
+    </div>
+    <a href="https://discord.gg/S8SFNkdSgK" class="ev-discord-btn" target="_blank" rel="noopener">Join →</a>
+  </div>
+
+</div>
+
+<style>
+  .ev-page { max-width:640px; margin:0 auto; padding:0 20px 40px; }
+
+  .ev-header { text-align:center; padding:28px 0 20px; }
+  .ev-h1 { font-family:'Instrument Serif',serif; font-size:clamp(28px,5vw,36px); color:#fff; font-weight:400; margin-bottom:6px; }
+  .ev-h1 em { font-style:italic; color:#4ade80; }
+  .ev-sub { font-size:14px; color:rgba(255,255,255,.35); }
+
+  .ev-count { font-size:11px; color:rgba(255,255,255,.25); margin-bottom:12px; }
+
+  .ev-empty {
+    text-align:center; padding:56px 20px;
+    background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.05); border-radius:20px;
+  }
+  .ev-empty-icon { font-size:40px; margin-bottom:14px; }
+  .ev-empty h2 { font-family:'Instrument Serif',serif; font-size:22px; color:#fff; margin-bottom:6px; }
+  .ev-empty p { font-size:13px; color:rgba(255,255,255,.35); margin-bottom:20px; }
+  .ev-empty-btn { display:inline-block; padding:12px 28px; background:#5865F2; color:#fff; border-radius:12px; font-size:14px; font-weight:700; }
+
+  .ev-list { display:flex; flex-direction:column; gap:8px; margin-bottom:28px; }
+
+  .ev-card {
+    display:flex; align-items:center; gap:14px;
+    padding:16px 18px; border-radius:16px; text-decoration:none; color:#e8ecf4;
+    background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.05);
+    transition:border-color .2s, transform .2s, background .2s;
+  }
+  .ev-card:hover { border-color:rgba(255,255,255,.12); transform:translateX(4px); background:rgba(255,255,255,.04); }
+
+  .ev-card-date { text-align:center; min-width:48px; padding:6px 10px; background:rgba(59,130,246,.08); border-radius:10px; }
+  .ev-card-month { display:block; font-size:9px; font-weight:700; color:#60a5fa; text-transform:uppercase; }
+  .ev-card-day { display:block; font-family:'Instrument Serif',serif; font-size:22px; color:#fff; line-height:1.1; }
+
+  .ev-card-body { flex:1; min-width:0; }
+  .ev-card-type { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
+  .ev-card-type-label { font-size:11px; color:#60a5fa; font-weight:600; text-transform:capitalize; }
+  .ev-card-featured { font-size:9px; padding:2px 6px; border-radius:4px; background:rgba(240,90,40,.12); color:#F05A28; font-weight:700; margin-left:4px; }
+  .ev-card-title { font-size:14px; color:#fff; font-weight:600; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ev-card-meta { font-size:11px; color:rgba(255,255,255,.3); }
+
+  .ev-card-right { text-align:right; flex-shrink:0; }
+  .ev-card-price { display:block; font-size:12px; color:rgba(255,255,255,.5); font-weight:600; }
+  .ev-card-price.free { color:#4ade80; }
+  .ev-card-spots { font-size:10px; color:rgba(255,255,255,.2); }
+
+  .ev-discord {
+    display:flex; align-items:center; gap:14px;
+    padding:18px 22px; border-radius:16px;
+    background:linear-gradient(135deg,rgba(88,101,242,.1),rgba(88,101,242,.05));
+    border:1px solid rgba(88,101,242,.15);
+  }
+  .ev-discord-icon { font-size:24px; flex-shrink:0; }
+  .ev-discord-text { flex:1; }
+  .ev-discord-text strong { display:block; font-size:13px; color:#fff; }
+  .ev-discord-text span { font-size:11px; color:rgba(255,255,255,.4); }
+  .ev-discord-btn {
+    padding:8px 18px; background:#5865F2; color:#fff;
+    border-radius:10px; font-size:12px; font-weight:700; flex-shrink:0;
+  }
+</style>
+
+</Base>
