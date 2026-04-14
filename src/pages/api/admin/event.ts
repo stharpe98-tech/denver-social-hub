@@ -35,6 +35,10 @@ export async function POST({ request }: APIContext) {
       await db.prepare(`UPDATE events SET featured=? WHERE id=?`).bind(body.featured?1:0,body.id).run();
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
+    if (action === 'archive_past') {
+      await db.prepare(`UPDATE events SET is_past=1 WHERE is_past=0`).run();
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }
     return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400 });
   } catch(e:any) { return new Response(JSON.stringify({ error: e.message }), { status: 500 }); }
 }
