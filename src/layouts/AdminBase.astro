@@ -1,0 +1,78 @@
+---
+const { title = "Admin — Denver Social" } = Astro.props;
+---
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; }
+    body {
+      min-height: 100vh;
+      background: #05070d;
+      color: #e8ecf4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 50%, rgba(240,90,40,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 80% at 80% 20%, rgba(59,130,246,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 50% at 60% 80%, rgba(240,90,40,0.06) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* grid texture */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .admin-wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+    }
+
+    .input {
+      width: 100%;
+      padding: 14px 16px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+      font-size: 15px;
+      color: #e8ecf4;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .input::placeholder { color: #4a5568; }
+    .input:focus { border-color: #F05A28; outline: none; background: rgba(255,255,255,.06); }
+  </style>
+</head>
+<body>
+  <div class="admin-wrap">
+    <slot />
+  </div>
+</body>
+</html>

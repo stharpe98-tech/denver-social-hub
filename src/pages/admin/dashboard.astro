@@ -1,5 +1,5 @@
 ---
-import Base from '../../layouts/Base.astro';
+import AdminBase from '../../layouts/AdminBase.astro';
 import { getDB } from '../../lib/db';
 
 // Auth check
@@ -29,7 +29,7 @@ if (db) {
   } catch {}
 }
 ---
-<Base title="Admin Dashboard — Denver Social">
+<AdminBase title="Admin Dashboard — Denver Social">
   <div style="max-width:1100px;margin:0 auto;padding:40px 32px">
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:36px">
@@ -134,4 +134,4 @@ if (db) {
     </div>
 
   </div>
-</Base>
+</AdminBase>
