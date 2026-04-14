@@ -29,11 +29,9 @@ if (isAdmin) {
           type="email"
           id="emailInput"
           placeholder="your@email.com"
-          onkeydown="if(event.key==='Enter') sendLink()"
           style="width:100%;background:#0f0f12;border:1.5px solid #2e2e36;border-radius:12px;padding:13px 16px;color:#f0f0f0;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px;box-sizing:border-box"
         />
         <button
-          onclick="sendLink()"
           id="sendBtn"
           style="width:100%;background:#F05A28;color:#fff;border:none;border-radius:50px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit"
         >
@@ -52,9 +50,9 @@ if (isAdmin) {
 
   <script>
     async function sendLink() {
-      const email = document.getElementById('emailInput').value.trim();
-      const btn = document.getElementById('sendBtn');
-      const errEl = document.getElementById('error');
+      const email = (document.getElementById('emailInput') as HTMLInputElement).value.trim();
+      const btn = document.getElementById('sendBtn') as HTMLButtonElement;
+      const errEl = document.getElementById('error') as HTMLElement;
       errEl.style.display = 'none';
       if (!email || !email.includes('@')) {
         errEl.textContent = 'Please enter a valid email.';
@@ -70,9 +68,9 @@ if (isAdmin) {
           body: JSON.stringify({ email }),
         });
         if (!res.ok) throw new Error();
-        document.getElementById('form').style.display = 'none';
-        document.getElementById('sentTo').textContent = email;
-        document.getElementById('success').style.display = 'block';
+        (document.getElementById('form') as HTMLElement).style.display = 'none';
+        (document.getElementById('sentTo') as HTMLElement).textContent = email;
+        (document.getElementById('success') as HTMLElement).style.display = 'block';
       } catch {
         errEl.textContent = 'Something went wrong. Try again.';
         errEl.style.display = 'block';
@@ -80,5 +78,10 @@ if (isAdmin) {
         btn.textContent = 'Send My Link →';
       }
     }
+
+    document.getElementById('sendBtn')?.addEventListener('click', sendLink);
+    document.getElementById('emailInput')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendLink();
+    });
   </script>
 </Base>
