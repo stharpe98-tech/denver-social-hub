@@ -5,8 +5,9 @@ import { getDB } from '../../lib/db';
 const cookie = Astro.request.headers.get('cookie') || '';
 const userMatch = cookie.match(/dsn_user=([^;]+)/);
 let isAdmin = false;
+let userName = 'Admin';
 if (userMatch) {
-  try { const u = JSON.parse(decodeURIComponent(userMatch[1])); isAdmin = u.email === 'stharpe98@gmail.com'; } catch {}
+  try { const u = JSON.parse(decodeURIComponent(userMatch[1])); isAdmin = u.email === 'stharpe98@gmail.com'; userName = u.name || 'Seth'; } catch {}
 }
 if (!isAdmin) return Astro.redirect('/admin');
 
@@ -16,7 +17,7 @@ if (db) {
   try {
     members = (await db.prepare(`SELECT * FROM members ORDER BY id DESC`).all())?.results || [];
     events = (await db.prepare(`SELECT * FROM events ORDER BY id DESC`).all())?.results || [];
-    suggestions = (await db.prepare(`SELECT * FROM suggestions ORDER BY votes DESC LIMIT 20`).all())?.results || [];
+    suggestions = (await db.prepare(`SELECT * FROM suggestions ORDER BY votes DESC LIMIT 50`).all())?.results || [];
     announcements = (await db.prepare(`SELECT * FROM announcements ORDER BY id DESC`).all())?.results || [];
     spotlights = (await db.prepare(`SELECT * FROM member_spotlights ORDER BY id DESC`).all())?.results || [];
     const pvResult = await db.prepare(`SELECT COUNT(*) as c FROM page_views`).first() as any;
@@ -27,534 +28,1444 @@ const onboarded = members.filter((m: any) => m.onboarding_done).length;
 const suspended = members.filter((m: any) => m.suspended).length;
 const pendingApproval = members.filter((m: any) => !m.approved && m.onboarding_done).length;
 const featuredEvents = events.filter((e: any) => e.featured).length;
-const pastEvents = events.filter((e: any) => e.is_past).length;
-const typeEmoji: Record<string, string> = {
+const upcomingEvents = events.filter((e: any) => !e.is_past);
+const pastEvents = events.filter((e: any) => e.is_past);
+const typeEmoji: Record<string,string> = {
   dinner:'🍽️', game_night:'🎲', outdoor:'🏔️', brewery:'🍺', bowling:'🎳',
   arts:'🎨', music:'🎵', social:'🎉', group_tickets:'🎫', sports:'⚾',
   coffee:'☕', casino:'🎰', active:'🧗', food_trucks:'🚚', potluck:'🥘', other:'📅'
 };
-const membersJSON = JSON.stringify(members.map((m: any) => ({ id:m.id, name:m.name, email:m.email, neighborhood:m.neighborhood, bio:m.bio, role:m.role, onboarding_done:m.onboarding_done, approved:m.approved, suspended:m.suspended, suspended_reason:m.suspended_reason, no_show_count:m.no_show_count, events_attended:m.events_attended, points:m.points, discord_username:m.discord_username, age_range:m.age_range, interests:m.interests, event_types:m.event_types, food_prefs:m.food_prefs, joined_at:m.joined_at, referral_code:m.referral_code })));
+const membersJSON = JSON.stringify(members.map((m: any) => ({ id:m.id, name:m.name, email:m.email, neighborhood:m.neighborhood, bio:m.bio, role:m.role, onboarding_done:m.onboarding_done, approved:m.approved, suspended:m.suspended, suspended_reason:m.suspended_reason, no_show_count:m.no_show_count, events_attended:m.events_attended, points:m.points, discord_username:m.discord_username, age_range:m.age_range, interests:m.interests, event_types:m.event_types, food_prefs:m.food_prefs, joined_at:m.joined_at, referral_code:m.referral_code, phone:m.phone })));
+const eventsJSON = JSON.stringify(events.map((e: any) => ({ id:e.id, title:e.title, description:e.description, event_type:e.event_type, location:e.location, zone:e.zone, event_month:e.event_month, event_day:e.event_day, spots:e.spots, price_cap:e.price_cap, featured:e.featured, is_past:e.is_past, rsvp_count:e.rsvp_count, deposit_required:e.deposit_required, deposit_amount:e.deposit_amount, plus_one_allowed:e.plus_one_allowed, price_per_person:e.price_per_person, commit_deadline:e.commit_deadline, difficulty:e.difficulty, pet_friendly:e.pet_friendly, cell_service:e.cell_service, packing_list:e.packing_list, potluck_categories:e.potluck_categories })));
 ---
 <AdminBase title="Dashboard — Denver Social">
 <style is:inline>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-  :root {
-    --bg:#0F1117; --white:rgba(255,255,255,0.04); --card:rgba(255,255,255,0.04);
-    --border:rgba(255,255,255,0.07); --border-light:rgba(255,255,255,0.05);
-    --text:#E4E2EC; --text-secondary:#8A859E; --text-hint:#5A5672;
-    --accent:#A78BFA; --accent-light:rgba(167,139,250,0.12); --accent-hover:#8B5CF6;
-    --green:#34D399; --green-light:rgba(52,211,153,0.10);
-    --red:#EF4444; --red-light:rgba(239,68,68,0.10);
-    --blue:#38BDF8; --blue-light:rgba(56,189,248,0.10);
-    --purple:#A78BFA; --purple-light:rgba(167,139,250,0.10);
-    --pink:#F472B6; --orange:#FB923C;
-    --radius:14px; --radius-sm:8px;
-    --shadow-sm:0 1px 2px rgba(0,0,0,.2);
-    --shadow:0 2px 8px rgba(0,0,0,.25);
-    --shadow-lg:0 8px 32px rgba(0,0,0,.4);
-    --font:'Inter',system-ui,-apple-system,sans-serif;
-    --font-heading:'Space Grotesk',sans-serif;
-    --font-mono:'JetBrains Mono',monospace;
-    --hover-row:rgba(255,255,255,0.025);
-    --glass-blur:blur(12px);
-  }
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg)!important;color:var(--text)!important;font-family:var(--font)!important;overflow:auto!important;height:auto!important;display:block!important;-webkit-font-smoothing:antialiased;line-height:1.5}
-  /* Keep ambient gradients from AdminBase visible */
-  body::after{display:none!important}
-  ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14)}
-  .topnav{background:rgba(15,17,23,0.85);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
-  .topnav-inner{max-width:1280px;margin:0 auto;padding:0 28px;display:flex;align-items:center;height:56px;gap:20px}
-  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);flex-shrink:0}
-  .brand-icon{width:30px;height:30px;background:linear-gradient(135deg,#A78BFA,#38BDF8);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 20px rgba(167,139,250,0.3)}
-  .brand-name{font-family:var(--font-heading);font-size:15px;font-weight:700;letter-spacing:-.02em}
-  .brand-tag{font-size:9px;font-weight:600;color:var(--accent);background:var(--accent-light);padding:2px 7px;border-radius:50px}
-  .tabs{display:flex;gap:1px;margin-left:12px;overflow-x:auto;flex:1}
-  .tab{padding:6px 12px;font-size:12px;font-weight:500;color:var(--text-secondary);border-radius:var(--radius-sm);cursor:pointer;border:none;background:none;font-family:var(--font);transition:all .15s;white-space:nowrap}
-  .tab:hover{color:var(--text);background:rgba(255,255,255,0.06)}
-  .tab.active{color:var(--accent);background:var(--accent-light);font-weight:600}
-  .tab .tab-badge{font-size:9px;background:var(--red);color:#fff;padding:1px 5px;border-radius:50px;margin-left:4px;font-weight:700}
-  .nav-right{margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0}
-  .nav-btn{padding:6px 12px;font-size:11px;font-weight:500;color:var(--text-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);background:rgba(255,255,255,0.04);cursor:pointer;font-family:var(--font);transition:all .15s;text-decoration:none;backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur)}
-  .nav-btn:hover{border-color:rgba(255,255,255,0.15);color:var(--text);background:rgba(255,255,255,0.07)}
-  .nav-btn.danger:hover{border-color:rgba(239,68,68,0.5);color:var(--red);background:rgba(239,68,68,0.08)}
-  .theme-toggle{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:all .2s;flex-shrink:0}
-  .theme-toggle:hover{border-color:var(--accent);box-shadow:0 0 12px rgba(167,139,250,0.2)}
-  .avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#A78BFA,#F472B6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;box-shadow:0 0 12px rgba(167,139,250,0.3)}
-  .page{max-width:1280px;margin:0 auto;padding:24px 28px 60px;position:relative;z-index:1}
-  .panel{display:none}.panel.active{display:block;animation:fadeIn .2s ease}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
-  .stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);transition:background .15s,border-color .15s,box-shadow .15s}
-  .stat:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.12);box-shadow:0 4px 20px rgba(0,0,0,0.2)}
-  .stat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-  .stat-icon{font-size:18px}.stat-trend{font-size:10px;font-weight:600;color:var(--green)}
-  .stat-num{font-family:var(--font-mono);font-size:28px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:2px}
-  .stat-label{font-size:11px;font-weight:500;color:var(--text-hint)}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);transition:background .15s,border-color .15s}
-  .card:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.10)}
-  .card-head{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border-light)}
-  .card-title{font-family:var(--font-heading);font-size:14px;font-weight:600}
-  .search-input{padding:6px 12px;font-size:12px;color:var(--text);font-family:var(--font);border:1px solid var(--border);border-radius:var(--radius-sm);background:rgba(255,255,255,0.04);outline:none;width:180px;transition:border-color .15s,background .15s}
-  .search-input:focus{border-color:var(--accent);background:rgba(167,139,250,0.06);box-shadow:0 0 0 2px rgba(167,139,250,0.1)}
-  .search-input::placeholder{color:var(--text-hint)}
-  table{width:100%;border-collapse:collapse}
-  th{padding:8px 18px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-hint);background:rgba(255,255,255,0.02);border-bottom:1px solid var(--border-light)}
-  td{padding:10px 18px;font-size:12px;border-bottom:1px solid var(--border-light);color:var(--text)}
-  tr:last-child td{border-bottom:none}
-  tr:hover td{background:var(--hover-row)}
-  .td-name{font-weight:600}.td-muted{color:var(--text-secondary)}
-  .badge{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:50px}
-  .badge-green{background:var(--green-light);color:var(--green)}
-  .badge-muted{background:rgba(255,255,255,0.06);color:var(--text-hint)}
-  .badge-accent{background:var(--accent-light);color:var(--accent)}
-  .badge-blue{background:var(--blue-light);color:var(--blue)}
-  .badge-red{background:var(--red-light);color:var(--red)}
-  .badge-purple{background:var(--purple-light);color:var(--purple)}
-  .btn{padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);border-radius:var(--radius-sm);transition:all .15s;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text-secondary);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur)}
-  .btn:hover{border-color:rgba(255,255,255,0.15);color:var(--text);background:rgba(255,255,255,0.07)}
-  .btn.del:hover{border-color:rgba(239,68,68,0.5);color:var(--red);background:rgba(239,68,68,0.08)}
-  .btn-primary{background:linear-gradient(135deg,#A78BFA,#8B5CF6);color:#fff;border:none;padding:7px 16px;font-size:12px;font-weight:600;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);transition:all .15s;box-shadow:0 0 20px rgba(167,139,250,0.25)}
-  .btn-primary:hover{background:linear-gradient(135deg,#8B5CF6,#7C3AED);box-shadow:0 0 28px rgba(167,139,250,0.35)}
-  .btn-sm{padding:4px 10px;font-size:10px}
-  .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .settings-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);transition:background .15s,border-color .15s}
-  .settings-card:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.10)}
-  .settings-title{font-family:var(--font-heading);font-size:14px;font-weight:600;margin-bottom:3px}
-  .settings-sub{font-size:12px;color:var(--text-secondary);margin-bottom:16px}
-  .field{margin-bottom:14px}.field-label{display:block;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-hint);margin-bottom:5px}
-  .field-input{width:100%;padding:9px 12px;font-size:12px;color:var(--text);font-family:var(--font);border:1px solid var(--border);border-radius:var(--radius-sm);background:rgba(255,255,255,0.04);outline:none;transition:border-color .15s,background .15s}
-  .field-input:focus{border-color:var(--accent);background:rgba(167,139,250,0.06);box-shadow:0 0 0 2px rgba(167,139,250,0.1)}
-  .field-input::placeholder{color:var(--text-hint)}
-  .field-select{width:100%;padding:9px 12px;font-size:12px;color:var(--text);font-family:var(--font);border:1px solid var(--border);border-radius:var(--radius-sm);background:rgba(255,255,255,0.04);outline:none;cursor:pointer}
-  .field-select option{background:#1a1c24;color:var(--text)}
-  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-light)}
-  .toggle-row:last-of-type{border-bottom:none;padding-bottom:0}
-  .toggle-label{font-size:12px;font-weight:600}.toggle-desc{font-size:11px;color:var(--text-hint);margin-top:1px}
-  .toggle{position:relative;width:38px;height:22px;flex-shrink:0}
-  .toggle input{opacity:0;width:0;height:0}
-  .toggle-track{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:50px;cursor:pointer;transition:background .2s}
-  .toggle-track::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s;box-shadow:var(--shadow)}
-  input:checked+.toggle-track{background:var(--accent);box-shadow:0 0 12px rgba(167,139,250,0.3)}
-  input:checked+.toggle-track::after{transform:translateX(16px)}
-  .create-form{display:none;margin-bottom:16px}.create-form.open{display:block;animation:fadeIn .2s ease}
-  .form-grid{padding:18px 20px;display:grid;grid-template-columns:1fr;gap:12px}
-  .form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .type-chip{padding:8px 14px;font-size:12px;font-weight:500;border-radius:var(--radius-sm);border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text-secondary);cursor:pointer;font-family:var(--font);transition:all .15s}
-  .type-chip:hover{border-color:rgba(167,139,250,0.4);color:var(--text);background:rgba(255,255,255,0.06)}
-  .type-chip.selected{border-color:var(--accent);background:var(--accent-light);color:var(--accent);font-weight:600;box-shadow:0 0 12px rgba(167,139,250,0.15)}
-  .evt-field{display:none}.evt-field.show{display:block}
-  .empty{padding:40px;text-align:center;color:var(--text-hint)}.empty-icon{font-size:32px;margin-bottom:10px;opacity:.5}
-  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(30,28,40,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#fff;border:1px solid rgba(255,255,255,0.12);border-radius:var(--radius);padding:10px 22px;font-size:12px;font-weight:500;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;box-shadow:var(--shadow-lg)}
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.error{background:rgba(239,68,68,0.9);border-color:rgba(239,68,68,0.4)}
-  /* Modal */
-  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center}
-  .modal-overlay.open{display:flex}
-  .modal{background:rgba(26,28,36,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:var(--radius);width:90%;max-width:560px;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);border:1px solid rgba(255,255,255,0.10)}
-  .modal-head{padding:16px 20px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between}
-  .modal-head h3{font-family:var(--font-heading);font-size:15px;font-weight:600}
-  .modal-body{padding:20px}
-  .detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:12px}
-  .detail-row:last-child{border-bottom:none}
-  .detail-key{color:var(--text-hint);font-weight:500}
-  .detail-val{color:var(--text);font-weight:500;text-align:right;max-width:60%;word-break:break-word}
-  .modal-actions{padding:16px 20px;border-top:1px solid var(--border-light);display:flex;gap:8px;flex-wrap:wrap}
-  .mob-menu{display:none;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text)}
-  .mob-tabs{display:none}
-  @media(max-width:768px){.tabs{display:none}.mob-menu{display:block}.mob-tabs.open{display:flex;flex-direction:column;position:absolute;top:56px;left:0;right:0;background:rgba(15,17,23,0.95);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--border);padding:8px 12px;z-index:99;box-shadow:var(--shadow-lg)}.mob-tabs .tab{width:100%;text-align:left;padding:10px 14px}.topnav-inner{padding:0 14px}.page{padding:16px 14px 60px}.stats{grid-template-columns:1fr 1fr}.settings-grid,.form-2col{grid-template-columns:1fr}.nav-btn.view-site{display:none}}
-  @media(max-width:480px){.stats{grid-template-columns:1fr}}
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#07060B;--surface:rgba(255,255,255,0.04);--surface-hover:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.08);--border-light:rgba(255,255,255,0.05);
+  --text:#E8E6F0;--text-secondary:#8A859E;--text-faint:#5A5672;
+  --accent:#A78BFA;--accent-light:rgba(167,139,250,0.12);--accent-hover:#8B5CF6;
+  --green:#34D399;--green-light:rgba(52,211,153,0.10);
+  --red:#EF4444;--red-light:rgba(239,68,68,0.10);
+  --blue:#38BDF8;--blue-light:rgba(56,189,248,0.10);
+  --pink:#F472B6;--pink-light:rgba(244,114,182,0.10);
+  --orange:#FB923C;--orange-light:rgba(251,146,60,0.10);
+  --purple:#A78BFA;--purple-light:rgba(167,139,250,0.10);
+  --radius:14px;--radius-sm:8px;
+  --shadow:0 2px 8px rgba(0,0,0,.25);--shadow-lg:0 8px 32px rgba(0,0,0,.4);
+  --font:'Inter',system-ui,sans-serif;--font-heading:'Space Grotesk',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --sidebar-w:240px;--glass:blur(12px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg)!important;color:var(--text)!important;font-family:var(--font)!important;overflow:hidden!important;height:100vh!important;display:flex!important;-webkit-font-smoothing:antialiased;line-height:1.5}
+.admin-wrap{display:flex!important;width:100%!important;height:100vh!important;overflow:hidden!important;min-height:auto!important}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14)}
+
+/* === SIDEBAR === */
+.sidebar{width:var(--sidebar-w);height:100vh;position:fixed;left:0;top:0;z-index:100;display:flex;flex-direction:column;background:rgba(12,11,18,0.92);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);border-right:1px solid var(--border);transition:width .25s ease;overflow:hidden}
+.sidebar.collapsed{width:60px}
+.sidebar-header{padding:20px 16px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border-light);flex-shrink:0}
+.sidebar-logo{width:32px;height:32px;min-width:32px;background:linear-gradient(135deg,#A78BFA,#38BDF8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 20px rgba(167,139,250,0.3)}
+.sidebar-brand{display:flex;flex-direction:column;overflow:hidden;white-space:nowrap}
+.sidebar-brand-name{font-family:var(--font-heading);font-size:14px;font-weight:700;letter-spacing:-.02em}
+.sidebar-brand-tag{font-size:9px;font-weight:600;color:var(--accent);opacity:.7}
+.collapsed .sidebar-brand{display:none}
+.sidebar-nav{flex:1;overflow-y:auto;padding:12px 8px}
+.nav-section{margin-bottom:16px}
+.nav-section-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);padding:4px 12px 6px;overflow:hidden;white-space:nowrap}
+.collapsed .nav-section-label{text-align:center;font-size:0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:500;color:var(--text-secondary);transition:all .15s;border:none;background:none;width:100%;text-align:left;font-family:var(--font);position:relative}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.06)}
+.nav-item.active{color:var(--accent);background:var(--accent-light);font-weight:600}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--accent);border-radius:0 3px 3px 0}
+.nav-item-icon{font-size:16px;min-width:20px;text-align:center}
+.nav-item-text{overflow:hidden;white-space:nowrap}
+.nav-item-badge{margin-left:auto;font-size:9px;font-weight:700;background:var(--red);color:#fff;padding:1px 6px;border-radius:50px;min-width:18px;text-align:center}
+.collapsed .nav-item-text,.collapsed .nav-item-badge{display:none}
+.collapsed .nav-item{justify-content:center;padding:10px 0}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border-light);flex-shrink:0;display:flex;align-items:center;gap:10px}
+.sidebar-avatar{width:30px;height:30px;min-width:30px;border-radius:50%;background:linear-gradient(135deg,#A78BFA,#F472B6);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff}
+.sidebar-user{overflow:hidden;white-space:nowrap}
+.sidebar-user-name{font-size:12px;font-weight:600;color:var(--text)}
+.sidebar-user-role{font-size:10px;color:var(--text-faint)}
+.collapsed .sidebar-user{display:none}
+.sidebar-toggle{position:absolute;top:20px;right:-12px;width:24px;height:24px;border-radius:50%;background:rgba(20,18,30,0.95);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;color:var(--text-secondary);transition:all .15s;z-index:101}
+.sidebar-toggle:hover{color:var(--text);border-color:var(--accent);background:rgba(167,139,250,0.15)}
+
+/* === MAIN CONTENT === */
+.main{margin-left:var(--sidebar-w);flex:1;height:100vh;overflow-y:auto;transition:margin-left .25s ease}
+.main.shifted{margin-left:60px}
+.main-header{position:sticky;top:0;z-index:50;background:rgba(7,6,11,0.85);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);border-bottom:1px solid var(--border-light);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.main-title{font-family:var(--font-heading);font-size:20px;font-weight:700;letter-spacing:-.02em}
+.main-title-sub{font-size:12px;color:var(--text-secondary);font-weight:400;margin-left:8px}
+.header-actions{display:flex;align-items:center;gap:8px}
+.main-content{padding:24px 28px 60px}
+
+/* === PANELS === */
+.panel{display:none}.panel.active{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* === STAT CARDS === */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:24px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;backdrop-filter:var(--glass);transition:all .2s;cursor:default}
+.stat:hover{background:var(--surface-hover);border-color:rgba(255,255,255,0.12);transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+.stat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.stat-icon{font-size:20px}.stat-trend{font-size:10px;font-weight:600;color:var(--green)}
+.stat-num{font-family:var(--font-mono);font-size:28px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:3px}
+.stat-label{font-size:11px;font-weight:500;color:var(--text-faint)}
+
+/* === CARDS === */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;backdrop-filter:var(--glass);transition:all .15s}
+.card:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.10)}
+.card-head{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border-light)}
+.card-title{font-family:var(--font-heading);font-size:14px;font-weight:600}
+.card-body{padding:16px 20px}
+
+/* === TABLE === */
+table{width:100%;border-collapse:collapse}
+th{padding:8px 16px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);background:rgba(255,255,255,0.02);border-bottom:1px solid var(--border-light)}
+td{padding:10px 16px;font-size:12px;border-bottom:1px solid var(--border-light);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.025)}
+.td-name{font-weight:600}.td-muted{color:var(--text-secondary)}
+.td-actions{display:flex;gap:4px;flex-wrap:wrap}
+
+/* === BADGES === */
+.badge{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:50px}
+.badge-green{background:var(--green-light);color:var(--green)}
+.badge-muted{background:rgba(255,255,255,0.06);color:var(--text-faint)}
+.badge-accent{background:var(--accent-light);color:var(--accent)}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
+.badge-red{background:var(--red-light);color:var(--red)}
+.badge-purple{background:var(--purple-light);color:var(--purple)}
+.badge-pink{background:var(--pink-light);color:var(--pink)}
+.badge-orange{background:var(--orange-light);color:var(--orange)}
+
+/* === BUTTONS === */
+.btn{padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);border-radius:var(--radius-sm);transition:all .15s;border:1px solid var(--border);background:var(--surface);color:var(--text-secondary);backdrop-filter:var(--glass)}
+.btn:hover{border-color:rgba(255,255,255,0.15);color:var(--text);background:var(--surface-hover)}
+.btn.del:hover{border-color:rgba(239,68,68,0.5);color:var(--red);background:var(--red-light)}
+.btn-primary{background:linear-gradient(135deg,#A78BFA,#8B5CF6);color:#fff;border:none;padding:7px 16px;font-size:12px;font-weight:600;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);transition:all .15s;box-shadow:0 0 20px rgba(167,139,250,0.25)}
+.btn-primary:hover{background:linear-gradient(135deg,#8B5CF6,#7C3AED);box-shadow:0 0 28px rgba(167,139,250,0.35)}
+.btn-danger{background:linear-gradient(135deg,#EF4444,#DC2626);color:#fff;border:none;padding:7px 16px;font-size:12px;font-weight:600;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);transition:all .15s}
+.btn-sm{padding:4px 10px;font-size:10px}
+.btn-icon{width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;font-size:13px}
+
+/* === INPUTS === */
+.search-input{padding:6px 12px;font-size:12px;color:var(--text);font-family:var(--font);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);outline:none;width:200px;transition:all .15s}
+.search-input:focus{border-color:var(--accent);background:rgba(167,139,250,0.06);box-shadow:0 0 0 2px rgba(167,139,250,0.1)}
+.search-input::placeholder{color:var(--text-faint)}
+.field{margin-bottom:14px}
+.field-label{display:block;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-faint);margin-bottom:5px}
+.field-input{width:100%;padding:9px 12px;font-size:12px;color:var(--text);font-family:var(--font);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);outline:none;transition:all .15s}
+.field-input:focus{border-color:var(--accent);background:rgba(167,139,250,0.06);box-shadow:0 0 0 2px rgba(167,139,250,0.1)}
+.field-input::placeholder{color:var(--text-faint)}
+.field-select{width:100%;padding:9px 12px;font-size:12px;color:var(--text);font-family:var(--font);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235A5672'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.field-select option{background:#1a1c24;color:var(--text)}
+
+/* === SETTINGS GRID === */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;backdrop-filter:var(--glass);transition:all .15s}
+.settings-card:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.10)}
+.settings-title{font-family:var(--font-heading);font-size:14px;font-weight:600;margin-bottom:3px}
+.settings-sub{font-size:12px;color:var(--text-secondary);margin-bottom:16px}
+
+/* === TOGGLES === */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-light)}
+.toggle-row:last-of-type{border-bottom:none;padding-bottom:0}
+.toggle-label{font-size:12px;font-weight:600}.toggle-desc{font-size:11px;color:var(--text-faint);margin-top:1px}
+.toggle{position:relative;width:38px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:50px;cursor:pointer;transition:background .2s}
+.toggle-track::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s;box-shadow:var(--shadow)}
+input:checked+.toggle-track{background:var(--accent);box-shadow:0 0 12px rgba(167,139,250,0.3)}
+input:checked+.toggle-track::after{transform:translateX(16px)}
+
+/* === FORM === */
+.create-form{display:none;margin-bottom:16px}.create-form.open{display:block;animation:fadeIn .2s ease}
+.form-grid{padding:18px 20px;display:grid;grid-template-columns:1fr;gap:12px}
+.form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.type-chip{padding:8px 14px;font-size:12px;font-weight:500;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text-secondary);cursor:pointer;font-family:var(--font);transition:all .15s}
+.type-chip:hover{border-color:rgba(167,139,250,0.4);color:var(--text);background:var(--surface-hover)}
+.type-chip.selected{border-color:var(--accent);background:var(--accent-light);color:var(--accent);font-weight:600;box-shadow:0 0 12px rgba(167,139,250,0.15)}
+.evt-field{display:none}.evt-field.show{display:block}
+
+/* === MODAL === */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:rgba(20,18,30,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:var(--radius);width:90%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-lg);border:1px solid rgba(255,255,255,0.10)}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(20,18,30,0.98);z-index:1;border-radius:var(--radius) var(--radius) 0 0}
+.modal-head h3{font-family:var(--font-heading);font-size:15px;font-weight:600}
+.modal-body{padding:20px}
+.modal-actions{padding:16px 20px;border-top:1px solid var(--border-light);display:flex;gap:8px;flex-wrap:wrap}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:12px}
+.detail-row:last-child{border-bottom:none}
+.detail-key{color:var(--text-faint);font-weight:500}.detail-val{color:var(--text);font-weight:500;text-align:right;max-width:60%;word-break:break-word}
+
+/* === TOAST === */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(20,18,30,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#fff;border:1px solid rgba(255,255,255,0.12);border-radius:var(--radius);padding:10px 22px;font-size:12px;font-weight:500;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;box-shadow:var(--shadow-lg)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.error{background:rgba(239,68,68,0.9);border-color:rgba(239,68,68,0.4)}
+
+/* === EMPTY STATE === */
+.empty{padding:40px;text-align:center;color:var(--text-faint)}.empty-icon{font-size:32px;margin-bottom:10px;opacity:.5}
+
+/* === CHART CONTAINER === */
+.chart-wrap{position:relative;height:260px;padding:16px 20px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+
+/* === BULK ACTIONS === */
+.bulk-bar{display:none;padding:10px 20px;background:var(--accent-light);border-bottom:1px solid rgba(167,139,250,0.2);align-items:center;gap:10px;font-size:12px;color:var(--accent);font-weight:600}
+.bulk-bar.show{display:flex}
+.bulk-count{font-family:var(--font-mono)}
+
+/* === RESPONSIVE === */
+.mob-sidebar-toggle{display:none;position:fixed;top:12px;left:12px;z-index:200;width:36px;height:36px;border-radius:var(--radius-sm);background:rgba(20,18,30,0.92);border:1px solid var(--border);font-size:16px;cursor:pointer;color:var(--text);backdrop-filter:var(--glass)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);z-index:150}.sidebar.mob-open{transform:translateX(0)}
+  .sidebar-overlay.open{display:block;z-index:140}
+  .mob-sidebar-toggle{display:flex;align-items:center;justify-content:center}
+  .main{margin-left:0!important}.main-content{padding:16px 14px 60px}.main-header{padding:12px 14px 12px 56px}
+  .stats{grid-template-columns:1fr 1fr}.settings-grid,.form-2col,.chart-grid{grid-template-columns:1fr}
+  .search-input{width:140px}
+}
+@media(max-width:480px){.stats{grid-template-columns:1fr}.form-3col{grid-template-columns:1fr}}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px}
+.pagination .btn{min-width:28px;text-align:center}
+.pagination .btn.active{background:var(--accent-light);color:var(--accent);border-color:rgba(167,139,250,0.3)}
+.page-info{font-size:11px;color:var(--text-faint)}
+
+/* Activity feed */
+.activity-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-light)}
+.activity-item:last-child{border-bottom:none}
+.activity-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.activity-text{font-size:12px;color:var(--text-secondary)}
+.activity-time{font-size:10px;color:var(--text-faint);margin-top:2px}
 </style>
 
-<style is:inline>
-  html.dark{--bg:#090b10;--white:rgba(255,255,255,0.03);--card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.05);--border-light:rgba(255,255,255,0.04);--text:#E4E2EC;--text-secondary:#8A859E;--text-hint:#5A5672;--accent:#A78BFA;--accent-light:rgba(167,139,250,0.12);--accent-hover:#8B5CF6;--green:#34D399;--green-light:rgba(52,211,153,0.10);--red:#EF4444;--red-light:rgba(239,68,68,0.10);--blue:#38BDF8;--blue-light:rgba(56,189,248,0.10);--purple:#A78BFA;--purple-light:rgba(167,139,250,0.10);--shadow-sm:0 1px 2px rgba(0,0,0,.3);--shadow:0 2px 8px rgba(0,0,0,.35);--shadow-lg:0 8px 32px rgba(0,0,0,.5);--hover-row:rgba(255,255,255,.02)}
-  html.dark body{background:var(--bg)!important;color:var(--text)!important}
-</style>
-
-<nav class="topnav">
-  <div class="topnav-inner">
-    <a href="/" class="brand"><div class="brand-icon">🌆</div><span class="brand-name">Denver Social</span><span class="brand-tag">Admin</span></a>
-    <div class="tabs" id="tabs">
-      <button class="tab active" data-panel="overview">Overview</button>
-      <button class="tab" data-panel="members">Members{pendingApproval > 0 ? <span class="tab-badge">{pendingApproval}</span> : null}</button>
-      <button class="tab" data-panel="events">Events</button>
-      <button class="tab" data-panel="suggestions">Suggestions</button>
-      <button class="tab" data-panel="announcements">Announcements</button>
-      <button class="tab" data-panel="spotlights">Spotlights</button>
-      <button class="tab" data-panel="settings">Settings</button>
-      <button class="tab" data-panel="content">Content</button>
-    </div>
-    <button class="mob-menu" id="mob-menu">☰</button>
-    <div class="nav-right">
-      <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">☀️</button>
-      <a href="/" class="nav-btn view-site" target="_blank">← Site</a>
-      <a href="/api/logout" class="nav-btn danger">Log Out</a>
-      <div class="avatar">S</div>
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">🌆</div>
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-name">Denver Social</div>
+      <div class="sidebar-brand-tag">Admin Dashboard</div>
     </div>
   </div>
-  <div class="mob-tabs" id="mob-tabs">
-    <button class="tab active" data-panel="overview">Overview</button>
-    <button class="tab" data-panel="members">Members</button>
-    <button class="tab" data-panel="events">Events</button>
-    <button class="tab" data-panel="suggestions">Suggestions</button>
-    <button class="tab" data-panel="announcements">Announcements</button>
-    <button class="tab" data-panel="spotlights">Spotlights</button>
-    <button class="tab" data-panel="settings">Settings</button>
-    <button class="tab" data-panel="content">Content</button>
-  </div>
-</nav>
-
-<div class="page">
-
-  <!-- ═══ OVERVIEW ═══ -->
-  <div class="panel active" id="panel-overview">
-    <div class="stats">
-      <div class="stat"><div class="stat-top"><span class="stat-icon">👥</span><span class="stat-trend">↑</span></div><div class="stat-num">{members.length}</div><div class="stat-label">Members</div></div>
-      <div class="stat"><div class="stat-top"><span class="stat-icon">✅</span><span class="stat-trend">{members.length>0?Math.round(onboarded/members.length*100):0}%</span></div><div class="stat-num">{onboarded}</div><div class="stat-label">Onboarded</div></div>
-      <div class="stat"><div class="stat-top"><span class="stat-icon">📅</span></div><div class="stat-num">{events.length}</div><div class="stat-label">Events</div></div>
-      <div class="stat"><div class="stat-top"><span class="stat-icon">⭐</span></div><div class="stat-num">{featuredEvents}</div><div class="stat-label">Featured</div></div>
-      <div class="stat"><div class="stat-top"><span class="stat-icon">💡</span></div><div class="stat-num">{suggestions.length}</div><div class="stat-label">Suggestions</div></div>
-      <div class="stat"><div class="stat-top"><span class="stat-icon">📢</span></div><div class="stat-num">{announcements.length}</div><div class="stat-label">Announcements</div></div>
-      {suspended>0&&<div class="stat"><div class="stat-top"><span class="stat-icon">🚫</span></div><div class="stat-num" style="color:var(--red)">{suspended}</div><div class="stat-label">Suspended</div></div>}
-      {pendingApproval>0&&<div class="stat"><div class="stat-top"><span class="stat-icon">⏳</span></div><div class="stat-num" style="color:var(--accent)">{pendingApproval}</div><div class="stat-label">Pending approval</div></div>}
+  <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">◀</button>
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-label">Main</div>
+      <button class="nav-item active" data-panel="overview"><span class="nav-item-icon">📊</span><span class="nav-item-text">Overview</span></button>
+      <button class="nav-item" data-panel="members"><span class="nav-item-icon">👥</span><span class="nav-item-text">Members</span>{pendingApproval > 0 ? <span class="nav-item-badge">{pendingApproval}</span> : null}</button>
+      <button class="nav-item" data-panel="events"><span class="nav-item-icon">📅</span><span class="nav-item-text">Events</span></button>
+      <button class="nav-item" data-panel="suggestions"><span class="nav-item-icon">💡</span><span class="nav-item-text">Suggestions</span></button>
     </div>
-    <div class="card">
-      <div class="card-head"><div class="card-title">Recent members</div><button class="btn" data-panel="members">View all →</button></div>
-      {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
-        <table><thead><tr><th>Name</th><th>Email</th><th>Neighborhood</th><th>Status</th></tr></thead><tbody>
-          {members.slice(0,5).map((m:any)=><tr><td class="td-name">{m.name||'—'}</td><td class="td-muted">{m.email}</td><td class="td-muted">{m.neighborhood||'—'}</td><td>{m.suspended?<span class="badge badge-red">Suspended</span>:m.onboarding_done?<span class="badge badge-green">Active</span>:<span class="badge badge-muted">Pending</span>}</td></tr>)}
-        </tbody></table>)}
+    <div class="nav-section">
+      <div class="nav-section-label">Content</div>
+      <button class="nav-item" data-panel="announcements"><span class="nav-item-icon">📢</span><span class="nav-item-text">Announcements</span></button>
+      <button class="nav-item" data-panel="spotlights"><span class="nav-item-icon">🌟</span><span class="nav-item-text">Spotlights</span></button>
+      <button class="nav-item" data-panel="reports"><span class="nav-item-icon">🛡️</span><span class="nav-item-text">Reports</span></button>
     </div>
-    <div class="card">
-      <div class="card-head"><div class="card-title">Upcoming events</div><button class="btn" data-panel="events">View all →</button></div>
-      {events.filter((e:any)=>!e.is_past).length===0?<div class="empty"><div class="empty-icon">📅</div><p>No upcoming events.</p></div>:(
-        <table><thead><tr><th>Event</th><th>Date</th><th>Location</th><th>RSVPs</th></tr></thead><tbody>
-          {events.filter((e:any)=>!e.is_past).slice(0,5).map((e:any)=><tr><td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td><td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td><td class="td-muted">{e.location||'—'}</td><td class="td-muted">{e.rsvp_count||0}/{e.spots||'—'}</td></tr>)}
-        </tbody></table>)}
+    <div class="nav-section">
+      <div class="nav-section-label">Business</div>
+      <button class="nav-item" data-panel="partners"><span class="nav-item-icon">🤝</span><span class="nav-item-text">Partners</span></button>
+      <button class="nav-item" data-panel="restaurants"><span class="nav-item-icon">🍽️</span><span class="nav-item-text">Restaurants</span></button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">System</div>
+      <button class="nav-item" data-panel="pages"><span class="nav-item-icon">📄</span><span class="nav-item-text">Pages</span></button>
+      <button class="nav-item" data-panel="plugins"><span class="nav-item-icon">🧩</span><span class="nav-item-text">Plugins</span></button>
+      <button class="nav-item" data-panel="analytics"><span class="nav-item-icon">📈</span><span class="nav-item-text">Analytics</span></button>
+      <button class="nav-item" data-panel="appearance"><span class="nav-item-icon">🎨</span><span class="nav-item-text">Appearance</span></button>
+      <button class="nav-item" data-panel="settings"><span class="nav-item-icon">⚙️</span><span class="nav-item-text">Settings</span></button>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-avatar">S</div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-name">{userName}</div>
+      <div class="sidebar-user-role">Administrator</div>
     </div>
   </div>
+</div>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<button class="mob-sidebar-toggle" id="mob-sidebar-toggle">☰</button>
 
-  <!-- ═══ MEMBERS ═══ -->
-  <div class="panel" id="panel-members">
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title">All members ({members.length})</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <select class="field-select" id="member-filter" style="width:auto;padding:6px 10px;font-size:11px">
-            <option value="all">All</option><option value="active">Active</option><option value="pending">Pending</option><option value="suspended">Suspended</option><option value="unapproved">Needs approval</option>
+<!-- Main Content -->
+<div class="main" id="main">
+  <div class="main-header">
+    <div>
+      <span class="main-title" id="main-title">Overview</span>
+      <span class="main-title-sub" id="main-title-sub"></span>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="refresh-btn" title="Refresh data">🔄 Refresh</button>
+      <a href="/" class="btn" target="_blank">← Site</a>
+      <a href="/api/logout" class="btn del">Log Out</a>
+    </div>
+  </div>
+  <div class="main-content">
+
+    <!-- ═══ OVERVIEW ═══ -->
+    <div class="panel active" id="panel-overview">
+      <div class="stats">
+        <div class="stat"><div class="stat-top"><span class="stat-icon">👥</span><span class="stat-trend">total</span></div><div class="stat-num">{members.length}</div><div class="stat-label">Members</div></div>
+        <div class="stat"><div class="stat-top"><span class="stat-icon">✅</span><span class="stat-trend">{members.length>0?Math.round(onboarded/members.length*100):0}%</span></div><div class="stat-num">{onboarded}</div><div class="stat-label">Onboarded</div></div>
+        <div class="stat"><div class="stat-top"><span class="stat-icon">📅</span></div><div class="stat-num">{events.length}</div><div class="stat-label">Total Events</div></div>
+        <div class="stat"><div class="stat-top"><span class="stat-icon">🎯</span></div><div class="stat-num">{upcomingEvents.length}</div><div class="stat-label">Upcoming</div></div>
+        <div class="stat"><div class="stat-top"><span class="stat-icon">⭐</span></div><div class="stat-num">{featuredEvents}</div><div class="stat-label">Featured</div></div>
+        <div class="stat"><div class="stat-top"><span class="stat-icon">💡</span></div><div class="stat-num">{suggestions.length}</div><div class="stat-label">Suggestions</div></div>
+        <div class="stat"><div class="stat-top"><span class="stat-icon">📢</span></div><div class="stat-num">{announcements.length}</div><div class="stat-label">Announcements</div></div>
+        <div class="stat"><div class="stat-top"><span class="stat-icon">👁️</span></div><div class="stat-num">{pageViews}</div><div class="stat-label">Page Views</div></div>
+        {suspended>0&&<div class="stat"><div class="stat-top"><span class="stat-icon">🚫</span></div><div class="stat-num" style="color:var(--red)">{suspended}</div><div class="stat-label">Suspended</div></div>}
+        {pendingApproval>0&&<div class="stat"><div class="stat-top"><span class="stat-icon">⏳</span></div><div class="stat-num" style="color:var(--accent)">{pendingApproval}</div><div class="stat-label">Pending Approval</div></div>}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Recent Members</div><button class="btn btn-sm" data-panel="members">View all</button></div>
+          {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
+            <table><thead><tr><th>Name</th><th>Email</th><th>Status</th></tr></thead><tbody>
+              {members.slice(0,6).map((m:any)=><tr><td class="td-name">{m.name||'--'}</td><td class="td-muted" style="font-size:11px">{m.email}</td><td>{m.suspended?<span class="badge badge-red">Suspended</span>:m.onboarding_done?<span class="badge badge-green">Active</span>:<span class="badge badge-muted">Pending</span>}</td></tr>)}
+            </tbody></table>)}
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Upcoming Events</div><button class="btn btn-sm" data-panel="events">View all</button></div>
+          {upcomingEvents.length===0?<div class="empty"><div class="empty-icon">📅</div><p>No upcoming events.</p></div>:(
+            <table><thead><tr><th>Event</th><th>Date</th><th>RSVPs</th></tr></thead><tbody>
+              {upcomingEvents.slice(0,6).map((e:any)=><tr><td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td><td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td><td class="td-muted">{e.rsvp_count||0}/{e.spots||'--'}</td></tr>)}
+            </tbody></table>)}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:0">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Top Suggestions</div><button class="btn btn-sm" data-panel="suggestions">View all</button></div>
+          {suggestions.length===0?<div class="empty"><div class="empty-icon">💡</div><p>None yet.</p></div>:(
+            <table><thead><tr><th>Idea</th><th>Votes</th><th>Status</th></tr></thead><tbody>
+              {suggestions.slice(0,5).map((s:any)=><tr><td class="td-name">{s.text||s.title||'--'}</td><td><span class="badge badge-blue">{s.votes||0}</span></td><td><span class={`badge ${s.status==='planned'?'badge-accent':s.status==='done'?'badge-green':'badge-muted'}`}>{s.status||'open'}</span></td></tr>)}
+            </tbody></table>)}
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Recent Announcements</div></div>
+          {announcements.length===0?<div class="empty"><div class="empty-icon">📢</div><p>None yet.</p></div>:(
+            <div class="card-body">
+              {announcements.slice(0,4).map((a:any)=><div class="activity-item"><div class="activity-dot" style="background:var(--accent)"></div><div><div class="activity-text">{a.text}</div><div class="activity-time">{a.created_at?.slice(0,10)||'--'}</div></div></div>)}
+            </div>)}
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MEMBERS ═══ -->
+    <div class="panel" id="panel-members">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">All Members ({members.length})</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select class="field-select" id="member-filter" style="width:auto;padding:6px 10px;font-size:11px">
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="suspended">Suspended</option>
+              <option value="unapproved">Needs Approval</option>
+            </select>
+            <input class="search-input" id="search-members" placeholder="Search members..." />
+            <button class="btn" id="export-csv">Export CSV</button>
+          </div>
+        </div>
+        <div class="bulk-bar" id="bulk-bar">
+          <span class="bulk-count" id="bulk-count">0</span> selected
+          <button class="btn btn-sm" id="bulk-approve">Approve All</button>
+          <button class="btn btn-sm del" id="bulk-suspend">Suspend All</button>
+          <button class="btn btn-sm" id="bulk-cancel" style="margin-left:auto">Cancel</button>
+        </div>
+        {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
+          <table id="members-table"><thead><tr><th style="width:30px"><input type="checkbox" id="select-all-members" /></th><th>Name</th><th>Email</th><th>Hood</th><th>Status</th><th>Role</th><th>Events</th><th>No-shows</th><th>Actions</th></tr></thead><tbody>
+            {members.map((m:any)=><tr data-search={`${m.name} ${m.email} ${m.neighborhood}`} data-status={m.suspended?'suspended':m.onboarding_done?(m.approved?'active':'unapproved'):'pending'} data-mid={m.id}>
+              <td><input type="checkbox" class="member-check" value={m.id} /></td>
+              <td class="td-name" style="cursor:pointer" data-action="view-member" data-id={m.id}>{m.name||'--'}</td>
+              <td class="td-muted" style="font-size:11px">{m.email}</td>
+              <td class="td-muted">{m.neighborhood||'--'}</td>
+              <td>{m.suspended?<span class="badge badge-red">Suspended</span>:!m.approved&&m.onboarding_done?<span class="badge badge-accent">Needs Approval</span>:m.onboarding_done?<span class="badge badge-green">Active</span>:<span class="badge badge-muted">Pending</span>}</td>
+              <td><span class={`badge ${m.role==='admin'?'badge-purple':'badge-muted'}`}>{m.role||'member'}</span></td>
+              <td class="td-muted">{m.events_attended||0}</td>
+              <td class="td-muted">{m.no_show_count||0}</td>
+              <td class="td-actions">
+                {!m.approved&&m.onboarding_done&&<button class="btn btn-sm" data-action="approve-member" data-id={m.id}>Approve</button>}
+                {m.suspended?<button class="btn btn-sm" data-action="unsuspend-member" data-id={m.id}>Unsuspend</button>:<button class="btn btn-sm del" data-action="suspend-member" data-id={m.id} data-name={m.name||m.email}>Suspend</button>}
+                <button class="btn btn-sm del" data-action="remove-member" data-id={m.id} data-name={m.name||m.email}>Remove</button>
+              </td>
+            </tr>)}
+          </tbody></table>)}
+      </div>
+    </div>
+
+    <!-- ═══ EVENTS ═══ -->
+    <div class="panel" id="panel-events">
+      <div class="create-form card" id="create-event-form">
+        <div class="card-head"><div class="card-title">Create New Event</div><button class="btn" id="cancel-create">Cancel</button></div>
+        <div class="form-grid">
+          <div class="field" style="margin-bottom:4px">
+            <label class="field-label">Event Type</label>
+            <div id="type-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+              <button type="button" class="type-chip" data-type="dinner">🍽️ Dinner</button>
+              <button type="button" class="type-chip" data-type="brewery">🍺 Brewery</button>
+              <button type="button" class="type-chip" data-type="outdoor">🏔️ Outdoor</button>
+              <button type="button" class="type-chip" data-type="game_night">🎲 Game Night</button>
+              <button type="button" class="type-chip" data-type="bowling">🎳 Bowling</button>
+              <button type="button" class="type-chip" data-type="sports">⚾ Sports</button>
+              <button type="button" class="type-chip" data-type="music">🎵 Music</button>
+              <button type="button" class="type-chip" data-type="arts">🎨 Arts</button>
+              <button type="button" class="type-chip" data-type="coffee">☕ Coffee</button>
+              <button type="button" class="type-chip" data-type="casino">🎰 Casino</button>
+              <button type="button" class="type-chip" data-type="potluck">🥘 Potluck</button>
+              <button type="button" class="type-chip" data-type="social">🎉 Social</button>
+              <button type="button" class="type-chip" data-type="active">🧗 Active</button>
+              <button type="button" class="type-chip" data-type="food_trucks">🚚 Food Trucks</button>
+              <button type="button" class="type-chip" data-type="group_tickets">🎫 Group Tickets</button>
+              <button type="button" class="type-chip" data-type="other">📅 Other</button>
+            </div>
+            <input type="hidden" id="evt-type" value="" />
+          </div>
+          <div id="evt-core" style="display:none">
+            <div class="form-2col">
+              <div class="field" style="grid-column:span 2"><label class="field-label">Event Name</label><input class="field-input" id="evt-title" /></div>
+              <div class="field"><label class="field-label">Location</label><input class="field-input" id="evt-location" /></div>
+              <div class="field"><label class="field-label">Zone</label><input class="field-input" id="evt-zone" value="RiNo" /></div>
+              <div class="field"><label class="field-label">Month</label><select class="field-select" id="evt-month"><option value="">Pick month</option><option value="JAN">JAN</option><option value="FEB">FEB</option><option value="MAR">MAR</option><option value="APR">APR</option><option value="MAY">MAY</option><option value="JUN">JUN</option><option value="JUL">JUL</option><option value="AUG">AUG</option><option value="SEP">SEP</option><option value="OCT">OCT</option><option value="NOV">NOV</option><option value="DEC">DEC</option></select></div>
+              <div class="field"><label class="field-label">Day</label><input class="field-input" id="evt-day" placeholder="e.g. 17th" /></div>
+              <div class="field"><label class="field-label">Spots</label><input class="field-input" id="evt-spots" type="number" value="10" min="1" /></div>
+              <div class="field"><label class="field-label" id="price-label">Price Cap</label><input class="field-input" id="evt-price" /></div>
+              <div class="field evt-field" data-for="outdoor"><label class="field-label">Difficulty</label><select class="field-select" id="evt-difficulty"><option value="">Select</option><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="hard">Hard</option></select></div>
+              <div class="field evt-field" data-for="outdoor"><label class="field-label">Pet Friendly?</label><select class="field-select" id="evt-pet"><option value="0">No</option><option value="1">Yes</option></select></div>
+              <div class="field evt-field" data-for="outdoor"><label class="field-label">Cell Service</label><select class="field-select" id="evt-cell"><option value="">Unknown</option><option value="good">Good</option><option value="spotty">Spotty</option><option value="none">None</option></select></div>
+              <div class="field evt-field" data-for="outdoor"><label class="field-label">Packing List</label><input class="field-input" id="evt-packing" placeholder="Water, sunscreen..." /></div>
+              <div class="field evt-field" data-for="dinner brewery coffee"><label class="field-label">Reservation By</label><input class="field-input" id="evt-reservation" placeholder="Seth / TBD" /></div>
+              <div class="field evt-field" data-for="dinner brewery coffee"><label class="field-label">Price Per Person</label><input class="field-input" id="evt-ppp" placeholder="$20-30" /></div>
+              <div class="field evt-field" data-for="casino sports music arts group_tickets"><label class="field-label">Ticket / Payment Link</label><input class="field-input" id="evt-payment" placeholder="https://..." /></div>
+              <div class="field evt-field" data-for="casino sports"><label class="field-label">Min Group Size</label><input class="field-input" id="evt-mingroup" type="number" value="4" min="1" /></div>
+              <div class="field evt-field" data-for="casino sports music group_tickets"><label class="field-label">Deposit?</label><select class="field-select" id="evt-deposit"><option value="0">No</option><option value="1">Yes</option></select></div>
+              <div class="field evt-field" data-for="casino sports music group_tickets"><label class="field-label">Deposit Amount</label><input class="field-input" id="evt-depositamt" value="10" type="number" /></div>
+              <div class="field evt-field" data-for="dinner casino sports music potluck"><label class="field-label">Commit Deadline</label><input class="field-input" id="evt-deadline" placeholder="May 15th" /></div>
+              <div class="field evt-field" data-for="potluck" style="grid-column:span 2"><label class="field-label">Potluck Categories</label><input class="field-input" id="evt-potluck-cats" value="Appetizers,Mains,Sides,Desserts,Drinks" /></div>
+              <div class="field evt-field" data-for="potluck"><label class="field-label">Host</label><input class="field-input" id="evt-potluck-host" placeholder="Seth's place" /></div>
+              <div class="field evt-field" data-for="potluck"><label class="field-label">What to Bring</label><input class="field-input" id="evt-potluck-bring" placeholder="Your dish + drinks" /></div>
+              <div class="field evt-field" data-for="all"><label class="field-label">Plus-ones?</label><select class="field-select" id="evt-plusone"><option value="1">Yes</option><option value="0">No</option></select></div>
+            </div>
+            <div class="field" style="margin-top:12px"><label class="field-label">Description</label><textarea class="field-input" id="evt-desc" rows="3" style="resize:vertical"></textarea></div>
+            <div style="display:flex;align-items:center;gap:14px;margin-top:10px">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer"><input type="checkbox" id="evt-featured" /> Featured Event</label>
+              <button class="btn-primary" style="margin-left:auto" id="submit-event">Create Event</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Events ({events.length})</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select class="field-select" id="event-filter" style="width:auto;padding:6px 10px;font-size:11px">
+              <option value="all">All Events</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="past">Past</option>
+              <option value="featured">Featured</option>
+            </select>
+            <input class="search-input" id="search-events" placeholder="Search events..." />
+            <button class="btn-primary" id="toggle-create">+ New Event</button>
+          </div>
+        </div>
+        {events.length===0?<div class="empty"><div class="empty-icon">📅</div><p>No events yet.</p></div>:(
+          <table id="events-table"><thead><tr><th>Title</th><th>Type</th><th>Date</th><th>Location</th><th>RSVPs</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+            {events.map((e:any)=><tr data-search={`${e.title} ${e.location} ${e.event_type} ${e.zone}`} data-eid={e.id} data-estatus={e.is_past?'past':e.featured?'featured':'upcoming'}>
+              <td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td>
+              <td class="td-muted">{e.event_type||'--'}</td>
+              <td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td>
+              <td class="td-muted">{e.location||'--'}</td>
+              <td class="td-muted">{e.rsvp_count||0}/{e.spots||'--'}</td>
+              <td>{e.is_past?<span class="badge badge-muted">Past</span>:e.featured?<span class="badge badge-accent">Featured</span>:<span class="badge badge-green">Active</span>}</td>
+              <td class="td-actions">
+                <button class="btn btn-sm" data-action="view-rsvps" data-id={e.id} data-title={e.title}>RSVPs</button>
+                <button class="btn btn-sm" data-action="toggle-feature" data-id={e.id} data-featured={e.featured?'1':'0'}>{e.featured?'Unfeature':'Feature'}</button>
+                <button class="btn btn-sm del" data-action="delete-event" data-id={e.id} data-title={e.title}>Delete</button>
+              </td>
+            </tr>)}
+          </tbody></table>)}
+      </div>
+    </div>
+
+    <!-- ═══ SUGGESTIONS ═══ -->
+    <div class="panel" id="panel-suggestions">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Community Suggestions ({suggestions.length})</div>
+          <select class="field-select" id="suggestion-filter" style="width:auto;padding:6px 10px;font-size:11px">
+            <option value="all">All</option>
+            <option value="open">Open</option>
+            <option value="planned">Planned</option>
+            <option value="done">Done</option>
           </select>
-          <input class="search-input" id="search-members" placeholder="Search..." />
         </div>
+        {suggestions.length===0?<div class="empty"><div class="empty-icon">💡</div><p>No suggestions yet.</p></div>:(
+          <table id="suggestions-table"><thead><tr><th>Idea</th><th>By</th><th>Votes</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+            {suggestions.map((s:any)=><tr data-sid={s.id} data-sstatus={s.status||'open'}>
+              <td class="td-name">{s.text||s.title||'--'}</td>
+              <td class="td-muted">{s.member_name||'Anonymous'}</td>
+              <td><span class="badge badge-blue">{s.votes||0}</span></td>
+              <td><span class={`badge ${s.status==='planned'?'badge-accent':s.status==='done'?'badge-green':s.status==='promoted'?'badge-purple':'badge-muted'}`}>{s.status||'open'}</span></td>
+              <td class="td-actions">
+                <button class="btn btn-sm" data-action="mark-suggestion" data-id={s.id} data-status="planned">Plan</button>
+                <button class="btn btn-sm" data-action="mark-suggestion" data-id={s.id} data-status="done">Done</button>
+                <button class="btn btn-sm" data-action="promote-suggestion" data-id={s.id} data-title={s.text||s.title||''}>Promote</button>
+                <button class="btn btn-sm del" data-action="delete-suggestion" data-id={s.id}>Delete</button>
+              </td>
+            </tr>)}
+          </tbody></table>)}
       </div>
-      {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
-        <table id="members-table"><thead><tr><th>Name</th><th>Email</th><th>Hood</th><th>Status</th><th>Role</th><th>Events</th><th>No-shows</th><th></th></tr></thead><tbody>
-          {members.map((m:any)=><tr data-search={`${m.name} ${m.email} ${m.neighborhood}`} data-status={m.suspended?'suspended':m.onboarding_done?(m.approved?'active':'unapproved'):'pending'} data-mid={m.id}>
-            <td class="td-name" style="cursor:pointer" data-action="view-member" data-id={m.id}>{m.name||'—'}</td>
-            <td class="td-muted" style="font-size:11px">{m.email}</td>
-            <td class="td-muted">{m.neighborhood||'—'}</td>
-            <td>{m.suspended?<span class="badge badge-red">Suspended</span>:!m.approved&&m.onboarding_done?<span class="badge badge-accent">Needs approval</span>:m.onboarding_done?<span class="badge badge-green">Active</span>:<span class="badge badge-muted">Pending</span>}</td>
-            <td><span class={`badge ${m.role==='admin'?'badge-purple':'badge-muted'}`}>{m.role||'member'}</span></td>
-            <td class="td-muted">{m.events_attended||0}</td>
-            <td class="td-muted">{m.no_show_count||0}</td>
-            <td style="display:flex;gap:4px;flex-wrap:wrap">
-              {!m.approved&&m.onboarding_done&&<button class="btn btn-sm" data-action="approve-member" data-id={m.id}>✓ Approve</button>}
-              {m.suspended?<button class="btn btn-sm" data-action="unsuspend-member" data-id={m.id}>Unsuspend</button>:<button class="btn btn-sm del" data-action="suspend-member" data-id={m.id} data-name={m.name||m.email}>Suspend</button>}
-              <button class="btn btn-sm del" data-action="remove-member" data-id={m.id} data-name={m.name||m.email}>Remove</button>
-            </td>
-          </tr>)}
-        </tbody></table>)}
     </div>
-  </div>
 
-  <!-- ═══ EVENTS ═══ -->
-  <div class="panel" id="panel-events">
-    <div class="create-form card" id="create-event-form">
-      <div class="card-head"><div class="card-title">Create new event</div><button class="btn" id="cancel-create">✕ Cancel</button></div>
-      <div class="form-grid">
-        <div class="field" style="margin-bottom:4px">
-          <label class="field-label">What type of event?</label>
-          <div id="type-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
-            <button type="button" class="type-chip" data-type="dinner">🍽️ Dinner</button>
-            <button type="button" class="type-chip" data-type="brewery">🍺 Brewery</button>
-            <button type="button" class="type-chip" data-type="outdoor">🏔️ Outdoor</button>
-            <button type="button" class="type-chip" data-type="game_night">🎲 Game Night</button>
-            <button type="button" class="type-chip" data-type="bowling">🎳 Bowling</button>
-            <button type="button" class="type-chip" data-type="sports">⚾ Sports</button>
-            <button type="button" class="type-chip" data-type="music">🎵 Music</button>
-            <button type="button" class="type-chip" data-type="arts">🎨 Arts</button>
-            <button type="button" class="type-chip" data-type="coffee">☕ Coffee</button>
-            <button type="button" class="type-chip" data-type="casino">🎰 Casino</button>
-            <button type="button" class="type-chip" data-type="potluck">🥘 Potluck</button>
-            <button type="button" class="type-chip" data-type="social">🎉 Social</button>
-            <button type="button" class="type-chip" data-type="other">📅 Other</button>
-          </div>
-          <input type="hidden" id="evt-type" value="" />
+    <!-- ═══ ANNOUNCEMENTS ═══ -->
+    <div class="panel" id="panel-announcements">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Announcements ({announcements.length})</div></div>
+        <div style="padding:16px 20px;display:flex;gap:8px">
+          <input class="field-input" id="new-announcement" placeholder="Write an announcement..." style="flex:1" />
+          <button class="btn-primary" id="post-announcement">Post</button>
         </div>
-        <div id="evt-core" style="display:none">
+        {announcements.length===0?<div class="empty"><div class="empty-icon">📢</div><p>No announcements yet.</p></div>:(
+          <table><thead><tr><th>Message</th><th>Posted</th><th>Actions</th></tr></thead><tbody>
+            {announcements.map((a:any)=><tr><td class="td-name" style="max-width:400px;word-break:break-word">{a.text}</td><td class="td-muted">{a.created_at?.slice(0,10)||'--'}</td><td><button class="btn btn-sm del" data-action="delete-announcement" data-id={a.id}>Delete</button></td></tr>)}
+          </tbody></table>)}
+      </div>
+    </div>
+
+    <!-- ═══ SPOTLIGHTS ═══ -->
+    <div class="panel" id="panel-spotlights">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Member Spotlights ({spotlights.length})</div></div>
+        <div style="padding:16px 20px">
+          <div class="form-3col">
+            <div class="field"><label class="field-label">Member Email</label><input class="field-input" id="spot-email" placeholder="member@email.com" /></div>
+            <div class="field"><label class="field-label">Week Of</label><input class="field-input" id="spot-week" placeholder="e.g. May 12" /></div>
+            <div class="field"><label class="field-label">Blurb</label><input class="field-input" id="spot-blurb" placeholder="Spotlight blurb..." /></div>
+          </div>
+          <button class="btn-primary" id="post-spotlight" style="margin-top:4px">Add Spotlight</button>
+        </div>
+        {spotlights.length===0?<div class="empty"><div class="empty-icon">🌟</div><p>No spotlights yet.</p></div>:(
+          <table><thead><tr><th>Member</th><th>Blurb</th><th>Week</th><th>Actions</th></tr></thead><tbody>
+            {spotlights.map((s:any)=><tr><td class="td-name">{s.member_email}</td><td class="td-muted" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{s.blurb}</td><td class="td-muted">{s.week_of}</td><td><button class="btn btn-sm del" data-action="delete-spotlight" data-id={s.id}>Delete</button></td></tr>)}
+          </tbody></table>)}
+      </div>
+    </div>
+
+    <!-- ═══ REPORTS ═══ -->
+    <div class="panel" id="panel-reports">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Member Reports</div><span class="badge badge-muted" id="reports-count">Loading...</span></div>
+        <div id="reports-body"><div class="empty"><div class="empty-icon">🛡️</div><p>Loading reports...</p></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ PARTNERS ═══ -->
+    <div class="panel" id="panel-partners">
+      <div class="create-form card" id="create-partner-form">
+        <div class="card-head"><div class="card-title">Add Partner</div><button class="btn" id="cancel-partner">Cancel</button></div>
+        <div class="form-grid">
           <div class="form-2col">
-            <div class="field" style="grid-column:span 2"><label class="field-label">Event name</label><input class="field-input" id="evt-title" /></div>
-            <div class="field"><label class="field-label">Where</label><input class="field-input" id="evt-location" /></div>
-            <div class="field"><label class="field-label">Zone</label><input class="field-input" id="evt-zone" value="RiNo" /></div>
-            <div class="field"><label class="field-label">Month</label><select class="field-select" id="evt-month"><option value="">Pick</option><option>JAN</option><option>FEB</option><option>MAR</option><option>APR</option><option>MAY</option><option>JUN</option><option>JUL</option><option>AUG</option><option>SEP</option><option>OCT</option><option>NOV</option><option>DEC</option></select></div>
-            <div class="field"><label class="field-label">Day</label><input class="field-input" id="evt-day" placeholder="e.g. 17th" /></div>
-            <div class="field"><label class="field-label">Spots</label><input class="field-input" id="evt-spots" type="number" value="10" min="1" /></div>
-            <div class="field"><label class="field-label" id="price-label">Price cap</label><input class="field-input" id="evt-price" /></div>
-            <!-- Type-specific -->
-            <div class="field evt-field" data-for="outdoor"><label class="field-label">Difficulty</label><select class="field-select" id="evt-difficulty"><option value="">Select</option><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="hard">Hard</option></select></div>
-            <div class="field evt-field" data-for="outdoor"><label class="field-label">Pet friendly?</label><select class="field-select" id="evt-pet"><option value="0">No</option><option value="1">Yes</option></select></div>
-            <div class="field evt-field" data-for="outdoor"><label class="field-label">Cell service</label><select class="field-select" id="evt-cell"><option value="">Unknown</option><option value="good">Good</option><option value="spotty">Spotty</option><option value="none">None</option></select></div>
-            <div class="field evt-field" data-for="outdoor"><label class="field-label">Packing list</label><input class="field-input" id="evt-packing" placeholder="Water, sunscreen..." /></div>
-            <div class="field evt-field" data-for="dinner brewery coffee"><label class="field-label">Reservation by</label><input class="field-input" id="evt-reservation" placeholder="Seth / TBD" /></div>
-            <div class="field evt-field" data-for="dinner brewery coffee"><label class="field-label">Price per person</label><input class="field-input" id="evt-ppp" placeholder="$20-30" /></div>
-            <div class="field evt-field" data-for="casino sports music arts"><label class="field-label">Ticket / payment link</label><input class="field-input" id="evt-payment" placeholder="https://..." /></div>
-            <div class="field evt-field" data-for="casino sports"><label class="field-label">Min group size</label><input class="field-input" id="evt-mingroup" type="number" value="4" min="1" /></div>
-            <div class="field evt-field" data-for="casino sports music"><label class="field-label">Deposit?</label><select class="field-select" id="evt-deposit"><option value="0">No</option><option value="1">Yes — $10</option></select></div>
-            <div class="field evt-field" data-for="casino sports music"><label class="field-label">Deposit $</label><input class="field-input" id="evt-depositamt" value="10" type="number" /></div>
-            <div class="field evt-field" data-for="dinner casino sports music potluck"><label class="field-label">Commit deadline</label><input class="field-input" id="evt-deadline" placeholder="May 15th" /></div>
-            <div class="field evt-field" data-for="potluck" style="grid-column:span 2"><label class="field-label">Potluck categories</label><input class="field-input" id="evt-potluck-cats" value="Appetizers,Mains,Sides,Desserts,Drinks" /></div>
-            <div class="field evt-field" data-for="potluck"><label class="field-label">Host</label><input class="field-input" id="evt-potluck-host" placeholder="Seth's place" /></div>
-            <div class="field evt-field" data-for="potluck"><label class="field-label">What to bring</label><input class="field-input" id="evt-potluck-bring" placeholder="Your dish + drinks" /></div>
-            <div class="field evt-field" data-for="all"><label class="field-label">Plus-ones?</label><select class="field-select" id="evt-plusone"><option value="1">Yes</option><option value="0">No</option></select></div>
+            <div class="field"><label class="field-label">Business Name</label><input class="field-input" id="partner-name" /></div>
+            <div class="field"><label class="field-label">Neighborhood</label><input class="field-input" id="partner-hood" /></div>
+            <div class="field"><label class="field-label">Category</label><input class="field-input" id="partner-category" placeholder="Restaurant, Bar, etc." /></div>
+            <div class="field"><label class="field-label">Logo Emoji</label><input class="field-input" id="partner-emoji" placeholder="🍕" /></div>
+            <div class="field" style="grid-column:span 2"><label class="field-label">Deal</label><input class="field-input" id="partner-deal" placeholder="10% off with code..." /></div>
+            <div class="field"><label class="field-label">Promo Code</label><input class="field-input" id="partner-promo" /></div>
+            <div class="field"><label class="field-label">How to Claim</label><input class="field-input" id="partner-claim" placeholder="Show app at checkout" /></div>
+            <div class="field"><label class="field-label">Website</label><input class="field-input" id="partner-website" placeholder="https://..." /></div>
           </div>
-          <div class="field" style="margin-top:12px"><label class="field-label">Description</label><textarea class="field-input" id="evt-desc" rows="2" style="resize:vertical"></textarea></div>
-          <div style="display:flex;align-items:center;gap:14px;margin-top:10px"><label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer"><input type="checkbox" id="evt-featured" /> ⭐ Featured</label><button class="btn-primary" style="margin-left:auto" id="submit-event">Create Event</button></div>
+          <button class="btn-primary" id="submit-partner">Add Partner</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Partners</div><div style="display:flex;gap:6px"><input class="search-input" id="search-partners" placeholder="Search partners..." /><button class="btn-primary" id="toggle-partner-form">+ Add Partner</button></div></div>
+        <div id="partners-body"><div class="empty"><div class="empty-icon">🤝</div><p>Loading partners...</p></div></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-head"><div class="card-title">Partner Inquiries</div></div>
+        <div id="inquiries-body"><div class="empty"><div class="empty-icon">📨</div><p>Loading inquiries...</p></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ RESTAURANTS ═══ -->
+    <div class="panel" id="panel-restaurants">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Restaurants</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select class="field-select" id="restaurant-zone-filter" style="width:auto;padding:6px 10px;font-size:11px">
+              <option value="all">All Zones</option>
+            </select>
+            <input class="search-input" id="search-restaurants" placeholder="Search restaurants..." />
+            <button class="btn-primary" id="add-restaurant-btn">+ Add</button>
+          </div>
+        </div>
+        <div id="restaurants-body"><div class="empty"><div class="empty-icon">🍽️</div><p>Loading restaurants...</p></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGES ═══ -->
+    <div class="panel" id="panel-pages">
+      <div class="create-form card" id="create-page-form">
+        <div class="card-head"><div class="card-title">Create Page</div><button class="btn" id="cancel-page">Cancel</button></div>
+        <div class="form-grid">
+          <div class="form-2col">
+            <div class="field"><label class="field-label">Title</label><input class="field-input" id="page-title" /></div>
+            <div class="field"><label class="field-label">Slug</label><input class="field-input" id="page-slug" placeholder="my-page" /></div>
+            <div class="field"><label class="field-label">Nav Label</label><input class="field-input" id="page-nav-label" /></div>
+            <div class="field" style="display:flex;gap:16px;align-items:end">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer"><input type="checkbox" id="page-show-nav" /> Show in Nav</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer"><input type="checkbox" id="page-published" checked /> Published</label>
+            </div>
+          </div>
+          <div class="field"><label class="field-label">Content (HTML)</label><textarea class="field-input" id="page-content" rows="8" style="resize:vertical;font-family:var(--font-mono);font-size:11px"></textarea></div>
+          <button class="btn-primary" id="submit-page">Create Page</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Custom Pages</div><button class="btn-primary" id="toggle-page-form">+ New Page</button></div>
+        <div id="pages-body"><div class="empty"><div class="empty-icon">📄</div><p>Loading pages...</p></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ PLUGINS ═══ -->
+    <div class="panel" id="panel-plugins">
+      <div class="create-form card" id="create-plugin-form">
+        <div class="card-head"><div class="card-title">Add Plugin</div><button class="btn" id="cancel-plugin">Cancel</button></div>
+        <div class="form-grid">
+          <div class="form-2col">
+            <div class="field"><label class="field-label">Name</label><input class="field-input" id="plugin-name" /></div>
+            <div class="field"><label class="field-label">Type</label><select class="field-select" id="plugin-type"><option value="script">Script</option><option value="style">Style</option><option value="html">HTML</option></select></div>
+            <div class="field"><label class="field-label">Location</label><select class="field-select" id="plugin-location"><option value="head">Head</option><option value="body">Body</option></select></div>
+            <div class="field"><label class="field-label">Description</label><input class="field-input" id="plugin-description" /></div>
+          </div>
+          <div class="field"><label class="field-label">Code</label><textarea class="field-input" id="plugin-code" rows="6" style="resize:vertical;font-family:var(--font-mono);font-size:11px"></textarea></div>
+          <button class="btn-primary" id="submit-plugin">Add Plugin</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Plugins</div><button class="btn-primary" id="toggle-plugin-form">+ Add Plugin</button></div>
+        <div id="plugins-body"><div class="empty"><div class="empty-icon">🧩</div><p>Loading plugins...</p></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ ANALYTICS ═══ -->
+    <div class="panel" id="panel-analytics">
+      <div class="chart-grid">
+        <div class="card"><div class="card-head"><div class="card-title">Members by Month</div></div><div class="chart-wrap"><canvas id="chart-members"></canvas></div></div>
+        <div class="card"><div class="card-head"><div class="card-title">Events by Type</div></div><div class="chart-wrap"><canvas id="chart-events-type"></canvas></div></div>
+        <div class="card"><div class="card-head"><div class="card-title">RSVPs by Month</div></div><div class="chart-wrap"><canvas id="chart-rsvps"></canvas></div></div>
+        <div class="card"><div class="card-head"><div class="card-title">Top Events by RSVPs</div></div><div class="chart-wrap"><canvas id="chart-top-events"></canvas></div></div>
+      </div>
+      <div class="chart-grid">
+        <div class="card"><div class="card-head"><div class="card-title">Page Views by Path</div></div><div class="chart-wrap"><canvas id="chart-pageviews"></canvas></div></div>
+        <div class="card"><div class="card-head"><div class="card-title">Event Ratings</div></div><div class="chart-wrap"><canvas id="chart-ratings"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ APPEARANCE ═══ -->
+    <div class="panel" id="panel-appearance">
+      <div class="settings-grid">
+        <div class="settings-card" style="grid-column:span 2">
+          <div class="settings-title">Hero Section</div><div class="settings-sub">Homepage headline and call-to-action.</div>
+          <div class="form-2col">
+            <div class="field" style="grid-column:span 2"><label class="field-label">Heading</label><input class="field-input" data-setting="hero_heading" value="Meet your people. Explore your city." /></div>
+            <div class="field" style="grid-column:span 2"><label class="field-label">Subheading</label><textarea class="field-input" data-setting="hero_subheading" rows="2" style="resize:vertical">Denver Social Hub is a free community for locals who want to get out, try new spots, and actually connect.</textarea></div>
+            <div class="field"><label class="field-label">CTA Label</label><input class="field-input" data-setting="hero_cta_label" value="Join for free" /></div>
+            <div class="field"><label class="field-label">CTA URL</label><input class="field-input" data-setting="hero_cta_url" value="/join" /></div>
+          </div>
+          <button class="btn-primary js-save" style="margin-top:12px">Save Hero</button>
+        </div>
+        <div class="settings-card">
+          <div class="settings-title">About Section</div><div class="settings-sub">The story on your homepage.</div>
+          <div class="field"><label class="field-label">Heading</label><input class="field-input" data-setting="about_heading" value="Denver is big. It doesn't have to feel that way." /></div>
+          <div class="field"><label class="field-label">Body</label><textarea class="field-input" data-setting="about_body" rows="4" style="resize:vertical">Denver Social Hub started as a simple idea.</textarea></div>
+          <button class="btn-primary js-save" style="margin-top:12px">Save About</button>
+        </div>
+        <div class="settings-card">
+          <div class="settings-title">Footer and SEO</div><div class="settings-sub">Bottom of pages and search engine info.</div>
+          <div class="field"><label class="field-label">Footer Tagline</label><input class="field-input" data-setting="footer_tagline" value="Real connections, real city." /></div>
+          <div class="field"><label class="field-label">Contact Email</label><input class="field-input" data-setting="footer_email" value="hello@denversocial.com" /></div>
+          <div class="field"><label class="field-label">Instagram</label><input class="field-input" data-setting="instagram_handle" placeholder="@denversocialhub" /></div>
+          <div class="field"><label class="field-label">SEO Description</label><textarea class="field-input" data-setting="seo_description" rows="2" style="resize:vertical">Real small-group events across Denver.</textarea></div>
+          <button class="btn-primary js-save" style="margin-top:12px">Save Footer</button>
         </div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-head"><div class="card-title">All events ({events.length})</div><div style="display:flex;gap:6px;align-items:center"><input class="search-input" id="search-events" placeholder="Search..." /><button class="btn-primary" id="toggle-create">+ Add Event</button></div></div>
-      {events.length===0?<div class="empty"><div class="empty-icon">📅</div><p>No events.</p></div>:(
-        <table id="events-table"><thead><tr><th>Title</th><th>Date</th><th>Location</th><th>RSVPs</th><th>Status</th><th></th></tr></thead><tbody>
-          {events.map((e:any)=><tr data-search={`${e.title} ${e.location} ${e.event_type}`} data-eid={e.id}><td class="td-name">{typeEmoji[e.event_type]||'📅'} {e.title}</td><td class="td-muted">{e.event_month&&e.event_day?`${e.event_month} ${e.event_day}`:'TBD'}</td><td class="td-muted">{e.location||'—'}</td><td class="td-muted">{e.rsvp_count||0}/{e.spots||'—'}</td><td>{e.is_past?<span class="badge badge-muted">Past</span>:e.featured?<span class="badge badge-accent">⭐ Featured</span>:<span class="badge badge-muted">{e.event_type||'event'}</span>}</td><td style="display:flex;gap:4px"><button class="btn btn-sm" data-action="toggle-feature" data-id={e.id} data-featured={e.featured?'1':'0'}>{e.featured?'Unfeature':'⭐'}</button><button class="btn btn-sm del" data-action="delete-event" data-id={e.id} data-title={e.title}>Delete</button></td></tr>)}
-        </tbody></table>)}
-    </div>
-  </div>
 
-  <!-- ═══ SUGGESTIONS ═══ -->
-  <div class="panel" id="panel-suggestions">
-    <div class="card">
-      <div class="card-head"><div class="card-title">Community suggestions</div></div>
-      {suggestions.length===0?<div class="empty"><div class="empty-icon">💡</div><p>No suggestions yet.</p></div>:(
-        <table><thead><tr><th>Idea</th><th>Votes</th><th>Status</th><th></th></tr></thead><tbody>
-          {suggestions.map((s:any)=><tr data-sid={s.id}><td class="td-name">{s.text||s.title||'—'}</td><td><span class="badge badge-blue">▲ {s.votes||0}</span></td><td><span class={`badge ${s.status==='planned'?'badge-accent':s.status==='done'?'badge-green':'badge-muted'}`}>{s.status||'open'}</span></td><td style="display:flex;gap:4px"><button class="btn btn-sm" data-action="mark-suggestion" data-id={s.id} data-status="planned">Plan</button><button class="btn btn-sm" data-action="mark-suggestion" data-id={s.id} data-status="done">Done</button><button class="btn btn-sm del" data-action="delete-suggestion" data-id={s.id}>Del</button></td></tr>)}
-        </tbody></table>)}
-    </div>
-  </div>
-
-  <!-- ═══ ANNOUNCEMENTS ═══ -->
-  <div class="panel" id="panel-announcements">
-    <div class="card">
-      <div class="card-head"><div class="card-title">Announcements</div></div>
-      <div style="padding:16px 20px;display:flex;gap:8px">
-        <input class="field-input" id="new-announcement" placeholder="Write an announcement..." style="flex:1" />
-        <button class="btn-primary" id="post-announcement">Post</button>
-      </div>
-      {announcements.length===0?<div class="empty"><div class="empty-icon">📢</div><p>No announcements yet.</p></div>:(
-        <table><thead><tr><th>Message</th><th>Posted</th><th></th></tr></thead><tbody>
-          {announcements.map((a:any)=><tr><td class="td-name">{a.text}</td><td class="td-muted">{a.created_at?.slice(0,10)||'—'}</td><td><button class="btn btn-sm del" data-action="delete-announcement" data-id={a.id}>Delete</button></td></tr>)}
-        </tbody></table>)}
-    </div>
-  </div>
-
-  <!-- ═══ SPOTLIGHTS ═══ -->
-  <div class="panel" id="panel-spotlights">
-    <div class="card">
-      <div class="card-head"><div class="card-title">Member spotlights</div></div>
-      <div style="padding:16px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <input class="field-input" id="spot-email" placeholder="Member email" />
-        <input class="field-input" id="spot-week" placeholder="Week of (e.g. May 12)" />
-        <input class="field-input" id="spot-blurb" placeholder="Spotlight blurb..." style="grid-column:span 2" />
-        <button class="btn-primary" id="post-spotlight">Add Spotlight</button>
-      </div>
-      {spotlights.length===0?<div class="empty"><div class="empty-icon">🌟</div><p>No spotlights yet.</p></div>:(
-        <table><thead><tr><th>Member</th><th>Blurb</th><th>Week</th><th></th></tr></thead><tbody>
-          {spotlights.map((s:any)=><tr><td class="td-name">{s.member_email}</td><td class="td-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{s.blurb}</td><td class="td-muted">{s.week_of}</td><td><button class="btn btn-sm del" data-action="delete-spotlight" data-id={s.id}>Delete</button></td></tr>)}
-        </tbody></table>)}
-    </div>
-  </div>
-
-  <!-- ═══ SETTINGS ═══ -->
-  <div class="panel" id="panel-settings">
-    <div class="settings-grid">
-      <div class="settings-card">
-        <div class="settings-title">Site controls</div><div class="settings-sub">Toggle major features.</div>
-        <div class="toggle-row"><div><div class="toggle-label">Maintenance mode</div><div class="toggle-desc">Show "coming soon" page</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_maintenance"><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">New signups</div><div class="toggle-desc">Allow new members</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_signups" checked><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">Member directory</div><div class="toggle-desc">Public members page</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_directory" checked><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">Suggestions</div><div class="toggle-desc">Let members submit ideas</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_suggestions" checked><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">AI chatbot</div><div class="toggle-desc">Groq chatbot on site</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_chatbot" checked><span class="toggle-track"></span></label></div>
-      </div>
-      <div class="settings-card">
-        <div class="settings-title">Member rules</div><div class="settings-sub">Join + behavior controls.</div>
-        <div class="toggle-row"><div><div class="toggle-label">Require approval</div><div class="toggle-desc">Manually approve new members</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_require_approval"><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">Discord login only</div><div class="toggle-desc">Only Discord OAuth</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_discord_login" checked><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">Referral codes</div><div class="toggle-desc">Invite-only signups</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_referrals"><span class="toggle-track"></span></label></div>
-        <div class="field" style="margin-top:14px"><label class="field-label">Max no-shows</label><select class="field-select" data-setting="max_no_shows"><option value="2">2</option><option value="3" selected>3</option><option value="5">5</option><option value="0">Disabled</option></select></div>
-        <button class="btn-primary js-save" style="margin-top:12px">Save</button>
-      </div>
-      <div class="settings-card">
-        <div class="settings-title">Event defaults</div><div class="settings-sub">Defaults for new events.</div>
-        <div class="toggle-row"><div><div class="toggle-label">Discord RSVP</div><div class="toggle-desc">Require Discord to RSVP</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_discord_rsvp" checked><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">Plus-ones</div><div class="toggle-desc">Allow guests by default</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_plus_ones" checked><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">Deposits</div><div class="toggle-desc">Require deposit for RSVP</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_deposits"><span class="toggle-track"></span></label></div>
-        <div class="field" style="margin-top:14px"><label class="field-label">Default group size</label><select class="field-select" data-setting="default_group_size"><option value="8">8</option><option value="10" selected>10</option><option value="12">12</option><option value="15">15</option><option value="20">20</option></select></div>
-        <div class="field"><label class="field-label">Default price cap</label><input class="field-input" data-setting="default_price_cap" value="$30/person cap" /></div>
-        <button class="btn-primary js-save" style="margin-top:12px">Save</button>
-      </div>
-      <div class="settings-card">
-        <div class="settings-title">Notifications</div><div class="settings-sub">Admin email alerts.</div>
-        <div class="toggle-row"><div><div class="toggle-label">New member</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_member" checked><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">New suggestion</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_suggestion"><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">RSVP full</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_rsvp" checked><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">No-show alert</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_noshow" checked><span class="toggle-track"></span></label></div>
-        <div class="toggle-row"><div><div class="toggle-label">Weekly digest</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_digest"><span class="toggle-track"></span></label></div>
-        <div class="field" style="margin-top:14px"><label class="field-label">Admin email</label><input class="field-input" data-setting="admin_email" value="stharpe98@gmail.com" /></div>
-        <button class="btn-primary js-save" style="margin-top:12px">Save</button>
-      </div>
-      <div class="settings-card">
-        <div class="settings-title">Community info</div><div class="settings-sub">Public-facing details.</div>
-        <div class="field"><label class="field-label">Site title</label><input class="field-input" data-setting="site_title" value="Denver Social Hub" /></div>
-        <div class="field"><label class="field-label">Site description</label><input class="field-input" data-setting="site_description" value="A community for Denver locals." /></div>
-        <div class="field"><label class="field-label">Discord link</label><input class="field-input" data-setting="discord_url" value="https://discord.gg/S8SFNkdSgK" /></div>
-        <div class="field"><label class="field-label">Member count</label><input class="field-input" data-setting="member_count" value="88+" /></div>
-        <div class="field"><label class="field-label">Events count</label><input class="field-input" data-setting="events_count" value="10+" /></div>
-        <button class="btn-primary js-save" style="margin-top:12px">Save</button>
-      </div>
-      <div class="settings-card">
-        <div class="settings-title">Danger zone</div><div class="settings-sub">Irreversible.</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <button class="btn del" style="width:100%;padding:10px;font-size:12px" id="clear-pending">Clear Pending Members</button>
-          <button class="btn del" style="width:100%;padding:10px;font-size:12px" id="export-csv">Export Members CSV</button>
-          <button class="btn del" style="width:100%;padding:10px;font-size:12px" id="clear-past-events">Archive Past Events</button>
+    <!-- ═══ SETTINGS ═══ -->
+    <div class="panel" id="panel-settings">
+      <div class="settings-grid">
+        <div class="settings-card">
+          <div class="settings-title">Site Controls</div><div class="settings-sub">Toggle major features on/off.</div>
+          <div class="toggle-row"><div><div class="toggle-label">Maintenance Mode</div><div class="toggle-desc">Show "coming soon" page to visitors</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_maintenance"><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">New Signups</div><div class="toggle-desc">Allow new member registrations</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_signups" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">Member Directory</div><div class="toggle-desc">Public members page visible</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_directory" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">Suggestions</div><div class="toggle-desc">Let members submit ideas</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_suggestions" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">AI Chatbot</div><div class="toggle-desc">Show Groq chatbot on site</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_chatbot" checked><span class="toggle-track"></span></label></div>
+          <button class="btn-primary js-save" style="margin-top:14px">Save</button>
+        </div>
+        <div class="settings-card">
+          <div class="settings-title">Member Rules</div><div class="settings-sub">Join and behavior controls.</div>
+          <div class="toggle-row"><div><div class="toggle-label">Require Approval</div><div class="toggle-desc">Manually approve new members</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_require_approval"><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">Discord Login Only</div><div class="toggle-desc">Only allow Discord OAuth</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_discord_login" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">Referral Codes</div><div class="toggle-desc">Require invite code to join</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_referrals"><span class="toggle-track"></span></label></div>
+          <div class="field" style="margin-top:14px"><label class="field-label">Max No-Shows</label><select class="field-select" data-setting="max_no_shows"><option value="2">2</option><option value="3" selected>3</option><option value="5">5</option><option value="0">Disabled</option></select></div>
+          <button class="btn-primary js-save" style="margin-top:12px">Save</button>
+        </div>
+        <div class="settings-card">
+          <div class="settings-title">Event Defaults</div><div class="settings-sub">Defaults applied to new events.</div>
+          <div class="toggle-row"><div><div class="toggle-label">Discord RSVP</div><div class="toggle-desc">Require Discord to RSVP</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_discord_rsvp" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">Plus-Ones</div><div class="toggle-desc">Allow guests by default</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_plus_ones" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">Deposits</div><div class="toggle-desc">Require deposit for RSVP</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_deposits"><span class="toggle-track"></span></label></div>
+          <div class="field" style="margin-top:14px"><label class="field-label">Default Group Size</label><select class="field-select" data-setting="default_group_size"><option value="8">8</option><option value="10" selected>10</option><option value="12">12</option><option value="15">15</option><option value="20">20</option></select></div>
+          <div class="field"><label class="field-label">Default Price Cap</label><input class="field-input" data-setting="default_price_cap" value="$30/person cap" /></div>
+          <button class="btn-primary js-save" style="margin-top:12px">Save</button>
+        </div>
+        <div class="settings-card">
+          <div class="settings-title">Notifications</div><div class="settings-sub">Email notification preferences.</div>
+          <div class="toggle-row"><div><div class="toggle-label">New Member Alert</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_member" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">New Suggestion</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_suggestion"><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">RSVP Full</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_rsvp" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">No-Show Alert</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_noshow" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div><div class="toggle-label">Weekly Digest</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_notif_digest"><span class="toggle-track"></span></label></div>
+          <div class="field" style="margin-top:14px"><label class="field-label">Admin Email</label><input class="field-input" data-setting="admin_email" value="stharpe98@gmail.com" /></div>
+          <button class="btn-primary js-save" style="margin-top:12px">Save</button>
+        </div>
+        <div class="settings-card">
+          <div class="settings-title">Community Info</div><div class="settings-sub">Public-facing details.</div>
+          <div class="field"><label class="field-label">Site Title</label><input class="field-input" data-setting="site_title" value="Denver Social Hub" /></div>
+          <div class="field"><label class="field-label">Site Description</label><input class="field-input" data-setting="site_description" value="A community for Denver locals." /></div>
+          <div class="field"><label class="field-label">Discord Invite Link</label><input class="field-input" data-setting="discord_url" value="https://discord.gg/S8SFNkdSgK" /></div>
+          <div class="field"><label class="field-label">Member Count Display</label><input class="field-input" data-setting="member_count" value="88+" /></div>
+          <div class="field"><label class="field-label">Events Count Display</label><input class="field-input" data-setting="events_count" value="10+" /></div>
+          <button class="btn-primary js-save" style="margin-top:12px">Save</button>
+        </div>
+        <div class="settings-card">
+          <div class="settings-title">Danger Zone</div><div class="settings-sub">Irreversible actions.</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn del" style="width:100%;padding:10px;font-size:12px" id="clear-pending">Clear All Pending Members</button>
+            <button class="btn del" style="width:100%;padding:10px;font-size:12px" id="clear-past-events">Archive Past Events</button>
+            <button class="btn" style="width:100%;padding:10px;font-size:12px" id="export-all-data">Export All Data (JSON)</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ═══ CONTENT ═══ -->
-  <div class="panel" id="panel-content">
-    <div class="settings-grid">
-      <div class="settings-card" style="grid-column:span 2">
-        <div class="settings-title">Hero section</div><div class="settings-sub">Homepage headline.</div>
-        <div class="field"><label class="field-label">Heading</label><input class="field-input" data-setting="hero_heading" value="Meet your people. Explore your city." /></div>
-        <div class="field"><label class="field-label">Subheading</label><textarea class="field-input" data-setting="hero_subheading" rows="2" style="resize:vertical">Denver Social Hub is a free community for locals who want to get out, try new spots, and actually connect.</textarea></div>
-        <div class="field"><label class="field-label">CTA label</label><input class="field-input" data-setting="hero_cta_label" value="Join for free" /></div>
-        <button class="btn-primary js-save" style="margin-top:12px">Save</button>
-      </div>
-      <div class="settings-card">
-        <div class="settings-title">About section</div><div class="settings-sub">Story on homepage.</div>
-        <div class="field"><label class="field-label">Heading</label><input class="field-input" data-setting="about_heading" value="Denver is big. It doesn't have to feel that way." /></div>
-        <div class="field"><label class="field-label">Body</label><textarea class="field-input" data-setting="about_body" rows="3" style="resize:vertical">Denver Social Hub started as a simple idea.</textarea></div>
-        <button class="btn-primary js-save" style="margin-top:12px">Save</button>
-      </div>
-      <div class="settings-card">
-        <div class="settings-title">Footer &amp; SEO</div><div class="settings-sub">Bottom of pages + search.</div>
-        <div class="field"><label class="field-label">Footer tagline</label><input class="field-input" data-setting="footer_tagline" value="Real connections, real city." /></div>
-        <div class="field"><label class="field-label">Contact email</label><input class="field-input" data-setting="footer_email" value="hello@denversocial.com" /></div>
-        <div class="field"><label class="field-label">Instagram</label><input class="field-input" data-setting="instagram_handle" placeholder="@denversocialhub" /></div>
-        <div class="field"><label class="field-label">SEO description</label><textarea class="field-input" data-setting="seo_description" rows="2" style="resize:vertical">Real small-group events across Denver.</textarea></div>
-        <button class="btn-primary js-save" style="margin-top:12px">Save</button>
-      </div>
-    </div>
   </div>
-
 </div>
 
-<!-- Member Detail Modal -->
+<!-- ═══ MODALS ═══ -->
 <div class="modal-overlay" id="member-modal">
   <div class="modal">
-    <div class="modal-head"><h3 id="modal-member-name">Member</h3><button class="btn" id="close-modal">✕</button></div>
+    <div class="modal-head"><h3 id="modal-member-name">Member</h3><button class="btn" id="close-member-modal">Close</button></div>
     <div class="modal-body" id="modal-member-body"></div>
     <div class="modal-actions" id="modal-member-actions"></div>
   </div>
 </div>
 
+<div class="modal-overlay" id="rsvp-modal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="rsvp-modal-title">RSVPs</h3><button class="btn" id="close-rsvp-modal">Close</button></div>
+    <div class="modal-body" id="rsvp-modal-body"><div class="empty"><div class="empty-icon">Loading...</div></div></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-head"><h3 id="edit-modal-title">Edit</h3><button class="btn" id="close-edit-modal">Close</button></div>
+    <div class="modal-body" id="edit-modal-body"></div>
+    <div class="modal-actions"><button class="btn-primary" id="edit-modal-save">Save</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="restaurant-modal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-head"><h3 id="restaurant-modal-title">Add Restaurant</h3><button class="btn" id="close-restaurant-modal">Close</button></div>
+    <div class="modal-body">
+      <div class="form-2col">
+        <div class="field"><label class="field-label">Name</label><input class="field-input" id="rest-name" /></div>
+        <div class="field"><label class="field-label">Zone</label><input class="field-input" id="rest-zone" /></div>
+        <div class="field"><label class="field-label">Category</label><input class="field-input" id="rest-category" placeholder="Italian, Mexican, etc." /></div>
+        <div class="field"><label class="field-label">Price Range</label><select class="field-select" id="rest-price"><option value="$">$</option><option value="$$" selected>$$</option><option value="$$$">$$$</option><option value="$$$$">$$$$</option></select></div>
+        <div class="field" style="grid-column:span 2"><label class="field-label">Address</label><input class="field-input" id="rest-address" /></div>
+        <div class="field"><label class="field-label">Phone</label><input class="field-input" id="rest-phone" /></div>
+        <div class="field"><label class="field-label">Rating</label><input class="field-input" id="rest-rating" type="number" step="0.1" min="0" max="5" placeholder="4.5" /></div>
+        <div class="field"><label class="field-label">Hours</label><input class="field-input" id="rest-hours" placeholder="Mon-Sat 11-10" /></div>
+        <div class="field"><label class="field-label">Notes</label><input class="field-input" id="rest-notes" /></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <input type="hidden" id="rest-edit-id" value="" />
+      <button class="btn-primary" id="save-restaurant">Save Restaurant</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
-<script is:inline define:vars={{ membersJSON }}>
+<script is:inline define:vars={{ membersJSON, eventsJSON }}>
   window.__members = JSON.parse(membersJSON);
+  window.__events = JSON.parse(eventsJSON);
 </script>
 
 <script is:inline>
 (function(){
-var $=function(s){return document.querySelector(s)},$$=function(s){return document.querySelectorAll(s)};
+var $=function(s){return document.querySelector(s)};
+var $$=function(s){return document.querySelectorAll(s)};
+var chartJS=null;
+var loadedPanels={overview:true};
+
 function toast(m,e){var el=$('#toast');if(!el)return;el.textContent=m;el.className=e?'toast show error':'toast show';setTimeout(function(){el.className='toast'},3000)}
-function api(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);return d})}
+function api(u,b){return fetch(u,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:void 0).then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);return d})}
+function apiGet(t){return fetch('/api/admin/data?table='+t).then(function(r){return r.json()})}
+function apiPost(b){return fetch('/api/admin/data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);return d})}
+function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
-// Panels
-var titles={overview:'Overview',members:'Members',events:'Events',suggestions:'Suggestions',announcements:'Announcements',spotlights:'Spotlights',settings:'Settings',content:'Content'};
-function showPanel(id){$$('.panel').forEach(function(p){p.classList.remove('active')});var t=$('#panel-'+id);if(t)t.classList.add('active');$$('.tab').forEach(function(b){b.classList.remove('active')});$$('.tab[data-panel="'+id+'"]').forEach(function(b){b.classList.add('active')});var mob=$('#mob-tabs');if(mob)mob.classList.remove('open')}
-$$('[data-panel]').forEach(function(b){b.addEventListener('click',function(){showPanel(this.getAttribute('data-panel'))})});
-$('#mob-menu').addEventListener('click',function(){$('#mob-tabs').classList.toggle('open')});
+// ============ SIDEBAR + PANELS ============
+var panelTitles={overview:'Overview',members:'Members',events:'Events',suggestions:'Suggestions',announcements:'Announcements',spotlights:'Spotlights',reports:'Reports',partners:'Partners',restaurants:'Restaurants',pages:'Pages',plugins:'Plugins',analytics:'Analytics',appearance:'Appearance',settings:'Settings'};
+var panelSubs={overview:'Dashboard overview and quick stats',members:'Manage all community members',events:'Create and manage events',suggestions:'Community ideas and feedback',announcements:'Broadcast messages',spotlights:'Highlight outstanding members',reports:'Review member reports',partners:'Business partnerships and deals',restaurants:'Denver restaurant database',pages:'Custom page management',plugins:'Code injection and plugins',analytics:'Charts and data insights',appearance:'Site content and branding',settings:'Configuration and toggles'};
 
-// Search + Filter
-function bindSearch(i,t){var inp=$('#'+i);if(!inp)return;inp.addEventListener('input',function(){var q=this.value.toLowerCase();$$('#'+t+' tr[data-search]').forEach(function(r){r.style.display=(r.getAttribute('data-search')||'').toLowerCase().indexOf(q)>=0?'':'none'})})}
-bindSearch('search-members','members-table');bindSearch('search-events','events-table');
-var mf=$('#member-filter');if(mf)mf.addEventListener('change',function(){var v=this.value;$$('#members-table tbody tr').forEach(function(r){if(v==='all')r.style.display='';else r.style.display=r.getAttribute('data-status')===v?'':'none'})});
+function showPanel(id){
+  $$('.panel').forEach(function(p){p.classList.remove('active')});
+  var t=$('#panel-'+id);if(t)t.classList.add('active');
+  $$('.nav-item').forEach(function(b){b.classList.remove('active')});
+  $$('.nav-item[data-panel="'+id+'"]').forEach(function(b){b.classList.add('active')});
+  $('#main-title').textContent=panelTitles[id]||id;
+  $('#main-title-sub').textContent=panelSubs[id]||'';
+  // Close mobile sidebar
+  $('#sidebar').classList.remove('mob-open');
+  $('#sidebar-overlay').classList.remove('open');
+  // Lazy load panel data
+  if(!loadedPanels[id]){
+    loadedPanels[id]=true;
+    if(id==='reports')loadReports();
+    if(id==='partners')loadPartners();
+    if(id==='restaurants')loadRestaurants();
+    if(id==='pages')loadPages();
+    if(id==='plugins')loadPlugins();
+    if(id==='analytics')loadAnalytics();
+    if(id==='settings'||id==='appearance')loadSettings();
+  }
+}
 
-// Actions
+$$('[data-panel]').forEach(function(b){b.addEventListener('click',function(e){
+  e.preventDefault();showPanel(this.getAttribute('data-panel'));
+})});
+
+// Sidebar toggle
+$('#sidebar-toggle').addEventListener('click',function(){
+  var sb=$('#sidebar'),mn=$('#main');
+  sb.classList.toggle('collapsed');
+  mn.classList.toggle('shifted');
+  this.textContent=sb.classList.contains('collapsed')?'▶':'◀';
+});
+
+// Mobile sidebar
+$('#mob-sidebar-toggle').addEventListener('click',function(){
+  $('#sidebar').classList.toggle('mob-open');
+  $('#sidebar-overlay').classList.toggle('open');
+});
+$('#sidebar-overlay').addEventListener('click',function(){
+  $('#sidebar').classList.remove('mob-open');
+  this.classList.remove('open');
+});
+
+// Refresh
+$('#refresh-btn').addEventListener('click',function(){location.reload()});
+
+// ============ SEARCH + FILTER ============
+function bindSearch(inputId,tableId){
+  var inp=$('#'+inputId);if(!inp)return;
+  inp.addEventListener('input',function(){
+    var q=this.value.toLowerCase();
+    $$('#'+tableId+' tr[data-search]').forEach(function(r){
+      r.style.display=(r.getAttribute('data-search')||'').toLowerCase().indexOf(q)>=0?'':'none';
+    });
+  });
+}
+bindSearch('search-members','members-table');
+bindSearch('search-events','events-table');
+
+var mf=$('#member-filter');if(mf)mf.addEventListener('change',function(){
+  var v=this.value;
+  $$('#members-table tbody tr').forEach(function(r){
+    if(v==='all')r.style.display='';
+    else r.style.display=r.getAttribute('data-status')===v?'':'none';
+  });
+});
+
+var ef=$('#event-filter');if(ef)ef.addEventListener('change',function(){
+  var v=this.value;
+  $$('#events-table tbody tr').forEach(function(r){
+    if(v==='all')r.style.display='';
+    else{
+      var st=r.getAttribute('data-estatus');
+      if(v==='upcoming')r.style.display=(st==='upcoming'||st==='featured')?'':'none';
+      else if(v==='past')r.style.display=st==='past'?'':'none';
+      else if(v==='featured')r.style.display=st==='featured'?'':'none';
+      else r.style.display='';
+    }
+  });
+});
+
+var sf=$('#suggestion-filter');if(sf)sf.addEventListener('change',function(){
+  var v=this.value;
+  $$('#suggestions-table tbody tr').forEach(function(r){
+    if(v==='all')r.style.display='';
+    else r.style.display=r.getAttribute('data-sstatus')===v?'':'none';
+  });
+});
+
+// ============ BULK ACTIONS ============
+var selAll=$('#select-all-members');
+if(selAll)selAll.addEventListener('change',function(){
+  var checked=this.checked;
+  $$('.member-check').forEach(function(c){
+    if(c.closest('tr').style.display!=='none')c.checked=checked;
+  });
+  updateBulkBar();
+});
+document.addEventListener('change',function(e){if(e.target.classList.contains('member-check'))updateBulkBar()});
+function updateBulkBar(){
+  var checked=$$('.member-check:checked');
+  var bar=$('#bulk-bar'),cnt=$('#bulk-count');
+  if(checked.length>0){bar.classList.add('show');cnt.textContent=checked.length}
+  else{bar.classList.remove('show')}
+}
+$('#bulk-cancel').addEventListener('click',function(){
+  $$('.member-check').forEach(function(c){c.checked=false});
+  if(selAll)selAll.checked=false;
+  updateBulkBar();
+});
+$('#bulk-approve').addEventListener('click',function(){
+  var ids=[];$$('.member-check:checked').forEach(function(c){ids.push(parseInt(c.value))});
+  if(!ids.length)return;if(!confirm('Approve '+ids.length+' members?'))return;
+  Promise.all(ids.map(function(id){return api('/api/admin/member',{action:'approve',id:id})}))
+    .then(function(){toast('Approved '+ids.length+' members');setTimeout(function(){location.reload()},500)})
+    .catch(function(err){toast('Failed: '+err.message,true)});
+});
+$('#bulk-suspend').addEventListener('click',function(){
+  var ids=[];$$('.member-check:checked').forEach(function(c){ids.push(parseInt(c.value))});
+  if(!ids.length)return;var reason=prompt('Reason for suspending '+ids.length+' members?','Policy violation');
+  if(!reason)return;
+  Promise.all(ids.map(function(id){return api('/api/admin/member',{action:'suspend',id:id,reason:reason})}))
+    .then(function(){toast('Suspended '+ids.length+' members');setTimeout(function(){location.reload()},500)})
+    .catch(function(err){toast('Failed: '+err.message,true)});
+});
+
+// ============ MEMBER + EVENT ACTIONS ============
 document.addEventListener('click',function(e){
   var btn=e.target.closest('[data-action]');if(!btn)return;
   var act=btn.getAttribute('data-action'),id=btn.getAttribute('data-id');
-  if(act==='remove-member'){var nm=btn.getAttribute('data-name');if(!confirm('Remove '+nm+'?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/member',{action:'delete',id:parseInt(id)}).then(function(){toast(nm+' removed.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Remove'})}
-  if(act==='approve-member'){api('/api/admin/member',{action:'approve',id:parseInt(id)}).then(function(){toast('Approved ✓');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}
-  if(act==='suspend-member'){var nm2=btn.getAttribute('data-name');var reason=prompt('Reason for suspending '+nm2+'?','Policy violation');if(!reason)return;api('/api/admin/member',{action:'suspend',id:parseInt(id),reason:reason}).then(function(){toast(nm2+' suspended.');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}
-  if(act==='unsuspend-member'){api('/api/admin/member',{action:'unsuspend',id:parseInt(id)}).then(function(){toast('Unsuspended ✓');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}
-  if(act==='delete-event'){var tt=btn.getAttribute('data-title');if(!confirm('Delete "'+tt+'"?'))return;btn.disabled=true;btn.textContent='...';api('/api/admin/event',{action:'delete',id:parseInt(id)}).then(function(){toast('"'+tt+'" deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Delete'})}
-  if(act==='toggle-feature'){var f=btn.getAttribute('data-featured')==='1';api('/api/admin/event',{action:'feature',id:parseInt(id),featured:!f}).then(function(){toast(f?'Unfeatured':'Featured ⭐');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}
-  if(act==='mark-suggestion'){var st=btn.getAttribute('data-status');api('/api/admin/suggestion',{action:'status',id:parseInt(id),status:st}).then(function(){toast('Marked '+st);setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})}
-  if(act==='delete-suggestion'){if(!confirm('Delete?'))return;api('/api/admin/suggestion',{action:'delete',id:parseInt(id)}).then(function(){toast('Deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true)})}
-  if(act==='delete-announcement'){if(!confirm('Delete?'))return;api('/api/admin/announcement',{action:'delete',id:parseInt(id)}).then(function(){toast('Deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true)})}
-  if(act==='delete-spotlight'){if(!confirm('Delete?'))return;api('/api/admin/spotlight',{action:'delete',id:parseInt(id)}).then(function(){toast('Deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true)})}
+
+  if(act==='remove-member'){
+    var nm=btn.getAttribute('data-name');if(!confirm('Remove '+nm+'?'))return;
+    btn.disabled=true;btn.textContent='...';
+    api('/api/admin/member',{action:'delete',id:parseInt(id)}).then(function(){toast(nm+' removed.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Remove'});
+  }
+  if(act==='approve-member'){
+    api('/api/admin/member',{action:'approve',id:parseInt(id)}).then(function(){toast('Approved');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='suspend-member'){
+    var nm2=btn.getAttribute('data-name');var reason=prompt('Reason for suspending '+nm2+'?','Policy violation');if(!reason)return;
+    api('/api/admin/member',{action:'suspend',id:parseInt(id),reason:reason}).then(function(){toast(nm2+' suspended.');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='unsuspend-member'){
+    api('/api/admin/member',{action:'unsuspend',id:parseInt(id)}).then(function(){toast('Unsuspended');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='delete-event'){
+    var tt=btn.getAttribute('data-title');if(!confirm('Delete "'+tt+'"?'))return;
+    btn.disabled=true;btn.textContent='...';
+    api('/api/admin/event',{action:'delete',id:parseInt(id)}).then(function(){toast('"'+tt+'" deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true);btn.disabled=false;btn.textContent='Delete'});
+  }
+  if(act==='toggle-feature'){
+    var f=btn.getAttribute('data-featured')==='1';
+    api('/api/admin/event',{action:'feature',id:parseInt(id),featured:!f}).then(function(){toast(f?'Unfeatured':'Featured');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='view-rsvps'){
+    var evtTitle=btn.getAttribute('data-title');
+    $('#rsvp-modal-title').textContent='RSVPs for: '+evtTitle;
+    $('#rsvp-modal-body').innerHTML='<div class="empty">Loading...</div>';
+    $('#rsvp-modal').classList.add('open');
+    apiGet('rsvps&event_id='+id).then(function(data){
+      var rsvps=data.results||data||[];
+      if(!rsvps.length){$('#rsvp-modal-body').innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>No RSVPs yet.</p></div>';return}
+      var h='<table><thead><tr><th>Name</th><th>Email</th><th>Plus One</th><th>Status</th></tr></thead><tbody>';
+      rsvps.forEach(function(r){h+='<tr><td class="td-name">'+esc(r.member_name||r.name||'--')+'</td><td class="td-muted">'+esc(r.member_email||r.email||'--')+'</td><td class="td-muted">'+(r.plus_one?'Yes':'No')+'</td><td><span class="badge badge-green">'+(r.status||'confirmed')+'</span></td></tr>'});
+      h+='</tbody></table>';
+      $('#rsvp-modal-body').innerHTML=h;
+    }).catch(function(err){$('#rsvp-modal-body').innerHTML='<div class="empty">Failed to load: '+esc(err.message)+'</div>'});
+  }
+  if(act==='mark-suggestion'){
+    var st=btn.getAttribute('data-status');
+    api('/api/admin/suggestion',{action:'status',id:parseInt(id),status:st}).then(function(){toast('Marked '+st);setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='promote-suggestion'){
+    var sTitle=btn.getAttribute('data-title');if(!confirm('Promote "'+sTitle+'" to a new event?'))return;
+    apiPost({table:'suggestions',action:'promote',id:parseInt(id)}).then(function(){toast('Promoted to event');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='delete-suggestion'){
+    if(!confirm('Delete this suggestion?'))return;
+    api('/api/admin/suggestion',{action:'delete',id:parseInt(id)}).then(function(){toast('Deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='delete-announcement'){
+    if(!confirm('Delete this announcement?'))return;
+    api('/api/admin/announcement',{action:'delete',id:parseInt(id)}).then(function(){toast('Deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='delete-spotlight'){
+    if(!confirm('Delete this spotlight?'))return;
+    api('/api/admin/spotlight',{action:'delete',id:parseInt(id)}).then(function(){toast('Deleted.');var r=btn.closest('tr');if(r)r.remove()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='resolve-report'){
+    apiPost({table:'reports',action:'resolve',id:parseInt(id)}).then(function(){toast('Report resolved');loadReports()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='dismiss-report'){
+    apiPost({table:'reports',action:'dismiss',id:parseInt(id)}).then(function(){toast('Report dismissed');loadReports()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='toggle-partner'){
+    var active=btn.getAttribute('data-active')==='1';
+    apiPost({table:'partners',action:'update',id:parseInt(id),active:active?0:1}).then(function(){toast(active?'Deactivated':'Activated');loadPartners()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='delete-partner'){
+    if(!confirm('Delete this partner?'))return;
+    apiPost({table:'partners',action:'delete',id:parseInt(id)}).then(function(){toast('Deleted');loadPartners()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='delete-restaurant'){
+    if(!confirm('Delete this restaurant?'))return;
+    apiPost({table:'restaurants',action:'delete',id:parseInt(id)}).then(function(){toast('Deleted');loadRestaurants()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='edit-restaurant'){
+    var restData=window.__restaurants||[];
+    var rest=null;restData.forEach(function(r){if(String(r.id)===String(id))rest=r});
+    if(!rest)return;
+    $('#rest-name').value=rest.name||'';$('#rest-zone').value=rest.zone||'';
+    $('#rest-category').value=rest.category||'';$('#rest-price').value=rest.price_range||'$$';
+    $('#rest-address').value=rest.address||'';$('#rest-phone').value=rest.phone||'';
+    $('#rest-rating').value=rest.rating||'';$('#rest-hours').value=rest.hours||'';
+    $('#rest-notes').value=rest.notes||'';$('#rest-edit-id').value=rest.id;
+    $('#restaurant-modal-title').textContent='Edit Restaurant';
+    $('#restaurant-modal').classList.add('open');
+  }
+  if(act==='delete-page'){
+    if(!confirm('Delete this page?'))return;
+    apiPost({table:'pages',action:'delete',id:parseInt(id)}).then(function(){toast('Deleted');loadPages()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='toggle-page'){
+    var pub=btn.getAttribute('data-published')==='1';
+    apiPost({table:'pages',action:'update',id:parseInt(id),published:pub?0:1}).then(function(){toast(pub?'Unpublished':'Published');loadPages()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='delete-plugin'){
+    if(!confirm('Delete this plugin?'))return;
+    apiPost({table:'plugins',action:'delete',id:parseInt(id)}).then(function(){toast('Deleted');loadPlugins()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
+  if(act==='toggle-plugin'){
+    var en=btn.getAttribute('data-enabled')==='1';
+    apiPost({table:'plugins',action:'update',id:parseInt(id),enabled:en?0:1}).then(function(){toast(en?'Disabled':'Enabled');loadPlugins()}).catch(function(err){toast('Failed: '+err.message,true)});
+  }
   if(act==='view-member'){
     var mem=null;(window.__members||[]).forEach(function(m){if(String(m.id)===String(id))mem=m});
     if(!mem)return;
     $('#modal-member-name').textContent=mem.name||mem.email;
-    var rows=[['Email',mem.email],['Neighborhood',mem.neighborhood||'—'],['Bio',mem.bio||'—'],['Role',mem.role||'member'],['Discord',mem.discord_username||'—'],['Age range',mem.age_range||'—'],['Interests',mem.interests||'—'],['Event types',mem.event_types||'—'],['Food prefs',mem.food_prefs||'—'],['Points',mem.points||0],['Events attended',mem.events_attended||0],['No-shows',mem.no_show_count||0],['Joined',mem.joined_at?.slice(0,10)||'—'],['Referral code',mem.referral_code||'—'],['Status',mem.suspended?'Suspended ('+mem.suspended_reason+')':mem.approved?'Active':'Pending approval']];
-    var html='';rows.forEach(function(r){html+='<div class="detail-row"><span class="detail-key">'+r[0]+'</span><span class="detail-val">'+r[1]+'</span></div>'});
+    var rows=[['Email',mem.email],['Neighborhood',mem.neighborhood||'--'],['Bio',mem.bio||'--'],['Role',mem.role||'member'],['Discord',mem.discord_username||'--'],['Phone',mem.phone||'--'],['Age Range',mem.age_range||'--'],['Interests',mem.interests||'--'],['Event Types',mem.event_types||'--'],['Food Prefs',mem.food_prefs||'--'],['Points',mem.points||0],['Events Attended',mem.events_attended||0],['No-Shows',mem.no_show_count||0],['Joined',mem.joined_at?mem.joined_at.slice(0,10):'--'],['Referral Code',mem.referral_code||'--'],['Status',mem.suspended?'Suspended'+(mem.suspended_reason?' ('+mem.suspended_reason+')':''):mem.approved?'Active':'Pending Approval']];
+    var html='';rows.forEach(function(r){html+='<div class="detail-row"><span class="detail-key">'+esc(String(r[0]))+'</span><span class="detail-val">'+esc(String(r[1]))+'</span></div>'});
     $('#modal-member-body').innerHTML=html;
-    var acts='<button class="btn btn-sm" onclick="document.getElementById(\'member-modal\').classList.remove(\'open\')">Close</button>';
-    if(!mem.approved)acts+='<button class="btn btn-sm" data-action="approve-member" data-id="'+mem.id+'">✓ Approve</button>';
+    var acts='';
+    if(!mem.approved)acts+='<button class="btn btn-sm" data-action="approve-member" data-id="'+mem.id+'">Approve</button>';
     if(mem.suspended)acts+='<button class="btn btn-sm" data-action="unsuspend-member" data-id="'+mem.id+'">Unsuspend</button>';
-    else acts+='<button class="btn btn-sm del" data-action="suspend-member" data-id="'+mem.id+'" data-name="'+(mem.name||mem.email)+'">Suspend</button>';
+    else acts+='<button class="btn btn-sm del" data-action="suspend-member" data-id="'+mem.id+'" data-name="'+esc(mem.name||mem.email)+'">Suspend</button>';
+    acts+='<button class="btn btn-sm del" data-action="remove-member" data-id="'+mem.id+'" data-name="'+esc(mem.name||mem.email)+'">Remove</button>';
     $('#modal-member-actions').innerHTML=acts;
     $('#member-modal').classList.add('open');
   }
 });
 
-// Close modal
-$('#close-modal').addEventListener('click',function(){$('#member-modal').classList.remove('open')});
+// ============ MODALS ============
+$('#close-member-modal').addEventListener('click',function(){$('#member-modal').classList.remove('open')});
 $('#member-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
+$('#close-rsvp-modal').addEventListener('click',function(){$('#rsvp-modal').classList.remove('open')});
+$('#rsvp-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
+$('#close-edit-modal').addEventListener('click',function(){$('#edit-modal').classList.remove('open')});
+$('#edit-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
+$('#close-restaurant-modal').addEventListener('click',function(){$('#restaurant-modal').classList.remove('open')});
+$('#restaurant-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
 
-// Announcements
-$('#post-announcement').addEventListener('click',function(){var t=$('#new-announcement').value.trim();if(!t){toast('Write something.',true);return}api('/api/admin/announcement',{action:'create',text:t}).then(function(){toast('Posted ✓');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})});
+// ============ ANNOUNCEMENTS ============
+$('#post-announcement').addEventListener('click',function(){
+  var t=$('#new-announcement').value.trim();if(!t){toast('Write something.',true);return}
+  api('/api/admin/announcement',{action:'create',text:t}).then(function(){toast('Posted');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)});
+});
 
-// Spotlights
-$('#post-spotlight').addEventListener('click',function(){var e=$('#spot-email').value.trim(),w=$('#spot-week').value.trim(),b=$('#spot-blurb').value.trim();if(!e||!w||!b){toast('Fill all fields.',true);return}api('/api/admin/spotlight',{action:'create',member_email:e,week_of:w,blurb:b}).then(function(){toast('Spotlight added ✓');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)})});
+// ============ SPOTLIGHTS ============
+$('#post-spotlight').addEventListener('click',function(){
+  var e=$('#spot-email').value.trim(),w=$('#spot-week').value.trim(),b=$('#spot-blurb').value.trim();
+  if(!e||!w||!b){toast('Fill all fields.',true);return}
+  api('/api/admin/spotlight',{action:'create',member_email:e,week_of:w,blurb:b}).then(function(){toast('Spotlight added');setTimeout(function(){location.reload()},400)}).catch(function(err){toast('Failed: '+err.message,true)});
+});
 
-// Create event
+// ============ CREATE EVENT ============
 $('#toggle-create').addEventListener('click',function(){$('#create-event-form').classList.toggle('open')});
 $('#cancel-create').addEventListener('click',function(){$('#create-event-form').classList.remove('open')});
-var typeHints={dinner:{title:'e.g. RiNo Ramen Night',loc:'e.g. Uncle Ramen',price:'$20-30/person',desc:'Dietary notes?'},brewery:{title:'e.g. Brewery Crawl',loc:'e.g. Sunnyside',price:'$15-25',desc:'How many stops?'},outdoor:{title:'e.g. Bear Creek Hike',loc:'e.g. Bear Creek Trail',price:'Free',desc:'Distance? Terrain?'},game_night:{title:'e.g. Game Night — RiNo',loc:'e.g. Board game cafe',price:'Free/$5',desc:'What games?'},bowling:{title:'e.g. Cosmic Bowling',loc:'e.g. Punch Bowl Social',price:'$15-20',desc:'Lanes?'},sports:{title:'e.g. Rockies Game',loc:'e.g. Coors Field',price:'$25-40/ticket',desc:'Tailgate?'},music:{title:'e.g. Red Rocks Night',loc:'e.g. Red Rocks',price:'$30-60',desc:'Who\'s playing?'},arts:{title:'e.g. Paint & Sip',loc:'e.g. Painting w/ Twist',price:'$35',desc:'Supplies included?'},coffee:{title:'e.g. Sunday Coffee',loc:'e.g. Crema — RiNo',price:'Buy your own',desc:'Casual hangout?'},casino:{title:'e.g. Blackhawk Night',loc:'e.g. Isle Casino',price:'Bring $50-100',desc:'Carpool?'},potluck:{title:'e.g. Summer Potluck',loc:'e.g. Wash Park Pavilion',price:'Free — bring a dish',desc:'Theme?'},social:{title:'e.g. Block Party',loc:'e.g. RiNo Art District',price:'Free',desc:'Vibe?'},other:{title:'e.g. Custom Event',loc:'Location',price:'Varies',desc:'Details?'}};
-function showTypeFields(type){$$('.evt-field').forEach(function(f){var ft=f.getAttribute('data-for');f.classList.toggle('show',ft==='all'||ft.split(' ').indexOf(type)>=0)});var h=typeHints[type]||typeHints.other;$('#evt-title').placeholder=h.title;$('#evt-location').placeholder=h.loc;$('#evt-price').placeholder=h.price;$('#evt-desc').placeholder=h.desc;$('#evt-core').style.display=''}
-$$('.type-chip').forEach(function(c){c.addEventListener('click',function(){$$('.type-chip').forEach(function(x){x.classList.remove('selected')});this.classList.add('selected');$('#evt-type').value=this.getAttribute('data-type');showTypeFields(this.getAttribute('data-type'))})});
-$('#submit-event').addEventListener('click',function(){var t=$('#evt-title').value.trim(),ty=$('#evt-type').value;if(!ty){toast('Pick a type.',true);return}if(!t){toast('Name it.',true);return}var b={action:'create',title:t,event_type:ty,location:$('#evt-location').value.trim(),zone:$('#evt-zone').value.trim(),event_month:$('#evt-month').value,event_day:$('#evt-day').value.trim(),spots:$('#evt-spots').value,price_cap:$('#evt-price').value.trim(),description:$('#evt-desc').value.trim(),featured:$('#evt-featured').checked,plus_one_allowed:$('#evt-plusone')?$('#evt-plusone').value:'1'};
-function g(id){var el=$('#'+id);return el&&el.offsetParent?el.value:''}
-if(g('evt-difficulty'))b.difficulty=g('evt-difficulty');if(g('evt-pet'))b.pet_friendly=parseInt(g('evt-pet'));if(g('evt-cell'))b.cell_service=g('evt-cell');if(g('evt-packing'))b.packing_list=g('evt-packing');if(g('evt-reservation'))b.reservation_by=g('evt-reservation');if(g('evt-ppp'))b.price_per_person=g('evt-ppp');if(g('evt-payment'))b.payment_link=g('evt-payment');if(g('evt-mingroup'))b.min_group_size=parseInt(g('evt-mingroup'));if(g('evt-deposit')){b.deposit_required=parseInt(g('evt-deposit'));b.deposit_amount=parseFloat(g('evt-depositamt'))||10}if(g('evt-deadline'))b.commit_deadline=g('evt-deadline');if(g('evt-potluck-cats'))b.potluck_categories=g('evt-potluck-cats');if(g('evt-potluck-host'))b.reservation_by=g('evt-potluck-host');if(g('evt-potluck-bring'))b.packing_list=g('evt-potluck-bring');
-api('/api/admin/event',b).then(function(){toast('Created! 🎉');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});
 
-// Settings
-function gatherAll(){var s={};$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');s[k]=el.type==='checkbox'?(el.checked?'1':'0'):el.value});return s}
-function doSave(){api('/api/admin/settings',gatherAll()).then(function(){toast('Saved ✓')}).catch(function(err){toast('Failed: '+err.message,true)})}
+var typeHints={dinner:{title:'e.g. RiNo Ramen Night',loc:'e.g. Uncle Ramen',price:'$20-30/person',desc:'Dietary notes?'},brewery:{title:'e.g. Brewery Crawl',loc:'e.g. Sunnyside',price:'$15-25',desc:'How many stops?'},outdoor:{title:'e.g. Bear Creek Hike',loc:'e.g. Bear Creek Trail',price:'Free',desc:'Distance? Terrain?'},game_night:{title:'e.g. Game Night',loc:'e.g. Board game cafe',price:'Free/$5',desc:'What games?'},bowling:{title:'e.g. Cosmic Bowling',loc:'e.g. Punch Bowl Social',price:'$15-20',desc:'Lanes?'},sports:{title:'e.g. Rockies Game',loc:'e.g. Coors Field',price:'$25-40/ticket',desc:'Tailgate?'},music:{title:'e.g. Red Rocks Night',loc:'e.g. Red Rocks',price:'$30-60',desc:'Who is playing?'},arts:{title:'e.g. Paint and Sip',loc:'e.g. Painting w/ Twist',price:'$35',desc:'Supplies included?'},coffee:{title:'e.g. Sunday Coffee',loc:'e.g. Crema',price:'Buy your own',desc:'Casual hangout?'},casino:{title:'e.g. Blackhawk Night',loc:'e.g. Isle Casino',price:'Bring $50-100',desc:'Carpool?'},potluck:{title:'e.g. Summer Potluck',loc:'e.g. Wash Park',price:'Free - bring a dish',desc:'Theme?'},social:{title:'e.g. Block Party',loc:'e.g. RiNo Art District',price:'Free',desc:'Vibe?'},other:{title:'e.g. Custom Event',loc:'Location',price:'Varies',desc:'Details?'}};
+
+function showTypeFields(type){
+  $$('.evt-field').forEach(function(f){
+    var ft=f.getAttribute('data-for');
+    f.classList.toggle('show',ft==='all'||ft.split(' ').indexOf(type)>=0);
+  });
+  var h=typeHints[type]||typeHints.other;
+  $('#evt-title').placeholder=h.title;$('#evt-location').placeholder=h.loc;
+  $('#evt-price').placeholder=h.price;$('#evt-desc').placeholder=h.desc;
+  $('#evt-core').style.display='';
+}
+
+$$('.type-chip').forEach(function(c){c.addEventListener('click',function(){
+  $$('.type-chip').forEach(function(x){x.classList.remove('selected')});
+  this.classList.add('selected');
+  $('#evt-type').value=this.getAttribute('data-type');
+  showTypeFields(this.getAttribute('data-type'));
+})});
+
+$('#submit-event').addEventListener('click',function(){
+  var t=$('#evt-title').value.trim(),ty=$('#evt-type').value;
+  if(!ty){toast('Pick a type.',true);return}
+  if(!t){toast('Name the event.',true);return}
+  var b={action:'create',title:t,event_type:ty,location:$('#evt-location').value.trim(),zone:$('#evt-zone').value.trim(),event_month:$('#evt-month').value,event_day:$('#evt-day').value.trim(),spots:$('#evt-spots').value,price_cap:$('#evt-price').value.trim(),description:$('#evt-desc').value.trim(),featured:$('#evt-featured').checked,plus_one_allowed:$('#evt-plusone')?$('#evt-plusone').value:'1'};
+  function g(id){var el=$('#'+id);return el&&el.offsetParent?el.value:''}
+  if(g('evt-difficulty'))b.difficulty=g('evt-difficulty');
+  if(g('evt-pet'))b.pet_friendly=parseInt(g('evt-pet'));
+  if(g('evt-cell'))b.cell_service=g('evt-cell');
+  if(g('evt-packing'))b.packing_list=g('evt-packing');
+  if(g('evt-reservation'))b.reservation_by=g('evt-reservation');
+  if(g('evt-ppp'))b.price_per_person=g('evt-ppp');
+  if(g('evt-payment'))b.payment_link=g('evt-payment');
+  if(g('evt-mingroup'))b.min_group_size=parseInt(g('evt-mingroup'));
+  if(g('evt-deposit')){b.deposit_required=parseInt(g('evt-deposit'));b.deposit_amount=parseFloat(g('evt-depositamt'))||10}
+  if(g('evt-deadline'))b.commit_deadline=g('evt-deadline');
+  if(g('evt-potluck-cats'))b.potluck_categories=g('evt-potluck-cats');
+  if(g('evt-potluck-host'))b.reservation_by=g('evt-potluck-host');
+  if(g('evt-potluck-bring'))b.packing_list=g('evt-potluck-bring');
+  api('/api/admin/event',b).then(function(){toast('Event created');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)});
+});
+
+// ============ REPORTS ============
+function loadReports(){
+  apiGet('reports').then(function(data){
+    var reports=data.results||data||[];
+    $('#reports-count').textContent=reports.length+' total';
+    if(!reports.length){$('#reports-body').innerHTML='<div class="empty"><div class="empty-icon">🛡️</div><p>No reports. Community is peaceful.</p></div>';return}
+    var h='<table><thead><tr><th>Reported Member</th><th>Reporter</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+    reports.forEach(function(r){
+      var statusBadge=r.status==='resolved'?'badge-green':r.status==='dismissed'?'badge-muted':'badge-orange';
+      h+='<tr><td class="td-name">'+esc(r.reported_member_name||'ID:'+r.reported_member_id)+'</td>';
+      h+='<td class="td-muted">'+esc(r.reporter_email||'--')+'</td>';
+      h+='<td class="td-muted" style="max-width:200px;word-break:break-word">'+esc(r.reason||'--')+(r.details?' - '+esc(r.details):'')+'</td>';
+      h+='<td><span class="badge '+statusBadge+'">'+(r.status||'pending')+'</span></td>';
+      h+='<td class="td-actions">';
+      if(r.status==='pending'){
+        h+='<button class="btn btn-sm" data-action="resolve-report" data-id="'+r.id+'">Resolve</button>';
+        h+='<button class="btn btn-sm del" data-action="dismiss-report" data-id="'+r.id+'">Dismiss</button>';
+      }
+      h+='</td></tr>';
+    });
+    h+='</tbody></table>';
+    $('#reports-body').innerHTML=h;
+  }).catch(function(err){$('#reports-body').innerHTML='<div class="empty">Failed to load reports: '+esc(err.message)+'</div>'});
+}
+
+// ============ PARTNERS ============
+function loadPartners(){
+  apiGet('partners').then(function(data){
+    var partners=data.results||data||[];
+    if(!partners.length){$('#partners-body').innerHTML='<div class="empty"><div class="empty-icon">🤝</div><p>No partners yet.</p></div>';return}
+    var h='<table><thead><tr><th>Business</th><th>Category</th><th>Neighborhood</th><th>Deal</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+    partners.forEach(function(p){
+      h+='<tr data-search="'+esc(p.business_name+' '+p.neighborhood+' '+p.category)+'">';
+      h+='<td class="td-name">'+(p.logo_emoji||'🏪')+' '+esc(p.business_name||'--')+'</td>';
+      h+='<td class="td-muted">'+esc(p.category||'--')+'</td>';
+      h+='<td class="td-muted">'+esc(p.neighborhood||'--')+'</td>';
+      h+='<td class="td-muted" style="max-width:180px;word-break:break-word">'+esc(p.deal||'--')+'</td>';
+      h+='<td>'+(p.active?'<span class="badge badge-green">Active</span>':'<span class="badge badge-muted">Inactive</span>')+'</td>';
+      h+='<td class="td-actions"><button class="btn btn-sm" data-action="toggle-partner" data-id="'+p.id+'" data-active="'+(p.active?'1':'0')+'">'+(p.active?'Deactivate':'Activate')+'</button><button class="btn btn-sm del" data-action="delete-partner" data-id="'+p.id+'">Delete</button></td></tr>';
+    });
+    h+='</tbody></table>';$('#partners-body').innerHTML=h;
+    // Bind search
+    var si=$('#search-partners');if(si){si.oninput=function(){var q=this.value.toLowerCase();$('#partners-body').querySelectorAll('tr[data-search]').forEach(function(r){r.style.display=(r.getAttribute('data-search')||'').toLowerCase().indexOf(q)>=0?'':'none'})}}
+  }).catch(function(err){$('#partners-body').innerHTML='<div class="empty">Failed: '+esc(err.message)+'</div>'});
+
+  apiGet('partner_inquiries').then(function(data){
+    var inq=data.results||data||[];
+    if(!inq.length){$('#inquiries-body').innerHTML='<div class="empty"><div class="empty-icon">📨</div><p>No inquiries yet.</p></div>';return}
+    var h='<table><thead><tr><th>Business</th><th>Contact</th><th>Message</th><th>Date</th></tr></thead><tbody>';
+    inq.forEach(function(i){
+      h+='<tr><td class="td-name">'+esc(i.business_name||'--')+'</td><td class="td-muted">'+esc(i.contact_email||i.email||'--')+'</td><td class="td-muted" style="max-width:250px;word-break:break-word">'+esc(i.message||'--')+'</td><td class="td-muted">'+esc((i.created_at||'--').slice(0,10))+'</td></tr>';
+    });
+    h+='</tbody></table>';$('#inquiries-body').innerHTML=h;
+  }).catch(function(){});
+}
+
+$('#toggle-partner-form').addEventListener('click',function(){$('#create-partner-form').classList.toggle('open')});
+$('#cancel-partner').addEventListener('click',function(){$('#create-partner-form').classList.remove('open')});
+$('#submit-partner').addEventListener('click',function(){
+  var name=$('#partner-name').value.trim();if(!name){toast('Enter business name.',true);return}
+  apiPost({table:'partners',action:'create',business_name:name,neighborhood:$('#partner-hood').value.trim(),category:$('#partner-category').value.trim(),logo_emoji:$('#partner-emoji').value.trim()||'🏪',deal:$('#partner-deal').value.trim(),promo_code:$('#partner-promo').value.trim(),how_to_claim:$('#partner-claim').value.trim(),website:$('#partner-website').value.trim(),active:1})
+    .then(function(){toast('Partner added');$('#create-partner-form').classList.remove('open');loadPartners()})
+    .catch(function(err){toast('Failed: '+err.message,true)});
+});
+
+// ============ RESTAURANTS ============
+function loadRestaurants(){
+  apiGet('restaurants').then(function(data){
+    var rests=data.results||data||[];
+    window.__restaurants=rests;
+    // Populate zone filter
+    var zones={};rests.forEach(function(r){if(r.zone)zones[r.zone]=true});
+    var sel=$('#restaurant-zone-filter');
+    sel.innerHTML='<option value="all">All Zones ('+rests.length+')</option>';
+    Object.keys(zones).sort().forEach(function(z){sel.innerHTML+='<option value="'+esc(z)+'">'+esc(z)+'</option>'});
+    renderRestaurants(rests);
+  }).catch(function(err){$('#restaurants-body').innerHTML='<div class="empty">Failed: '+esc(err.message)+'</div>'});
+}
+function renderRestaurants(rests){
+  if(!rests.length){$('#restaurants-body').innerHTML='<div class="empty"><div class="empty-icon">🍽️</div><p>No restaurants found.</p></div>';return}
+  var h='<table><thead><tr><th>Name</th><th>Zone</th><th>Category</th><th>Price</th><th>Rating</th><th>Actions</th></tr></thead><tbody>';
+  rests.forEach(function(r){
+    h+='<tr data-search="'+esc((r.name||'')+' '+(r.zone||'')+' '+(r.category||''))+'" data-rzone="'+esc(r.zone||'')+'">';
+    h+='<td class="td-name">'+esc(r.name||'--')+'</td>';
+    h+='<td class="td-muted">'+esc(r.zone||'--')+'</td>';
+    h+='<td class="td-muted">'+esc(r.category||'--')+'</td>';
+    h+='<td class="td-muted">'+esc(r.price_range||'--')+'</td>';
+    h+='<td class="td-muted">'+(r.rating||'--')+'</td>';
+    h+='<td class="td-actions"><button class="btn btn-sm" data-action="edit-restaurant" data-id="'+r.id+'">Edit</button><button class="btn btn-sm del" data-action="delete-restaurant" data-id="'+r.id+'">Delete</button></td></tr>';
+  });
+  h+='</tbody></table>';
+  $('#restaurants-body').innerHTML=h;
+}
+$('#search-restaurants').addEventListener('input',function(){
+  var q=this.value.toLowerCase();
+  $('#restaurants-body').querySelectorAll('tr[data-search]').forEach(function(r){
+    r.style.display=(r.getAttribute('data-search')||'').toLowerCase().indexOf(q)>=0?'':'none';
+  });
+});
+$('#restaurant-zone-filter').addEventListener('change',function(){
+  var v=this.value;
+  $('#restaurants-body').querySelectorAll('tr[data-rzone]').forEach(function(r){
+    if(v==='all')r.style.display='';
+    else r.style.display=r.getAttribute('data-rzone')===v?'':'none';
+  });
+});
+$('#add-restaurant-btn').addEventListener('click',function(){
+  $('#rest-name').value='';$('#rest-zone').value='';$('#rest-category').value='';$('#rest-price').value='$$';
+  $('#rest-address').value='';$('#rest-phone').value='';$('#rest-rating').value='';$('#rest-hours').value='';
+  $('#rest-notes').value='';$('#rest-edit-id').value='';
+  $('#restaurant-modal-title').textContent='Add Restaurant';
+  $('#restaurant-modal').classList.add('open');
+});
+$('#save-restaurant').addEventListener('click',function(){
+  var name=$('#rest-name').value.trim();if(!name){toast('Enter restaurant name.',true);return}
+  var editId=$('#rest-edit-id').value;
+  var payload={table:'restaurants',action:editId?'update':'create',name:name,zone:$('#rest-zone').value.trim(),category:$('#rest-category').value.trim(),price_range:$('#rest-price').value,address:$('#rest-address').value.trim(),phone:$('#rest-phone').value.trim(),rating:parseFloat($('#rest-rating').value)||null,hours:$('#rest-hours').value.trim(),notes:$('#rest-notes').value.trim()};
+  if(editId)payload.id=parseInt(editId);
+  apiPost(payload).then(function(){toast(editId?'Updated':'Added');$('#restaurant-modal').classList.remove('open');loadRestaurants()}).catch(function(err){toast('Failed: '+err.message,true)});
+});
+
+// ============ PAGES ============
+function loadPages(){
+  apiGet('pages').then(function(data){
+    var pages=data.results||data||[];
+    if(!pages.length){$('#pages-body').innerHTML='<div class="empty"><div class="empty-icon">📄</div><p>No custom pages.</p></div>';return}
+    var h='<table><thead><tr><th>Title</th><th>Slug</th><th>Published</th><th>In Nav</th><th>Actions</th></tr></thead><tbody>';
+    pages.forEach(function(p){
+      h+='<tr><td class="td-name">'+esc(p.title||'--')+'</td>';
+      h+='<td class="td-muted">/'+esc(p.slug||'--')+'</td>';
+      h+='<td>'+(p.published?'<span class="badge badge-green">Yes</span>':'<span class="badge badge-muted">No</span>')+'</td>';
+      h+='<td>'+(p.show_in_nav?'<span class="badge badge-blue">Yes</span>':'<span class="badge badge-muted">No</span>')+'</td>';
+      h+='<td class="td-actions"><button class="btn btn-sm" data-action="toggle-page" data-id="'+p.id+'" data-published="'+(p.published?'1':'0')+'">'+(p.published?'Unpublish':'Publish')+'</button><button class="btn btn-sm del" data-action="delete-page" data-id="'+p.id+'">Delete</button></td></tr>';
+    });
+    h+='</tbody></table>';$('#pages-body').innerHTML=h;
+  }).catch(function(err){$('#pages-body').innerHTML='<div class="empty">Failed: '+esc(err.message)+'</div>'});
+}
+$('#toggle-page-form').addEventListener('click',function(){$('#create-page-form').classList.toggle('open')});
+$('#cancel-page').addEventListener('click',function(){$('#create-page-form').classList.remove('open')});
+$('#submit-page').addEventListener('click',function(){
+  var title=$('#page-title').value.trim();if(!title){toast('Enter title.',true);return}
+  var slug=$('#page-slug').value.trim()||title.toLowerCase().replace(/[^a-z0-9]+/g,'-');
+  apiPost({table:'pages',action:'create',title:title,slug:slug,content:$('#page-content').value,nav_label:$('#page-nav-label').value.trim(),show_in_nav:$('#page-show-nav').checked?1:0,published:$('#page-published').checked?1:0})
+    .then(function(){toast('Page created');$('#create-page-form').classList.remove('open');loadPages()})
+    .catch(function(err){toast('Failed: '+err.message,true)});
+});
+
+// ============ PLUGINS ============
+function loadPlugins(){
+  apiGet('plugins').then(function(data){
+    var plugins=data.results||data||[];
+    if(!plugins.length){$('#plugins-body').innerHTML='<div class="empty"><div class="empty-icon">🧩</div><p>No plugins installed.</p></div>';return}
+    var h='<table><thead><tr><th>Name</th><th>Type</th><th>Location</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+    plugins.forEach(function(p){
+      h+='<tr><td class="td-name">'+esc(p.name||'--')+'</td>';
+      h+='<td class="td-muted">'+esc(p.type||'--')+'</td>';
+      h+='<td class="td-muted">'+esc(p.location||'--')+'</td>';
+      h+='<td>'+(p.enabled?'<span class="badge badge-green">Active</span>':'<span class="badge badge-muted">Disabled</span>')+'</td>';
+      h+='<td class="td-actions"><button class="btn btn-sm" data-action="toggle-plugin" data-id="'+p.id+'" data-enabled="'+(p.enabled?'1':'0')+'">'+(p.enabled?'Disable':'Enable')+'</button><button class="btn btn-sm del" data-action="delete-plugin" data-id="'+p.id+'">Delete</button></td></tr>';
+    });
+    h+='</tbody></table>';$('#plugins-body').innerHTML=h;
+  }).catch(function(err){$('#plugins-body').innerHTML='<div class="empty">Failed: '+esc(err.message)+'</div>'});
+}
+$('#toggle-plugin-form').addEventListener('click',function(){$('#create-plugin-form').classList.toggle('open')});
+$('#cancel-plugin').addEventListener('click',function(){$('#create-plugin-form').classList.remove('open')});
+$('#submit-plugin').addEventListener('click',function(){
+  var name=$('#plugin-name').value.trim();if(!name){toast('Enter name.',true);return}
+  apiPost({table:'plugins',action:'create',name:name,type:$('#plugin-type').value,location:$('#plugin-location').value,description:$('#plugin-description').value.trim(),code:$('#plugin-code').value,enabled:1})
+    .then(function(){toast('Plugin added');$('#create-plugin-form').classList.remove('open');loadPlugins()})
+    .catch(function(err){toast('Failed: '+err.message,true)});
+});
+
+// ============ ANALYTICS ============
+function loadAnalytics(){
+  var script=document.createElement('script');
+  script.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+  script.onload=function(){
+    chartJS=window.Chart;
+    apiGet('analytics').then(function(data){
+      var d=data||{};
+      var chartCfg={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#8A859E',font:{size:10}}},tooltip:{backgroundColor:'rgba(20,18,30,0.95)',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#E8E6F0',bodyColor:'#8A859E',padding:10,cornerRadius:8}},scales:{x:{ticks:{color:'#5A5672',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#5A5672',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}};
+
+      // Members by Month
+      if(d.membersByMonth&&d.membersByMonth.length){
+        var labels=d.membersByMonth.map(function(i){return i.month||i.label||''});
+        var vals=d.membersByMonth.map(function(i){return i.count||i.value||0});
+        new chartJS($('#chart-members'),{type:'line',data:{labels:labels,datasets:[{label:'Members',data:vals,borderColor:'#A78BFA',backgroundColor:'rgba(167,139,250,0.1)',fill:true,tension:0.4,pointRadius:3}]},options:chartCfg});
+      }
+
+      // Events by Type
+      if(d.eventsByType&&d.eventsByType.length){
+        var tLabels=d.eventsByType.map(function(i){return i.type||i.label||''});
+        var tVals=d.eventsByType.map(function(i){return i.count||i.value||0});
+        var colors=['#A78BFA','#38BDF8','#F472B6','#34D399','#FB923C','#EF4444','#FBBF24','#818CF8','#6EE7B7','#F9A8D4','#93C5FD','#FCA5A5'];
+        new chartJS($('#chart-events-type'),{type:'doughnut',data:{labels:tLabels,datasets:[{data:tVals,backgroundColor:colors.slice(0,tLabels.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#8A859E',font:{size:10},padding:8}}}}});
+      }
+
+      // RSVPs by Month
+      if(d.rsvpsByMonth&&d.rsvpsByMonth.length){
+        var rLabels=d.rsvpsByMonth.map(function(i){return i.month||i.label||''});
+        var rVals=d.rsvpsByMonth.map(function(i){return i.count||i.value||0});
+        new chartJS($('#chart-rsvps'),{type:'bar',data:{labels:rLabels,datasets:[{label:'RSVPs',data:rVals,backgroundColor:'rgba(56,189,248,0.5)',borderColor:'#38BDF8',borderWidth:1,borderRadius:4}]},options:chartCfg});
+      }
+
+      // Top Events
+      if(d.topEvents&&d.topEvents.length){
+        var eLabels=d.topEvents.map(function(i){return(i.title||'').substring(0,20)});
+        var eVals=d.topEvents.map(function(i){return i.rsvp_count||i.count||0});
+        new chartJS($('#chart-top-events'),{type:'bar',data:{labels:eLabels,datasets:[{label:'RSVPs',data:eVals,backgroundColor:'rgba(244,114,182,0.5)',borderColor:'#F472B6',borderWidth:1,borderRadius:4}]},options:Object.assign({},chartCfg,{indexAxis:'y'})});
+      }
+
+      // Page views
+      if(d.viewsByPath&&d.viewsByPath.length){
+        var pLabels=d.viewsByPath.map(function(i){return i.path||i.label||''});
+        var pVals=d.viewsByPath.map(function(i){return i.count||i.value||0});
+        new chartJS($('#chart-pageviews'),{type:'bar',data:{labels:pLabels,datasets:[{label:'Views',data:pVals,backgroundColor:'rgba(52,211,153,0.5)',borderColor:'#34D399',borderWidth:1,borderRadius:4}]},options:chartCfg});
+      }
+
+      // Ratings
+      if(d.ratingsByEvent&&d.ratingsByEvent.length){
+        var rtLabels=d.ratingsByEvent.map(function(i){return(i.title||'').substring(0,20)});
+        var rtVals=d.ratingsByEvent.map(function(i){return i.avg_rating||i.rating||0});
+        new chartJS($('#chart-ratings'),{type:'bar',data:{labels:rtLabels,datasets:[{label:'Avg Rating',data:rtVals,backgroundColor:'rgba(251,146,60,0.5)',borderColor:'#FB923C',borderWidth:1,borderRadius:4}]},options:chartCfg});
+      }
+
+      // If no data for some charts, show placeholder
+      if(!d.membersByMonth||!d.membersByMonth.length)$('#chart-members').parentElement.innerHTML='<div class="empty" style="padding:20px"><div class="empty-icon">📊</div><p>No data yet</p></div>';
+      if(!d.eventsByType||!d.eventsByType.length)$('#chart-events-type').parentElement.innerHTML='<div class="empty" style="padding:20px"><div class="empty-icon">📊</div><p>No data yet</p></div>';
+      if(!d.rsvpsByMonth||!d.rsvpsByMonth.length)$('#chart-rsvps').parentElement.innerHTML='<div class="empty" style="padding:20px"><div class="empty-icon">📊</div><p>No data yet</p></div>';
+      if(!d.topEvents||!d.topEvents.length)$('#chart-top-events').parentElement.innerHTML='<div class="empty" style="padding:20px"><div class="empty-icon">📊</div><p>No data yet</p></div>';
+      if(!d.viewsByPath||!d.viewsByPath.length)$('#chart-pageviews').parentElement.innerHTML='<div class="empty" style="padding:20px"><div class="empty-icon">📊</div><p>No data yet</p></div>';
+      if(!d.ratingsByEvent||!d.ratingsByEvent.length)$('#chart-ratings').parentElement.innerHTML='<div class="empty" style="padding:20px"><div class="empty-icon">📊</div><p>No data yet</p></div>';
+    }).catch(function(err){console.error('Analytics load error:',err)});
+  };
+  document.head.appendChild(script);
+}
+
+// ============ SETTINGS ============
+function loadSettings(){
+  fetch('/api/admin/settings').then(function(r){return r.json()}).then(function(d){
+    if(d.error)return;
+    $$('[data-setting]').forEach(function(el){
+      var k=el.getAttribute('data-setting');
+      if(d[k]===undefined)return;
+      if(el.type==='checkbox')el.checked=d[k]==='1';
+      else if(el.tagName==='TEXTAREA')el.value=d[k];
+      else el.value=d[k];
+    });
+  }).catch(function(){});
+}
+function gatherAll(){
+  var s={};
+  $$('[data-setting]').forEach(function(el){
+    var k=el.getAttribute('data-setting');
+    s[k]=el.type==='checkbox'?(el.checked?'1':'0'):el.value;
+  });
+  return s;
+}
+function doSave(){
+  api('/api/admin/settings',gatherAll()).then(function(){toast('Saved')}).catch(function(err){toast('Failed: '+err.message,true)});
+}
 $$('.js-save').forEach(function(b){b.addEventListener('click',doSave)});
-fetch('/api/admin/settings').then(function(r){return r.json()}).then(function(d){if(d.error)return;$$('[data-setting]').forEach(function(el){var k=el.getAttribute('data-setting');if(d[k]===undefined)return;if(el.type==='checkbox')el.checked=d[k]==='1';else if(el.tagName==='TEXTAREA')el.textContent=d[k];else el.value=d[k]})}).catch(function(){});
 
-// Danger
-$('#clear-pending').addEventListener('click',function(){if(!confirm('Clear pending?'))return;api('/api/admin/member',{action:'clear_pending'}).then(function(){toast('Cleared.');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});
-$('#export-csv').addEventListener('click',function(){var rows=$$('#members-table tbody tr');if(!rows.length){toast('No members.',true);return}var csv='Name,Email,Neighborhood,Bio,Status\n';rows.forEach(function(row){var cells=row.querySelectorAll('td');var vals=[];for(var i=0;i<5;i++)vals.push('"'+(cells[i]?cells[i].textContent.trim().replace(/"/g,'""'):'')+'"');csv+=vals.join(',')+'\n'});var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='dsn-members-'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('CSV downloaded ✓')});
-$('#clear-past-events').addEventListener('click',function(){if(!confirm('Archive all events?'))return;api('/api/admin/event',{action:'archive_past'}).then(function(){toast('Archived.');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)})});
+// Load settings on init
+loadSettings();
 
-// Theme
-var themeBtn=$('#theme-toggle');function setTheme(dark){if(dark){document.documentElement.classList.add('dark');themeBtn.textContent='🌙'}else{document.documentElement.classList.remove('dark');themeBtn.textContent='☀️'}try{localStorage.setItem('dsn_admin_theme',dark?'dark':'light')}catch(e){}}var saved=null;try{saved=localStorage.getItem('dsn_admin_theme')}catch(e){}setTheme(saved==='dark');themeBtn.addEventListener('click',function(){setTheme(!document.documentElement.classList.contains('dark'))});
+// ============ DANGER ZONE ============
+$('#clear-pending').addEventListener('click',function(){
+  if(!confirm('Clear all pending members? This cannot be undone.'))return;
+  api('/api/admin/member',{action:'clear_pending'}).then(function(){toast('Cleared');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)});
+});
+$('#clear-past-events').addEventListener('click',function(){
+  if(!confirm('Archive all past events?'))return;
+  api('/api/admin/event',{action:'archive_past'}).then(function(){toast('Archived');setTimeout(function(){location.reload()},500)}).catch(function(err){toast('Failed: '+err.message,true)});
+});
+$('#export-csv').addEventListener('click',function(){
+  var members=window.__members||[];
+  if(!members.length){toast('No members.',true);return}
+  var csv='Name,Email,Neighborhood,Role,Status,Events Attended,Points,Joined\n';
+  members.forEach(function(m){
+    var status=m.suspended?'Suspended':m.approved?'Active':'Pending';
+    csv+='"'+((m.name||'').replace(/"/g,'""'))+'","'+(m.email||'')+'","'+((m.neighborhood||'').replace(/"/g,'""'))+'","'+(m.role||'member')+'","'+status+'",'+
+      (m.events_attended||0)+','+(m.points||0)+',"'+((m.joined_at||'').slice(0,10))+'"\n';
+  });
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='dsn-members-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('CSV downloaded');
+});
+$('#export-all-data').addEventListener('click',function(){
+  var data={members:window.__members,events:window.__events};
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download='dsn-data-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  toast('Data exported');
+});
+
+// ============ KEYBOARD SHORTCUTS ============
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    $$('.modal-overlay.open').forEach(function(m){m.classList.remove('open')});
+  }
+});
+
 })();
 </script>
 </AdminBase>
