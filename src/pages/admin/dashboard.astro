@@ -36,7 +36,7 @@ const typeEmoji: Record<string, string> = {
 const membersJSON = JSON.stringify(members.map((m: any) => ({ id:m.id, name:m.name, email:m.email, neighborhood:m.neighborhood, bio:m.bio, role:m.role, onboarding_done:m.onboarding_done, approved:m.approved, suspended:m.suspended, suspended_reason:m.suspended_reason, no_show_count:m.no_show_count, events_attended:m.events_attended, points:m.points, discord_username:m.discord_username, age_range:m.age_range, interests:m.interests, event_types:m.event_types, food_prefs:m.food_prefs, joined_at:m.joined_at, referral_code:m.referral_code })));
 ---
 <AdminBase title="Dashboard — Denver Social">
-<style>
+<style is:inline>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
   :root {
     --bg:#0F1117; --white:rgba(255,255,255,0.04); --card:rgba(255,255,255,0.04);
@@ -165,7 +165,7 @@ const membersJSON = JSON.stringify(members.map((m: any) => ({ id:m.id, name:m.na
   @media(max-width:480px){.stats{grid-template-columns:1fr}}
 </style>
 
-<style is:global>
+<style is:inline>
   html.dark{--bg:#090b10;--white:rgba(255,255,255,0.03);--card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.05);--border-light:rgba(255,255,255,0.04);--text:#E4E2EC;--text-secondary:#8A859E;--text-hint:#5A5672;--accent:#A78BFA;--accent-light:rgba(167,139,250,0.12);--accent-hover:#8B5CF6;--green:#34D399;--green-light:rgba(52,211,153,0.10);--red:#EF4444;--red-light:rgba(239,68,68,0.10);--blue:#38BDF8;--blue-light:rgba(56,189,248,0.10);--purple:#A78BFA;--purple-light:rgba(167,139,250,0.10);--shadow-sm:0 1px 2px rgba(0,0,0,.3);--shadow:0 2px 8px rgba(0,0,0,.35);--shadow-lg:0 8px 32px rgba(0,0,0,.5);--hover-row:rgba(255,255,255,.02)}
   html.dark body{background:var(--bg)!important;color:var(--text)!important}
 </style>
