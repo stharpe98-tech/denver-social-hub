@@ -171,6 +171,28 @@ tr:hover td{background:rgba(255,255,255,0.025)}
 .settings-title{font-family:var(--font-heading);font-size:14px;font-weight:600;margin-bottom:3px}
 .settings-sub{font-size:12px;color:var(--text-secondary);margin-bottom:16px}
 
+/* === APPEARANCE TABS === */
+.app-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto}
+.app-tab{padding:8px 14px;font-size:11px;font-weight:600;font-family:var(--font);border-radius:10px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:all .15s;white-space:nowrap}
+.app-tab:hover{color:var(--text);background:rgba(255,255,255,0.06)}
+.app-tab.active{background:var(--accent-light);color:var(--accent);box-shadow:0 0 10px rgba(167,139,250,0.1)}
+.app-panel{display:none}.app-panel.active{display:block;animation:fadeIn .2s ease}
+
+/* === COLOR PICKERS === */
+.color-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.color-field{display:flex;flex-direction:column;gap:5px}
+.color-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-faint)}
+.color-input-wrap{display:flex;align-items:center;gap:8px}
+.color-picker{width:40px;height:34px;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;background:transparent;padding:2px;-webkit-appearance:none;appearance:none}
+.color-picker::-webkit-color-swatch-wrapper{padding:0;border-radius:4px;overflow:hidden}
+.color-picker::-webkit-color-swatch{border:none;border-radius:4px}
+.color-picker::-moz-color-swatch{border:none;border-radius:4px}
+.color-picker:hover{border-color:var(--accent)}
+.color-hex{width:90px!important;font-family:var(--font-mono)!important;font-size:11px!important;text-transform:uppercase;padding:7px 8px!important}
+.color-hint{font-size:10px;color:var(--text-faint);font-style:italic}
+@media(max-width:768px){.color-grid{grid-template-columns:1fr 1fr}.app-tabs{gap:2px;padding:3px}.app-tab{padding:6px 10px;font-size:10px}}
+@media(max-width:480px){.color-grid{grid-template-columns:1fr}}
+
 /* === TOGGLES === */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-light)}
 .toggle-row:last-of-type{border-bottom:none;padding-bottom:0}
@@ -676,32 +698,395 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
 
     <!-- ═══ APPEARANCE ═══ -->
     <div class="panel" id="panel-appearance">
-      <div class="settings-grid">
-        <div class="settings-card" style="grid-column:span 2">
-          <div class="settings-title">Hero Section</div><div class="settings-sub">Homepage headline and call-to-action.</div>
-          <div class="form-2col">
-            <div class="field" style="grid-column:span 2"><label class="field-label">Heading</label><input class="field-input" data-setting="hero_heading" value="Meet your people. Explore your city." /></div>
-            <div class="field" style="grid-column:span 2"><label class="field-label">Subheading</label><textarea class="field-input" data-setting="hero_subheading" rows="2" style="resize:vertical">Denver Social Hub is a free community for locals who want to get out, try new spots, and actually connect.</textarea></div>
-            <div class="field"><label class="field-label">CTA Label</label><input class="field-input" data-setting="hero_cta_label" value="Join for free" /></div>
-            <div class="field"><label class="field-label">CTA URL</label><input class="field-input" data-setting="hero_cta_url" value="/join" /></div>
+
+      <!-- Sub-tab navigation -->
+      <div class="app-tabs">
+        <button class="app-tab active" data-apptab="global">Global Theme</button>
+        <button class="app-tab" data-apptab="typography">Typography</button>
+        <button class="app-tab" data-apptab="page-home">Homepage</button>
+        <button class="app-tab" data-apptab="page-events">Events</button>
+        <button class="app-tab" data-apptab="page-members">Members</button>
+        <button class="app-tab" data-apptab="page-discover">Discover</button>
+        <button class="app-tab" data-apptab="page-about">About</button>
+        <button class="app-tab" data-apptab="page-login">Login</button>
+        <button class="app-tab" data-apptab="page-fund">Fund</button>
+        <button class="app-tab" data-apptab="nav-footer">Nav &amp; Footer</button>
+      </div>
+
+      <!-- ── GLOBAL THEME ── -->
+      <div class="app-panel active" id="apptab-global">
+        <div class="settings-grid">
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Site-Wide Color Palette</div>
+            <div class="settings-sub">These colors apply across every page unless overridden per-page below.</div>
+            <div class="color-grid">
+              <div class="color-field"><label class="color-label">Primary</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_primary" value="#A78BFA" /><input class="field-input color-hex" data-mirror="color_primary" value="#A78BFA" /></div><span class="color-hint">Buttons, links, active states</span></div>
+              <div class="color-field"><label class="color-label">Secondary</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_secondary" value="#38BDF8" /><input class="field-input color-hex" data-mirror="color_secondary" value="#38BDF8" /></div><span class="color-hint">Badges, accents, highlights</span></div>
+              <div class="color-field"><label class="color-label">Accent</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_accent" value="#F472B6" /><input class="field-input color-hex" data-mirror="color_accent" value="#F472B6" /></div><span class="color-hint">Hover states, notifications</span></div>
+              <div class="color-field"><label class="color-label">Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="color_bg" value="#07060B" /></div><span class="color-hint">Main page background</span></div>
+              <div class="color-field"><label class="color-label">Surface</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_surface" value="#1A1825" /><input class="field-input color-hex" data-mirror="color_surface" value="#1A1825" /></div><span class="color-hint">Cards, panels, modals</span></div>
+              <div class="color-field"><label class="color-label">Text</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_text" value="#E8E6F0" /><input class="field-input color-hex" data-mirror="color_text" value="#E8E6F0" /></div><span class="color-hint">Body text color</span></div>
+              <div class="color-field"><label class="color-label">Heading Text</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_heading" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="color_heading" value="#FFFFFF" /></div><span class="color-hint">All headings (h1-h6)</span></div>
+              <div class="color-field"><label class="color-label">Muted Text</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_muted" value="#8A859E" /><input class="field-input color-hex" data-mirror="color_muted" value="#8A859E" /></div><span class="color-hint">Captions, secondary info</span></div>
+              <div class="color-field"><label class="color-label">Border</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_border" value="#2A2737" /><input class="field-input color-hex" data-mirror="color_border" value="#2A2737" /></div><span class="color-hint">Card borders, dividers</span></div>
+              <div class="color-field"><label class="color-label">Success</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_success" value="#34D399" /><input class="field-input color-hex" data-mirror="color_success" value="#34D399" /></div><span class="color-hint">Approved, active, confirmed</span></div>
+              <div class="color-field"><label class="color-label">Warning</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_warning" value="#FB923C" /><input class="field-input color-hex" data-mirror="color_warning" value="#FB923C" /></div><span class="color-hint">Pending, attention needed</span></div>
+              <div class="color-field"><label class="color-label">Error / Danger</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="color_error" value="#EF4444" /><input class="field-input color-hex" data-mirror="color_error" value="#EF4444" /></div><span class="color-hint">Errors, suspensions, alerts</span></div>
+            </div>
+            <button class="btn-primary js-save" style="margin-top:16px">Save Global Colors</button>
           </div>
-          <button class="btn-primary js-save" style="margin-top:12px">Save Hero</button>
-        </div>
-        <div class="settings-card">
-          <div class="settings-title">About Section</div><div class="settings-sub">The story on your homepage.</div>
-          <div class="field"><label class="field-label">Heading</label><input class="field-input" data-setting="about_heading" value="Denver is big. It doesn't have to feel that way." /></div>
-          <div class="field"><label class="field-label">Body</label><textarea class="field-input" data-setting="about_body" rows="4" style="resize:vertical">Denver Social Hub started as a simple idea.</textarea></div>
-          <button class="btn-primary js-save" style="margin-top:12px">Save About</button>
-        </div>
-        <div class="settings-card">
-          <div class="settings-title">Footer and SEO</div><div class="settings-sub">Bottom of pages and search engine info.</div>
-          <div class="field"><label class="field-label">Footer Tagline</label><input class="field-input" data-setting="footer_tagline" value="Real connections, real city." /></div>
-          <div class="field"><label class="field-label">Contact Email</label><input class="field-input" data-setting="footer_email" value="hello@denversocial.com" /></div>
-          <div class="field"><label class="field-label">Instagram</label><input class="field-input" data-setting="instagram_handle" placeholder="@denversocialhub" /></div>
-          <div class="field"><label class="field-label">SEO Description</label><textarea class="field-input" data-setting="seo_description" rows="2" style="resize:vertical">Real small-group events across Denver.</textarea></div>
-          <button class="btn-primary js-save" style="margin-top:12px">Save Footer</button>
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Background Effects</div>
+            <div class="settings-sub">Control the background gradient and texture overlays.</div>
+            <div class="form-2col">
+              <div class="color-field"><label class="color-label">Gradient Color 1</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="bg_gradient_1" value="#A78BFA" /><input class="field-input color-hex" data-mirror="bg_gradient_1" value="#A78BFA" /></div></div>
+              <div class="color-field"><label class="color-label">Gradient Color 2</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="bg_gradient_2" value="#38BDF8" /><input class="field-input color-hex" data-mirror="bg_gradient_2" value="#38BDF8" /></div></div>
+              <div class="color-field"><label class="color-label">Gradient Color 3</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="bg_gradient_3" value="#F472B6" /><input class="field-input color-hex" data-mirror="bg_gradient_3" value="#F472B6" /></div></div>
+              <div class="field"><label class="field-label">Gradient Intensity</label><select class="field-select" data-setting="bg_gradient_intensity"><option value="subtle">Subtle</option><option value="medium" selected>Medium</option><option value="strong">Strong</option><option value="none">None / Flat</option></select></div>
+            </div>
+            <div class="toggle-row" style="margin-top:12px"><div><div class="toggle-label">Grid Texture Overlay</div><div class="toggle-desc">Faint grid pattern on backgrounds</div></div><label class="toggle"><input type="checkbox" data-setting="bg_grid_texture" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Glassmorphism</div><div class="toggle-desc">Frosted glass effect on cards</div></div><label class="toggle"><input type="checkbox" data-setting="bg_glass_effect" checked><span class="toggle-track"></span></label></div>
+            <button class="btn-primary js-save" style="margin-top:16px">Save Effects</button>
+          </div>
         </div>
       </div>
+
+      <!-- ── TYPOGRAPHY ── -->
+      <div class="app-panel" id="apptab-typography">
+        <div class="settings-grid">
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Fonts</div>
+            <div class="settings-sub">Select typefaces for headings and body text across the site.</div>
+            <div class="form-2col">
+              <div class="field"><label class="field-label">Heading Font</label><select class="field-select" data-setting="font_heading"><option value="Space Grotesk" selected>Space Grotesk</option><option value="Inter">Inter</option><option value="Poppins">Poppins</option><option value="Montserrat">Montserrat</option><option value="Outfit">Outfit</option><option value="Sora">Sora</option><option value="DM Sans">DM Sans</option><option value="Plus Jakarta Sans">Plus Jakarta Sans</option><option value="Unbounded">Unbounded</option></select></div>
+              <div class="field"><label class="field-label">Body Font</label><select class="field-select" data-setting="font_body"><option value="Inter" selected>Inter</option><option value="Space Grotesk">Space Grotesk</option><option value="Poppins">Poppins</option><option value="Nunito">Nunito</option><option value="DM Sans">DM Sans</option><option value="Lato">Lato</option><option value="Open Sans">Open Sans</option><option value="Roboto">Roboto</option></select></div>
+              <div class="field"><label class="field-label">Monospace Font</label><select class="field-select" data-setting="font_mono"><option value="JetBrains Mono" selected>JetBrains Mono</option><option value="Fira Code">Fira Code</option><option value="Source Code Pro">Source Code Pro</option><option value="IBM Plex Mono">IBM Plex Mono</option></select></div>
+              <div class="field"><label class="field-label">Heading Weight</label><select class="field-select" data-setting="font_heading_weight"><option value="400">Regular (400)</option><option value="500">Medium (500)</option><option value="600">Semibold (600)</option><option value="700" selected>Bold (700)</option><option value="800">Extra Bold (800)</option></select></div>
+            </div>
+            <button class="btn-primary js-save" style="margin-top:16px">Save Fonts</button>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Font Sizes</div>
+            <div class="settings-sub">Adjust base sizes for text elements.</div>
+            <div class="field"><label class="field-label">Base Font Size</label><select class="field-select" data-setting="font_size_base"><option value="14px">Small (14px)</option><option value="15px">Default (15px)</option><option value="16px" selected>Medium (16px)</option><option value="17px">Large (17px)</option><option value="18px">Extra Large (18px)</option></select></div>
+            <div class="field"><label class="field-label">H1 Hero Size</label><select class="field-select" data-setting="font_size_h1"><option value="36px">Small (36px)</option><option value="42px">Default (42px)</option><option value="48px" selected>Medium (48px)</option><option value="56px">Large (56px)</option><option value="64px">Extra Large (64px)</option></select></div>
+            <div class="field"><label class="field-label">Section Title Size</label><select class="field-select" data-setting="font_size_section"><option value="22px">Small (22px)</option><option value="26px" selected>Default (26px)</option><option value="30px">Large (30px)</option><option value="36px">Extra Large (36px)</option></select></div>
+            <div class="field"><label class="field-label">Card Title Size</label><select class="field-select" data-setting="font_size_card"><option value="14px">Small (14px)</option><option value="16px" selected>Default (16px)</option><option value="18px">Large (18px)</option><option value="20px">Extra Large (20px)</option></select></div>
+            <button class="btn-primary js-save" style="margin-top:12px">Save Sizes</button>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Text Style</div>
+            <div class="settings-sub">Letter spacing, line height, and transform.</div>
+            <div class="field"><label class="field-label">Heading Letter Spacing</label><select class="field-select" data-setting="heading_letter_spacing"><option value="-0.03em" selected>Tight (-0.03em)</option><option value="-0.01em">Slight (-0.01em)</option><option value="0">Normal (0)</option><option value="0.02em">Loose (0.02em)</option><option value="0.05em">Wide (0.05em)</option></select></div>
+            <div class="field"><label class="field-label">Body Line Height</label><select class="field-select" data-setting="body_line_height"><option value="1.4">Compact (1.4)</option><option value="1.5" selected>Default (1.5)</option><option value="1.6">Relaxed (1.6)</option><option value="1.75">Spacious (1.75)</option></select></div>
+            <div class="field"><label class="field-label">Heading Transform</label><select class="field-select" data-setting="heading_transform"><option value="none" selected>None</option><option value="uppercase">UPPERCASE</option><option value="capitalize">Capitalize</option></select></div>
+            <button class="btn-primary js-save" style="margin-top:12px">Save Style</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── HOMEPAGE ── -->
+      <div class="app-panel" id="apptab-page-home">
+        <div class="settings-grid">
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Homepage Colors</div>
+            <div class="settings-sub">Override global colors for the homepage. Leave blank to use global theme.</div>
+            <div class="color-grid">
+              <div class="color-field"><label class="color-label">Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="home_color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="home_color_bg" value="#07060B" /></div></div>
+              <div class="color-field"><label class="color-label">Hero Gradient Start</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="home_hero_grad_start" value="#A78BFA" /><input class="field-input color-hex" data-mirror="home_hero_grad_start" value="#A78BFA" /></div></div>
+              <div class="color-field"><label class="color-label">Hero Gradient End</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="home_hero_grad_end" value="#38BDF8" /><input class="field-input color-hex" data-mirror="home_hero_grad_end" value="#38BDF8" /></div></div>
+              <div class="color-field"><label class="color-label">Heading Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="home_color_heading" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="home_color_heading" value="#FFFFFF" /></div></div>
+              <div class="color-field"><label class="color-label">Text Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="home_color_text" value="#E8E6F0" /><input class="field-input color-hex" data-mirror="home_color_text" value="#E8E6F0" /></div></div>
+              <div class="color-field"><label class="color-label">CTA Button Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="home_color_cta" value="#A78BFA" /><input class="field-input color-hex" data-mirror="home_color_cta" value="#A78BFA" /></div></div>
+              <div class="color-field"><label class="color-label">CTA Button Text</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="home_color_cta_text" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="home_color_cta_text" value="#FFFFFF" /></div></div>
+              <div class="color-field"><label class="color-label">Card Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="home_color_card" value="#1A1825" /><input class="field-input color-hex" data-mirror="home_color_card" value="#1A1825" /></div></div>
+            </div>
+          </div>
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Hero Section Content</div><div class="settings-sub">Homepage headline and call-to-action.</div>
+            <div class="form-2col">
+              <div class="field" style="grid-column:span 2"><label class="field-label">Heading</label><input class="field-input" data-setting="hero_heading" value="Meet your people. Explore your city." /></div>
+              <div class="field" style="grid-column:span 2"><label class="field-label">Subheading</label><textarea class="field-input" data-setting="hero_subheading" rows="2" style="resize:vertical">Denver Social Hub is a free community for locals who want to get out, try new spots, and actually connect.</textarea></div>
+              <div class="field"><label class="field-label">CTA Label</label><input class="field-input" data-setting="hero_cta_label" value="Join for free" /></div>
+              <div class="field"><label class="field-label">CTA URL</label><input class="field-input" data-setting="hero_cta_url" value="/join" /></div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">About Section</div><div class="settings-sub">The story on your homepage.</div>
+            <div class="field"><label class="field-label">Heading</label><input class="field-input" data-setting="about_heading" value="Denver is big. It doesn't have to feel that way." /></div>
+            <div class="field"><label class="field-label">Body</label><textarea class="field-input" data-setting="about_body" rows="4" style="resize:vertical">Denver Social Hub started as a simple idea.</textarea></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Section Visibility</div><div class="settings-sub">Toggle sections on or off for the homepage.</div>
+            <div class="toggle-row"><div><div class="toggle-label">Hero Banner</div><div class="toggle-desc">Large headline at the top</div></div><label class="toggle"><input type="checkbox" data-setting="home_show_hero" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">About Section</div><div class="toggle-desc">Story / mission statement</div></div><label class="toggle"><input type="checkbox" data-setting="home_show_about" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Upcoming Events</div><div class="toggle-desc">Show next events on homepage</div></div><label class="toggle"><input type="checkbox" data-setting="home_show_events" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Member Spotlights</div><div class="toggle-desc">Featured member cards</div></div><label class="toggle"><input type="checkbox" data-setting="home_show_spotlights" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Partners Bar</div><div class="toggle-desc">Business partner logos</div></div><label class="toggle"><input type="checkbox" data-setting="home_show_partners" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Join CTA Section</div><div class="toggle-desc">Bottom call-to-action block</div></div><label class="toggle"><input type="checkbox" data-setting="home_show_join_cta" checked><span class="toggle-track"></span></label></div>
+          </div>
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Layout Options</div><div class="settings-sub">Control homepage structure.</div>
+            <div class="form-2col">
+              <div class="field"><label class="field-label">Hero Style</label><select class="field-select" data-setting="home_hero_style"><option value="full" selected>Full Width Banner</option><option value="split">Split (Text + Image)</option><option value="centered">Centered Minimal</option><option value="video">Video Background</option></select></div>
+              <div class="field"><label class="field-label">Card Style</label><select class="field-select" data-setting="home_card_style"><option value="glass" selected>Glassmorphism</option><option value="solid">Solid</option><option value="outline">Outline</option><option value="flat">Flat / No Border</option></select></div>
+              <div class="field"><label class="field-label">Hero Height</label><select class="field-select" data-setting="home_hero_height"><option value="60vh">Short (60vh)</option><option value="80vh" selected>Default (80vh)</option><option value="100vh">Full Screen (100vh)</option><option value="auto">Auto / Content</option></select></div>
+              <div class="field"><label class="field-label">Section Spacing</label><select class="field-select" data-setting="home_section_spacing"><option value="compact">Compact</option><option value="normal" selected>Normal</option><option value="relaxed">Relaxed</option><option value="spacious">Spacious</option></select></div>
+            </div>
+          </div>
+          <div class="settings-card" style="grid-column:span 2;text-align:right">
+            <button class="btn-primary js-save">Save All Homepage Settings</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── EVENTS PAGE ── -->
+      <div class="app-panel" id="apptab-page-events">
+        <div class="settings-grid">
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Events Page Colors</div>
+            <div class="settings-sub">Color overrides for the events listing and detail pages.</div>
+            <div class="color-grid">
+              <div class="color-field"><label class="color-label">Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="events_color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="events_color_bg" value="#07060B" /></div></div>
+              <div class="color-field"><label class="color-label">Accent Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="events_color_accent" value="#A78BFA" /><input class="field-input color-hex" data-mirror="events_color_accent" value="#A78BFA" /></div></div>
+              <div class="color-field"><label class="color-label">Card Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="events_color_card" value="#1A1825" /><input class="field-input color-hex" data-mirror="events_color_card" value="#1A1825" /></div></div>
+              <div class="color-field"><label class="color-label">Heading Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="events_color_heading" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="events_color_heading" value="#FFFFFF" /></div></div>
+              <div class="color-field"><label class="color-label">Text Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="events_color_text" value="#E8E6F0" /><input class="field-input color-hex" data-mirror="events_color_text" value="#E8E6F0" /></div></div>
+              <div class="color-field"><label class="color-label">RSVP Button</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="events_color_rsvp" value="#34D399" /><input class="field-input color-hex" data-mirror="events_color_rsvp" value="#34D399" /></div></div>
+              <div class="color-field"><label class="color-label">Featured Badge</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="events_color_featured" value="#FB923C" /><input class="field-input color-hex" data-mirror="events_color_featured" value="#FB923C" /></div></div>
+              <div class="color-field"><label class="color-label">Type Tag Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="events_color_tag" value="#38BDF8" /><input class="field-input color-hex" data-mirror="events_color_tag" value="#38BDF8" /></div></div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Section Visibility</div><div class="settings-sub">Show/hide elements on events pages.</div>
+            <div class="toggle-row"><div><div class="toggle-label">Filter Bar</div><div class="toggle-desc">Type/month filter toolbar</div></div><label class="toggle"><input type="checkbox" data-setting="events_show_filters" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Calendar View</div><div class="toggle-desc">Monthly calendar grid</div></div><label class="toggle"><input type="checkbox" data-setting="events_show_calendar" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Past Events</div><div class="toggle-desc">Show completed events</div></div><label class="toggle"><input type="checkbox" data-setting="events_show_past" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">RSVP Count</div><div class="toggle-desc">Show number of RSVPs</div></div><label class="toggle"><input type="checkbox" data-setting="events_show_rsvp_count" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Suggest Event CTA</div><div class="toggle-desc">Prompt members to suggest</div></div><label class="toggle"><input type="checkbox" data-setting="events_show_suggest" checked><span class="toggle-track"></span></label></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Layout Options</div><div class="settings-sub">How events are displayed.</div>
+            <div class="field"><label class="field-label">Card Layout</label><select class="field-select" data-setting="events_layout"><option value="grid" selected>Grid Cards</option><option value="list">List View</option><option value="timeline">Timeline</option><option value="compact">Compact Cards</option></select></div>
+            <div class="field"><label class="field-label">Events Per Row</label><select class="field-select" data-setting="events_per_row"><option value="2">2 Per Row</option><option value="3" selected>3 Per Row</option><option value="4">4 Per Row</option></select></div>
+            <div class="field"><label class="field-label">Default Sort</label><select class="field-select" data-setting="events_sort"><option value="date_asc" selected>Soonest First</option><option value="date_desc">Latest First</option><option value="popular">Most Popular</option></select></div>
+            <div class="field"><label class="field-label">Card Style</label><select class="field-select" data-setting="events_card_style"><option value="glass" selected>Glassmorphism</option><option value="solid">Solid</option><option value="image">Image Header</option><option value="minimal">Minimal</option></select></div>
+          </div>
+          <div class="settings-card" style="grid-column:span 2;text-align:right">
+            <button class="btn-primary js-save">Save Events Page</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MEMBERS PAGE ── -->
+      <div class="app-panel" id="apptab-page-members">
+        <div class="settings-grid">
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Members Page Colors</div>
+            <div class="settings-sub">Color overrides for the member directory.</div>
+            <div class="color-grid">
+              <div class="color-field"><label class="color-label">Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="members_color_bg" value="#07060B" /></div></div>
+              <div class="color-field"><label class="color-label">Accent Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_accent" value="#A78BFA" /><input class="field-input color-hex" data-mirror="members_color_accent" value="#A78BFA" /></div></div>
+              <div class="color-field"><label class="color-label">Card Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_card" value="#1A1825" /><input class="field-input color-hex" data-mirror="members_color_card" value="#1A1825" /></div></div>
+              <div class="color-field"><label class="color-label">Heading Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_heading" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="members_color_heading" value="#FFFFFF" /></div></div>
+              <div class="color-field"><label class="color-label">Text Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_text" value="#E8E6F0" /><input class="field-input color-hex" data-mirror="members_color_text" value="#E8E6F0" /></div></div>
+              <div class="color-field"><label class="color-label">Avatar Ring</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_avatar" value="#A78BFA" /><input class="field-input color-hex" data-mirror="members_color_avatar" value="#A78BFA" /></div></div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Section Visibility</div><div class="settings-sub">Toggle member page elements.</div>
+            <div class="toggle-row"><div><div class="toggle-label">Search Bar</div><div class="toggle-desc">Allow search by name</div></div><label class="toggle"><input type="checkbox" data-setting="members_show_search" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Neighborhood Filter</div><div class="toggle-desc">Filter by area</div></div><label class="toggle"><input type="checkbox" data-setting="members_show_filter" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Member Bios</div><div class="toggle-desc">Show bio text on cards</div></div><label class="toggle"><input type="checkbox" data-setting="members_show_bios" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Event Count</div><div class="toggle-desc">Show events attended</div></div><label class="toggle"><input type="checkbox" data-setting="members_show_events" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Points / Badges</div><div class="toggle-desc">Show gamification stats</div></div><label class="toggle"><input type="checkbox" data-setting="members_show_points" checked><span class="toggle-track"></span></label></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Layout Options</div><div class="settings-sub">How members are displayed.</div>
+            <div class="field"><label class="field-label">Card Layout</label><select class="field-select" data-setting="members_layout"><option value="grid" selected>Grid Cards</option><option value="list">List View</option><option value="compact">Compact Grid</option></select></div>
+            <div class="field"><label class="field-label">Members Per Row</label><select class="field-select" data-setting="members_per_row"><option value="3">3 Per Row</option><option value="4" selected>4 Per Row</option><option value="5">5 Per Row</option></select></div>
+            <div class="field"><label class="field-label">Avatar Style</label><select class="field-select" data-setting="members_avatar_style"><option value="circle" selected>Circle</option><option value="rounded">Rounded Square</option><option value="square">Square</option></select></div>
+          </div>
+          <div class="settings-card" style="grid-column:span 2;text-align:right">
+            <button class="btn-primary js-save">Save Members Page</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DISCOVER PAGE ── -->
+      <div class="app-panel" id="apptab-page-discover">
+        <div class="settings-grid">
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Discover Page Colors</div>
+            <div class="settings-sub">Color overrides for the discover/explore page.</div>
+            <div class="color-grid">
+              <div class="color-field"><label class="color-label">Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="discover_color_bg" value="#07060B" /></div></div>
+              <div class="color-field"><label class="color-label">Accent Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_accent" value="#38BDF8" /><input class="field-input color-hex" data-mirror="discover_color_accent" value="#38BDF8" /></div></div>
+              <div class="color-field"><label class="color-label">Card Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_card" value="#1A1825" /><input class="field-input color-hex" data-mirror="discover_color_card" value="#1A1825" /></div></div>
+              <div class="color-field"><label class="color-label">Heading Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_heading" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="discover_color_heading" value="#FFFFFF" /></div></div>
+              <div class="color-field"><label class="color-label">Text Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_text" value="#E8E6F0" /><input class="field-input color-hex" data-mirror="discover_color_text" value="#E8E6F0" /></div></div>
+              <div class="color-field"><label class="color-label">Category Pill</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_pill" value="#F472B6" /><input class="field-input color-hex" data-mirror="discover_color_pill" value="#F472B6" /></div></div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Section Visibility</div><div class="settings-sub">Toggle discover page sections.</div>
+            <div class="toggle-row"><div><div class="toggle-label">Search</div><div class="toggle-desc">Search bar at top</div></div><label class="toggle"><input type="checkbox" data-setting="discover_show_search" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Category Filters</div><div class="toggle-desc">Category pill tabs</div></div><label class="toggle"><input type="checkbox" data-setting="discover_show_categories" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Restaurant Section</div><div class="toggle-desc">Show restaurant listings</div></div><label class="toggle"><input type="checkbox" data-setting="discover_show_restaurants" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Partner Deals</div><div class="toggle-desc">Show partner deals section</div></div><label class="toggle"><input type="checkbox" data-setting="discover_show_partners" checked><span class="toggle-track"></span></label></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Layout</div><div class="settings-sub">Discover page layout settings.</div>
+            <div class="field"><label class="field-label">Card Layout</label><select class="field-select" data-setting="discover_layout"><option value="grid" selected>Grid</option><option value="masonry">Masonry</option><option value="list">List</option></select></div>
+            <div class="field"><label class="field-label">Items Per Row</label><select class="field-select" data-setting="discover_per_row"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option></select></div>
+          </div>
+          <div class="settings-card" style="grid-column:span 2;text-align:right">
+            <button class="btn-primary js-save">Save Discover Page</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ABOUT PAGE ── -->
+      <div class="app-panel" id="apptab-page-about">
+        <div class="settings-grid">
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">About Page Colors</div>
+            <div class="settings-sub">Color overrides for the about page.</div>
+            <div class="color-grid">
+              <div class="color-field"><label class="color-label">Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="about_color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="about_color_bg" value="#07060B" /></div></div>
+              <div class="color-field"><label class="color-label">Accent Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="about_color_accent" value="#A78BFA" /><input class="field-input color-hex" data-mirror="about_color_accent" value="#A78BFA" /></div></div>
+              <div class="color-field"><label class="color-label">Heading Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="about_color_heading" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="about_color_heading" value="#FFFFFF" /></div></div>
+              <div class="color-field"><label class="color-label">Text Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="about_color_text" value="#E8E6F0" /><input class="field-input color-hex" data-mirror="about_color_text" value="#E8E6F0" /></div></div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">About Page Content</div><div class="settings-sub">Main about page text.</div>
+            <div class="field"><label class="field-label">Page Title</label><input class="field-input" data-setting="about_page_title" value="About Denver Social Hub" /></div>
+            <div class="field"><label class="field-label">Intro Text</label><textarea class="field-input" data-setting="about_intro" rows="3" style="resize:vertical">We bring people together across Denver.</textarea></div>
+            <div class="field"><label class="field-label">Mission Statement</label><textarea class="field-input" data-setting="about_mission" rows="3" style="resize:vertical">Our mission is to build a genuine, inclusive community where new connections happen every week.</textarea></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Section Visibility</div><div class="settings-sub">Toggle about page sections.</div>
+            <div class="toggle-row"><div><div class="toggle-label">Mission Block</div><div class="toggle-desc">Mission statement section</div></div><label class="toggle"><input type="checkbox" data-setting="about_show_mission" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Team Section</div><div class="toggle-desc">Show team/founder info</div></div><label class="toggle"><input type="checkbox" data-setting="about_show_team" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Stats</div><div class="toggle-desc">Member/event count stats</div></div><label class="toggle"><input type="checkbox" data-setting="about_show_stats" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">FAQ</div><div class="toggle-desc">Frequently asked questions</div></div><label class="toggle"><input type="checkbox" data-setting="about_show_faq" checked><span class="toggle-track"></span></label></div>
+          </div>
+          <div class="settings-card" style="grid-column:span 2;text-align:right">
+            <button class="btn-primary js-save">Save About Page</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LOGIN PAGE ── -->
+      <div class="app-panel" id="apptab-page-login">
+        <div class="settings-grid">
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Login Page Colors</div>
+            <div class="settings-sub">Customize the login and signup pages.</div>
+            <div class="color-grid">
+              <div class="color-field"><label class="color-label">Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="login_color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="login_color_bg" value="#07060B" /></div></div>
+              <div class="color-field"><label class="color-label">Card Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="login_color_card" value="#1A1825" /><input class="field-input color-hex" data-mirror="login_color_card" value="#1A1825" /></div></div>
+              <div class="color-field"><label class="color-label">Accent Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="login_color_accent" value="#A78BFA" /><input class="field-input color-hex" data-mirror="login_color_accent" value="#A78BFA" /></div></div>
+              <div class="color-field"><label class="color-label">Button Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="login_color_button" value="#A78BFA" /><input class="field-input color-hex" data-mirror="login_color_button" value="#A78BFA" /></div></div>
+              <div class="color-field"><label class="color-label">Button Text</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="login_color_btn_text" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="login_color_btn_text" value="#FFFFFF" /></div></div>
+              <div class="color-field"><label class="color-label">Input Border</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="login_color_input" value="#2A2737" /><input class="field-input color-hex" data-mirror="login_color_input" value="#2A2737" /></div></div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Login Page Content</div><div class="settings-sub">Customize the login screen text.</div>
+            <div class="field"><label class="field-label">Welcome Heading</label><input class="field-input" data-setting="login_heading" value="Welcome back" /></div>
+            <div class="field"><label class="field-label">Subtitle</label><input class="field-input" data-setting="login_subtitle" value="Sign in to your community" /></div>
+            <div class="field"><label class="field-label">Signup Heading</label><input class="field-input" data-setting="signup_heading" value="Join the community" /></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Login Options</div><div class="settings-sub">Which methods are visible.</div>
+            <div class="toggle-row"><div><div class="toggle-label">Magic Link</div><div class="toggle-desc">Email magic link login</div></div><label class="toggle"><input type="checkbox" data-setting="login_show_magic" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Discord OAuth</div><div class="toggle-desc">Login with Discord</div></div><label class="toggle"><input type="checkbox" data-setting="login_show_discord" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Google OAuth</div><div class="toggle-desc">Login with Google</div></div><label class="toggle"><input type="checkbox" data-setting="login_show_google"><span class="toggle-track"></span></label></div>
+          </div>
+          <div class="settings-card" style="grid-column:span 2;text-align:right">
+            <button class="btn-primary js-save">Save Login Page</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── FUND PAGE ── -->
+      <div class="app-panel" id="apptab-page-fund">
+        <div class="settings-grid">
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Fund Page Colors</div>
+            <div class="settings-sub">Colors for the community fund/donation page.</div>
+            <div class="color-grid">
+              <div class="color-field"><label class="color-label">Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="fund_color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="fund_color_bg" value="#07060B" /></div></div>
+              <div class="color-field"><label class="color-label">Accent Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="fund_color_accent" value="#34D399" /><input class="field-input color-hex" data-mirror="fund_color_accent" value="#34D399" /></div></div>
+              <div class="color-field"><label class="color-label">Heading Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="fund_color_heading" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="fund_color_heading" value="#FFFFFF" /></div></div>
+              <div class="color-field"><label class="color-label">Donate Button</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="fund_color_button" value="#34D399" /><input class="field-input color-hex" data-mirror="fund_color_button" value="#34D399" /></div></div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Fund Page Content</div><div class="settings-sub">Donation page text.</div>
+            <div class="field"><label class="field-label">Page Title</label><input class="field-input" data-setting="fund_title" value="Support Denver Social Hub" /></div>
+            <div class="field"><label class="field-label">Description</label><textarea class="field-input" data-setting="fund_description" rows="3" style="resize:vertical">Help us keep events free and the community growing.</textarea></div>
+            <div class="field"><label class="field-label">Donation Link</label><input class="field-input" data-setting="fund_donation_url" placeholder="https://venmo.com/..." /></div>
+            <div class="field"><label class="field-label">Goal Amount ($)</label><input class="field-input" data-setting="fund_goal" type="number" placeholder="1000" /></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Fund Visibility</div><div class="settings-sub">Control what shows on the fund page.</div>
+            <div class="toggle-row"><div><div class="toggle-label">Progress Bar</div><div class="toggle-desc">Show fundraising progress</div></div><label class="toggle"><input type="checkbox" data-setting="fund_show_progress" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Donor List</div><div class="toggle-desc">Show recent donors</div></div><label class="toggle"><input type="checkbox" data-setting="fund_show_donors"><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Fund in Nav</div><div class="toggle-desc">Show fund link in navigation</div></div><label class="toggle"><input type="checkbox" data-setting="fund_show_nav" checked><span class="toggle-track"></span></label></div>
+          </div>
+          <div class="settings-card" style="grid-column:span 2;text-align:right">
+            <button class="btn-primary js-save">Save Fund Page</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── NAV & FOOTER ── -->
+      <div class="app-panel" id="apptab-nav-footer">
+        <div class="settings-grid">
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Navigation Colors</div>
+            <div class="settings-sub">Customize the site header and navigation bar.</div>
+            <div class="color-grid">
+              <div class="color-field"><label class="color-label">Nav Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="nav_color_bg" value="#0C0B12" /><input class="field-input color-hex" data-mirror="nav_color_bg" value="#0C0B12" /></div></div>
+              <div class="color-field"><label class="color-label">Nav Text</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="nav_color_text" value="#E8E6F0" /><input class="field-input color-hex" data-mirror="nav_color_text" value="#E8E6F0" /></div></div>
+              <div class="color-field"><label class="color-label">Nav Hover</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="nav_color_hover" value="#A78BFA" /><input class="field-input color-hex" data-mirror="nav_color_hover" value="#A78BFA" /></div></div>
+              <div class="color-field"><label class="color-label">Nav Active Link</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="nav_color_active" value="#A78BFA" /><input class="field-input color-hex" data-mirror="nav_color_active" value="#A78BFA" /></div></div>
+              <div class="color-field"><label class="color-label">Mobile Menu BG</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="nav_color_mobile_bg" value="#0C0B12" /><input class="field-input color-hex" data-mirror="nav_color_mobile_bg" value="#0C0B12" /></div></div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Navigation Style</div><div class="settings-sub">Header layout and behavior.</div>
+            <div class="field"><label class="field-label">Nav Style</label><select class="field-select" data-setting="nav_style"><option value="glass" selected>Glassmorphism</option><option value="solid">Solid</option><option value="transparent">Transparent</option><option value="bordered">Bordered Bottom</option></select></div>
+            <div class="field"><label class="field-label">Nav Position</label><select class="field-select" data-setting="nav_position"><option value="sticky" selected>Sticky</option><option value="fixed">Fixed</option><option value="static">Static (scrolls away)</option></select></div>
+            <div class="toggle-row" style="margin-top:8px"><div><div class="toggle-label">Show Logo</div><div class="toggle-desc">Site logo in nav</div></div><label class="toggle"><input type="checkbox" data-setting="nav_show_logo" checked><span class="toggle-track"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Show Site Name</div><div class="toggle-desc">Text name next to logo</div></div><label class="toggle"><input type="checkbox" data-setting="nav_show_name" checked><span class="toggle-track"></span></label></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">Footer Content</div><div class="settings-sub">Bottom of every page.</div>
+            <div class="field"><label class="field-label">Footer Tagline</label><input class="field-input" data-setting="footer_tagline" value="Real connections, real city." /></div>
+            <div class="field"><label class="field-label">Contact Email</label><input class="field-input" data-setting="footer_email" value="hello@denversocial.com" /></div>
+            <div class="field"><label class="field-label">Instagram</label><input class="field-input" data-setting="instagram_handle" placeholder="@denversocialhub" /></div>
+            <div class="field"><label class="field-label">SEO Description</label><textarea class="field-input" data-setting="seo_description" rows="2" style="resize:vertical">Real small-group events across Denver.</textarea></div>
+          </div>
+          <div class="settings-card" style="grid-column:span 2">
+            <div class="settings-title">Footer Colors</div>
+            <div class="settings-sub">Footer section styling.</div>
+            <div class="color-grid">
+              <div class="color-field"><label class="color-label">Footer Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="footer_color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="footer_color_bg" value="#07060B" /></div></div>
+              <div class="color-field"><label class="color-label">Footer Text</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="footer_color_text" value="#8A859E" /><input class="field-input color-hex" data-mirror="footer_color_text" value="#8A859E" /></div></div>
+              <div class="color-field"><label class="color-label">Footer Link</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="footer_color_link" value="#A78BFA" /><input class="field-input color-hex" data-mirror="footer_color_link" value="#A78BFA" /></div></div>
+              <div class="color-field"><label class="color-label">Footer Border</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="footer_color_border" value="#2A2737" /><input class="field-input color-hex" data-mirror="footer_color_border" value="#2A2737" /></div></div>
+            </div>
+          </div>
+          <div class="settings-card" style="grid-column:span 2;text-align:right">
+            <button class="btn-primary js-save">Save Nav &amp; Footer</button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- ═══ SETTINGS ═══ -->
@@ -835,7 +1220,7 @@ function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent
 
 // ============ SIDEBAR + PANELS ============
 var panelTitles={overview:'Overview',members:'Members',events:'Events',suggestions:'Suggestions',announcements:'Announcements',spotlights:'Spotlights',reports:'Reports',partners:'Partners',restaurants:'Restaurants',pages:'Pages',plugins:'Plugins',analytics:'Analytics',appearance:'Appearance',settings:'Settings'};
-var panelSubs={overview:'Dashboard overview and quick stats',members:'Manage all community members',events:'Create and manage events',suggestions:'Community ideas and feedback',announcements:'Broadcast messages',spotlights:'Highlight outstanding members',reports:'Review member reports',partners:'Business partnerships and deals',restaurants:'Denver restaurant database',pages:'Custom page management',plugins:'Code injection and plugins',analytics:'Charts and data insights',appearance:'Site content and branding',settings:'Configuration and toggles'};
+var panelSubs={overview:'Dashboard overview and quick stats',members:'Manage all community members',events:'Create and manage events',suggestions:'Community ideas and feedback',announcements:'Broadcast messages',spotlights:'Highlight outstanding members',reports:'Review member reports',partners:'Business partnerships and deals',restaurants:'Denver restaurant database',pages:'Custom page management',plugins:'Code injection and plugins',analytics:'Charts and data insights',appearance:'Per-page colors, typography, layout and branding',settings:'Configuration and toggles'};
 
 function showPanel(id){
   $$('.panel').forEach(function(p){p.classList.remove('active')});
@@ -1425,6 +1810,47 @@ $$('.js-save').forEach(function(b){b.addEventListener('click',doSave)});
 
 // Load settings on init
 loadSettings();
+
+// ============ APPEARANCE SUB-TABS ============
+$$('.app-tab').forEach(function(t){t.addEventListener('click',function(){
+  $$('.app-tab').forEach(function(x){x.classList.remove('active')});
+  $$('.app-panel').forEach(function(p){p.classList.remove('active')});
+  this.classList.add('active');
+  var target=$('#apptab-'+this.getAttribute('data-apptab'));
+  if(target)target.classList.add('active');
+})});
+
+// ============ COLOR PICKER SYNC ============
+// Sync color picker <-> hex input
+$$('.color-picker').forEach(function(cp){
+  var settingKey=cp.getAttribute('data-setting');
+  var hexInput=document.querySelector('.color-hex[data-mirror="'+settingKey+'"]');
+  if(!hexInput)return;
+  cp.addEventListener('input',function(){hexInput.value=this.value.toUpperCase()});
+  hexInput.addEventListener('input',function(){
+    var v=this.value.trim();
+    if(/^#[0-9a-fA-F]{6}$/.test(v))cp.value=v;
+  });
+  hexInput.addEventListener('change',function(){
+    var v=this.value.trim();
+    if(v.length===6&&!/^#/.test(v))v='#'+v;
+    if(/^#[0-9a-fA-F]{6}$/.test(v)){cp.value=v;this.value=v.toUpperCase()}
+  });
+});
+
+// Also sync color pickers when settings load
+var origLoadSettings=loadSettings;
+loadSettings=function(){
+  origLoadSettings();
+  // After settings load, sync hex inputs from color pickers
+  setTimeout(function(){
+    $$('.color-picker').forEach(function(cp){
+      var settingKey=cp.getAttribute('data-setting');
+      var hexInput=document.querySelector('.color-hex[data-mirror="'+settingKey+'"]');
+      if(hexInput)hexInput.value=cp.value.toUpperCase();
+    });
+  },300);
+};
 
 // ============ DANGER ZONE ============
 $('#clear-pending').addEventListener('click',function(){
