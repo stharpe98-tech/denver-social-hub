@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
-    "postbuild": "cp .assetsignore dist/.assetsignore",
+    "build": "astro build && rm -rf worker && mv dist/_worker.js worker",
     "deploy": "npm run build && wrangler deploy",
     "preview": "wrangler dev"
   },
