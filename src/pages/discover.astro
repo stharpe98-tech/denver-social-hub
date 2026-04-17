@@ -4,16 +4,10 @@ import { getDB } from '../lib/db';
 
 const db = getDB();
   let events = [];
-  let restaurants = [];
   try {
     if (db) {
       const ev = await db.prepare("SELECT * FROM events ORDER BY id DESC LIMIT 20").all();
       events = ev?.results || [];
-      try {
-        const rest = await db.prepare("SELECT * FROM restaurants ORDER BY name").all();
-        restaurants = rest?.results || [];
-      } catch {
-      }
     }
   } catch {
   }

@@ -25,6 +25,7 @@ const currentPath = Astro.url.pathname;
 
     <div class="nav-links">
       <a href="/events"   class:list={["nav-link", { active: currentPath.startsWith("/events") && !currentPath.startsWith("/events/new") }]}>Events</a>
+      <a href="/discover" class:list={["nav-link", { active: currentPath.startsWith("/discover") }]}>Discover</a>
       <a href="/members"  class:list={["nav-link", { active: currentPath.startsWith("/members")  }]}>The Crew</a>
       <a href="/about"    class:list={["nav-link", { active: currentPath.startsWith("/about")    }]}>About</a>
     </div>
@@ -47,6 +48,7 @@ const currentPath = Astro.url.pathname;
     <div class="mob-nav-inner">
       <a href="/"        class:list={[{ active: currentPath === "/" }]}><span>🏠</span>Home</a>
       <a href="/events"  class:list={[{ active: currentPath.startsWith("/events") }]}><span>📅</span>Events</a>
+      <a href="/discover" class:list={[{ active: currentPath.startsWith("/discover") }]}><span>🔍</span>Explore</a>
       <a href="/members" class:list={[{ active: currentPath.startsWith("/members") }]}><span>👥</span>Crew</a>
       <a href="/about"   class:list={[{ active: currentPath.startsWith("/about") }]}><span>💬</span>About</a>
       {isAdmin && <a href="/admin" class:list={[{ active: currentPath.startsWith("/admin") }]}><span>⚙️</span>Admin</a>}
