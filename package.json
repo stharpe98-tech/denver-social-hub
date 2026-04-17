@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && cp .assetsignore dist/.assetsignore",
-    "deploy": "astro build && wrangler deploy",
+    "build": "astro build",
+    "postbuild": "cp .assetsignore dist/.assetsignore",
+    "deploy": "npm run build && wrangler deploy",
     "preview": "wrangler dev"
   },
   "dependencies": {
