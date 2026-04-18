@@ -14,6 +14,18 @@ if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 const isAdmin = user?.email === "stharpe98@gmail.com";
 
 const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",other:"📅" };
+const typeTint: Record<string,string> = { dinner:"#F05A28",game_night:"#a855f7",outdoor:"#22c55e",brewery:"#fbbf24",coffee:"#FF8A65",arts:"#ec4899",music:"#a855f7",social:"#ec4899",group_tickets:"#3b82f6",camping:"#22c55e",sports_outing:"#3b82f6",bowling:"#fbbf24",active:"#22c55e",casino:"#a855f7",food_trucks:"#F05A28",other:"#6b7a8e" };
+
+const categories = [
+  { emoji:"🍽️", label:"Dinners",        sub:"Small tables, long nights", type:"dinner",       tint:"#F05A28" },
+  { emoji:"🏔️", label:"Outdoors",       sub:"Hikes, sunrise, trails",    type:"outdoor",      tint:"#22c55e" },
+  { emoji:"🎲", label:"Game nights",    sub:"Board games + trivia",      type:"game_night",   tint:"#a855f7" },
+  { emoji:"🍺", label:"Brewery crawls", sub:"Denver's best taprooms",    type:"brewery",      tint:"#fbbf24" },
+  { emoji:"🎨", label:"Arts + pottery", sub:"Get your hands dirty",      type:"arts",         tint:"#ec4899" },
+  { emoji:"🎳", label:"Bowling",        sub:"Strikes + gutters",         type:"bowling",      tint:"#FF8A65" },
+  { emoji:"☕", label:"Coffee meets",   sub:"Low-key + local",           type:"coffee",       tint:"#3b82f6" },
+  { emoji:"🎉", label:"Just social",    sub:"Turn-up, turn-out",         type:"social",       tint:"#ec4899" },
+];
 
 const slides = [
   { img:"https://images.unsplash.com/photo-1546156929-a4c0ac411f47?w=1800&q=80", alt:"Denver skyline at dusk" },
@@ -74,6 +86,14 @@ const activities = [
 
   <div class="hero-overlay"></div>
 
+  <div class="hero-stickers" aria-hidden="true">
+    <span class="sticker s1">🍕</span>
+    <span class="sticker s2">🏔️</span>
+    <span class="sticker s3">🎲</span>
+    <span class="sticker s4">🍻</span>
+    <span class="sticker s5">🎨</span>
+  </div>
+
   <div class="hero-content">
     <div class="hero-badge">
       <span class="hero-badge-dot"></span>
@@ -86,7 +106,7 @@ const activities = [
       We organize small-group hangouts across Denver — dinners, hikes, pottery, game nights. No fees. No awkwardness. Just show up.
     </p>
     <div class="hero-btns">
-      <a href="/login?mode=join" class="btn-primary-lg">Join Free →</a>
+      <a href="/login?mode=join" class="btn-party">Join Free →</a>
       <a href="#activities" class="btn-ghost-lg">See What We Do</a>
     </div>
   </div>
@@ -103,6 +123,22 @@ const activities = [
 </section>
 
 
+<!-- ═══ CATEGORY SCROLLER — Meetup-style pills ═══ -->
+<section class="categories" aria-label="Browse by category">
+  <div class="categories-scroll">
+    {categories.map((c) => (
+      <a href={`/events?type=${c.type}`} class="cat-pill" style={`--tint:${c.tint}`}>
+        <span class="cat-emoji">{c.emoji}</span>
+        <span class="cat-text">
+          <strong>{c.label}</strong>
+          <small>{c.sub}</small>
+        </span>
+      </a>
+    ))}
+  </div>
+</section>
+
+
 <!-- ═══ ACTIVITY CARDS — photo-backed grid ═══ -->
 <section id="activities" class="section">
   <div class="section-head">
@@ -112,11 +148,11 @@ const activities = [
   </div>
   <div class="activity-grid">
     {activities.map((a) => (
-      <div class="activity-card fade-up">
+      <div class="activity-card fade-up" style={`--tint:${a.color}`}>
         <img src={a.img} alt={a.title} class="activity-img" loading="lazy" />
         <div class="activity-overlay"></div>
+        <div class="activity-sticker">{a.emoji}</div>
         <div class="activity-content">
-          <span class="activity-emoji">{a.emoji}</span>
           <h3 class="activity-title">{a.title}</h3>
           <p class="activity-desc">{a.desc}</p>
         </div>
@@ -135,7 +171,7 @@ const activities = [
     </div>
     <div class="steps">
       <div class="step fade-up">
-        <div class="step-number">1</div>
+        <div class="step-number s-coral">1</div>
         <div class="step-body">
           <h3>Join free</h3>
           <p>60 seconds — name, email, done. No credit card, no subscription.</p>
@@ -143,7 +179,7 @@ const activities = [
       </div>
       <div class="step-divider fade-up"></div>
       <div class="step fade-up">
-        <div class="step-number">2</div>
+        <div class="step-number s-pink">2</div>
         <div class="step-body">
           <h3>Pick something</h3>
           <p>Pottery, dinner, hike, game night. Whatever sounds like you.</p>
@@ -151,7 +187,7 @@ const activities = [
       </div>
       <div class="step-divider fade-up"></div>
       <div class="step fade-up">
-        <div class="step-number">3</div>
+        <div class="step-number s-purple">3</div>
         <div class="step-body">
           <h3>Show up</h3>
           <p>Small group, real people. Walk-ins welcome. No icebreakers, we promise.</p>
@@ -171,24 +207,27 @@ const activities = [
     </div>
     <div class="events-grid">
       {upcomingEvents.slice(0, 4).map((ev: any) => (
-        <a href={`/events/${ev.id}`} class="event-card fade-up">
-          <div class="event-date-badge">
-            <span class="event-month">{ev.event_month || 'TBD'}</span>
-            <span class="event-day">{ev.event_day || '—'}</span>
-          </div>
-          <div class="event-info">
-            <div class="event-type-row">
-              <span>{typeEmoji[ev.event_type] || '📅'}</span>
-              <span class="event-type-label">{(ev.event_type || '').replace('_', ' ')}</span>
+        <a href={`/events/${ev.id}`} class="event-card fade-up" style={`--ev-tint:${typeTint[ev.event_type] || '#F05A28'}`}>
+          <div class="event-strip"></div>
+          <div class="event-body">
+            <div class="event-date-badge">
+              <span class="event-month">{ev.event_month || 'TBD'}</span>
+              <span class="event-day">{ev.event_day || '—'}</span>
             </div>
-            <h3 class="event-title">{ev.title}</h3>
-            <p class="event-meta">{ev.zone || ev.location} · up to {ev.spots} people</p>
+            <div class="event-info">
+              <div class="event-type-row">
+                <span class="event-type-emoji">{typeEmoji[ev.event_type] || '📅'}</span>
+                <span class="event-type-label">{(ev.event_type || '').replace('_', ' ')}</span>
+              </div>
+              <h3 class="event-title">{ev.title}</h3>
+              <p class="event-meta">{ev.zone || ev.location} · up to {ev.spots} people</p>
+            </div>
+            <span class="event-arrow" aria-hidden="true">→</span>
           </div>
-          <span class="event-arrow">›</span>
         </a>
       ))}
     </div>
-    <div style="text-align:center;margin-top:28px">
+    <div style="text-align:center;margin-top:32px">
       <a href="/events" class="btn-ghost-lg">All events →</a>
     </div>
   </section>
@@ -235,14 +274,19 @@ const activities = [
 </section>
 
 
-<!-- ═══ FINAL CTA — with background image ═══ -->
+<!-- ═══ FINAL CTA — gradient mesh ═══ -->
 <section class="final-cta">
-  <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&q=75" alt="" class="final-cta-bg" loading="lazy" />
-  <div class="final-cta-overlay"></div>
+  <div class="final-cta-mesh" aria-hidden="true"></div>
+  <div class="final-cta-stickers" aria-hidden="true">
+    <span class="sticker s1">🌮</span>
+    <span class="sticker s2">⛺</span>
+    <span class="sticker s3">🪩</span>
+    <span class="sticker s4">🎟️</span>
+  </div>
   <div class="final-cta-content fade-up">
     <h2>Your people are<br>out <em>there.</em></h2>
     <p>No cost to join. Takes 60 seconds.</p>
-    <a href="/login?mode=join" class="btn-primary-lg" style="font-size:16px;padding:18px 44px">Join Free →</a>
+    <a href="/login?mode=join" class="btn-party btn-party-lg">Join Free →</a>
   </div>
 </section>
 
@@ -310,9 +354,18 @@ const activities = [
   .nav-links a { font-size: 14px; font-weight: 500; color: rgba(255,255,255,.45); transition: color .2s; }
   .nav-links a:hover { color: #fff; }
   .nav-auth { display: flex; gap: 8px; }
-  .nav-btn { font-size: 13px; font-weight: 600; padding: 7px 18px; border-radius: 50px; transition: all .2s; }
-  .nav-btn-primary { background: #3b82f6; color: #fff; }
+  .nav-btn { font-size: 13px; font-weight: 700; padding: 8px 20px; border-radius: 50px; transition: transform .2s, box-shadow .3s, background .2s, border-color .2s; }
+  .nav-btn-primary {
+    color: #fff;
+    background: linear-gradient(135deg, #F05A28 0%, #ec4899 55%, #a855f7 100%);
+    box-shadow: 0 6px 16px rgba(240,90,40,.28);
+  }
+  .nav-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(236,72,153,.4); }
+  .nav-btn-primary:active { transform: translateY(0); }
   .nav-btn-ghost { color: #fff; border: 1px solid rgba(255,255,255,.15); }
+  .nav-btn-ghost:hover { border-color: rgba(255,255,255,.35); background: rgba(255,255,255,.04); }
+  .nav-btn-ghost:active { background: rgba(255,255,255,.08); }
+  .nav-links a:active { color: #fff; }
 
   /* ─── HERO ─── */
   .hero { position: relative; width: 100%; height: 100svh; min-height: 640px; overflow: hidden; background: #000; }
@@ -363,6 +416,18 @@ const activities = [
     line-height: 1.7; max-width: 500px; margin-bottom: 28px;
   }
   .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn-party {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 15px 34px; color: #fff;
+    border-radius: 999px; font-size: 15px; font-weight: 700; letter-spacing: .2px;
+    background: linear-gradient(135deg, #F05A28 0%, #ec4899 55%, #a855f7 100%);
+    background-size: 200% 100%; background-position: 0% 50%;
+    box-shadow: 0 10px 28px rgba(240,90,40,.35), 0 0 0 1px rgba(255,255,255,.06) inset;
+    transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .3s, background-position .6s;
+  }
+  .btn-party:hover { transform: translateY(-2px) scale(1.02); background-position: 100% 50%; box-shadow: 0 16px 40px rgba(236,72,153,.45); }
+  .btn-party:active { transform: translateY(0) scale(.99); }
+  .btn-party-lg { padding: 18px 44px; font-size: 16px; }
   .btn-primary-lg {
     display: inline-block; padding: 14px 32px; background: #fff; color: #05070d;
     border-radius: 14px; font-size: 15px; font-weight: 700;
@@ -373,9 +438,33 @@ const activities = [
     display: inline-block; padding: 14px 32px;
     background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
     color: #fff; border-radius: 14px; font-size: 15px; font-weight: 500;
-    transition: background .2s, border-color .2s;
+    transition: background .2s, border-color .2s, transform .2s;
   }
-  .btn-ghost-lg:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); }
+  .btn-ghost-lg:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); transform: translateY(-1px); }
+  .btn-ghost-lg:active { transform: translateY(0); }
+
+  /* ─── HERO STICKERS ─── */
+  .hero-stickers { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+  .hero-stickers .sticker {
+    position: absolute; font-size: clamp(34px, 5vw, 52px);
+    filter: drop-shadow(0 8px 18px rgba(0,0,0,.35));
+    animation: bob 6s ease-in-out infinite;
+  }
+  .hero-stickers .s1 { top: 12%;  left: 8%;   animation-delay: 0s;   transform: rotate(-12deg); }
+  .hero-stickers .s2 { top: 22%;  right: 12%; animation-delay: .6s;  transform: rotate(8deg); }
+  .hero-stickers .s3 { top: 54%;  right: 18%; animation-delay: 1.2s; transform: rotate(-6deg); }
+  .hero-stickers .s4 { top: 40%;  left: 14%;  animation-delay: 1.8s; transform: rotate(14deg); }
+  .hero-stickers .s5 { top: 68%;  right: 8%;  animation-delay: 2.4s; transform: rotate(-10deg); }
+  @keyframes bob {
+    0%, 100% { translate: 0 0; }
+    50%      { translate: 0 -10px; }
+  }
+  @media (max-width: 768px) {
+    .hero-stickers .s3, .hero-stickers .s4 { display: none; }
+    .hero-stickers .s1 { top: 8%; left: 6%; }
+    .hero-stickers .s2 { top: 14%; right: 6%; }
+    .hero-stickers .s5 { top: 44%; right: 6%; }
+  }
 
   .hero-dots { position: absolute; bottom: 40px; right: 48px; z-index: 12; display: flex; gap: 6px; align-items: center; }
   .hero-dot {
@@ -415,39 +504,98 @@ const activities = [
   .section-h2 em { font-style: italic; color: #4ade80; }
   .section-sub { font-size: 14px; color: rgba(255,255,255,.4); }
 
+  /* ─── CATEGORY SCROLLER (Meetup-style) ─── */
+  .categories {
+    max-width: 1200px; margin: 0 auto;
+    padding: 32px 0 8px;
+  }
+  .categories-scroll {
+    display: flex; gap: 12px;
+    padding: 8px 40px 24px;
+    overflow-x: auto; scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .categories-scroll::-webkit-scrollbar { display: none; }
+  .cat-pill {
+    scroll-snap-align: start; flex: 0 0 auto;
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px 14px 16px;
+    background: color-mix(in srgb, var(--tint) 10%, rgba(255,255,255,.02));
+    border: 1px solid color-mix(in srgb, var(--tint) 28%, transparent);
+    border-radius: 999px;
+    text-decoration: none;
+    transition: transform .25s cubic-bezier(.22,1,.36,1), background .25s, border-color .25s, box-shadow .25s;
+  }
+  .cat-pill:hover {
+    transform: translateY(-3px) rotate(-.6deg);
+    background: color-mix(in srgb, var(--tint) 18%, rgba(255,255,255,.04));
+    border-color: color-mix(in srgb, var(--tint) 55%, transparent);
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--tint) 25%, transparent);
+  }
+  .cat-pill:active { transform: translateY(-1px) rotate(0); }
+  .cat-emoji {
+    font-size: 26px; line-height: 1;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: color-mix(in srgb, var(--tint) 22%, rgba(255,255,255,.04));
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .cat-text { display: flex; flex-direction: column; line-height: 1.2; }
+  .cat-text strong { font-size: 14px; color: #fff; font-weight: 700; }
+  .cat-text small { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 2px; }
+  @media (max-width: 768px) {
+    .categories-scroll { padding: 8px 20px 20px; }
+  }
+
   /* ─── ACTIVITY CARDS ─── */
   .activity-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
   }
   .activity-card {
-    position: relative; border-radius: 18px; overflow: hidden;
-    height: 220px; display: flex;
+    position: relative; border-radius: 22px; overflow: hidden;
+    height: 240px; display: flex;
+    border: 1px solid color-mix(in srgb, var(--tint, #fff) 15%, transparent);
+    transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s, border-color .3s;
   }
+  .activity-card:hover {
+    transform: translateY(-4px) rotate(-.4deg);
+    border-color: color-mix(in srgb, var(--tint, #fff) 50%, transparent);
+    box-shadow: 0 18px 40px color-mix(in srgb, var(--tint, #000) 35%, rgba(0,0,0,.4));
+  }
+  .activity-card:hover .activity-img { transform: scale(1.06); }
   .activity-img {
     position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    transition: transform .6s cubic-bezier(.22,1,.36,1);
   }
   .activity-overlay {
     position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.3) 50%, rgba(0,0,0,.15) 100%);
+    background:
+      linear-gradient(to top, rgba(0,0,0,.88) 0%, rgba(0,0,0,.2) 55%, rgba(0,0,0,0) 100%),
+      linear-gradient(135deg, color-mix(in srgb, var(--tint, transparent) 40%, transparent) 0%, transparent 60%);
   }
+  .activity-sticker {
+    position: absolute; top: 14px; left: 14px; z-index: 3;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 6px 14px rgba(0,0,0,.35), 0 0 0 3px color-mix(in srgb, var(--tint, #fff) 60%, transparent);
+    transform: rotate(-8deg);
+    transition: transform .3s cubic-bezier(.22,1,.36,1);
+  }
+  .activity-card:hover .activity-sticker { transform: rotate(6deg) scale(1.08); }
   .activity-content {
     position: relative; z-index: 2; margin-top: auto; padding: 20px;
   }
-  .activity-emoji { font-size: 22px; display: block; margin-bottom: 8px; }
-  .activity-title { font-size: 16px; color: #fff; font-weight: 700; margin-bottom: 4px; }
-  .activity-desc { font-size: 12px; color: rgba(255,255,255,.55); line-height: 1.5; }
-  .activity-arrow {
-    position: absolute; top: 16px; right: 16px; z-index: 3;
-    width: 32px; height: 32px; border-radius: 50%;
-    background: rgba(255,255,255,.12); backdrop-filter: blur(8px);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 14px; opacity: 0; transform: translateX(-8px);
-    transition: all .3s ease;
-  }
+  .activity-title { font-size: 17px; color: #fff; font-weight: 700; margin-bottom: 4px; letter-spacing: -.2px; }
+  .activity-desc { font-size: 12px; color: rgba(255,255,255,.7); line-height: 1.5; }
 
   /* ─── HOW IT WORKS ─── */
   .how-section {
-    background: linear-gradient(180deg, rgba(59,130,246,.04) 0%, transparent 100%);
+    background:
+      radial-gradient(ellipse at 15% 0%, rgba(240,90,40,.08), transparent 55%),
+      radial-gradient(ellipse at 85% 100%, rgba(168,85,247,.07), transparent 55%);
     border-top: 1px solid rgba(255,255,255,.04);
     border-bottom: 1px solid rgba(255,255,255,.04);
     padding: 72px 0;
@@ -456,42 +604,78 @@ const activities = [
   .steps { display: flex; align-items: flex-start; gap: 0; margin-top: 12px; }
   .step { flex: 1; display: flex; align-items: flex-start; gap: 16px; }
   .step-number {
-    width: 44px; height: 44px; flex-shrink: 0;
-    border-radius: 14px; background: rgba(59,130,246,.1);
-    border: 1px solid rgba(59,130,246,.2);
+    width: 56px; height: 56px; flex-shrink: 0;
+    border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Instrument Serif', serif; font-size: 22px; color: #60a5fa;
+    font-family: 'Instrument Serif', serif; font-size: 26px; color: #fff;
+    font-style: italic; font-weight: 500;
+    box-shadow: 0 10px 24px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.12);
+    transform: rotate(-6deg);
+    transition: transform .3s cubic-bezier(.22,1,.36,1);
   }
-  .step-body h3 { font-size: 16px; color: #fff; margin-bottom: 4px; }
-  .step-body p { font-size: 13px; color: rgba(255,255,255,.4); line-height: 1.6; }
+  .step:hover .step-number { transform: rotate(6deg) scale(1.06); }
+  .step-number.s-coral  { background: linear-gradient(135deg, #F05A28 0%, #fbbf24 100%); }
+  .step-number.s-pink   { background: linear-gradient(135deg, #ec4899 0%, #F05A28 100%); }
+  .step-number.s-purple { background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); }
+  .step-body h3 { font-size: 17px; color: #fff; margin-bottom: 6px; font-weight: 700; }
+  .step-body p { font-size: 13px; color: rgba(255,255,255,.5); line-height: 1.6; }
   .step-divider {
     width: 1px; min-height: 60px; align-self: stretch;
-    background: linear-gradient(to bottom, rgba(59,130,246,.2), transparent);
+    background: linear-gradient(to bottom, rgba(236,72,153,.3), transparent);
     margin: 0 20px; flex-shrink: 0;
   }
 
   /* ─── EVENT CARDS ─── */
-  .events-grid { display: flex; flex-direction: column; gap: 10px; }
+  .events-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .event-card {
+    position: relative; display: flex; flex-direction: column;
+    border-radius: 20px; overflow: hidden; text-decoration: none;
+    background: rgba(255,255,255,.03);
+    border: 1px solid color-mix(in srgb, var(--ev-tint, #fff) 14%, rgba(255,255,255,.06));
+    transition: transform .3s cubic-bezier(.22,1,.36,1), border-color .3s, box-shadow .3s;
+  }
+  .event-card:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--ev-tint, #fff) 50%, transparent);
+    box-shadow: 0 18px 38px color-mix(in srgb, var(--ev-tint, #000) 25%, rgba(0,0,0,.35));
+  }
+  .event-strip {
+    height: 8px;
+    background: linear-gradient(90deg,
+      color-mix(in srgb, var(--ev-tint, #F05A28) 100%, transparent) 0%,
+      color-mix(in srgb, var(--ev-tint, #F05A28) 60%, #ec4899) 100%);
+  }
+  .event-body {
     display: flex; align-items: center; gap: 16px;
-    padding: 18px 20px; border-radius: 16px;
-    background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.05);
-    transition: border-color .2s, transform .2s, background .2s;
+    padding: 20px 22px;
   }
-  .event-card:hover { border-color: rgba(255,255,255,.12); transform: translateX(4px); background: rgba(255,255,255,.04); }
   .event-date-badge {
-    text-align: center; padding: 8px 12px; min-width: 54px;
-    background: rgba(59,130,246,.1); border-radius: 12px;
+    text-align: center; padding: 10px 12px; min-width: 58px;
+    background: color-mix(in srgb, var(--ev-tint, #F05A28) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ev-tint, #F05A28) 28%, transparent);
+    border-radius: 14px;
   }
-  .event-month { display: block; font-size: 10px; font-weight: 700; color: #60a5fa; text-transform: uppercase; }
-  .event-day { display: block; font-family: 'Instrument Serif', serif; font-size: 22px; color: #fff; line-height: 1.1; }
-  .event-info { flex: 1; }
-  .event-type-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-  .event-type-label { font-size: 11px; color: #60a5fa; font-weight: 600; text-transform: capitalize; }
-  .event-title { font-size: 15px; color: #fff; font-weight: 600; margin-bottom: 2px; }
-  .event-meta { font-size: 12px; color: rgba(255,255,255,.3); }
-  .event-arrow { font-size: 20px; color: rgba(255,255,255,.2); flex-shrink: 0; transition: color .2s; }
-  .event-card:hover .event-arrow { color: rgba(255,255,255,.5); }
+  .event-month { display: block; font-size: 10px; font-weight: 700; color: color-mix(in srgb, var(--ev-tint, #fff) 80%, #fff); text-transform: uppercase; letter-spacing: .08em; }
+  .event-day { display: block; font-family: 'Instrument Serif', serif; font-size: 26px; color: #fff; line-height: 1.05; }
+  .event-info { flex: 1; min-width: 0; }
+  .event-type-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .event-type-emoji { font-size: 16px; }
+  .event-type-label {
+    font-size: 10px; color: color-mix(in srgb, var(--ev-tint, #fff) 75%, #fff);
+    font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    padding: 3px 10px; border-radius: 999px;
+    background: color-mix(in srgb, var(--ev-tint, #F05A28) 14%, transparent);
+  }
+  .event-title { font-size: 16px; color: #fff; font-weight: 700; margin-bottom: 4px; letter-spacing: -.2px; }
+  .event-meta { font-size: 12px; color: rgba(255,255,255,.5); }
+  .event-arrow {
+    font-size: 18px; color: rgba(255,255,255,.35);
+    flex-shrink: 0; transition: transform .3s cubic-bezier(.22,1,.36,1), color .2s;
+  }
+  .event-card:hover .event-arrow { transform: translateX(4px); color: color-mix(in srgb, var(--ev-tint, #fff) 85%, #fff); }
+  @media (max-width: 680px) {
+    .events-grid { grid-template-columns: 1fr; }
+  }
 
   /* ─── DISCORD ─── */
   .discord-section {
@@ -556,25 +740,50 @@ const activities = [
 
   /* ─── FINAL CTA ─── */
   .final-cta {
-    position: relative; height: 420px; overflow: hidden;
+    position: relative; min-height: 460px; overflow: hidden;
     display: flex; align-items: center; justify-content: center; text-align: center;
     margin-top: 40px;
+    background: #05070d;
   }
-  .final-cta-bg {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  }
-  .final-cta-overlay {
+  .final-cta-mesh {
     position: absolute; inset: 0;
-    background: rgba(5,7,13,.7);
-    backdrop-filter: blur(2px);
+    background:
+      radial-gradient(ellipse 60% 55% at 18% 30%, rgba(240,90,40,.55), transparent 65%),
+      radial-gradient(ellipse 55% 50% at 82% 25%, rgba(236,72,153,.5), transparent 60%),
+      radial-gradient(ellipse 70% 60% at 50% 110%, rgba(168,85,247,.55), transparent 55%),
+      radial-gradient(ellipse 40% 40% at 20% 95%, rgba(251,191,36,.28), transparent 60%),
+      linear-gradient(180deg, #0a0712 0%, #05070d 100%);
+    filter: saturate(1.1);
   }
-  .final-cta-content { position: relative; z-index: 2; padding: 0 24px; }
+  .final-cta-mesh::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(5,7,13,.55) 100%);
+  }
+  .final-cta-stickers { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+  .final-cta-stickers .sticker {
+    position: absolute; font-size: clamp(32px, 4.5vw, 48px);
+    filter: drop-shadow(0 8px 18px rgba(0,0,0,.4));
+    animation: bob 7s ease-in-out infinite;
+  }
+  .final-cta-stickers .s1 { top: 18%; left: 10%;  animation-delay: 0s;   transform: rotate(-12deg); }
+  .final-cta-stickers .s2 { top: 22%; right: 12%; animation-delay: .8s;  transform: rotate(10deg); }
+  .final-cta-stickers .s3 { bottom: 18%; left: 16%; animation-delay: 1.6s; transform: rotate(14deg); }
+  .final-cta-stickers .s4 { bottom: 22%; right: 14%; animation-delay: 2.4s; transform: rotate(-8deg); }
+  @media (max-width: 768px) {
+    .final-cta-stickers .s2, .final-cta-stickers .s4 { display: none; }
+  }
+  .final-cta-content { position: relative; z-index: 2; padding: 72px 24px; }
   .final-cta-content h2 {
     font-family: 'Instrument Serif', serif;
-    font-size: clamp(32px, 5vw, 52px); color: #fff; line-height: 1.08; margin-bottom: 12px;
+    font-size: clamp(34px, 5.5vw, 56px); color: #fff; line-height: 1.08; margin-bottom: 14px;
+    letter-spacing: -.5px;
   }
-  .final-cta-content h2 em { font-style: italic; color: #4ade80; }
-  .final-cta-content p { font-size: 15px; color: rgba(255,255,255,.5); margin-bottom: 28px; }
+  .final-cta-content h2 em {
+    font-style: italic;
+    background: linear-gradient(135deg, #fbbf24 0%, #F05A28 50%, #ec4899 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .final-cta-content p { font-size: 15px; color: rgba(255,255,255,.7); margin-bottom: 32px; }
 
   /* ─── FOOTER ─── */
   .footer { border-top: 1px solid rgba(255,255,255,.06); padding: 48px 40px; }

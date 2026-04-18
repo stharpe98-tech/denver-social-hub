@@ -39,10 +39,24 @@
 ## Rules for "Perfection"
 - **Mobile First:** Always design for small screens before desktop. Base styles target mobile; use `@media (min-width: ...)` to scale up.
 - **Visuals:** Use 60-30-10 color rule (Primary/Secondary/Accent). Define the three colors as CSS custom properties in `Base.astro` and reference them everywhere — no one-off hex codes in components.
-- **Spacing:** Strict 4px scale — only use `4, 8, 12, 16, 24, 32, 48, 64, 96` px for padding, margin, and gaps. Define these as CSS variables (`--space-1` through `--space-8`) in `Base.astro` and use the variables instead of raw pixel values.
+- **Spacing:** Strict 4px scale — only use `4, 8, 12, 16, 24, 32, 48, 64, 96` px for padding, margin, and gaps. Use the CSS variables (`--space-1` through `--space-9`) defined in `Base.astro` instead of raw pixel values.
 - **Typography:** All `@font-face` declarations must use `font-display: swap` for performance.
 - **Interactions:** Every `<button>` and `<a>` that looks like a button must have a `:hover` and `:active` state.
 - **Process:** Always provide a "Plan" before writing any code.
+
+## Design Direction
+- **References:** Partiful (playfulness, gradients, sticker-style emojis, rounded pill buttons) + Meetup (category scroller, social cues, warm orange CTA).
+- **Vibe:** Partiful energy, Meetup backbone — bold color and stickers, but the trust/verification language stays intact.
+- **Design tokens (in `src/layouts/Base.astro` `:root`):**
+  - Colors: `--coral` / `--coral-2` (primary CTA), `--pink`, `--yellow`, `--purple`, `--green`, `--blue` (each has a `-dim` tinted variant).
+  - Gradients: `--gradient-party` (coral→pink→purple, signature CTA look), `--gradient-sunset` (coral→yellow), `--gradient-dusk` (purple→blue).
+  - Radii: `--radius` (14), `--radius-lg` (20), `--radius-xl` (28). Rounded pill buttons use `999px`.
+  - Spacing: `--space-1` … `--space-9` (4/8/12/16/24/32/48/64/96).
+- **Reusable patterns (live on home page, carry to other pages when refreshed):**
+  - `.btn-party` — gradient pill CTA with shine-on-hover. Prefer this for primary CTAs over `.btn-primary-lg`/`.nav-cta`.
+  - Floating `.sticker` emojis with a `bob` keyframe — use sparingly on hero / empty states / success screens.
+  - Card color-tinting via `--tint` CSS var (activity, event, category cards) using `color-mix(in srgb, var(--tint) X%, …)` — one card recipe, swap the hue.
+  - Meetup-style `.categories-scroll` for horizontal category browsing (scroll-snap + hidden scrollbar).
 
 ## Project-Specific Rules
 - **SSR only** — never switch to static output.
