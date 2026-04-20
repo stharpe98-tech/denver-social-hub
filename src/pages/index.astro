@@ -43,6 +43,12 @@ const activities = [
   { emoji:"🧶", title:"Fiber arts", desc:"Knitting, crochet — bring your project or start one.", img:"https://images.unsplash.com/photo-1582738411706-bfc8e691d1c2?w=600&q=70", color:"#ec4899" },
   { emoji:"🎳", title:"Bowling nights", desc:"Strikes, gutters, and a whole lot of laughing.", img:"https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?w=600&q=70", color:"#f59e0b" },
 ];
+
+const crew = [
+  { initial:"S", name:"Sarah M.",  zone:"Capitol Hill", fav:"Dinner hangs",     quote:"Moved here knowing nobody. Now I have a group text.",    tint:"#F05A28" },
+  { initial:"M", name:"Marco D.",  zone:"Highlands",    fav:"Brewery crawls",   quote:"Tuesdays are now the best night of my week.",             tint:"#fbbf24" },
+  { initial:"P", name:"Priya L.",  zone:"RiNo",         fav:"Pottery nights",   quote:"I came for the clay, stayed for the dumpling crawl.",     tint:"#ec4899" },
+];
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -162,6 +168,29 @@ const activities = [
 </section>
 
 
+<!-- ═══ MEET THE CREW — humanize the landing ═══ -->
+<section class="section crew-section">
+  <div class="section-head">
+    <span class="section-tag">Meet the crew</span>
+    <h2 class="section-h2">A few <em>Denverites</em> you'll meet.</h2>
+    <p class="section-sub">Real people, real neighborhoods, real plans.</p>
+  </div>
+  <div class="crew-grid">
+    {crew.map((m) => (
+      <div class="crew-card fade-up" style={`--tint:${m.tint}`}>
+        <div class="crew-avatar">{m.initial}</div>
+        <div class="crew-meta">
+          <strong>{m.name}</strong>
+          <span>{m.zone}</span>
+        </div>
+        <span class="crew-fav">{m.fav}</span>
+        <p class="crew-quote">"{m.quote}"</p>
+      </div>
+    ))}
+  </div>
+</section>
+
+
 <!-- ═══ HOW IT WORKS — with numbered visual steps ═══ -->
 <section class="how-section">
   <div class="how-inner">
@@ -239,8 +268,8 @@ const activities = [
   <div class="discord-inner">
     <div class="discord-icon">💬</div>
     <div class="discord-text">
-      <h3><strong>88</strong> locals in the Discord</h3>
-      <p>That's where plans actually happen — polls, last-minute hangs, figuring out what's next.</p>
+      <h3><strong>88</strong> in the group chat. Come say hi.</h3>
+      <p>This is where plans actually happen — polls, last-minute hangs, hot takes on Denver's best dumplings.</p>
     </div>
     <a href="https://discord.gg/S8SFNkdSgK" class="discord-btn" target="_blank" rel="noopener">Join the Discord →</a>
   </div>
@@ -262,12 +291,12 @@ const activities = [
       </footer>
     </div>
     <div class="trust-facts fade-up">
-      <h3>Built for trust.</h3>
+      <h3>How we keep hangs cozy.</h3>
       <div class="trust-list">
-        <div class="trust-item"><div class="trust-check">✓</div><span>Every member is verified before RSVP</span></div>
-        <div class="trust-item"><div class="trust-check">✓</div><span>Locations stay private until you commit</span></div>
-        <div class="trust-item"><div class="trust-check">✓</div><span>Small groups only — 6 to 12 people</span></div>
-        <div class="trust-item"><div class="trust-check">✓</div><span>One-strike policy for bad behavior</span></div>
+        <div class="trust-item"><div class="trust-check">✓</div><span>Small groups only — 6 to 12 people, always</span></div>
+        <div class="trust-item"><div class="trust-check">✓</div><span>Hosts reply within a day, usually same-night</span></div>
+        <div class="trust-item"><div class="trust-check">✓</div><span>Locations stay private until you RSVP</span></div>
+        <div class="trust-item"><div class="trust-check">✓</div><span>One hang free. No subscription, no catch.</span></div>
       </div>
     </div>
   </div>
@@ -284,8 +313,8 @@ const activities = [
     <span class="sticker s4">🎟️</span>
   </div>
   <div class="final-cta-content fade-up">
-    <h2>Your people are<br>out <em>there.</em></h2>
-    <p>No cost to join. Takes 60 seconds.</p>
+    <h2>See you <em>Thursday?</em></h2>
+    <p>Pick a hang. Show up. We handle the rest.</p>
     <a href="/login?mode=join" class="btn-party btn-party-lg">Join Free →</a>
   </div>
 </section>
@@ -573,8 +602,8 @@ const activities = [
   .activity-overlay {
     position: absolute; inset: 0;
     background:
-      linear-gradient(to top, rgba(0,0,0,.88) 0%, rgba(0,0,0,.2) 55%, rgba(0,0,0,0) 100%),
-      linear-gradient(135deg, color-mix(in srgb, var(--tint, transparent) 40%, transparent) 0%, transparent 60%);
+      linear-gradient(to top, rgba(0,0,0,.78) 0%, rgba(0,0,0,.15) 55%, transparent 100%),
+      linear-gradient(135deg, color-mix(in srgb, var(--tint, transparent) 55%, transparent) 0%, transparent 55%);
   }
   .activity-sticker {
     position: absolute; top: 14px; left: 14px; z-index: 3;
@@ -592,6 +621,64 @@ const activities = [
   }
   .activity-title { font-size: 17px; color: #fff; font-weight: 700; margin-bottom: 4px; letter-spacing: -.2px; }
   .activity-desc { font-size: 12px; color: rgba(255,255,255,.7); line-height: 1.5; }
+
+  /* ─── CREW CARDS ─── */
+  .crew-section {
+    background:
+      radial-gradient(ellipse at 90% 0%, rgba(236,72,153,.06), transparent 55%),
+      radial-gradient(ellipse at 10% 100%, rgba(240,90,40,.06), transparent 55%);
+    border-radius: 28px;
+    max-width: 1040px; margin: 0 auto;
+  }
+  .crew-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  .crew-card {
+    position: relative;
+    padding: 28px 22px 24px;
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--tint, #fff) 5%, rgba(255,255,255,.025));
+    border: 1px solid color-mix(in srgb, var(--tint, #fff) 18%, rgba(255,255,255,.05));
+    transition: transform .3s cubic-bezier(.22,1,.36,1), border-color .3s, box-shadow .3s;
+  }
+  .crew-card:hover {
+    transform: translateY(-4px) rotate(-.3deg);
+    border-color: color-mix(in srgb, var(--tint, #fff) 45%, transparent);
+    box-shadow: 0 16px 36px color-mix(in srgb, var(--tint, #000) 22%, rgba(0,0,0,.3));
+  }
+  .crew-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Instrument Serif', serif; font-size: 26px; color: #fff;
+    font-weight: 500; letter-spacing: -.5px;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--tint, #F05A28) 100%, transparent) 0%,
+      color-mix(in srgb, var(--tint, #ec4899) 65%, #ec4899) 100%);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--tint, #000) 30%, rgba(0,0,0,.35)), inset 0 0 0 2px rgba(255,255,255,.14);
+    margin-bottom: 14px;
+    transform: rotate(-4deg);
+    transition: transform .3s cubic-bezier(.22,1,.36,1);
+  }
+  .crew-card:hover .crew-avatar { transform: rotate(4deg) scale(1.05); }
+  .crew-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .crew-meta strong { font-size: 16px; color: #fff; font-weight: 700; letter-spacing: -.2px; }
+  .crew-meta span { font-size: 12px; color: rgba(255,255,255,.45); }
+  .crew-fav {
+    display: inline-block;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    padding: 4px 10px; border-radius: 999px;
+    background: color-mix(in srgb, var(--tint, #F05A28) 16%, transparent);
+    color: color-mix(in srgb, var(--tint, #fff) 75%, #fff);
+    margin-bottom: 14px;
+  }
+  .crew-quote {
+    font-family: 'Instrument Serif', serif;
+    font-size: 17px; line-height: 1.35; color: rgba(255,255,255,.88);
+    font-style: italic;
+  }
+  @media (max-width: 768px) {
+    .crew-grid { grid-template-columns: 1fr; gap: 12px; }
+  }
 
   /* ─── HOW IT WORKS ─── */
   .how-section {

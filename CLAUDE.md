@@ -57,6 +57,7 @@
   - Floating `.sticker` emojis with a `bob` keyframe — use sparingly on hero / empty states / success screens.
   - Card color-tinting via `--tint` CSS var (activity, event, category cards) using `color-mix(in srgb, var(--tint) X%, …)` — one card recipe, swap the hue.
   - Meetup-style `.categories-scroll` for horizontal category browsing (scroll-snap + hidden scrollbar).
+  - `--wash-warm` — reusable coral bottom-glow radial for hero/CTA sections that should feel sunset-cozy.
 
 ## Project-Specific Rules
 - **SSR only** — never switch to static output.
