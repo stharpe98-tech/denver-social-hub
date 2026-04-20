@@ -219,6 +219,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
             <option value="potluck">🍲 Potluck</option>
             <option value="other">📅 Other</option>
           </select>
+          <div class="wiz-subcats" id="wizSubcats"></div>
           <div class="wiz-suggestions" id="wizSuggestions"></div>
           <input type="text" id="wizTitle" class="wiz-input" placeholder="or type your own name..." maxlength="100" />
           <button class="wiz-next" id="wizNext1">Next →</button>
@@ -470,6 +471,21 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
   .wiz-sug-chip:hover { border-color: #7C3AED; color: #7C3AED; background: rgba(124,58,237,0.04); transform: translateY(-1px); }
   .wiz-sug-chip.selected { border-color: #7C3AED; background: rgba(124,58,237,0.08); color: #7C3AED; }
+  .wiz-subcats {
+    display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px;
+  }
+  .wiz-subcat-label {
+    width: 100%; font-size: 11px; font-weight: 700; color: #9CA3AF;
+    font-family: 'Outfit', sans-serif; text-transform: uppercase;
+    letter-spacing: .06em; margin-bottom: 2px;
+  }
+  .wiz-subcat {
+    padding: 7px 14px; background: #F8F9FB; border: 1.5px solid #E5E7EB;
+    border-radius: 50px; font-size: 12px; font-weight: 600; color: #6B7280;
+    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
+  }
+  .wiz-subcat:hover { border-color: #D1D5DB; color: #374151; }
+  .wiz-subcat.selected { border-color: #3B82F6; background: rgba(59,130,246,0.06); color: #2563EB; }
   .wiz-sug-other { border-style: dashed; color: #9CA3AF; }
   .wiz-sug-other:hover { border-color: #7C3AED; color: #7C3AED; border-style: dashed; }
   .wiz-sug-other.selected { border-style: dashed; }
@@ -595,7 +611,44 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   // ── Wizard ──
   var TOTAL_STEPS = 4;
   var wizMode = isLoggedIn ? 'live' : 'suggest'; // 'live' = create event, 'suggest' = suggestion
-  var wizData = { title: '', type: 'social', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '' };
+  var wizData = { title: '', type: 'social', subcat: '', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '' };
+
+  // Sub-categories by type (only types that benefit from them)
+  var subcategories = {
+    dinner:        ['Mexican', 'Italian', 'Sushi', 'Ramen', 'BBQ', 'Thai', 'Indian', 'Korean', 'Brunch', 'Steakhouse'],
+    outdoor:       ['Hiking', 'Biking', 'Kayaking', 'Trail Run', 'Park Hangout', 'Fishing'],
+    music:         ['Jazz', 'Rock', 'Hip-Hop', 'EDM', 'Country', 'Indie', 'Open Mic'],
+    sports:        ['Basketball', 'Football', 'Soccer', 'Volleyball', 'Softball', 'Hockey'],
+    active:        ['Rock Climbing', 'Yoga', 'Ice Skating', 'Skiing', 'Kickboxing', 'Swimming'],
+    arts:          ['Gallery', 'Museum', 'Paint Night', 'Pottery', 'Theater', 'Film'],
+    game_night:    ['Board Games', 'Trivia', 'Escape Room', 'Video Games', 'Poker'],
+    group_tickets: ['Rockies', 'Nuggets', 'Avs', 'Rapids', 'Comedy', 'Concert', 'Theater'],
+    potluck:       ['Mexican', 'Italian', 'BBQ', 'Asian', 'Dessert Only', 'Brunch'],
+    camping:       ['Car Camping', 'Backpacking', 'Glamping', 'RV']
+  };
+
+  function renderSubcats(type) {
+    var container = document.getElementById('wizSubcats');
+    var items = subcategories[type];
+    container.innerHTML = '';
+    if (!items || items.length === 0) return;
+    var lbl = document.createElement('div');
+    lbl.className = 'wiz-subcat-label';
+    lbl.textContent = 'Narrow it down:';
+    container.appendChild(lbl);
+    items.forEach(function(cat) {
+      var pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'wiz-subcat';
+      pill.textContent = cat;
+      pill.addEventListener('click', function() {
+        container.querySelectorAll('.wiz-subcat').forEach(function(p) { p.classList.remove('selected'); });
+        pill.classList.add('selected');
+        wizData.subcat = cat;
+      });
+      container.appendChild(pill);
+    });
+  }
 
   // Auto-suggestion names by type
   var suggestions = {
@@ -718,14 +771,14 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
 
   function resetWizard() {
-    wizData = { title: '', type: 'social', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '' };
+    wizData = { title: '', type: 'social', subcat: '', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '' };
     wizMode = isLoggedIn ? 'live' : 'suggest';
     document.getElementById('wizTitle').value = '';
     document.getElementById('wizType').value = 'social';
     document.getElementById('wizDesc').value = '';
     document.getElementById('wizVenue').value = '';
     document.getElementById('wizLink').value = '';
-    document.querySelectorAll('.wiz-pill-btn, .wiz-sug-chip').forEach(function(b) { b.classList.remove('selected'); });
+    document.querySelectorAll('.wiz-pill-btn, .wiz-sug-chip, .wiz-subcat').forEach(function(b) { b.classList.remove('selected'); });
     document.querySelectorAll('.wiz-err').forEach(function(e) { e.textContent = ''; });
     // Reset mode toggle
     if (isLoggedIn) {
@@ -733,19 +786,23 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       document.getElementById('wizModeSuggest').classList.remove('selected');
       document.getElementById('wizSubmit').textContent = 'Create Event';
     }
+    renderSubcats('social');
     renderSuggestions('social');
     renderVenueSuggestions('social');
     showStep(1);
   }
 
   // Render initial suggestions
+  renderSubcats('social');
   renderSuggestions('social');
   renderVenueSuggestions('social');
 
-  // Dropdown change → update suggestions + venue suggestions
+  // Dropdown change → update subcats + suggestions + venue suggestions
   document.getElementById('wizType').addEventListener('change', function() {
     wizData.type = this.value;
+    wizData.subcat = '';
     document.getElementById('wizTitle').value = '';
+    renderSubcats(this.value);
     renderSuggestions(this.value);
     renderVenueSuggestions(this.value);
   });
