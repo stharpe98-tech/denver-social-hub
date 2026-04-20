@@ -145,6 +145,41 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     </div>
   )}
 
+  <!-- Suggest an Event -->
+  <div class="suggest-section">
+    <div class="suggest-header">
+      <h2 class="suggest-title">Got an idea?</h2>
+      <p class="suggest-sub">Suggest an event and let the community vote on it.</p>
+    </div>
+    <form class="suggest-form" id="suggestForm">
+      <div class="suggest-row">
+        <input type="text" name="title" placeholder="Event name (e.g. Rooftop BBQ)" class="suggest-input" required maxlength="100" />
+        <select name="type" class="suggest-select">
+          <option value="dinner">🍽️ Dinner</option>
+          <option value="brewery">🍺 Brewery</option>
+          <option value="outdoor">🏔️ Outdoor</option>
+          <option value="game_night">🎳 Game Night</option>
+          <option value="coffee">☕ Coffee</option>
+          <option value="arts">🎨 Arts</option>
+          <option value="music">🎵 Music</option>
+          <option value="social" selected>🎉 Social</option>
+          <option value="sports">🏒 Sports</option>
+          <option value="group_tickets">🎫 Group Tickets</option>
+          <option value="camping">🏕️ Camping</option>
+          <option value="bowling">🎳 Bowling</option>
+          <option value="active">🧗 Active</option>
+          <option value="casino">🎰 Casino</option>
+          <option value="food_trucks">🌮 Food Trucks</option>
+          <option value="potluck">🍲 Potluck</option>
+          <option value="other">📅 Other</option>
+        </select>
+      </div>
+      <textarea name="description" placeholder="Quick pitch — what would this look like? (optional)" class="suggest-textarea" rows="2" maxlength="300"></textarea>
+      <button type="submit" class="suggest-btn">Submit Idea</button>
+      <div class="suggest-msg" id="suggestMsg"></div>
+    </form>
+  </div>
+
   <div class="ev-discord">
     <span class="ev-discord-icon">💬</span>
     <div class="ev-discord-text">
@@ -266,9 +301,58 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     font-family: 'Outfit', sans-serif; flex-shrink: 0;
   }
 
+  /* Suggest an Event */
+  .suggest-section {
+    margin-bottom: 24px; padding: 24px;
+    background: #F8F9FB; border: 1px solid #E5E7EB; border-radius: 20px;
+  }
+  .suggest-header { margin-bottom: 16px; }
+  .suggest-title {
+    font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800;
+    color: #111827; margin-bottom: 4px;
+  }
+  .suggest-sub { font-size: 13px; color: #6B7280; }
+  .suggest-form { display: flex; flex-direction: column; gap: 10px; }
+  .suggest-row { display: flex; gap: 10px; }
+  .suggest-input {
+    flex: 1; padding: 11px 16px; background: #fff; border: 1px solid #E5E7EB;
+    border-radius: 12px; font-size: 13px; color: #111827; font-family: 'Inter', sans-serif;
+    outline: none; transition: border-color .2s;
+  }
+  .suggest-input:focus { border-color: #7C3AED; }
+  .suggest-input::placeholder { color: #9CA3AF; }
+  .suggest-select {
+    padding: 11px 14px; background: #fff; border: 1px solid #E5E7EB;
+    border-radius: 12px; font-size: 12px; color: #111827; font-family: 'Outfit', sans-serif;
+    font-weight: 600; cursor: pointer; outline: none; min-width: 150px;
+  }
+  .suggest-select:focus { border-color: #7C3AED; }
+  .suggest-textarea {
+    width: 100%; padding: 11px 16px; background: #fff; border: 1px solid #E5E7EB;
+    border-radius: 12px; font-size: 13px; color: #111827; font-family: 'Inter', sans-serif;
+    outline: none; resize: vertical; transition: border-color .2s;
+  }
+  .suggest-textarea:focus { border-color: #7C3AED; }
+  .suggest-textarea::placeholder { color: #9CA3AF; }
+  .suggest-btn {
+    align-self: flex-start; padding: 11px 28px; background: #7C3AED; color: #fff;
+    border: none; border-radius: 50px; font-size: 13px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .2s;
+  }
+  .suggest-btn:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.2); }
+  .suggest-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .suggest-msg {
+    font-size: 12px; font-weight: 600; font-family: 'Outfit', sans-serif;
+    min-height: 18px;
+  }
+  .suggest-msg.ok { color: #059669; }
+  .suggest-msg.err { color: #DC2626; }
+
   @media (max-width: 768px) {
     .ev-page { padding: 0 20px 40px; }
     .ev-grid { grid-template-columns: 1fr; }
+    .suggest-row { flex-direction: column; }
+    .suggest-select { min-width: unset; }
   }
 </style>
 
@@ -287,6 +371,46 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       });
     });
   });
+
+  // Suggest form
+  var form = document.getElementById('suggestForm');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var btn = form.querySelector('.suggest-btn');
+      var msg = document.getElementById('suggestMsg');
+      var title = form.querySelector('[name="title"]').value.trim();
+      var type = form.querySelector('[name="type"]').value;
+      var desc = form.querySelector('[name="description"]').value.trim();
+      if (!title) { msg.textContent = 'Please enter an event name.'; msg.className = 'suggest-msg err'; return; }
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+      msg.textContent = '';
+      msg.className = 'suggest-msg';
+      fetch('/api/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title, type: type, description: desc })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) {
+          msg.textContent = 'Submitted! The community will vote on it.';
+          msg.className = 'suggest-msg ok';
+          form.querySelector('[name="title"]').value = '';
+          form.querySelector('[name="description"]').value = '';
+        } else {
+          msg.textContent = data.error || 'Something went wrong.';
+          msg.className = 'suggest-msg err';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Submit Idea';
+      }).catch(function() {
+        msg.textContent = 'Network error. Try again.';
+        msg.className = 'suggest-msg err';
+        btn.disabled = false;
+        btn.textContent = 'Submit Idea';
+      });
+    });
+  }
 </script>
 
 </Base>
