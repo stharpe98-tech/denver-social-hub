@@ -470,6 +470,9 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
   .wiz-sug-chip:hover { border-color: #7C3AED; color: #7C3AED; background: rgba(124,58,237,0.04); transform: translateY(-1px); }
   .wiz-sug-chip.selected { border-color: #7C3AED; background: rgba(124,58,237,0.08); color: #7C3AED; }
+  .wiz-sug-other { border-style: dashed; color: #9CA3AF; }
+  .wiz-sug-other:hover { border-color: #7C3AED; color: #7C3AED; border-style: dashed; }
+  .wiz-sug-other.selected { border-style: dashed; }
   .wiz-input {
     width: 100%; padding: 16px 20px; background: #F8F9FB; border: 2px solid #E5E7EB;
     border-radius: 14px; font-size: 16px; color: #111827; font-family: 'Inter', sans-serif;
@@ -659,6 +662,18 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       });
       container.appendChild(chip);
     });
+    // "Other" chip — clears input and focuses it
+    var other = document.createElement('button');
+    other.type = 'button';
+    other.className = 'wiz-sug-chip wiz-sug-other';
+    other.textContent = '✏️ Other';
+    other.addEventListener('click', function() {
+      container.querySelectorAll('.wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
+      other.classList.add('selected');
+      document.getElementById('wizTitle').value = '';
+      document.getElementById('wizTitle').focus();
+    });
+    container.appendChild(other);
   }
 
   function renderVenueSuggestions(type) {
@@ -679,6 +694,18 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       });
       container.appendChild(chip);
     });
+    // "Other" chip — clears input and focuses it
+    var other = document.createElement('button');
+    other.type = 'button';
+    other.className = 'wiz-sug-chip wiz-sug-other';
+    other.textContent = '✏️ Other';
+    other.addEventListener('click', function() {
+      container.querySelectorAll('.wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
+      other.classList.add('selected');
+      document.getElementById('wizVenue').value = '';
+      document.getElementById('wizVenue').focus();
+    });
+    container.appendChild(other);
   }
 
   function showStep(n) {
