@@ -3,51 +3,46 @@ import { getDB } from '../lib/db';
 
 const db = getDB();
 let upcomingEvents: any[] = [];
+let suggestions: any[] = [];
+let memberCount = 0;
+let eventCount = 0;
+
 try {
-  if (db) upcomingEvents = (await db.prepare("SELECT * FROM events ORDER BY id DESC LIMIT 6").all())?.results || [];
+  if (db) {
+    upcomingEvents = (await db.prepare("SELECT * FROM events WHERE is_past IS NULL OR is_past=0 ORDER BY id DESC LIMIT 3").all())?.results || [];
+    const mc = await db.prepare("SELECT COUNT(*) as cnt FROM members").first();
+    memberCount = mc?.cnt || 0;
+    const ec = await db.prepare("SELECT COUNT(*) as cnt FROM events").first();
+    eventCount = ec?.cnt || 0;
+    suggestions = (await db.prepare("SELECT * FROM event_suggestions ORDER BY votes DESC LIMIT 4").all())?.results || [];
+  }
 } catch {}
 
 let user: any = null;
 const cookie = Astro.cookies.get("dsn_user")?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
-
 const isAdmin = user?.email === "stharpe98@gmail.com";
 
 const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",other:"📅" };
-const typeTint: Record<string,string> = { dinner:"#F05A28",game_night:"#a855f7",outdoor:"#22c55e",brewery:"#fbbf24",coffee:"#FF8A65",arts:"#ec4899",music:"#a855f7",social:"#ec4899",group_tickets:"#3b82f6",camping:"#22c55e",sports_outing:"#3b82f6",bowling:"#fbbf24",active:"#22c55e",casino:"#a855f7",food_trucks:"#F05A28",other:"#6b7a8e" };
 
 const categories = [
   { emoji:"🍽️", label:"Dinners",        sub:"Small tables, long nights", type:"dinner",       tint:"#F05A28" },
-  { emoji:"🏔️", label:"Outdoors",       sub:"Hikes, sunrise, trails",    type:"outdoor",      tint:"#22c55e" },
-  { emoji:"🎲", label:"Game nights",    sub:"Board games + trivia",      type:"game_night",   tint:"#a855f7" },
-  { emoji:"🍺", label:"Brewery crawls", sub:"Denver's best taprooms",    type:"brewery",      tint:"#fbbf24" },
-  { emoji:"🎨", label:"Arts + pottery", sub:"Get your hands dirty",      type:"arts",         tint:"#ec4899" },
-  { emoji:"🎳", label:"Bowling",        sub:"Strikes + gutters",         type:"bowling",      tint:"#FF8A65" },
-  { emoji:"☕", label:"Coffee meets",   sub:"Low-key + local",           type:"coffee",       tint:"#3b82f6" },
-  { emoji:"🎉", label:"Just social",    sub:"Turn-up, turn-out",         type:"social",       tint:"#ec4899" },
-];
-
-const slides = [
-  { img:"https://images.unsplash.com/photo-1546156929-a4c0ac411f47?w=1800&q=80", alt:"Denver skyline at dusk" },
-  { img:"https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1800&q=80", alt:"Pottery studio" },
-  { img:"https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=1800&q=80", alt:"Friends at dinner" },
-  { img:"https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1800&q=80", alt:"Colorado mountains" },
-  { img:"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1800&q=80", alt:"Mountain sunset" },
+  { emoji:"🏔️", label:"Outdoors",       sub:"Hikes, sunrise, trails",    type:"outdoor",      tint:"#10B981" },
+  { emoji:"🎲", label:"Game nights",    sub:"Board games + trivia",      type:"game_night",   tint:"#7C3AED" },
+  { emoji:"🍺", label:"Brewery crawls", sub:"Denver's best taprooms",    type:"brewery",      tint:"#F59E0B" },
+  { emoji:"🎨", label:"Arts + pottery", sub:"Get your hands dirty",      type:"arts",         tint:"#EC4899" },
+  { emoji:"🎳", label:"Bowling",        sub:"Strikes + gutters",         type:"bowling",      tint:"#3B82F6" },
+  { emoji:"☕", label:"Coffee meets",   sub:"Low-key + local",           type:"coffee",       tint:"#10B981" },
+  { emoji:"🎉", label:"Just social",    sub:"Turn-up, turn-out",         type:"social",       tint:"#EC4899" },
 ];
 
 const activities = [
-  { emoji:"🍽️", title:"Dinner hangs", desc:"Small tables, real conversation. Friends by dessert.", img:"https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=600&q=70", color:"#F05A28" },
-  { emoji:"🏔️", title:"Outdoor adventures", desc:"Hikes, sunrise treks, park days across Colorado.", img:"https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=70", color:"#22c55e" },
-  { emoji:"🏺", title:"Pottery nights", desc:"Get your hands dirty. No skill needed.", img:"https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&q=70", color:"#3b82f6" },
-  { emoji:"🎲", title:"Game evenings", desc:"Board games, trivia, zero experience required.", img:"https://images.unsplash.com/photo-1632501641765-e568d28b0015?w=600&q=70", color:"#a855f7" },
-  { emoji:"🧶", title:"Fiber arts", desc:"Knitting, crochet — bring your project or start one.", img:"https://images.unsplash.com/photo-1582738411706-bfc8e691d1c2?w=600&q=70", color:"#ec4899" },
-  { emoji:"🎳", title:"Bowling nights", desc:"Strikes, gutters, and a whole lot of laughing.", img:"https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?w=600&q=70", color:"#f59e0b" },
-];
-
-const crew = [
-  { initial:"S", name:"Sarah M.", zone:"Capitol Hill", fav:"Dinner hangs",   quote:"Moved here knowing nobody. Now I have a group text." },
-  { initial:"M", name:"Marco D.", zone:"Highlands",    fav:"Brewery crawls", quote:"Tuesdays are now the best night of my week." },
-  { initial:"P", name:"Priya L.", zone:"RiNo",         fav:"Pottery nights", quote:"I came for the clay, stayed for the dumpling crawl." },
+  { emoji:"🍽️", title:"Dinner hangs", desc:"Small tables, real conversation. Friends by dessert.", img:"https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=600&q=70" },
+  { emoji:"🏔️", title:"Outdoor adventures", desc:"Hikes, sunrise treks, park days across Colorado.", img:"https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=70" },
+  { emoji:"🏺", title:"Pottery nights", desc:"Get your hands dirty. No skill needed.", img:"https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&q=70" },
+  { emoji:"🎲", title:"Game evenings", desc:"Board games, trivia, zero experience required.", img:"https://images.unsplash.com/photo-1632501641765-e568d28b0015?w=600&q=70" },
+  { emoji:"🧶", title:"Fiber arts", desc:"Knitting, crochet — bring your project or start one.", img:"https://images.unsplash.com/photo-1582738411706-bfc8e691d1c2?w=600&q=70" },
+  { emoji:"🎳", title:"Bowling nights", desc:"Strikes, gutters, and a whole lot of laughing.", img:"https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?w=600&q=70" },
 ];
 ---
 <!DOCTYPE html>
@@ -55,17 +50,17 @@ const crew = [
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Denver Social — Show up. See what happens.</title>
-  <meta name="description" content="Small-group hangouts across Denver. Dinners, hikes, game nights, brewery crawls. No fees. No awkwardness. Just show up." />
+  <title>Denver Social — Meet your people. Explore your city.</title>
+  <meta name="description" content="Denver Social is a free community where members vote on what happens next. Small-group hangouts, dinners, hikes, game nights." />
   <link rel="icon" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 </head>
 <body>
 
-<!-- ═══ NAV — fades in on scroll ═══ -->
-<nav id="nav" class="nav">
+<!-- ═══ NAV — light, sticky top ═══ -->
+<nav class="nav">
   <a href="/" class="nav-logo">Denver <em>Social</em></a>
   <div class="nav-links">
     <a href="/events">Events</a>
@@ -75,53 +70,42 @@ const crew = [
   </div>
   <div class="nav-auth">
     {user
-      ? <a href="/profile" class="nav-btn nav-btn-ghost">My Profile</a>
-      : <a href="/login?mode=join" class="nav-btn nav-btn-primary">Join Free</a>
+      ? <a href="/profile" class="nav-btn-profile">My Profile</a>
+      : <a href="/login?mode=join" class="nav-btn-cta">Join Free</a>
     }
   </div>
 </nav>
 
 
-<!-- ═══ HERO — fullscreen slideshow with Ken Burns ═══ -->
-<section class="hero" id="hero">
-  {slides.map((s, i) => (
-    <div class={`hero-slide ${i === 0 ? 'active' : ''}`} aria-label={s.alt}>
-      <div class="hero-slide-img" style={`background-image:url(${s.img})`}></div>
-    </div>
-  ))}
-
-  <div class="hero-overlay"></div>
-
-  <div class="hero-content">
-    <div class="hero-badge">
-      <span class="hero-badge-dot"></span>
-      88 Denverites. One group chat. Lots of plans.
-    </div>
-    <h1 class="hero-h1">
-      Your next Denver<br>friends are <em>planning dinner.</em>
-    </h1>
-    <p class="hero-sub">
-      Small-group dinners, hikes, pottery, game nights. First hang is always free. Warm welcome, no awkwardness.
-    </p>
-    <div class="hero-btns">
-      <a href="/login?mode=join" class="btn-party">Join Free →</a>
-      <a href="#activities" class="btn-ghost-lg">See What We Do</a>
-    </div>
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="hero-badge"><span class="hero-dot"></span> {memberCount || 88} locals and growing</div>
+  <h1>Meet your people.<br/><em>Explore your city.</em></h1>
+  <p class="hero-sub">Denver Social is a free community where members vote on what happens next. No algorithm. Just locals showing up.</p>
+  <div class="hero-ctas">
+    <a href="/login?mode=join" class="btn-cta">Join for free</a>
+    <a href="#vote" class="btn-sec">See what's next</a>
   </div>
 
-  <div class="hero-dots" id="heroDots">
-    {slides.map((_, i) => (
-      <button class={`hero-dot ${i === 0 ? 'active' : ''}`} data-slide={i} aria-label={`Slide ${i + 1}`}></button>
-    ))}
-  </div>
-
-  <div class="hero-scroll" id="scrollHint">
-    <div class="hero-scroll-line"></div>
-  </div>
+  <!-- Mini event cards -->
+  {upcomingEvents.length > 0 && (
+    <div class="hero-cards">
+      {upcomingEvents.map((ev: any) => (
+        <a href={`/events/${ev.id}`} class="hc">
+          <div class="hc-top">
+            <span class="hc-emoji">{typeEmoji[ev.event_type] || '📅'}</span>
+            <span class="hc-going">{ev.spots} spots</span>
+          </div>
+          <div class="hc-title">{ev.title}</div>
+          <div class="hc-meta">{ev.event_month} {ev.event_day} · {ev.zone || ev.location}</div>
+        </a>
+      ))}
+    </div>
+  )}
 </section>
 
 
-<!-- ═══ CATEGORY SCROLLER — Meetup-style pills ═══ -->
+<!-- ═══ CATEGORY SCROLLER ═══ -->
 <section class="categories" aria-label="Browse by category">
   <div class="categories-scroll">
     {categories.map((c) => (
@@ -137,13 +121,57 @@ const crew = [
 </section>
 
 
-<!-- ═══ ACTIVITY CARDS — photo-backed grid ═══ -->
-<section id="activities" class="section">
-  <div class="section-head">
-    <span class="section-tag">What we do</span>
-    <h2 class="section-h2">Pick your thing. <em>Show up.</em></h2>
-    <p class="section-sub">No experience needed for any of these. Seriously.</p>
-  </div>
+<!-- ═══ STATS STRIP ═══ -->
+<div class="stats-strip">
+  <div class="ss-item"><div class="ss-num">{memberCount || '88'}+</div><div class="ss-label">Members</div></div>
+  <div class="ss-item"><div class="ss-num">{eventCount || '12'}</div><div class="ss-label">Events</div></div>
+  <div class="ss-item"><div class="ss-num">{suggestions.length || '4'}</div><div class="ss-label">Voted On</div></div>
+</div>
+
+
+<!-- ═══ COMMUNITY VOTING ═══ -->
+<section class="section" id="vote">
+  <div class="sec-eyebrow">Community Votes</div>
+  <h2 class="sec-title">What should we do next?</h2>
+  <p class="sec-sub">Members suggest ideas. The community votes. Top picks become real events.</p>
+
+  {suggestions.length > 0 ? (
+    <div class="vote-list">
+      {suggestions.map((s: any, i: number) => (
+        <div class="vi">
+          <div class="vi-rank">{i + 1}</div>
+          <div class="vi-info">
+            <div class="vi-title">{s.title}</div>
+            {s.description && <div class="vi-desc">{s.description}</div>}
+          </div>
+          <div class="vi-bar"><div class="vi-fill" style={`width:${Math.min(100, (s.votes || 0) * 3)}%`}></div></div>
+          <div class="vi-count">{s.votes || 0}</div>
+          <button class="vi-up" data-id={s.id}>▲</button>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div class="vote-list">
+      <div class="vi"><div class="vi-rank">1</div><div class="vi-info"><div class="vi-title">🍕 Korean BBQ Night</div><div class="vi-desc">Cook-your-own meat, Federal Blvd</div></div><div class="vi-bar"><div class="vi-fill" style="width:82%"></div></div><div class="vi-count">41</div><button class="vi-up">▲</button></div>
+      <div class="vi"><div class="vi-rank">2</div><div class="vi-info"><div class="vi-title">🧘 Red Rocks Sunrise Yoga</div><div class="vi-desc">Early morning yoga + coffee after</div></div><div class="vi-bar"><div class="vi-fill" style="width:68%"></div></div><div class="vi-count">34</div><button class="vi-up">▲</button></div>
+      <div class="vi"><div class="vi-rank">3</div><div class="vi-info"><div class="vi-title">🎮 Board Game Tournament</div><div class="vi-desc">Catan bracket at Tabletop Tap</div></div><div class="vi-bar"><div class="vi-fill" style="width:55%"></div></div><div class="vi-count">27</div><button class="vi-up">▲</button></div>
+      <div class="vi"><div class="vi-rank">4</div><div class="vi-info"><div class="vi-title">🏔️ Tubing on Clear Creek</div><div class="vi-desc">Lazy river in Golden, carpool</div></div><div class="vi-bar"><div class="vi-fill" style="width:45%"></div></div><div class="vi-count">22</div><button class="vi-up">▲</button></div>
+    </div>
+  )}
+
+  {!user && (
+    <p class="vote-cta-text">
+      <a href="/login?mode=join">Join free</a> to vote and suggest events.
+    </p>
+  )}
+</section>
+
+
+<!-- ═══ ACTIVITY CARDS ═══ -->
+<section class="section">
+  <div class="sec-eyebrow">What we do</div>
+  <h2 class="sec-title">Pick your thing. Show up.</h2>
+  <p class="sec-sub">No experience needed for any of these. Seriously.</p>
   <div class="activity-grid">
     {activities.map((a) => (
       <div class="activity-card fade-up">
@@ -160,58 +188,31 @@ const crew = [
 </section>
 
 
-<!-- ═══ MEET THE CREW — humanize the landing ═══ -->
-<section class="section crew-section">
-  <div class="section-head">
-    <span class="section-tag">Meet the crew</span>
-    <h2 class="section-h2">A few <em>Denverites</em> you'll meet.</h2>
-    <p class="section-sub">Real people, real neighborhoods, real plans.</p>
-  </div>
-  <div class="crew-grid">
-    {crew.map((m) => (
-      <div class="crew-card fade-up">
-        <div class="crew-avatar">{m.initial}</div>
-        <div class="crew-meta">
-          <strong>{m.name}</strong>
-          <span>{m.zone}</span>
-        </div>
-        <span class="crew-fav">{m.fav}</span>
-        <p class="crew-quote">"{m.quote}"</p>
-      </div>
-    ))}
-  </div>
-</section>
-
-
-<!-- ═══ HOW IT WORKS — with numbered visual steps ═══ -->
+<!-- ═══ HOW IT WORKS ═══ -->
 <section class="how-section">
   <div class="how-inner">
-    <div class="section-head">
-      <span class="section-tag">How it works</span>
-      <h2 class="section-h2">Three steps, <em>that's it.</em></h2>
-    </div>
+    <div class="sec-eyebrow">How it works</div>
+    <h2 class="sec-title">Three steps, that's it.</h2>
     <div class="steps">
-      <div class="step fade-up">
-        <div class="step-number">1</div>
+      <div class="step">
+        <div class="step-num">1</div>
         <div class="step-body">
           <h3>Join free</h3>
-          <p>60 seconds — name, email, done. No credit card, no subscription.</p>
+          <p>60 seconds — name, email, done. No credit card.</p>
         </div>
       </div>
-      <div class="step-divider fade-up"></div>
-      <div class="step fade-up">
-        <div class="step-number">2</div>
+      <div class="step">
+        <div class="step-num">2</div>
         <div class="step-body">
-          <h3>Pick something</h3>
-          <p>Pottery, dinner, hike, game night. Whatever sounds like you.</p>
+          <h3>Vote on what's next</h3>
+          <p>Suggest ideas or upvote others. Top picks become real events.</p>
         </div>
       </div>
-      <div class="step-divider fade-up"></div>
-      <div class="step fade-up">
-        <div class="step-number">3</div>
+      <div class="step">
+        <div class="step-num">3</div>
         <div class="step-body">
           <h3>Show up</h3>
-          <p>Small group, real people. Walk-ins welcome. No icebreakers, we promise.</p>
+          <p>Small group, real people. No icebreakers, we promise.</p>
         </div>
       </div>
     </div>
@@ -222,84 +223,79 @@ const crew = [
 <!-- ═══ UPCOMING EVENTS ═══ -->
 {upcomingEvents.length > 0 && (
   <section class="section">
-    <div class="section-head">
-      <span class="section-tag">Coming up</span>
-      <h2 class="section-h2">Happening in <em>Denver</em></h2>
-    </div>
-    <div class="events-grid">
-      {upcomingEvents.slice(0, 4).map((ev: any) => (
-        <a href={`/events/${ev.id}`} class="event-card fade-up">
-          <div class="event-date-badge">
-            <span class="event-month">{ev.event_month || 'TBD'}</span>
-            <span class="event-day">{ev.event_day || '—'}</span>
+    <div class="sec-eyebrow">Coming up</div>
+    <h2 class="sec-title">Happening in Denver</h2>
+    <div class="events-preview">
+      {upcomingEvents.map((ev: any) => (
+        <a href={`/events/${ev.id}`} class="ep-card">
+          <div class="ep-date">
+            <span class="ep-month">{(ev.event_month || 'TBD').slice(0, 3)}</span>
+            <span class="ep-day">{ev.event_day || '—'}</span>
           </div>
-          <div class="event-info">
-            <div class="event-type-row">
-              <span class="event-type-emoji">{typeEmoji[ev.event_type] || '📅'}</span>
-              <span class="event-type-label">{(ev.event_type || '').replace('_', ' ')}</span>
+          <div class="ep-info">
+            <div class="ep-type">
+              <span>{typeEmoji[ev.event_type] || '📅'}</span>
+              <span class="ep-type-label">{(ev.event_type || '').replace('_', ' ')}</span>
             </div>
-            <h3 class="event-title">{ev.title}</h3>
-            <p class="event-meta">{ev.zone || ev.location} · up to {ev.spots} people</p>
+            <h3 class="ep-title">{ev.title}</h3>
+            <p class="ep-meta">{ev.zone || ev.location} · up to {ev.spots} people</p>
           </div>
-          <span class="event-arrow" aria-hidden="true">→</span>
+          <span class="ep-arrow">→</span>
         </a>
       ))}
     </div>
-    <div style="text-align:center;margin-top:32px">
-      <a href="/events" class="btn-ghost-lg">All events →</a>
+    <div style="text-align:center;margin-top:24px">
+      <a href="/events" class="btn-sec">All events →</a>
     </div>
   </section>
 )}
 
 
-<!-- ═══ DISCORD CTA — full-width band ═══ -->
-<section class="discord-section fade-up">
-  <div class="discord-inner">
-    <div class="discord-icon">💬</div>
-    <div class="discord-text">
-      <h3><strong>88</strong> in the group chat. Come say hi.</h3>
-      <p>This is where plans actually happen — polls, last-minute hangs, hot takes on Denver's best dumplings.</p>
-    </div>
-    <a href="https://discord.gg/S8SFNkdSgK" class="discord-btn" target="_blank" rel="noopener">Join the Discord →</a>
-  </div>
-</section>
-
-
 <!-- ═══ TRUST / SOCIAL PROOF ═══ -->
 <section class="section">
   <div class="trust-grid">
-    <div class="trust-quote fade-up">
-      <div class="trust-quote-mark">"</div>
+    <div class="trust-quote">
+      <div class="tq-mark">"</div>
       <p>I moved to Denver knowing nobody. Three dinners later, I had a group text with 8 new friends.</p>
       <footer>
-        <div class="trust-avatar">S</div>
+        <div class="tq-avatar">S</div>
         <div>
           <strong>Sarah M.</strong>
           <span>Member since Jan 2026</span>
         </div>
       </footer>
     </div>
-    <div class="trust-facts fade-up">
-      <h3>How we keep hangs cozy.</h3>
-      <div class="trust-list">
-        <div class="trust-item"><div class="trust-check">✓</div><span>Small groups only — 6 to 12 people, always</span></div>
-        <div class="trust-item"><div class="trust-check">✓</div><span>Hosts reply within a day, usually same-night</span></div>
-        <div class="trust-item"><div class="trust-check">✓</div><span>Locations stay private until you RSVP</span></div>
-        <div class="trust-item"><div class="trust-check">✓</div><span>One hang free. No subscription, no catch.</span></div>
+    <div class="trust-facts">
+      <h3>Built for trust.</h3>
+      <div class="tf-list">
+        <div class="tf-item"><div class="tf-check">✓</div><span>Every member is verified before RSVP</span></div>
+        <div class="tf-item"><div class="tf-check">✓</div><span>Locations stay private until you commit</span></div>
+        <div class="tf-item"><div class="tf-check">✓</div><span>Small groups only — 6 to 12 people</span></div>
+        <div class="tf-item"><div class="tf-check">✓</div><span>One-strike policy for bad behavior</span></div>
       </div>
     </div>
   </div>
 </section>
 
 
-<!-- ═══ FINAL CTA — gradient mesh ═══ -->
-<section class="final-cta">
-  <div class="final-cta-mesh" aria-hidden="true"></div>
-  <div class="final-cta-content fade-up">
-    <h2>See you <em>Thursday?</em></h2>
-    <p>Pick a hang. Show up. We handle the rest.</p>
-    <a href="/login?mode=join" class="btn-party btn-party-lg">Join Free →</a>
+<!-- ═══ DISCORD CTA ═══ -->
+<section class="discord-section fade-up">
+  <div class="discord-inner">
+    <div class="discord-icon">💬</div>
+    <div class="discord-text">
+      <h3><strong>88</strong> locals in the Discord</h3>
+      <p>That's where plans actually happen — polls, last-minute hangs, figuring out what's next.</p>
+    </div>
+    <a href="https://discord.gg/S8SFNkdSgK" class="discord-btn" target="_blank" rel="noopener">Join the Discord →</a>
   </div>
+</section>
+
+
+<!-- ═══ FINAL CTA ═══ -->
+<section class="final-cta">
+  <h2>Your people are out <em>there.</em></h2>
+  <p>No cost to join. Takes 60 seconds.</p>
+  <a href="/login?mode=join" class="btn-cta">Join Free →</a>
 </section>
 
 
@@ -325,7 +321,7 @@ const crew = [
 </footer>
 
 
-<!-- ═══ MOBILE NAV ═══ -->
+<!-- ═══ BOTTOM TAB BAR (mobile) ═══ -->
 <div class="mob-nav">
   <div class="mob-nav-inner">
     <a href="/" class="active"><span>🏠</span>Home</a>
@@ -338,354 +334,224 @@ const crew = [
 </div>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     STYLES
-     ═══════════════════════════════════════════════════════════ -->
-<style>
+<style is:inline>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { font-family: 'DM Sans', sans-serif; background: #05070d; color: #e8ecf4; scroll-behavior: smooth; }
+  html { font-family: 'Inter', system-ui, sans-serif; background: #FFFFFF; color: #111827; scroll-behavior: smooth; }
   body { min-height: 100vh; overflow-x: hidden; }
   a { color: inherit; text-decoration: none; }
   img { display: block; }
 
   /* ─── NAV ─── */
   .nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    position: sticky; top: 0; z-index: 200;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 40px;
-    background: rgba(5,7,13,.92); backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255,255,255,.06);
-    transform: translateY(-100%); opacity: 0;
-    transition: transform .45s cubic-bezier(.22,1,.36,1), opacity .4s ease;
-    pointer-events: none;
+    padding: 14px 32px; height: 56px;
+    background: rgba(255,255,255,.92); backdrop-filter: blur(20px);
+    border-bottom: 1px solid #E5E7EB;
   }
-  .nav.visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
-  .nav-logo { font-family: 'Instrument Serif', serif; font-size: 20px; color: #fff; }
-  .nav-logo em { color: #4ade80; font-style: italic; }
-  .nav-links { display: flex; gap: 28px; position: absolute; left: 50%; transform: translateX(-50%); }
-  .nav-links a { font-size: 14px; font-weight: 500; color: rgba(255,255,255,.45); transition: color .2s; }
-  .nav-links a:hover { color: #fff; }
+  .nav-logo { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px; color: #111827; letter-spacing: -0.02em; }
+  .nav-logo em { font-style: normal; color: #7C3AED; }
+  .nav-links { display: flex; gap: 24px; position: absolute; left: 50%; transform: translateX(-50%); }
+  .nav-links a { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; color: #6B7280; transition: color .2s; }
+  .nav-links a:hover { color: #111827; }
   .nav-auth { display: flex; gap: 8px; }
-  .nav-btn { font-size: 13px; font-weight: 700; padding: 8px 20px; border-radius: 50px; transition: transform .2s, box-shadow .3s, background .2s, border-color .2s; }
-  .nav-btn-primary {
-    color: #fff;
-    background: linear-gradient(135deg, #F05A28 0%, #ec4899 55%, #a855f7 100%);
-    box-shadow: 0 6px 16px rgba(240,90,40,.28);
-  }
-  .nav-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(236,72,153,.4); }
-  .nav-btn-primary:active { transform: translateY(0); }
-  .nav-btn-ghost { color: #fff; border: 1px solid rgba(255,255,255,.15); }
-  .nav-btn-ghost:hover { border-color: rgba(255,255,255,.35); background: rgba(255,255,255,.04); }
-  .nav-btn-ghost:active { background: rgba(255,255,255,.08); }
-  .nav-links a:active { color: #fff; }
+  .nav-btn-profile { font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; padding: 7px 16px; border-radius: 50px; color: #111827; border: 1px solid #E5E7EB; transition: all .2s; }
+  .nav-btn-profile:hover { border-color: #D1D5DB; background: #F8F9FB; }
+  .nav-btn-cta { font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700; padding: 7px 18px; border-radius: 50px; background: #7C3AED; color: #fff; transition: all .2s; }
+  .nav-btn-cta:hover { opacity: .9; }
 
   /* ─── HERO ─── */
-  .hero { position: relative; width: 100%; height: 100svh; min-height: 640px; overflow: hidden; background: #000; }
-  .hero-slide {
-    position: absolute; inset: 0;
-    opacity: 0; transition: opacity 1.6s ease;
+  .hero {
+    padding: 56px 32px 48px; text-align: center; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #F8F9FB, #EEF2FF, #F0FDF4);
   }
-  .hero-slide.active { opacity: 1; }
-  .hero-slide.active .hero-slide-img { animation: kenBurns 12s ease forwards; }
-  .hero-slide-img {
-    position: absolute; inset: -20px;
-    background-size: cover; background-position: center;
-    will-change: transform;
-  }
-  @keyframes kenBurns {
-    0% { transform: scale(1); }
-    100% { transform: scale(1.08); }
-  }
-
-  .hero-overlay {
-    position: absolute; inset: 0; z-index: 2;
-    background:
-      linear-gradient(to bottom, rgba(5,7,13,.3) 0%, rgba(5,7,13,.1) 30%, rgba(5,7,13,.5) 70%, rgba(5,7,13,.95) 88%, #05070d 100%),
-      radial-gradient(ellipse at 20% 95%, rgba(240,90,40,.10), transparent 60%);
-  }
-
-  .hero-content {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    padding: 0 48px 56px; z-index: 10; max-width: 760px;
+  .hero::before {
+    content: ''; position: absolute; top: -50%; right: -30%; width: 500px; height: 500px;
+    border-radius: 50%; background: radial-gradient(circle, rgba(124,58,237,0.06), transparent 70%);
+    pointer-events: none;
   }
   .hero-badge {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 7px 16px; border-radius: 50px;
-    background: rgba(255,255,255,.08); backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,.1);
-    font-size: 12px; color: rgba(255,255,255,.7); margin-bottom: 22px;
-    font-weight: 500;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 16px; border-radius: 50px;
+    background: rgba(124,58,237,0.06); font-size: 12px; font-weight: 600; color: #7C3AED;
+    margin-bottom: 20px;
   }
-  .hero-badge-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,.5); }
-  .hero-h1 {
-    font-family: 'Instrument Serif', serif;
-    font-size: clamp(36px, 6vw, 66px);
-    font-weight: 400; color: #fff; line-height: 1.04; margin-bottom: 16px;
+  .hero-dot { width: 7px; height: 7px; border-radius: 50%; background: #10B981; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.4; transform:scale(1.5); } }
+  .hero h1 {
+    font-family: 'Outfit', sans-serif; font-size: clamp(32px, 5vw, 52px);
+    font-weight: 900; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 14px; color: #111827;
   }
-  .hero-h1 em { font-style: italic; color: #4ade80; }
-  .hero-sub {
-    font-size: clamp(14px, 1.6vw, 17px); color: rgba(255,255,255,.45);
-    line-height: 1.7; max-width: 500px; margin-bottom: 28px;
+  .hero h1 em { font-style: normal; color: #7C3AED; }
+  .hero-sub { font-size: 15px; color: #6B7280; max-width: 460px; margin: 0 auto 28px; line-height: 1.6; }
+  .hero-ctas { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn-cta {
+    display: inline-block; padding: 12px 28px; border-radius: 50px;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+    background: #7C3AED; color: #fff; transition: all .2s;
+    box-shadow: 0 2px 12px rgba(124,58,237,0.2);
   }
-  .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
-  .btn-party {
-    display: inline-flex; align-items: center; justify-content: center;
-    padding: 15px 34px; color: #fff;
-    border-radius: 999px; font-size: 15px; font-weight: 700; letter-spacing: .2px;
-    background: linear-gradient(135deg, #F05A28 0%, #ec4899 55%, #a855f7 100%);
-    background-size: 200% 100%; background-position: 0% 50%;
-    box-shadow: 0 10px 28px rgba(240,90,40,.35), 0 0 0 1px rgba(255,255,255,.06) inset;
-    transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .3s, background-position .6s;
+  .btn-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,58,237,0.3); }
+  .btn-sec {
+    display: inline-block; padding: 12px 28px; border-radius: 50px;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+    background: #fff; color: #111827; border: 1px solid #E5E7EB; transition: all .2s;
   }
-  .btn-party:hover { transform: translateY(-2px) scale(1.02); background-position: 100% 50%; box-shadow: 0 16px 40px rgba(236,72,153,.45); }
-  .btn-party:active { transform: translateY(0) scale(.99); }
-  .btn-party-lg { padding: 18px 44px; font-size: 16px; }
-  .btn-primary-lg {
-    display: inline-block; padding: 14px 32px; background: #fff; color: #05070d;
-    border-radius: 14px; font-size: 15px; font-weight: 700;
-    transition: transform .2s, box-shadow .3s;
-  }
-  .btn-primary-lg:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(255,255,255,.12); }
-  .btn-ghost-lg {
-    display: inline-block; padding: 14px 32px;
-    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
-    color: #fff; border-radius: 14px; font-size: 15px; font-weight: 500;
-    transition: background .2s, border-color .2s, transform .2s;
-  }
-  .btn-ghost-lg:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); transform: translateY(-1px); }
-  .btn-ghost-lg:active { transform: translateY(0); }
+  .btn-sec:hover { border-color: #D1D5DB; background: #F8F9FB; }
 
+  /* Hero mini cards */
+  .hero-cards { display: flex; gap: 14px; justify-content: center; margin-top: 40px; flex-wrap: wrap; padding: 0 16px; }
+  .hc {
+    width: 220px; background: #fff; border: 1px solid #E5E7EB; border-radius: 16px;
+    padding: 16px; text-align: left; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: all .2s;
+  }
+  .hc:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-color: #D1D5DB; }
+  .hc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .hc-emoji { font-size: 22px; }
+  .hc-going { font-size: 10px; font-weight: 700; color: #10B981; }
+  .hc-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px; margin-bottom: 3px; color: #111827; }
+  .hc-meta { font-size: 10px; color: #9CA3AF; }
 
-  .hero-dots { position: absolute; bottom: 40px; right: 48px; z-index: 12; display: flex; gap: 6px; align-items: center; }
-  .hero-dot {
-    width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.25);
-    border: none; padding: 0; cursor: pointer; transition: all .4s cubic-bezier(.22,1,.36,1);
-  }
-  .hero-dot.active { width: 22px; border-radius: 3px; background: #fff; }
-
-  .hero-scroll {
-    position: absolute; bottom: 32px; left: 48px; z-index: 12; height: 36px;
-    opacity: 1; transition: opacity .5s;
-  }
-  .hero-scroll.hidden { opacity: 0; }
-  .hero-scroll-line {
-    width: 1px; height: 100%; background: rgba(255,255,255,.2);
-    animation: scrollLine 2s ease-in-out infinite;
-  }
-  @keyframes scrollLine {
-    0% { transform: scaleY(0); transform-origin: top; opacity: 0; }
-    30% { opacity: 1; }
-    60% { transform: scaleY(1); transform-origin: top; }
-    100% { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
-  }
-
-  /* ─── SECTION HEADS ─── */
-  .section { max-width: 1040px; margin: 0 auto; padding: 72px 40px; }
-  .section-head { margin-bottom: 36px; }
-  .section-tag {
-    display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .2em;
-    color: #3b82f6; font-weight: 700; margin-bottom: 10px;
-    padding: 5px 12px; background: rgba(59,130,246,.08); border-radius: 6px;
-  }
-  .section-h2 {
-    font-family: 'Instrument Serif', serif;
-    font-size: clamp(28px, 4vw, 42px); color: #fff; line-height: 1.1; margin-bottom: 8px;
-  }
-  .section-h2 em { font-style: italic; color: #4ade80; }
-  .section-sub { font-size: 14px; color: rgba(255,255,255,.4); }
-
-  /* ─── CATEGORY SCROLLER (Meetup-style) ─── */
+  /* ─── CATEGORY SCROLLER ─── */
   .categories {
-    max-width: 1200px; margin: 0 auto;
-    padding: 32px 0 8px;
+    border-bottom: 1px solid #E5E7EB;
+    padding: 16px 0;
   }
   .categories-scroll {
-    display: flex; gap: 12px;
-    padding: 8px 40px 24px;
-    overflow-x: auto; scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
+    display: flex; gap: 10px; overflow-x: auto; padding: 0 32px;
+    scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
   .categories-scroll::-webkit-scrollbar { display: none; }
   .cat-pill {
-    scroll-snap-align: start; flex: 0 0 auto;
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 20px 14px 16px;
-    background: color-mix(in srgb, var(--tint) 10%, rgba(255,255,255,.02));
-    border: 1px solid color-mix(in srgb, var(--tint) 28%, transparent);
-    border-radius: 999px;
-    text-decoration: none;
-    transition: transform .25s cubic-bezier(.22,1,.36,1), background .25s, border-color .25s, box-shadow .25s;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-radius: 14px;
+    background: #F8F9FB; border: 1px solid #E5E7EB;
+    flex-shrink: 0; scroll-snap-align: start;
+    transition: all .2s; cursor: pointer;
   }
-  .cat-pill:hover {
-    transform: translateY(-2px);
-    background: color-mix(in srgb, var(--tint) 16%, rgba(255,255,255,.04));
-    border-color: color-mix(in srgb, var(--tint) 50%, transparent);
+  .cat-pill:hover { border-color: var(--tint); background: color-mix(in srgb, var(--tint) 6%, #fff); }
+  .cat-emoji { font-size: 24px; }
+  .cat-text { display: flex; flex-direction: column; }
+  .cat-text strong { font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700; color: #111827; }
+  .cat-text small { font-size: 10px; color: #9CA3AF; }
+
+  /* ─── STATS STRIP ─── */
+  .stats-strip { display: flex; justify-content: center; gap: 48px; padding: 28px 32px; border-bottom: 1px solid #E5E7EB; }
+  .ss-item { text-align: center; }
+  .ss-num { font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 28px; color: #7C3AED; }
+  .ss-label { font-size: 10px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: .06em; }
+
+  /* ─── SECTIONS ─── */
+  .section { padding: 56px 32px; max-width: 900px; margin: 0 auto; }
+  .sec-eyebrow {
+    display: inline-flex; padding: 4px 12px; border-radius: 50px;
+    background: #F0FDF4; color: #047857; font-size: 10px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px;
   }
-  .cat-pill:active { transform: translateY(0); }
-  .cat-emoji {
-    font-size: 26px; line-height: 1;
-    width: 44px; height: 44px; border-radius: 50%;
-    background: color-mix(in srgb, var(--tint) 22%, rgba(255,255,255,.04));
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
+  .sec-title { font-family: 'Outfit', sans-serif; font-size: clamp(24px, 3.5vw, 32px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; color: #111827; }
+  .sec-sub { font-size: 13px; color: #6B7280; margin-bottom: 24px; }
+
+  /* ─── VOTE LIST ─── */
+  .vote-list { display: flex; flex-direction: column; gap: 10px; }
+  .vi {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px; background: #F8F9FB; border: 1px solid #E5E7EB;
+    border-radius: 14px; transition: all .2s; cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
-  .cat-text { display: flex; flex-direction: column; line-height: 1.2; }
-  .cat-text strong { font-size: 14px; color: #fff; font-weight: 700; }
-  .cat-text small { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 2px; }
-  @media (max-width: 768px) {
-    .categories-scroll { padding: 8px 20px 20px; }
+  .vi:hover { border-color: #D1D5DB; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+  .vi-rank { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px; color: #9CA3AF; min-width: 24px; text-align: center; }
+  .vi-info { flex: 1; }
+  .vi-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px; color: #111827; margin-bottom: 1px; }
+  .vi-desc { font-size: 11px; color: #6B7280; }
+  .vi-bar { width: 100px; height: 5px; border-radius: 50px; background: #E5E7EB; overflow: hidden; }
+  .vi-fill { height: 100%; border-radius: 50px; background: linear-gradient(90deg, #7C3AED, #3B82F6); }
+  .vi-count { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 16px; color: #7C3AED; min-width: 32px; text-align: right; }
+  .vi-up {
+    width: 30px; height: 30px; border-radius: 10px; background: rgba(124,58,237,0.06);
+    border: 1px solid transparent; color: #7C3AED; font-size: 13px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all .15s; flex-shrink: 0;
   }
+  .vi-up:hover { background: #7C3AED; color: #fff; transform: scale(1.08); }
+  .vote-cta-text { margin-top: 16px; font-size: 13px; color: #6B7280; text-align: center; }
+  .vote-cta-text a { color: #7C3AED; font-weight: 600; }
 
   /* ─── ACTIVITY CARDS ─── */
-  .activity-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
-  }
-  .activity-card {
-    position: relative; border-radius: 18px; overflow: hidden;
-    height: 220px; display: flex;
-    border: 1px solid rgba(255,255,255,.06);
-    transition: transform .3s cubic-bezier(.22,1,.36,1), border-color .3s;
-  }
-  .activity-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(255,255,255,.18);
-  }
-  .activity-card:hover .activity-img { transform: scale(1.04); }
-  .activity-img {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-    transition: transform .6s cubic-bezier(.22,1,.36,1);
-  }
-  .activity-overlay {
-    position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,.78) 0%, rgba(0,0,0,.2) 55%, transparent 100%);
-  }
-  .activity-content {
-    position: relative; z-index: 2; margin-top: auto; padding: 20px;
-  }
+  .activity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .activity-card { position: relative; border-radius: 18px; overflow: hidden; height: 220px; display: flex; }
+  .activity-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .activity-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.8) 0%, rgba(0,0,0,.2) 50%, rgba(0,0,0,.1) 100%); }
+  .activity-content { position: relative; z-index: 2; margin-top: auto; padding: 20px; }
   .activity-emoji { font-size: 22px; display: block; margin-bottom: 8px; }
-  .activity-title { font-size: 17px; color: #fff; font-weight: 700; margin-bottom: 4px; letter-spacing: -.2px; }
+  .activity-title { font-family: 'Outfit', sans-serif; font-size: 16px; color: #fff; font-weight: 700; margin-bottom: 4px; }
   .activity-desc { font-size: 12px; color: rgba(255,255,255,.65); line-height: 1.5; }
 
-  /* ─── CREW CARDS ─── */
-  .crew-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
-  }
-  .crew-card {
-    position: relative;
-    padding: 28px 24px 24px;
-    border-radius: 18px;
-    background: rgba(255,255,255,.03);
-    border: 1px solid rgba(255,255,255,.06);
-    transition: transform .3s cubic-bezier(.22,1,.36,1), border-color .3s;
-  }
-  .crew-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(255,255,255,.18);
-  }
-  .crew-avatar {
-    width: 48px; height: 48px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Instrument Serif', serif; font-size: 22px; color: #fff;
-    font-weight: 500; letter-spacing: -.5px;
-    background: var(--coral);
-    margin-bottom: 16px;
-  }
-  .crew-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-  .crew-meta strong { font-size: 15px; color: #fff; font-weight: 700; letter-spacing: -.2px; }
-  .crew-meta span { font-size: 12px; color: rgba(255,255,255,.4); }
-  .crew-fav {
-    display: inline-block;
-    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
-    padding: 4px 10px; border-radius: 999px;
-    background: rgba(240,90,40,.12);
-    color: var(--coral-2);
-    margin-bottom: 14px;
-  }
-  .crew-quote {
-    font-family: 'Instrument Serif', serif;
-    font-size: 16px; line-height: 1.4; color: rgba(255,255,255,.82);
-    font-style: italic;
-  }
-  @media (max-width: 768px) {
-    .crew-grid { grid-template-columns: 1fr; gap: 12px; }
-  }
-
   /* ─── HOW IT WORKS ─── */
-  .how-section {
-    border-top: 1px solid rgba(255,255,255,.04);
-    border-bottom: 1px solid rgba(255,255,255,.04);
-    padding: 72px 0;
-  }
-  .how-inner { max-width: 1040px; margin: 0 auto; padding: 0 40px; }
-  .steps { display: flex; align-items: flex-start; gap: 0; margin-top: 12px; }
-  .step { flex: 1; display: flex; align-items: flex-start; gap: 16px; }
-  .step-number {
-    width: 44px; height: 44px; flex-shrink: 0;
-    border-radius: 50%;
+  .how-section { padding: 56px 0; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; background: #F8F9FB; }
+  .how-inner { max-width: 900px; margin: 0 auto; padding: 0 32px; }
+  .steps { display: flex; gap: 24px; margin-top: 24px; }
+  .step { flex: 1; display: flex; align-items: flex-start; gap: 14px; }
+  .step-num {
+    width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px;
+    background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.12);
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Instrument Serif', serif; font-size: 22px; color: #fff;
-    font-style: italic; font-weight: 500;
-    background: var(--coral);
+    font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800; color: #7C3AED;
   }
-  .step-body h3 { font-size: 16px; color: #fff; margin-bottom: 6px; font-weight: 700; }
-  .step-body p { font-size: 13px; color: rgba(255,255,255,.5); line-height: 1.6; }
-  .step-divider {
-    width: 1px; min-height: 60px; align-self: stretch;
-    background: linear-gradient(to bottom, rgba(255,255,255,.12), transparent);
-    margin: 0 20px; flex-shrink: 0;
-  }
+  .step-body h3 { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+  .step-body p { font-size: 12px; color: #6B7280; line-height: 1.6; }
 
-  /* ─── EVENT CARDS ─── */
-  .events-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .event-card {
-    position: relative;
-    display: flex; align-items: center; gap: 16px;
-    padding: 18px 20px 18px 22px;
-    border-radius: 16px; text-decoration: none;
-    background: rgba(255,255,255,.03);
-    border: 1px solid rgba(255,255,255,.06);
-    transition: transform .3s cubic-bezier(.22,1,.36,1), border-color .3s, background .3s;
+  /* ─── EVENTS PREVIEW ─── */
+  .events-preview { display: flex; flex-direction: column; gap: 10px; }
+  .ep-card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 18px; border-radius: 14px;
+    background: #F8F9FB; border: 1px solid #E5E7EB;
+    transition: all .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
-  .event-card::before {
-    content: ''; position: absolute; left: 0; top: 16px; bottom: 16px;
-    width: 3px; border-radius: 0 3px 3px 0; background: var(--coral);
-    opacity: .7; transition: opacity .3s;
+  .ep-card:hover { border-color: #D1D5DB; transform: translateX(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+  .ep-date { text-align: center; min-width: 48px; padding: 6px 10px; background: rgba(124,58,237,0.06); border-radius: 10px; }
+  .ep-month { display: block; font-size: 9px; font-weight: 700; color: #7C3AED; text-transform: uppercase; }
+  .ep-day { display: block; font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 900; color: #111827; line-height: 1.1; }
+  .ep-info { flex: 1; }
+  .ep-type { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; }
+  .ep-type-label { font-size: 11px; color: #7C3AED; font-weight: 600; text-transform: capitalize; }
+  .ep-title { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+  .ep-meta { font-size: 11px; color: #9CA3AF; }
+  .ep-arrow { font-size: 16px; color: #9CA3AF; flex-shrink: 0; transition: color .2s; }
+  .ep-card:hover .ep-arrow { color: #7C3AED; }
+
+  /* ─── TRUST ─── */
+  .trust-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .trust-quote {
+    background: linear-gradient(135deg, rgba(16,185,129,0.04), rgba(124,58,237,0.04));
+    border: 1px solid rgba(16,185,129,0.12); border-radius: 20px; padding: 32px;
   }
-  .event-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255,255,255,.18);
-    background: rgba(255,255,255,.045);
+  .tq-mark { font-family: 'Outfit', sans-serif; font-size: 60px; color: rgba(16,185,129,0.2); line-height: 0.5; margin-bottom: 16px; display: block; font-weight: 900; }
+  .trust-quote p { font-family: 'Outfit', sans-serif; font-size: 18px; color: #111827; line-height: 1.5; margin-bottom: 20px; font-weight: 500; }
+  .trust-quote footer { display: flex; align-items: center; gap: 10px; }
+  .tq-avatar {
+    width: 34px; height: 34px; border-radius: 50%; background: rgba(16,185,129,0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: #10B981;
   }
-  .event-card:hover::before { opacity: 1; }
-  .event-date-badge {
-    text-align: center; padding: 8px 12px; min-width: 54px;
-    background: rgba(240,90,40,.1);
-    border-radius: 12px;
-  }
-  .event-month { display: block; font-size: 10px; font-weight: 700; color: var(--coral-2); text-transform: uppercase; letter-spacing: .08em; }
-  .event-day { display: block; font-family: 'Instrument Serif', serif; font-size: 22px; color: #fff; line-height: 1.05; }
-  .event-info { flex: 1; min-width: 0; }
-  .event-type-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  .event-type-emoji { font-size: 14px; }
-  .event-type-label {
-    font-size: 11px; color: rgba(255,255,255,.5);
-    font-weight: 600; text-transform: capitalize; letter-spacing: 0;
-  }
-  .event-title { font-size: 15px; color: #fff; font-weight: 700; margin-bottom: 2px; letter-spacing: -.2px; }
-  .event-meta { font-size: 12px; color: rgba(255,255,255,.4); }
-  .event-arrow {
-    font-size: 18px; color: rgba(255,255,255,.25);
-    flex-shrink: 0; transition: transform .3s cubic-bezier(.22,1,.36,1), color .2s;
-  }
-  .event-card:hover .event-arrow { transform: translateX(3px); color: rgba(255,255,255,.7); }
-  @media (max-width: 680px) {
-    .events-grid { grid-template-columns: 1fr; }
+  .trust-quote footer strong { display: block; font-size: 12px; color: #111827; }
+  .trust-quote footer span { font-size: 10px; color: #9CA3AF; }
+  .trust-facts { background: #F8F9FB; border: 1px solid #E5E7EB; border-radius: 20px; padding: 32px; }
+  .trust-facts h3 { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 20px; }
+  .tf-list { display: flex; flex-direction: column; gap: 12px; }
+  .tf-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #6B7280; line-height: 1.5; }
+  .tf-check {
+    width: 22px; height: 22px; flex-shrink: 0; background: rgba(16,185,129,0.08);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    color: #10B981; font-size: 11px; font-weight: 700;
   }
 
   /* ─── DISCORD ─── */
   .discord-section {
-    margin: 0 40px; border-radius: 24px; overflow: hidden;
+    margin: 0 32px; border-radius: 20px; overflow: hidden;
     background: linear-gradient(135deg, #5865F2 0%, #4752c4 100%);
     position: relative;
   }
@@ -695,142 +561,85 @@ const crew = [
   }
   .discord-inner {
     position: relative; z-index: 2;
-    max-width: 1040px; margin: 0 auto;
-    padding: 40px 48px; display: flex; align-items: center; gap: 24px;
+    max-width: 900px; margin: 0 auto;
+    padding: 36px 40px; display: flex; align-items: center; gap: 24px;
   }
   .discord-icon { font-size: 36px; flex-shrink: 0; }
   .discord-text { flex: 1; }
   .discord-text h3 { font-size: 18px; color: #fff; margin-bottom: 4px; }
-  .discord-text h3 strong { font-family: 'Instrument Serif', serif; font-size: 24px; }
+  .discord-text h3 strong { font-family: 'Outfit', sans-serif; font-size: 24px; }
   .discord-text p { font-size: 13px; color: rgba(255,255,255,.65); line-height: 1.5; }
   .discord-btn {
     padding: 12px 28px; background: #fff; color: #5865F2;
-    border-radius: 12px; font-size: 14px; font-weight: 700;
+    border-radius: 50px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
     flex-shrink: 0; transition: transform .2s, box-shadow .2s;
   }
   .discord-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
 
-  /* ─── TRUST ─── */
-  .trust-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  .trust-quote {
-    background: linear-gradient(135deg, rgba(74,222,128,.06) 0%, rgba(59,130,246,.04) 100%);
-    border: 1px solid rgba(74,222,128,.1);
-    border-radius: 20px; padding: 36px; position: relative;
-  }
-  .trust-quote-mark {
-    font-family: 'Instrument Serif', serif; font-size: 72px;
-    color: rgba(74,222,128,.15); line-height: 0.5; margin-bottom: 16px; display: block;
-  }
-  .trust-quote p { font-family: 'Instrument Serif', serif; font-size: 20px; color: #fff; line-height: 1.5; margin-bottom: 20px; }
-  .trust-quote footer { display: flex; align-items: center; gap: 12px; }
-  .trust-avatar {
-    width: 36px; height: 36px; border-radius: 50%; background: rgba(74,222,128,.15);
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 14px; color: #4ade80; flex-shrink: 0;
-  }
-  .trust-quote footer strong { display: block; font-size: 13px; color: #fff; }
-  .trust-quote footer span { font-size: 11px; color: rgba(255,255,255,.35); }
-  .trust-facts {
-    background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.06);
-    border-radius: 20px; padding: 36px;
-  }
-  .trust-facts h3 { font-size: 18px; color: #fff; margin-bottom: 22px; }
-  .trust-list { display: flex; flex-direction: column; gap: 14px; }
-  .trust-item { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; color: rgba(255,255,255,.5); line-height: 1.5; }
-  .trust-check {
-    width: 24px; height: 24px; flex-shrink: 0;
-    background: rgba(74,222,128,.1); border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    color: #4ade80; font-size: 12px; font-weight: 700;
-  }
-
   /* ─── FINAL CTA ─── */
   .final-cta {
-    position: relative; min-height: 460px; overflow: hidden;
-    display: flex; align-items: center; justify-content: center; text-align: center;
-    margin-top: 40px;
-    background: #05070d;
+    padding: 64px 32px; text-align: center;
+    background: linear-gradient(135deg, #F8F9FB, #EEF2FF);
+    border-top: 1px solid #E5E7EB;
   }
-  .final-cta-mesh {
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(ellipse 60% 55% at 22% 75%, rgba(240,90,40,.35), transparent 60%),
-      radial-gradient(ellipse 55% 55% at 78% 35%, rgba(236,72,153,.28), transparent 60%),
-      linear-gradient(180deg, #0a0712 0%, #05070d 100%);
+  .final-cta h2 {
+    font-family: 'Outfit', sans-serif; font-size: clamp(28px, 4vw, 40px);
+    font-weight: 900; color: #111827; margin-bottom: 8px; letter-spacing: -0.02em;
   }
-  .final-cta-mesh::after {
-    content: ''; position: absolute; inset: 0;
-    background: radial-gradient(ellipse at center, transparent 55%, rgba(5,7,13,.5) 100%);
-  }
-  .final-cta-content { position: relative; z-index: 2; padding: 72px 24px; }
-  .final-cta-content h2 {
-    font-family: 'Instrument Serif', serif;
-    font-size: clamp(34px, 5.5vw, 56px); color: #fff; line-height: 1.08; margin-bottom: 14px;
-    letter-spacing: -.5px;
-  }
-  .final-cta-content h2 em {
-    font-style: italic;
-    background: linear-gradient(135deg, #fbbf24 0%, #F05A28 50%, #ec4899 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }
-  .final-cta-content p { font-size: 15px; color: rgba(255,255,255,.7); margin-bottom: 32px; }
+  .final-cta h2 em { font-style: normal; color: #7C3AED; }
+  .final-cta p { font-size: 14px; color: #6B7280; margin-bottom: 24px; }
 
   /* ─── FOOTER ─── */
-  .footer { border-top: 1px solid rgba(255,255,255,.06); padding: 48px 40px; }
-  .footer-inner { max-width: 1040px; margin: 0 auto; display: flex; gap: 48px; align-items: flex-start; }
+  .footer { border-top: 1px solid #E5E7EB; padding: 40px 32px; }
+  .footer-inner { max-width: 900px; margin: 0 auto; display: flex; gap: 48px; align-items: flex-start; }
   .footer-brand { flex: 1; }
-  .footer-logo { font-family: 'Instrument Serif', serif; font-size: 20px; color: #fff; display: block; margin-bottom: 6px; }
-  .footer-logo em { color: #4ade80; font-style: italic; }
-  .footer-brand p { font-size: 12px; color: rgba(255,255,255,.3); }
-  .footer-links { display: flex; flex-direction: column; gap: 10px; }
-  .footer-links a { font-size: 13px; color: rgba(255,255,255,.35); transition: color .2s; }
-  .footer-links a:hover { color: #fff; }
+  .footer-logo { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px; color: #111827; display: block; margin-bottom: 4px; }
+  .footer-logo em { font-style: normal; color: #7C3AED; }
+  .footer-brand p { font-size: 12px; color: #9CA3AF; }
+  .footer-links { display: flex; flex-direction: column; gap: 8px; }
+  .footer-links a { font-size: 13px; color: #6B7280; transition: color .2s; }
+  .footer-links a:hover { color: #111827; }
 
-  /* ─── MOBILE NAV ─── */
+  /* ─── MOBILE BOTTOM TAB BAR ─── */
   .mob-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
-    background: rgba(5,7,13,.95); backdrop-filter: blur(24px);
-    border-top: 1px solid rgba(255,255,255,.08);
-    padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+    background: rgba(255,255,255,.95); backdrop-filter: blur(24px);
+    border-top: 1px solid #E5E7EB;
+    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
   }
   .mob-nav-inner {
     display: flex; justify-content: space-around; align-items: center;
-    max-width: 540px; margin: 0 auto; padding: 0 8px;
+    max-width: 540px; margin: 0 auto; padding: 0 4px;
   }
   .mob-nav a {
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-    padding: 8px 6px; font-size: 11px; color: rgba(255,255,255,.35); font-weight: 700; border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 10px; font-size: 10px; color: #9CA3AF;
+    font-family: 'Outfit', sans-serif; font-weight: 600; border-radius: 10px; transition: all .2s;
   }
-  .mob-nav a span { font-size: 22px; }
-  .mob-nav a.active { color: #fff; background: rgba(96,165,250,.12); }
+  .mob-nav a span { font-size: 20px; }
+  .mob-nav a.active { color: #7C3AED; background: rgba(124,58,237,0.06); }
 
   /* ─── RESPONSIVE ─── */
-  @media (max-width: 900px) {
-    .nav-links { display: none; }
-    .nav { padding: 14px 20px; }
-    .discord-section { margin: 0 20px; }
-    .discord-inner { flex-direction: column; text-align: center; padding: 32px 24px; }
-  }
   @media (min-width: 901px) { .mob-nav { display: none; } body { padding-bottom: 0; } }
+  @media (max-width: 900px) { .nav-links { display: none; } .nav { padding: 14px 20px; } }
   @media (max-width: 768px) {
-    body { padding-bottom: 76px; }
-    .hero-content { padding: 0 24px 40px; }
-    .hero-dots { right: 24px; bottom: 28px; }
-    .hero-scroll { left: 24px; }
+    body { padding-bottom: 72px; }
+    .hero { padding: 40px 20px 32px; }
+    .hero-cards { flex-direction: column; align-items: center; }
     .activity-grid { grid-template-columns: 1fr 1fr; }
     .activity-card { height: 180px; }
-    .steps { flex-direction: column; gap: 0; }
-    .step-divider { width: 40px; min-height: 1px; height: 1px; margin: 16px 0 16px 22px;
-      background: linear-gradient(to right, rgba(59,130,246,.2), transparent); }
+    .steps { flex-direction: column; gap: 16px; }
     .trust-grid { grid-template-columns: 1fr; }
-    .events-grid { gap: 8px; }
-    .section { padding: 48px 20px; }
+    .section { padding: 40px 20px; }
     .how-inner { padding: 0 20px; }
-    .footer-inner { flex-direction: column; gap: 24px; }
-    .footer { padding: 32px 20px; }
-    .final-cta { height: 340px; }
+    .stats-strip { gap: 24px; padding: 20px 16px; }
+    .discord-section { margin: 0 20px; }
+    .discord-inner { flex-direction: column; text-align: center; padding: 28px 20px; }
+    .footer-inner { flex-direction: column; gap: 20px; }
+    .footer { padding: 28px 20px; }
   }
   @media (max-width: 480px) {
+    .hc { width: 100%; }
     .activity-grid { grid-template-columns: 1fr; }
     .activity-card { height: 160px; }
   }
@@ -842,52 +651,23 @@ const crew = [
 
 
 <script is:inline>
-  // ── Slideshow with Ken Burns ──
-  var slides = document.querySelectorAll('.hero-slide');
-  var dots = document.querySelectorAll('.hero-dot');
-  var current = 0;
-  var interval;
-
-  function goToSlide(i) {
-    slides[current].classList.remove('active');
-    dots[current].classList.remove('active');
-    current = i;
-    // Reset Ken Burns by cloning the img div
-    var img = slides[current].querySelector('.hero-slide-img');
-    if (img) { img.style.animation = 'none'; img.offsetHeight; img.style.animation = ''; }
-    slides[current].classList.add('active');
-    dots[current].classList.add('active');
-  }
-
-  function nextSlide() { goToSlide((current + 1) % slides.length); }
-
-  function startSlideshow() { interval = setInterval(nextSlide, 5000); }
-
-  dots.forEach(function(dot, i) {
-    dot.addEventListener('click', function() {
-      clearInterval(interval); goToSlide(i); startSlideshow();
+  // Vote buttons
+  document.querySelectorAll('.vi-up').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var vi = this.closest('.vi');
+      var c = vi.querySelector('.vi-count');
+      var f = vi.querySelector('.vi-fill');
+      c.textContent = parseInt(c.textContent) + 1;
+      var w = parseInt(f.style.width) || 0;
+      f.style.width = Math.min(100, w + 2) + '%';
+      this.style.background = '#7C3AED';
+      this.style.color = '#fff';
+      this.textContent = '✓';
+      this.disabled = true;
     });
   });
-  startSlideshow();
 
-  // ── Nav reveal ──
-  var nav = document.getElementById('nav');
-  var hero = document.getElementById('hero');
-  var scrollHint = document.getElementById('scrollHint');
-  var navShown = false;
-
-  function onScroll() {
-    var y = window.scrollY || window.pageYOffset;
-    var t = hero.offsetHeight * 0.55;
-    if (y > t && !navShown) { nav.classList.add('visible'); navShown = true; }
-    else if (y <= t && navShown) { nav.classList.remove('visible'); navShown = false; }
-    if (y > 60) scrollHint.classList.add('hidden');
-    else scrollHint.classList.remove('hidden');
-  }
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
-
-  // ── Fade-up on scroll ──
+  // Fade-up on scroll
   var fadeEls = document.querySelectorAll('.fade-up');
   if (fadeEls.length && 'IntersectionObserver' in window) {
     var obs = new IntersectionObserver(function(entries) {

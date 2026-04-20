@@ -45,19 +45,27 @@
 - **Process:** Always provide a "Plan" before writing any code.
 
 ## Design Direction
-- **References:** Partiful (playfulness, gradients, sticker-style emojis, rounded pill buttons) + Meetup (category scroller, social cues, warm orange CTA).
-- **Vibe:** Partiful energy, Meetup backbone — bold color and stickers, but the trust/verification language stays intact.
+- **References:** Clean & Crisp light theme — Meetup backbone + Partiful social energy. White/light background, purple accent, community-voted feel.
+- **Vibe:** Clean, modern, light. Trust signals and community voting front-and-center. Not corporate — still feels social and inviting.
+- **Fonts:** Outfit (headings, weights 400-900) + Inter (body, weights 400-600). Loaded from Google Fonts.
 - **Design tokens (in `src/layouts/Base.astro` `:root`):**
-  - Colors: `--coral` / `--coral-2` (primary CTA), `--pink`, `--yellow`, `--purple`, `--green`, `--blue` (each has a `-dim` tinted variant).
-  - Gradients: `--gradient-party` (coral→pink→purple, signature CTA look), `--gradient-sunset` (coral→yellow), `--gradient-dusk` (purple→blue).
-  - Radii: `--radius` (14), `--radius-lg` (20), `--radius-xl` (28). Rounded pill buttons use `999px`.
+  - Background: `--bg: #FFFFFF`, `--surface: #F8F9FB`, `--surface-hover: #F0F2F5`
+  - Borders: `--border: #E5E7EB`, `--border-hover: #D1D5DB`
+  - Text: `--text: #111827`, `--text-sec: #6B7280`, `--text-faint: #9CA3AF`
+  - Accent: `--accent: #7C3AED` (purple), `--accent2: #3B82F6` (blue), `--mint: #10B981` (green)
+  - CTA: `--cta-bg: #7C3AED`, `--cta-text: #FFF`
+  - Tags: `--tag-bg: #EEF2FF` / `--tag-text: #4338CA`, `--tag-bg2: #F0FDF4` / `--tag-text2: #047857`
+  - Shadows: `--card-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)`
+  - Radii: `--radius` (14), `--radius-lg` (20). Rounded pill buttons use `50px`.
   - Spacing: `--space-1` … `--space-9` (4/8/12/16/24/32/48/64/96).
-- **Reusable patterns (live on home page, carry to other pages when refreshed):**
-  - `.btn-party` — gradient pill CTA with shine-on-hover. Prefer this for primary CTAs over `.btn-primary-lg`/`.nav-cta`.
-  - Floating `.sticker` emojis with a `bob` keyframe — use sparingly on hero / empty states / success screens.
-  - Card color-tinting via `--tint` CSS var (activity, event, category cards) using `color-mix(in srgb, var(--tint) X%, …)` — one card recipe, swap the hue.
+- **Nav:** Light nav (white background, dark text) at top for desktop/tablet. Bottom tab bar for mobile with purple accent on active items.
+- **Reusable patterns:**
+  - `.btn-cta` — purple pill CTA with shadow. Primary CTA style.
+  - `.btn-sec` — white pill with border. Secondary CTA style.
+  - Card color-tinting via `--tint` CSS var on `.cat-pill` using `color-mix(in srgb, var(--tint) 6%, #fff)`.
   - Meetup-style `.categories-scroll` for horizontal category browsing (scroll-snap + hidden scrollbar).
-  - `--wash-warm` — reusable coral bottom-glow radial for hero/CTA sections that should feel sunset-cozy.
+  - Vote list (`.vi`) with progress bars and upvote buttons — community voting is the core differentiator.
+  - Hero gradient: `linear-gradient(135deg, #F8F9FB, #EEF2FF, #F0FDF4)` — subtle, airy.
 
 ## Project-Specific Rules
 - **SSR only** — never switch to static output.

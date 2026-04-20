@@ -23,74 +23,193 @@ try {
 
 if (!event) return Astro.redirect("/events");
 const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",other:"📅" };
+const spotsLeft = Math.max(0, (parseInt(event.spots) || 10) - rsvps.length);
+const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444","#6366F1"];
 ---
 <Base title={event.title}>
-  <div style="max-width:600px;margin:0 auto;padding:24px 20px">
-    <a href="/events" style="font-size:13px;color:#60a5fa;text-decoration:none;margin-bottom:16px;display:inline-block">← All Events</a>
-    <div class="card" style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <span style="font-size:24px">{typeEmoji[event.event_type]||'📅'}</span>
-        <span style="font-size:12px;color:#60a5fa;font-weight:600;text-transform:capitalize">{(event.event_type||'').replace('_',' ')}</span>
-        {event.event_month && <span style="font-size:12px;color:#6b7a8e;margin-left:auto">{event.event_month} {event.event_day}</span>}
-      </div>
-      <h1 style="font-family:'Instrument Serif',serif;font-size:26px;color:#fff;margin-bottom:8px">{event.title}</h1>
-      {event.description && <p style="font-size:14px;color:#6b7a8e;line-height:1.7;margin-bottom:16px">{event.description}</p>}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
-        <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:12px">
-          <div style="font-size:10px;color:#6b7a8e;font-weight:600;text-transform:uppercase;margin-bottom:4px">Location</div>
-          <div style="font-size:13px;color:#e8ecf4">{myRsvp?(event.location||event.zone):(event.zone||'TBD')} {!myRsvp&&<span style="font-size:11px;color:#4a5568">(RSVP to see)</span>}</div>
+
+<div class="det-page">
+  <a href="/events" class="det-back">← Back to events</a>
+
+  <!-- Event header card -->
+  <div class="det-head">
+    <div class="dh-date">
+      <div class="dh-month">{(event.event_month || 'TBD').slice(0, 3)}</div>
+      <div class="dh-day">{event.event_day || '—'}</div>
+      {event.event_time && <div class="dh-time">{event.event_time}</div>}
+    </div>
+    <div class="dh-tag">{typeEmoji[event.event_type] || '📅'} {(event.event_type || '').replace('_', ' ')}</div>
+    <h1 class="dh-title">{event.title}</h1>
+    <div class="dh-loc">{myRsvp ? (event.location || event.zone) : (event.zone || 'TBD')} {!myRsvp && <span class="dh-loc-hint">(RSVP to see full address)</span>}</div>
+  </div>
+
+  <div class="det-grid">
+    <!-- Left column: details -->
+    <div class="det-main">
+      {event.description && (
+        <div class="dm-sec">
+          <h3>About this event</h3>
+          <p>{event.description}</p>
         </div>
-        <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:12px">
-          <div style="font-size:10px;color:#6b7a8e;font-weight:600;text-transform:uppercase;margin-bottom:4px">Spots</div>
-          <div style="font-size:13px;color:#e8ecf4">{rsvps.length}/{event.spots} filled</div>
-        </div>
-        {event.price_cap && (
-          <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:12px">
-            <div style="font-size:10px;color:#6b7a8e;font-weight:600;text-transform:uppercase;margin-bottom:4px">Cost</div>
-            <div style="font-size:13px;color:#e8ecf4">{event.price_cap}</div>
+      )}
+
+      <div class="dm-sec">
+        <h3>Details</h3>
+        <div class="dm-details">
+          <div class="dm-detail">
+            <span class="dm-detail-label">Spots</span>
+            <span class="dm-detail-val">{rsvps.length}/{event.spots} filled</span>
           </div>
-        )}
+          {event.price_cap && (
+            <div class="dm-detail">
+              <span class="dm-detail-label">Cost</span>
+              <span class="dm-detail-val">{event.price_cap}</span>
+            </div>
+          )}
+          <div class="dm-detail">
+            <span class="dm-detail-label">Location</span>
+            <span class="dm-detail-val">{event.zone || 'Denver'}</span>
+          </div>
+        </div>
       </div>
-      {user ? (
-        <button id="rsvp-btn" onclick="toggleRsvp()" style={`width:100%;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;background:${myRsvp?'rgba(248,113,113,.15)':'#3b82f6'};color:${myRsvp?'#f87171':'#fff'}`}>
-          {myRsvp?"✓ You're In — Cancel RSVP":"RSVP →"}
-        </button>
-      ) : (
-        <a href={`/login?next=/events/${id}`} class="btn btn-primary" style="width:100%;display:block;text-align:center">Sign in to RSVP</a>
+    </div>
+
+    <!-- Right column: RSVP + attendees -->
+    <div class="det-side">
+      <div class="ds-card">
+        {user ? (
+          <button id="rsvp-btn" class={`ds-rsvp ${myRsvp ? 'rsvped' : ''}`}>
+            {myRsvp ? "✓ You're In — Cancel RSVP" : "RSVP — I'm in 🎉"}
+          </button>
+        ) : (
+          <a href={`/login?next=/events/${id}`} class="ds-rsvp">Sign in to RSVP</a>
+        )}
+        <div class="ds-info"><strong>{rsvps.length} of {event.spots}</strong> spots filled</div>
+        {spotsLeft <= 4 && spotsLeft > 0 && <div class="ds-urgent">Only {spotsLeft} spots left!</div>}
+      </div>
+
+      {rsvps.length > 0 && (
+        <div class="ds-card">
+          <h4>Who's going ({rsvps.length})</h4>
+          <div class="att-list">
+            {rsvps.slice(0, 6).map((r: any, i: number) => (
+              <div class="att-row">
+                <div class="att-avatar" style={`background:${avatarColors[i % avatarColors.length]}`}>{(r.name || '?')[0]}</div>
+                <div class="att-info">
+                  <div class="att-name">{r.name}</div>
+                  {r.neighborhood && <div class="att-meta">{r.neighborhood}</div>}
+                </div>
+              </div>
+            ))}
+            {rsvps.length > 6 && <div class="att-more">+ {rsvps.length - 6} more</div>}
+          </div>
+        </div>
       )}
     </div>
-    {rsvps.length>0 && (
-      <div class="card">
-        <h3 style="font-size:16px;color:#fff;margin-bottom:12px">Who's coming ({rsvps.length})</h3>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          {rsvps.map((r:any) => (
-            <div style="display:flex;align-items:center;gap:10px">
-              <div style="width:32px;height:32px;border-radius:50%;background:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">{(r.name||'?')[0]}</div>
-              <div>
-                <div style="font-size:13px;color:#e8ecf4">{r.name}</div>
-                {r.neighborhood && <div style="font-size:11px;color:#6b7a8e">{r.neighborhood}</div>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
   </div>
-  <script define:vars={{ eventId: id, initialRsvp: myRsvp }}>
-    let rsvped = initialRsvp;
-    async function toggleRsvp() {
-      const btn = document.getElementById('rsvp-btn');
+</div>
+
+<style is:inline>
+  .det-page { max-width: 780px; margin: 0 auto; padding: 24px 24px 48px; }
+  .det-back {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600;
+    color: #6B7280; margin-bottom: 18px; transition: color .2s;
+  }
+  .det-back:hover { color: #7C3AED; }
+
+  .det-head {
+    background: linear-gradient(135deg, #F8F9FB, #EEF2FF, #F0FDF4);
+    border: 1px solid #E5E7EB; border-radius: 16px;
+    padding: 28px; margin-bottom: 20px; position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .dh-date {
+    position: absolute; top: 24px; right: 24px; text-align: center;
+    padding: 10px 14px; background: #fff; border-radius: 12px;
+    border: 1px solid #E5E7EB; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .dh-month { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #7C3AED; letter-spacing: .06em; }
+  .dh-day { font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 900; color: #111827; line-height: 1; }
+  .dh-time { font-size: 9px; color: #9CA3AF; margin-top: 2px; }
+  .dh-tag {
+    display: inline-block; padding: 3px 10px; border-radius: 50px;
+    font-size: 9px; font-weight: 700; background: #EEF2FF; color: #4338CA;
+    margin-bottom: 10px; text-transform: capitalize;
+  }
+  .dh-title { font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900; letter-spacing: -0.02em; color: #111827; margin-bottom: 4px; }
+  .dh-loc { font-size: 13px; color: #6B7280; }
+  .dh-loc-hint { font-size: 11px; color: #9CA3AF; }
+
+  .det-grid { display: grid; grid-template-columns: 1fr 260px; gap: 20px; }
+
+  .det-main {}
+  .dm-sec { margin-bottom: 20px; }
+  .dm-sec h3 { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 8px; }
+  .dm-sec p { font-size: 13px; color: #6B7280; line-height: 1.7; }
+
+  .dm-details { display: flex; flex-direction: column; gap: 8px; }
+  .dm-detail {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; background: #F8F9FB; border-radius: 10px; border: 1px solid #E5E7EB;
+  }
+  .dm-detail-label { font-size: 11px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; }
+  .dm-detail-val { font-size: 13px; font-weight: 600; color: #111827; }
+
+  .det-side {}
+  .ds-card {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 14px;
+    padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .ds-card h4 { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 12px; }
+  .ds-rsvp {
+    display: block; width: 100%; padding: 12px; border-radius: 12px; border: none;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; text-align: center; text-decoration: none;
+    background: #7C3AED; color: #fff; margin-bottom: 10px; transition: all .2s;
+  }
+  .ds-rsvp:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.2); }
+  .ds-rsvp.rsvped { background: rgba(220,38,38,0.08); color: #DC2626; }
+  .ds-rsvp.rsvped:hover { background: rgba(220,38,38,0.12); }
+  .ds-info { font-size: 12px; color: #6B7280; margin-bottom: 4px; }
+  .ds-info strong { color: #111827; }
+  .ds-urgent { font-size: 11px; font-weight: 700; color: #DC2626; }
+
+  .att-list { display: flex; flex-direction: column; gap: 8px; }
+  .att-row { display: flex; align-items: center; gap: 10px; }
+  .att-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .att-info {}
+  .att-name { font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; color: #111827; }
+  .att-meta { font-size: 10px; color: #9CA3AF; }
+  .att-more { font-size: 10px; color: #9CA3AF; padding-top: 4px; }
+
+  @media (max-width: 768px) {
+    .det-grid { grid-template-columns: 1fr; }
+    .dh-date { position: static; display: inline-block; margin-top: 12px; }
+  }
+</style>
+
+<script define:vars={{ eventId: id, initialRsvp: myRsvp }}>
+  let rsvped = initialRsvp;
+  const btn = document.getElementById('rsvp-btn');
+  if (btn) {
+    btn.addEventListener('click', async function() {
       btn.textContent = 'Loading...';
       try {
-        const r = await fetch('/api/rsvp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:eventId})});
-        if (r.status===401){location.href='/login?next='+location.pathname;return;}
+        const r = await fetch('/api/rsvp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event_id: eventId }) });
+        if (r.status === 401) { location.href = '/login?next=' + location.pathname; return; }
         const d = await r.json();
-        if(d.error){btn.textContent=d.message||'Error';return;}
-        rsvped=d.rsvped;
-        btn.style.background=rsvped?'rgba(248,113,113,.15)':'#3b82f6';
-        btn.style.color=rsvped?'#f87171':'#fff';
-        btn.textContent=rsvped?"✓ You're In — Cancel RSVP":"RSVP →";
-      } catch{btn.textContent='Error — try again';}
-    }
-  </script>
+        if (d.error) { btn.textContent = d.message || 'Error'; return; }
+        rsvped = d.rsvped;
+        btn.className = 'ds-rsvp' + (rsvped ? ' rsvped' : '');
+        btn.textContent = rsvped ? "✓ You're In — Cancel RSVP" : "RSVP — I'm in 🎉";
+      } catch { btn.textContent = 'Error — try again'; }
+    });
+  }
+</script>
+
 </Base>

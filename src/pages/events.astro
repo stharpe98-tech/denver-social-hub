@@ -25,50 +25,74 @@ function priceLabel(ev: any): string {
   if (!ev.price_cap || ev.price_cap === 'Free' || ev.price_cap === '$0') return 'Free';
   return ev.price_cap;
 }
+
+function isHotEvent(ev: any): boolean {
+  const left = spotsLeft(ev);
+  return left >= 1 && left <= 4;
+}
+
+const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 ---
 <Base title="Events">
 
 <div class="ev-page">
 
   <div class="ev-header">
-    <h1 class="ev-h1">What's <em>happening</em></h1>
-    <p class="ev-sub">Small-group hangouts across Denver. Pick one and show up.</p>
+    <h1 class="ev-h1">Upcoming Events</h1>
+    <p class="ev-sub">Voted by the community. Show up to what sounds good.</p>
+  </div>
+
+  <!-- Filter pills -->
+  <div class="filters">
+    <button class="fpill active" data-type="all">All</button>
+    {Array.from(typeSet).map((t: any) => (
+      <button class="fpill" data-type={t}>
+        {typeEmoji[t] || '📅'} {(t || '').replace('_', ' ')}
+      </button>
+    ))}
   </div>
 
   {events.length === 0 ? (
     <div class="ev-empty">
       <div class="ev-empty-icon">🗓️</div>
       <h2>Nothing scheduled yet</h2>
-      <p>New events drop every week in Discord. Join to be the first to know.</p>
-      <a href="https://discord.gg/S8SFNkdSgK" class="ev-empty-btn" target="_blank" rel="noopener">Join the Discord →</a>
+      <p>New events drop every week. Join to be the first to know.</p>
+      <a href="/login?mode=join" class="ev-empty-btn">Join Free →</a>
     </div>
   ) : (
-    <>
-      <div class="ev-count">{events.length} events coming up</div>
-      <div class="ev-list">
-        {events.map((ev: any) => (
-          <a href={`/events/${ev.id}`} class="ev-card">
-            <div class="ev-card-date">
-              <span class="ev-card-month">{(ev.event_month || 'TBD').slice(0, 3)}</span>
-              <span class="ev-card-day">{ev.event_day || '—'}</span>
-            </div>
-            <div class="ev-card-body">
-              <div class="ev-card-type">
-                <span>{typeEmoji[ev.event_type] || '📅'}</span>
-                <span class="ev-card-type-label">{(ev.event_type || '').replace('_', ' ')}</span>
-                {ev.featured ? <span class="ev-card-featured">⭐ Featured</span> : null}
+    <div class="ev-grid">
+      {events.map((ev: any) => {
+        const left = spotsLeft(ev);
+        const going = rsvpCounts[ev.id] || 0;
+        const isHot = isHotEvent(ev);
+        return (
+          <a href={`/events/${ev.id}`} class={`ec ${isHot ? 'ec-hot' : ''}`} data-type={ev.event_type}>
+            <div class="ec-head">
+              {isHot && <span class="hot-tag">Filling up</span>}
+              <div class="ec-date">
+                <div class="ec-month">{(ev.event_month || 'TBD').slice(0, 3)}</div>
+                <div class="ec-day">{ev.event_day || '—'}</div>
               </div>
-              <h3 class="ev-card-title">{ev.title}</h3>
-              <div class="ev-card-meta">{ev.location || ev.zone} · up to {ev.spots} people</div>
+              <div class="ec-tag">{typeEmoji[ev.event_type] || '📅'} {(ev.event_type || '').replace('_', ' ')}</div>
+              <div class="ec-title">{ev.title}</div>
+              <div class="ec-loc">{ev.zone || ev.location}</div>
             </div>
-            <div class="ev-card-right">
-              <span class={`ev-card-price ${priceLabel(ev) === 'Free' ? 'free' : ''}`}>{priceLabel(ev)}</span>
-              <span class="ev-card-spots">{spotsLeft(ev)} left</span>
+            <div class="ec-body">
+              <div class="ec-meta">
+                <span><strong>{left ? `${left} spots left` : 'Full'}</strong> of {ev.spots}</span>
+                <span>{priceLabel(ev)}</span>
+              </div>
+              {going > 0 && (
+                <div class="ec-att">
+                  <span class="ec-att-text"><strong>{going} going</strong></span>
+                </div>
+              )}
+              <div class="ec-rsvp-row">RSVP — I'm in</div>
             </div>
           </a>
-        ))}
-      </div>
-    </>
+        );
+      })}
+    </div>
   )}
 
   <div class="ev-discord">
@@ -82,65 +106,108 @@ function priceLabel(ev: any): string {
 
 </div>
 
-<style>
-  .ev-page { max-width:640px; margin:0 auto; padding:0 20px 40px; }
+<style is:inline>
+  .ev-page { max-width: 900px; margin: 0 auto; padding: 0 32px 40px; }
 
-  .ev-header { text-align:center; padding:28px 0 20px; }
-  .ev-h1 { font-family:'Instrument Serif',serif; font-size:clamp(28px,5vw,36px); color:#fff; font-weight:400; margin-bottom:6px; }
-  .ev-h1 em { font-style:italic; color:#4ade80; }
-  .ev-sub { font-size:14px; color:rgba(255,255,255,.35); }
+  .ev-header { padding: 32px 0 16px; }
+  .ev-h1 { font-family: 'Outfit', sans-serif; font-size: clamp(24px, 4vw, 32px); font-weight: 800; letter-spacing: -0.02em; color: #111827; margin-bottom: 4px; }
+  .ev-sub { font-size: 13px; color: #6B7280; }
 
-  .ev-count { font-size:11px; color:rgba(255,255,255,.25); margin-bottom:12px; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+  .fpill {
+    padding: 7px 16px; border-radius: 50px; background: #F8F9FB;
+    border: 1px solid #E5E7EB; color: #6B7280; font-size: 11px; font-weight: 600;
+    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
+    text-transform: capitalize;
+  }
+  .fpill:hover { border-color: #D1D5DB; color: #111827; }
+  .fpill.active { background: rgba(124,58,237,0.06); color: #7C3AED; border-color: rgba(124,58,237,0.2); }
 
   .ev-empty {
-    text-align:center; padding:56px 20px;
-    background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.05); border-radius:20px;
+    text-align: center; padding: 56px 20px;
+    background: #F8F9FB; border: 1px solid #E5E7EB; border-radius: 20px;
   }
-  .ev-empty-icon { font-size:40px; margin-bottom:14px; }
-  .ev-empty h2 { font-family:'Instrument Serif',serif; font-size:22px; color:#fff; margin-bottom:6px; }
-  .ev-empty p { font-size:13px; color:rgba(255,255,255,.35); margin-bottom:20px; }
-  .ev-empty-btn { display:inline-block; padding:12px 28px; background:#5865F2; color:#fff; border-radius:12px; font-size:14px; font-weight:700; }
+  .ev-empty-icon { font-size: 40px; margin-bottom: 14px; }
+  .ev-empty h2 { font-family: 'Outfit', sans-serif; font-size: 22px; color: #111827; margin-bottom: 6px; font-weight: 700; }
+  .ev-empty p { font-size: 13px; color: #6B7280; margin-bottom: 20px; }
+  .ev-empty-btn { display: inline-block; padding: 12px 28px; background: #7C3AED; color: #fff; border-radius: 50px; font-size: 13px; font-weight: 700; font-family: 'Outfit', sans-serif; }
 
-  .ev-list { display:flex; flex-direction:column; gap:8px; margin-bottom:28px; }
+  .ev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 28px; }
 
-  .ev-card {
-    display:flex; align-items:center; gap:14px;
-    padding:16px 18px; border-radius:16px; text-decoration:none; color:#e8ecf4;
-    background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.05);
-    transition:border-color .2s, transform .2s, background .2s;
+  .ec {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 16px;
+    overflow: hidden; transition: all .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
-  .ev-card:hover { border-color:rgba(255,255,255,.12); transform:translateX(4px); background:rgba(255,255,255,.04); }
+  .ec:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-color: #D1D5DB; }
+  .ec-head { padding: 16px 18px 12px; position: relative; border-bottom: 1px solid #E5E7EB; }
+  .ec-date { position: absolute; top: 14px; right: 14px; text-align: center; }
+  .ec-month { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #7C3AED; letter-spacing: .06em; }
+  .ec-day { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 900; color: #111827; }
+  .ec-tag {
+    display: inline-block; padding: 3px 10px; border-radius: 50px;
+    font-size: 9px; font-weight: 700; background: #EEF2FF; color: #4338CA;
+    margin-bottom: 8px; text-transform: capitalize;
+  }
+  .ec-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 15px; color: #111827; margin-bottom: 3px; }
+  .ec-loc { font-size: 11px; color: #6B7280; }
+  .ec-body { padding: 14px 18px; }
+  .ec-meta { display: flex; justify-content: space-between; font-size: 11px; color: #9CA3AF; margin-bottom: 8px; }
+  .ec-meta strong { color: #10B981; }
+  .ec-att { margin-bottom: 10px; }
+  .ec-att-text { font-size: 10px; color: #6B7280; }
+  .ec-att-text strong { color: #10B981; }
+  .ec-rsvp-row {
+    width: 100%; padding: 9px; border-radius: 12px; text-align: center;
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700;
+    background: #7C3AED; color: #fff; transition: all .2s;
+  }
+  .ec:hover .ec-rsvp-row { box-shadow: 0 4px 12px rgba(124,58,237,0.2); }
 
-  .ev-card-date { text-align:center; min-width:48px; padding:6px 10px; background:rgba(59,130,246,.08); border-radius:10px; }
-  .ev-card-month { display:block; font-size:9px; font-weight:700; color:#60a5fa; text-transform:uppercase; }
-  .ev-card-day { display:block; font-family:'Instrument Serif',serif; font-size:22px; color:#fff; line-height:1.1; }
-
-  .ev-card-body { flex:1; min-width:0; }
-  .ev-card-type { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
-  .ev-card-type-label { font-size:11px; color:#60a5fa; font-weight:600; text-transform:capitalize; }
-  .ev-card-featured { font-size:9px; padding:2px 6px; border-radius:4px; background:rgba(240,90,40,.12); color:#F05A28; font-weight:700; margin-left:4px; }
-  .ev-card-title { font-size:14px; color:#fff; font-weight:600; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .ev-card-meta { font-size:11px; color:rgba(255,255,255,.3); }
-
-  .ev-card-right { text-align:right; flex-shrink:0; }
-  .ev-card-price { display:block; font-size:12px; color:rgba(255,255,255,.5); font-weight:600; }
-  .ev-card-price.free { color:#4ade80; }
-  .ev-card-spots { font-size:10px; color:rgba(255,255,255,.2); }
+  .ec-hot { border: 2px solid rgba(220,38,38,0.15); }
+  .ec-hot .ec-head { background: #FEF2F2; }
+  .hot-tag {
+    position: absolute; top: 14px; left: 14px;
+    padding: 3px 10px; border-radius: 50px;
+    background: #FEF2F2; color: #DC2626;
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+  }
 
   .ev-discord {
-    display:flex; align-items:center; gap:14px;
-    padding:18px 22px; border-radius:16px;
-    background:linear-gradient(135deg,rgba(88,101,242,.1),rgba(88,101,242,.05));
-    border:1px solid rgba(88,101,242,.15);
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 22px; border-radius: 16px;
+    background: rgba(124,58,237,0.04); border: 1px solid rgba(124,58,237,0.1);
   }
-  .ev-discord-icon { font-size:24px; flex-shrink:0; }
-  .ev-discord-text { flex:1; }
-  .ev-discord-text strong { display:block; font-size:13px; color:#fff; }
-  .ev-discord-text span { font-size:11px; color:rgba(255,255,255,.4); }
+  .ev-discord-icon { font-size: 24px; flex-shrink: 0; }
+  .ev-discord-text { flex: 1; }
+  .ev-discord-text strong { display: block; font-size: 13px; color: #111827; }
+  .ev-discord-text span { font-size: 11px; color: #6B7280; }
   .ev-discord-btn {
-    padding:8px 18px; background:#5865F2; color:#fff;
-    border-radius:10px; font-size:12px; font-weight:700; flex-shrink:0;
+    padding: 8px 18px; background: #7C3AED; color: #fff;
+    border-radius: 50px; font-size: 12px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; flex-shrink: 0;
+  }
+
+  @media (max-width: 768px) {
+    .ev-page { padding: 0 20px 40px; }
+    .ev-grid { grid-template-columns: 1fr; }
   }
 </style>
+
+<script is:inline>
+  document.querySelectorAll('.fpill').forEach(function(pill) {
+    pill.addEventListener('click', function() {
+      document.querySelectorAll('.fpill').forEach(function(p) { p.classList.remove('active'); });
+      this.classList.add('active');
+      var type = this.getAttribute('data-type');
+      document.querySelectorAll('.ec').forEach(function(card) {
+        if (type === 'all' || card.getAttribute('data-type') === type) {
+          card.style.display = '';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    });
+  });
+</script>
 
 </Base>
