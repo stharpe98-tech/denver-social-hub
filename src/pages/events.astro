@@ -83,121 +83,202 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 
 <div class="ev-page">
 
-  <div class="ev-header">
-    <h1 class="ev-h1">Upcoming Events</h1>
-    <p class="ev-sub">Voted by the community. Show up to what sounds good.</p>
-  </div>
-
-  <!-- Filter pills -->
-  <div class="filters">
-    <button class="fpill active" data-type="all">All</button>
-    {Array.from(typeSet).map((t: any) => (
-      <button class="fpill" data-type={t}>
-        {typeEmoji[t] || '📅'} {(t || '').replace('_', ' ')}
+  <!-- ═══ CHOOSER — first thing you see ═══ -->
+  <div id="chooser" class="chooser">
+    <div class="chooser-header">
+      <h1 class="ev-h1">Denver Social Events</h1>
+      <p class="ev-sub">What brings you here?</p>
+    </div>
+    <div class="chooser-cards">
+      <button class="chooser-card" id="pickBrowse">
+        <span class="chooser-emoji">📅</span>
+        <span class="chooser-label">Browse Events</span>
+        <span class="chooser-desc">See what's coming up and RSVP</span>
       </button>
-    ))}
+      <button class="chooser-card chooser-card-alt" id="pickSuggest">
+        <span class="chooser-emoji">💡</span>
+        <span class="chooser-label">Suggest an Event</span>
+        <span class="chooser-desc">Pitch an idea for the community</span>
+      </button>
+    </div>
   </div>
 
-  {events.length === 0 ? (
-    <div class="ev-empty">
-      <div class="ev-empty-icon">🗓️</div>
-      <h2>Nothing scheduled yet</h2>
-      <p>New events drop every week. Join to be the first to know.</p>
-      <a href="/login?mode=join" class="ev-empty-btn">Join Free →</a>
-    </div>
-  ) : (
-    <div class="ev-grid">
-      {events.map((ev: any) => {
-        const left = spotsLeft(ev);
-        const going = rsvpCounts[ev.id] || 0;
-        const isHot = isHotEvent(ev);
-        const tc = getTypeColor(ev.event_type);
-        return (
-          <a href={`/events/${ev.id}`} class={`ec ${isHot ? 'ec-hot' : ''}`} data-type={ev.event_type} style={`--card-accent: ${tc.accent};`}>
-            <div class="ec-img" style={`background-image: url(${typeImages[ev.event_type] || typeImages.other});`}>
-              <div class="ec-img-overlay"></div>
-              {isHot && <span class="hot-tag">Filling up</span>}
-              <div class="ec-date">
-                <div class="ec-month" style={`color: ${tc.accent};`}>{(ev.event_month || 'TBD').slice(0, 3)}</div>
-                <div class="ec-day">{ev.event_day || '—'}</div>
-              </div>
-            </div>
-            <div class="ec-head">
-              <div class="ec-tag" style={`background: ${tc.tagBg}; color: ${tc.tagText};`}>{typeEmoji[ev.event_type] || '📅'} {(ev.event_type || '').replace('_', ' ')}</div>
-              <div class="ec-title">{ev.title}</div>
-              <div class="ec-loc">{ev.zone || ev.location}</div>
-            </div>
-            <div class="ec-body">
-              <div class="ec-meta">
-                <span><strong>{left ? `${left} spots left` : 'Full'}</strong> of {ev.spots}</span>
-                <span>{priceLabel(ev)}</span>
-              </div>
-              {going > 0 && (
-                <div class="ec-att">
-                  <span class="ec-att-text"><strong>{going} going</strong></span>
-                </div>
-              )}
-              <div class="ec-rsvp-row" style={`background: ${tc.accent};`}>RSVP — I'm in</div>
-            </div>
-          </a>
-        );
-      })}
-    </div>
-  )}
+  <!-- ═══ BROWSE PATH ═══ -->
+  <div id="browsePath" class="path" style="display:none;">
+    <button class="path-back" id="browseBack">← Back</button>
 
-  <!-- Suggest an Event -->
-  <div class="suggest-section">
-    <div class="suggest-header">
-      <h2 class="suggest-title">Got an idea?</h2>
-      <p class="suggest-sub">Suggest an event and let the community vote on it.</p>
+    <div class="ev-header">
+      <h1 class="ev-h1">Upcoming Events</h1>
+      <p class="ev-sub">Voted by the community. Show up to what sounds good.</p>
     </div>
-    <form class="suggest-form" id="suggestForm">
-      <div class="suggest-row">
-        <input type="text" name="title" placeholder="Event name (e.g. Rooftop BBQ)" class="suggest-input" required maxlength="100" />
-        <select name="type" class="suggest-select">
-          <option value="dinner">🍽️ Dinner</option>
-          <option value="brewery">🍺 Brewery</option>
-          <option value="outdoor">🏔️ Outdoor</option>
-          <option value="game_night">🎳 Game Night</option>
-          <option value="coffee">☕ Coffee</option>
-          <option value="arts">🎨 Arts</option>
-          <option value="music">🎵 Music</option>
-          <option value="social" selected>🎉 Social</option>
-          <option value="sports">🏒 Sports</option>
-          <option value="group_tickets">🎫 Group Tickets</option>
-          <option value="camping">🏕️ Camping</option>
-          <option value="bowling">🎳 Bowling</option>
-          <option value="active">🧗 Active</option>
-          <option value="casino">🎰 Casino</option>
-          <option value="food_trucks">🌮 Food Trucks</option>
-          <option value="potluck">🍲 Potluck</option>
-          <option value="other">📅 Other</option>
-        </select>
+
+    <div class="filters">
+      <button class="fpill active" data-type="all">All</button>
+      {Array.from(typeSet).map((t: any) => (
+        <button class="fpill" data-type={t}>
+          {typeEmoji[t] || '📅'} {(t || '').replace('_', ' ')}
+        </button>
+      ))}
+    </div>
+
+    {events.length === 0 ? (
+      <div class="ev-empty">
+        <div class="ev-empty-icon">🗓️</div>
+        <h2>Nothing scheduled yet</h2>
+        <p>New events drop every week. Join to be the first to know.</p>
+        <a href="/login?mode=join" class="ev-empty-btn">Join Free →</a>
       </div>
-      <textarea name="description" placeholder="Quick pitch — what would this look like? (optional)" class="suggest-textarea" rows="2" maxlength="300"></textarea>
-      <button type="submit" class="suggest-btn">Submit Idea</button>
-      <div class="suggest-msg" id="suggestMsg"></div>
-    </form>
+    ) : (
+      <div class="ev-grid">
+        {events.map((ev: any) => {
+          const left = spotsLeft(ev);
+          const going = rsvpCounts[ev.id] || 0;
+          const isHot = isHotEvent(ev);
+          const tc = getTypeColor(ev.event_type);
+          return (
+            <a href={`/events/${ev.id}`} class={`ec ${isHot ? 'ec-hot' : ''}`} data-type={ev.event_type} style={`--card-accent: ${tc.accent};`}>
+              <div class="ec-img" style={`background-image: url(${typeImages[ev.event_type] || typeImages.other});`}>
+                <div class="ec-img-overlay"></div>
+                {isHot && <span class="hot-tag">Filling up</span>}
+                <div class="ec-date">
+                  <div class="ec-month" style={`color: ${tc.accent};`}>{(ev.event_month || 'TBD').slice(0, 3)}</div>
+                  <div class="ec-day">{ev.event_day || '—'}</div>
+                </div>
+              </div>
+              <div class="ec-head">
+                <div class="ec-tag" style={`background: ${tc.tagBg}; color: ${tc.tagText};`}>{typeEmoji[ev.event_type] || '📅'} {(ev.event_type || '').replace('_', ' ')}</div>
+                <div class="ec-title">{ev.title}</div>
+                <div class="ec-loc">{ev.zone || ev.location}</div>
+              </div>
+              <div class="ec-body">
+                <div class="ec-meta">
+                  <span><strong>{left ? `${left} spots left` : 'Full'}</strong> of {ev.spots}</span>
+                  <span>{priceLabel(ev)}</span>
+                </div>
+                {going > 0 && (
+                  <div class="ec-att">
+                    <span class="ec-att-text"><strong>{going} going</strong></span>
+                  </div>
+                )}
+                <div class="ec-rsvp-row" style={`background: ${tc.accent};`}>RSVP — I'm in</div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    )}
+
+    <div class="ev-discord">
+      <span class="ev-discord-icon">💬</span>
+      <div class="ev-discord-text">
+        <strong>Plans happen in Discord first</strong>
+        <span>88 locals and growing</span>
+      </div>
+      <a href="https://discord.gg/S8SFNkdSgK" class="ev-discord-btn" target="_blank" rel="noopener">Join →</a>
+    </div>
   </div>
 
-  <div class="ev-discord">
-    <span class="ev-discord-icon">💬</span>
-    <div class="ev-discord-text">
-      <strong>Plans happen in Discord first</strong>
-      <span>88 locals and growing</span>
+  <!-- ═══ SUGGEST PATH — one-box-at-a-time wizard ═══ -->
+  <div id="suggestPath" class="path" style="display:none;">
+    <button class="path-back" id="suggestBack">← Back</button>
+
+    <div class="wiz-container">
+      <!-- Step 1: Name -->
+      <div class="wiz-step" id="wizStep1">
+        <div class="wiz-num">1 of 3</div>
+        <h2 class="wiz-q">What's the event?</h2>
+        <p class="wiz-hint">Give it a short, catchy name.</p>
+        <input type="text" id="wizTitle" class="wiz-input" placeholder="e.g. Rooftop BBQ, Trivia Night, Group Hike" maxlength="100" autofocus />
+        <button class="wiz-next" id="wizNext1">Next →</button>
+        <div class="wiz-err" id="wizErr1"></div>
+      </div>
+
+      <!-- Step 2: Type -->
+      <div class="wiz-step" id="wizStep2" style="display:none;">
+        <div class="wiz-num">2 of 3</div>
+        <h2 class="wiz-q">What kind of event?</h2>
+        <p class="wiz-hint">Pick the closest category.</p>
+        <div class="wiz-type-grid" id="wizTypeGrid">
+          <button class="wiz-type-btn" data-val="dinner">🍽️ Dinner</button>
+          <button class="wiz-type-btn" data-val="brewery">🍺 Brewery</button>
+          <button class="wiz-type-btn" data-val="outdoor">🏔️ Outdoor</button>
+          <button class="wiz-type-btn" data-val="game_night">🎳 Game Night</button>
+          <button class="wiz-type-btn" data-val="coffee">☕ Coffee</button>
+          <button class="wiz-type-btn" data-val="arts">🎨 Arts</button>
+          <button class="wiz-type-btn" data-val="music">🎵 Music</button>
+          <button class="wiz-type-btn" data-val="social">🎉 Social</button>
+          <button class="wiz-type-btn" data-val="sports">🏒 Sports</button>
+          <button class="wiz-type-btn" data-val="group_tickets">🎫 Group Tickets</button>
+          <button class="wiz-type-btn" data-val="camping">🏕️ Camping</button>
+          <button class="wiz-type-btn" data-val="bowling">🎳 Bowling</button>
+          <button class="wiz-type-btn" data-val="active">🧗 Active</button>
+          <button class="wiz-type-btn" data-val="casino">🎰 Casino</button>
+          <button class="wiz-type-btn" data-val="food_trucks">🌮 Food Trucks</button>
+          <button class="wiz-type-btn" data-val="potluck">🍲 Potluck</button>
+          <button class="wiz-type-btn" data-val="other">📅 Other</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Description + Submit -->
+      <div class="wiz-step" id="wizStep3" style="display:none;">
+        <div class="wiz-num">3 of 3</div>
+        <h2 class="wiz-q">Quick pitch <span class="wiz-opt">(optional)</span></h2>
+        <p class="wiz-hint">What would this look like? A sentence or two is plenty.</p>
+        <textarea id="wizDesc" class="wiz-textarea" placeholder="e.g. Meet at Sloan's Lake, bring a frisbee, we'll grab beers after..." rows="3" maxlength="300"></textarea>
+        <button class="wiz-submit" id="wizSubmit">Submit Idea</button>
+        <div class="wiz-err" id="wizErr3"></div>
+      </div>
+
+      <!-- Step 4: Done -->
+      <div class="wiz-step wiz-done" id="wizStep4" style="display:none;">
+        <div class="wiz-done-icon">🎉</div>
+        <h2 class="wiz-q">Submitted!</h2>
+        <p class="wiz-hint">The community will vote on your idea. Thanks for making Denver more fun.</p>
+        <div class="wiz-done-btns">
+          <button class="wiz-next" id="wizAnother">Suggest Another</button>
+          <button class="wiz-ghost" id="wizBrowse">Browse Events →</button>
+        </div>
+      </div>
     </div>
-    <a href="https://discord.gg/S8SFNkdSgK" class="ev-discord-btn" target="_blank" rel="noopener">Join →</a>
   </div>
 
 </div>
 
 <style is:inline>
   .ev-page { max-width: 900px; margin: 0 auto; padding: 0 32px 40px; }
-
   .ev-header { padding: 32px 0 16px; }
   .ev-h1 { font-family: 'Outfit', sans-serif; font-size: clamp(24px, 4vw, 32px); font-weight: 800; letter-spacing: -0.02em; color: #111827; margin-bottom: 4px; }
   .ev-sub { font-size: 13px; color: #6B7280; }
 
+  /* ── Chooser ── */
+  .chooser { padding: 48px 0 0; }
+  .chooser-header { text-align: center; margin-bottom: 32px; }
+  .chooser-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 520px; margin: 0 auto; }
+  .chooser-card {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 36px 20px; border-radius: 20px;
+    background: #fff; border: 2px solid #E5E7EB;
+    cursor: pointer; transition: all .2s;
+    font-family: 'Outfit', sans-serif; text-align: center;
+  }
+  .chooser-card:hover { border-color: #7C3AED; transform: translateY(-3px); box-shadow: 0 8px 24px rgba(124,58,237,0.1); }
+  .chooser-card-alt:hover { border-color: #10B981; box-shadow: 0 8px 24px rgba(16,185,129,0.1); }
+  .chooser-emoji { font-size: 40px; }
+  .chooser-label { font-size: 17px; font-weight: 800; color: #111827; }
+  .chooser-desc { font-size: 12px; color: #6B7280; font-weight: 400; font-family: 'Inter', sans-serif; }
+
+  /* ── Paths (fade in) ── */
+  .path { animation: fadeUp .3s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .path-back {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
+    color: #6B7280; background: none; border: none; cursor: pointer;
+    padding: 8px 0; margin-bottom: 4px; transition: color .15s;
+  }
+  .path-back:hover { color: #111827; }
+
+  /* ── Browse events ── */
   .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
   .fpill {
     padding: 7px 16px; border-radius: 50px; background: #F8F9FB;
@@ -241,27 +322,14 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     text-decoration: none;
   }
   .ec:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-color: #D1D5DB; }
-  .ec-img {
-    position: relative; height: 120px; background-size: cover; background-position: center;
-  }
-  .ec-img-overlay {
-    position: absolute; inset: 0;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.35) 100%);
-  }
-  .ec-img .ec-date {
-    position: absolute; top: 10px; right: 10px; text-align: center;
-    padding: 6px 10px; background: #fff; border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-  }
+  .ec-img { position: relative; height: 120px; background-size: cover; background-position: center; }
+  .ec-img-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.35) 100%); }
+  .ec-img .ec-date { position: absolute; top: 10px; right: 10px; text-align: center; padding: 6px 10px; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
   .ec-img .hot-tag { position: absolute; top: 10px; left: 10px; }
   .ec-head { padding: 12px 18px 10px; border-bottom: 1px solid #E5E7EB; }
   .ec-month { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #7C3AED; letter-spacing: .06em; }
   .ec-day { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 900; color: #111827; line-height: 1; }
-  .ec-tag {
-    display: inline-block; padding: 3px 10px; border-radius: 50px;
-    font-size: 9px; font-weight: 700; background: #EEF2FF; color: #4338CA;
-    margin-bottom: 8px; text-transform: capitalize;
-  }
+  .ec-tag { display: inline-block; padding: 3px 10px; border-radius: 50px; font-size: 9px; font-weight: 700; background: #EEF2FF; color: #4338CA; margin-bottom: 8px; text-transform: capitalize; }
   .ec-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 15px; color: #111827; margin-bottom: 3px; }
   .ec-loc { font-size: 11px; color: #6B7280; }
   .ec-body { padding: 14px 18px; }
@@ -276,141 +344,187 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     background: #7C3AED; color: #fff; transition: all .2s;
   }
   .ec:hover .ec-rsvp-row { box-shadow: 0 4px 12px color-mix(in srgb, var(--card-accent, #7C3AED) 25%, transparent); }
-
   .ec-hot { border: 2px solid rgba(220,38,38,0.15); }
   .ec-hot .ec-head { background: #FEF2F2; }
-  .hot-tag {
-    padding: 3px 10px; border-radius: 50px;
-    background: #FEF2F2; color: #DC2626;
-    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
-    z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-  }
+  .hot-tag { padding: 3px 10px; border-radius: 50px; background: #FEF2F2; color: #DC2626; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
 
-  .ev-discord {
-    display: flex; align-items: center; gap: 14px;
-    padding: 18px 22px; border-radius: 16px;
-    background: rgba(124,58,237,0.04); border: 1px solid rgba(124,58,237,0.1);
-  }
+  .ev-discord { display: flex; align-items: center; gap: 14px; padding: 18px 22px; border-radius: 16px; background: rgba(124,58,237,0.04); border: 1px solid rgba(124,58,237,0.1); }
   .ev-discord-icon { font-size: 24px; flex-shrink: 0; }
   .ev-discord-text { flex: 1; }
   .ev-discord-text strong { display: block; font-size: 13px; color: #111827; }
   .ev-discord-text span { font-size: 11px; color: #6B7280; }
-  .ev-discord-btn {
-    padding: 8px 18px; background: #7C3AED; color: #fff;
-    border-radius: 50px; font-size: 12px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; flex-shrink: 0;
-  }
+  .ev-discord-btn { padding: 8px 18px; background: #7C3AED; color: #fff; border-radius: 50px; font-size: 12px; font-weight: 700; font-family: 'Outfit', sans-serif; flex-shrink: 0; }
 
-  /* Suggest an Event */
-  .suggest-section {
-    margin-bottom: 24px; padding: 24px;
-    background: #F8F9FB; border: 1px solid #E5E7EB; border-radius: 20px;
-  }
-  .suggest-header { margin-bottom: 16px; }
-  .suggest-title {
-    font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800;
-    color: #111827; margin-bottom: 4px;
-  }
-  .suggest-sub { font-size: 13px; color: #6B7280; }
-  .suggest-form { display: flex; flex-direction: column; gap: 10px; }
-  .suggest-row { display: flex; gap: 10px; }
-  .suggest-input {
-    flex: 1; padding: 11px 16px; background: #fff; border: 1px solid #E5E7EB;
-    border-radius: 12px; font-size: 13px; color: #111827; font-family: 'Inter', sans-serif;
+  /* ── Wizard ── */
+  .wiz-container { max-width: 480px; margin: 40px auto 0; }
+  .wiz-step { animation: fadeUp .3s ease; }
+  .wiz-num { font-size: 11px; font-weight: 600; color: #9CA3AF; font-family: 'Outfit', sans-serif; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .06em; }
+  .wiz-q { font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 800; color: #111827; margin-bottom: 6px; }
+  .wiz-q .wiz-opt { font-weight: 400; color: #9CA3AF; font-size: 16px; }
+  .wiz-hint { font-size: 13px; color: #6B7280; margin-bottom: 20px; }
+  .wiz-input {
+    width: 100%; padding: 16px 20px; background: #fff; border: 2px solid #E5E7EB;
+    border-radius: 16px; font-size: 16px; color: #111827; font-family: 'Inter', sans-serif;
     outline: none; transition: border-color .2s;
   }
-  .suggest-input:focus { border-color: #7C3AED; }
-  .suggest-input::placeholder { color: #9CA3AF; }
-  .suggest-select {
-    padding: 11px 14px; background: #fff; border: 1px solid #E5E7EB;
-    border-radius: 12px; font-size: 12px; color: #111827; font-family: 'Outfit', sans-serif;
-    font-weight: 600; cursor: pointer; outline: none; min-width: 150px;
-  }
-  .suggest-select:focus { border-color: #7C3AED; }
-  .suggest-textarea {
-    width: 100%; padding: 11px 16px; background: #fff; border: 1px solid #E5E7EB;
-    border-radius: 12px; font-size: 13px; color: #111827; font-family: 'Inter', sans-serif;
+  .wiz-input:focus { border-color: #7C3AED; }
+  .wiz-input::placeholder { color: #D1D5DB; }
+  .wiz-textarea {
+    width: 100%; padding: 16px 20px; background: #fff; border: 2px solid #E5E7EB;
+    border-radius: 16px; font-size: 15px; color: #111827; font-family: 'Inter', sans-serif;
     outline: none; resize: vertical; transition: border-color .2s;
   }
-  .suggest-textarea:focus { border-color: #7C3AED; }
-  .suggest-textarea::placeholder { color: #9CA3AF; }
-  .suggest-btn {
-    align-self: flex-start; padding: 11px 28px; background: #7C3AED; color: #fff;
-    border: none; border-radius: 50px; font-size: 13px; font-weight: 700;
+  .wiz-textarea:focus { border-color: #7C3AED; }
+  .wiz-textarea::placeholder { color: #D1D5DB; }
+  .wiz-next, .wiz-submit {
+    margin-top: 16px; padding: 14px 32px; background: #7C3AED; color: #fff;
+    border: none; border-radius: 50px; font-size: 15px; font-weight: 700;
     font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .2s;
   }
-  .suggest-btn:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.2); }
-  .suggest-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
-  .suggest-msg {
-    font-size: 12px; font-weight: 600; font-family: 'Outfit', sans-serif;
-    min-height: 18px;
+  .wiz-next:hover, .wiz-submit:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(124,58,237,0.25); }
+  .wiz-next:disabled, .wiz-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .wiz-ghost {
+    margin-top: 16px; padding: 14px 32px; background: #F8F9FB; color: #6B7280;
+    border: 1px solid #E5E7EB; border-radius: 50px; font-size: 15px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .2s;
   }
-  .suggest-msg.ok { color: #059669; }
-  .suggest-msg.err { color: #DC2626; }
+  .wiz-ghost:hover { color: #111827; border-color: #D1D5DB; }
+  .wiz-err { font-size: 12px; font-weight: 600; color: #DC2626; margin-top: 8px; min-height: 18px; font-family: 'Outfit', sans-serif; }
+
+  /* Type grid */
+  .wiz-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+  .wiz-type-btn {
+    padding: 14px 12px; background: #fff; border: 2px solid #E5E7EB;
+    border-radius: 14px; font-size: 13px; font-weight: 600; color: #374151;
+    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
+    text-align: center;
+  }
+  .wiz-type-btn:hover { border-color: #D1D5DB; background: #F8F9FB; }
+  .wiz-type-btn.selected { border-color: #7C3AED; background: rgba(124,58,237,0.06); color: #7C3AED; }
+
+  /* Done step */
+  .wiz-done { text-align: center; padding: 20px 0; }
+  .wiz-done-icon { font-size: 52px; margin-bottom: 12px; }
+  .wiz-done-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
   @media (max-width: 768px) {
     .ev-page { padding: 0 20px 40px; }
     .ev-grid { grid-template-columns: 1fr; }
-    .suggest-row { flex-direction: column; }
-    .suggest-select { min-width: unset; }
+    .chooser-cards { grid-template-columns: 1fr; max-width: 320px; }
+    .wiz-type-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
   }
 </style>
 
 <script is:inline>
+(function() {
+  var chooser = document.getElementById('chooser');
+  var browsePath = document.getElementById('browsePath');
+  var suggestPath = document.getElementById('suggestPath');
+
+  function showView(view) {
+    chooser.style.display = 'none';
+    browsePath.style.display = 'none';
+    suggestPath.style.display = 'none';
+    if (view === 'chooser') chooser.style.display = '';
+    if (view === 'browse') browsePath.style.display = '';
+    if (view === 'suggest') suggestPath.style.display = '';
+    window.scrollTo(0, 0);
+  }
+
+  // Chooser buttons
+  document.getElementById('pickBrowse').addEventListener('click', function() { showView('browse'); });
+  document.getElementById('pickSuggest').addEventListener('click', function() { showView('suggest'); });
+
+  // Back buttons
+  document.getElementById('browseBack').addEventListener('click', function() { showView('chooser'); });
+  document.getElementById('suggestBack').addEventListener('click', function() { showView('chooser'); resetWizard(); });
+
+  // ── Filter pills ──
   document.querySelectorAll('.fpill').forEach(function(pill) {
     pill.addEventListener('click', function() {
       document.querySelectorAll('.fpill').forEach(function(p) { p.classList.remove('active'); });
       this.classList.add('active');
       var type = this.getAttribute('data-type');
       document.querySelectorAll('.ec').forEach(function(card) {
-        if (type === 'all' || card.getAttribute('data-type') === type) {
-          card.style.display = '';
-        } else {
-          card.style.display = 'none';
-        }
+        card.style.display = (type === 'all' || card.getAttribute('data-type') === type) ? '' : 'none';
       });
     });
   });
 
-  // Suggest form
-  var form = document.getElementById('suggestForm');
-  if (form) {
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
-      var btn = form.querySelector('.suggest-btn');
-      var msg = document.getElementById('suggestMsg');
-      var title = form.querySelector('[name="title"]').value.trim();
-      var type = form.querySelector('[name="type"]').value;
-      var desc = form.querySelector('[name="description"]').value.trim();
-      if (!title) { msg.textContent = 'Please enter an event name.'; msg.className = 'suggest-msg err'; return; }
-      btn.disabled = true;
-      btn.textContent = 'Submitting...';
-      msg.textContent = '';
-      msg.className = 'suggest-msg';
-      fetch('/api/suggest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title, type: type, description: desc })
-      }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.ok) {
-          msg.textContent = 'Submitted! The community will vote on it.';
-          msg.className = 'suggest-msg ok';
-          form.querySelector('[name="title"]').value = '';
-          form.querySelector('[name="description"]').value = '';
-        } else {
-          msg.textContent = data.error || 'Something went wrong.';
-          msg.className = 'suggest-msg err';
-        }
-        btn.disabled = false;
-        btn.textContent = 'Submit Idea';
-      }).catch(function() {
-        msg.textContent = 'Network error. Try again.';
-        msg.className = 'suggest-msg err';
-        btn.disabled = false;
-        btn.textContent = 'Submit Idea';
-      });
-    });
+  // ── Wizard state ──
+  var wizData = { title: '', type: 'social', description: '' };
+
+  function showStep(n) {
+    for (var i = 1; i <= 4; i++) {
+      document.getElementById('wizStep' + i).style.display = (i === n) ? '' : 'none';
+    }
   }
+
+  function resetWizard() {
+    wizData = { title: '', type: 'social', description: '' };
+    document.getElementById('wizTitle').value = '';
+    document.getElementById('wizDesc').value = '';
+    document.querySelectorAll('.wiz-type-btn').forEach(function(b) { b.classList.remove('selected'); });
+    document.querySelectorAll('.wiz-err').forEach(function(e) { e.textContent = ''; });
+    showStep(1);
+  }
+
+  // Step 1 → 2
+  document.getElementById('wizNext1').addEventListener('click', function() {
+    var val = document.getElementById('wizTitle').value.trim();
+    if (!val) { document.getElementById('wizErr1').textContent = 'Give it a name first.'; return; }
+    wizData.title = val;
+    document.getElementById('wizErr1').textContent = '';
+    showStep(2);
+  });
+
+  // Enter key on title input
+  document.getElementById('wizTitle').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('wizNext1').click(); }
+  });
+
+  // Step 2 → 3 (pick type)
+  document.querySelectorAll('.wiz-type-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.wiz-type-btn').forEach(function(b) { b.classList.remove('selected'); });
+      btn.classList.add('selected');
+      wizData.type = btn.getAttribute('data-val');
+      // Auto-advance after a short beat
+      setTimeout(function() { showStep(3); }, 250);
+    });
+  });
+
+  // Step 3 → submit
+  document.getElementById('wizSubmit').addEventListener('click', function() {
+    var btn = this;
+    wizData.description = document.getElementById('wizDesc').value.trim();
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+    document.getElementById('wizErr3').textContent = '';
+
+    fetch('/api/suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(wizData)
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false;
+      btn.textContent = 'Submit Idea';
+      if (data.ok) {
+        showStep(4);
+      } else {
+        document.getElementById('wizErr3').textContent = data.error || 'Something went wrong.';
+      }
+    }).catch(function() {
+      btn.disabled = false;
+      btn.textContent = 'Submit Idea';
+      document.getElementById('wizErr3').textContent = 'Network error. Try again.';
+    });
+  });
+
+  // Done → another / browse
+  document.getElementById('wizAnother').addEventListener('click', function() { resetWizard(); });
+  document.getElementById('wizBrowse').addEventListener('click', function() { resetWizard(); showView('browse'); });
+})();
 </script>
 
 </Base>
