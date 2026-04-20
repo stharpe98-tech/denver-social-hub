@@ -82,85 +82,95 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
 <div class="det-page" style={`--ev-accent: ${theme.accent}; --ev-accent-shadow: ${theme.accent}33;`}>
   <a href="/events" class="det-back">← Back to events</a>
 
-  <!-- Event header card -->
-  <div class="det-head" style={`border-color: ${theme.accent}20;`}>
-    <div class="dh-date">
-      <div class="dh-month" style={`color: ${theme.accent};`}>{(event.event_month || 'TBD').slice(0, 3)}</div>
-      <div class="dh-day">{event.event_day || '—'}</div>
-      {event.event_time && <div class="dh-time">{event.event_time}</div>}
-    </div>
-    <div class="dh-tag" style={`background: ${theme.tagBg}; color: ${theme.tagText};`}>{typeEmoji[event.event_type] || '📅'} {(event.event_type || '').replace('_', ' ')}</div>
-    <h1 class="dh-title">{event.title}</h1>
-    <div class="dh-loc">{myRsvp ? (event.location || event.zone) : (event.zone || 'TBD')} {!myRsvp && <span class="dh-loc-hint">(RSVP to see full address)</span>}</div>
+  <!-- Big emoji + type + title -->
+  <div class="det-hero-block">
+    <div class="det-emoji">{typeEmoji[event.event_type] || '📅'}</div>
+    <div class="det-type-tag" style={`background: ${theme.tagBg}; color: ${theme.tagText};`}>{(event.event_type || 'event').replace('_', ' ')}</div>
+    <h1 class="det-title">{event.title}</h1>
+    <p class="det-subtitle">
+      {(event.event_month || 'TBD').slice(0, 3)} {event.event_day || ''} · {myRsvp ? (event.location || event.zone || 'Denver') : (event.zone || 'Denver')}
+      {!myRsvp && <span class="det-loc-hint"> · RSVP to see full address</span>}
+    </p>
   </div>
 
-  <div class="det-grid">
-    <!-- Left column: details -->
-    <div class="det-main">
-      {event.description && (
-        <div class="dm-sec">
-          <h3>About this event</h3>
-          <p>{event.description}</p>
-        </div>
-      )}
-
-      <div class="dm-sec">
-        <h3>Details</h3>
-        <div class="dm-details">
-          <div class="dm-detail">
-            <span class="dm-detail-label">Spots</span>
-            <span class="dm-detail-val">{rsvps.length}/{event.spots} filled</span>
-          </div>
-          {event.price_cap && (
-            <div class="dm-detail">
-              <span class="dm-detail-label">Cost</span>
-              <span class="dm-detail-val">{event.price_cap}</span>
-            </div>
-          )}
-          <div class="dm-detail">
-            <span class="dm-detail-label">Location</span>
-            <span class="dm-detail-val">{event.zone || 'Denver'}</span>
-          </div>
-        </div>
-      </div>
+  <!-- Info pills -->
+  <div class="det-pills">
+    <div class="det-pill">
+      <span class="det-pill-icon">📅</span>
+      <strong>{(event.event_month || 'TBD').slice(0, 3)} {event.event_day || 'TBD'}</strong>
+      {event.event_time && <span>· {event.event_time}</span>}
     </div>
-
-    <!-- Right column: RSVP + attendees -->
-    <div class="det-side">
-      <div class="ds-card">
-        {user ? (
-          <button id="rsvp-btn" class={`ds-rsvp ${myRsvp ? 'rsvped' : ''}`} style={myRsvp ? '' : `background: ${theme.accent};`}>
-            {myRsvp ? "✓ You're In — Cancel RSVP" : "RSVP — I'm in 🎉"}
-          </button>
-        ) : (
-          <a href={`/login?next=/events/${id}`} class="ds-rsvp" style={`background: ${theme.accent};`}>Sign in to RSVP</a>
-        )}
-        <div class="ds-info"><strong>{rsvps.length} of {event.spots}</strong> spots filled</div>
-        {spotsLeft <= 4 && spotsLeft > 0 && <div class="ds-urgent">Only {spotsLeft} spots left!</div>}
-      </div>
-
-      {rsvps.length > 0 && (
-        <div class="ds-card">
-          <h4>Who's going ({rsvps.length})</h4>
-          <div class="att-list">
-            {rsvps.slice(0, 6).map((r: any, i: number) => (
-              <div class="att-row">
-                <div class="att-avatar" style={`background:${avatarColors[i % avatarColors.length]}`}>{(r.name || '?')[0]}</div>
-                <div class="att-info">
-                  <div class="att-name">{r.name}</div>
-                  {r.neighborhood && <div class="att-meta">{r.neighborhood}</div>}
-                </div>
-              </div>
-            ))}
-            {rsvps.length > 6 && <div class="att-more">+ {rsvps.length - 6} more</div>}
-          </div>
-        </div>
-      )}
+    <div class="det-pill">
+      <span class="det-pill-icon">📍</span>
+      <strong>{myRsvp ? (event.location || event.zone || 'Denver') : (event.zone || 'Denver')}</strong>
     </div>
+    <div class="det-pill">
+      <span class="det-pill-icon">💰</span>
+      <strong>{event.price_cap && event.price_cap !== 'Free' && event.price_cap !== '$0' ? event.price_cap : 'Free'}</strong>
+    </div>
+    <div class="det-pill">
+      <span class="det-pill-icon">👥</span>
+      <strong>{event.spots}</strong> max
+    </div>
+  </div>
+
+  <!-- Description card -->
+  {event.description && (
+    <div class="det-desc-card">
+      <p>{event.description}</p>
+    </div>
+  )}
+
+  <!-- Spots + RSVP bar -->
+  <div class="det-spots-card">
+    <div class="det-spots-top">
+      <div class="det-spots-label">{spotsLeft > 0 ? (spotsLeft <= 4 ? 'Almost full!' : 'Spots available') : 'Event is full'}</div>
+      <div class="det-spots-count">{spotsLeft} left of {event.spots}</div>
+    </div>
+    <div class="det-bar">
+      <div class="det-bar-fill" style={`width: ${Math.round((rsvps.length / (parseInt(event.spots) || 10)) * 100)}%; background: linear-gradient(90deg, ${theme.accent}, ${theme.accent}CC);`}></div>
+    </div>
+    {user ? (
+      <button id="rsvp-btn" class={`det-rsvp-btn ${myRsvp ? 'rsvped' : ''}`} style={myRsvp ? '' : `background: ${theme.accent};`}>
+        {myRsvp ? "✓ You're In — Cancel RSVP" : "I'm In"}
+      </button>
+    ) : (
+      <a href={`/login?next=/events/${id}`} class="det-rsvp-btn" style={`background: ${theme.accent};`}>Sign in to RSVP</a>
+    )}
+    {spotsLeft <= 4 && spotsLeft > 0 && <div class="det-urgent">🔥 Only {spotsLeft} spots left — don't sleep on this</div>}
+  </div>
+
+  <!-- Who's going -->
+  <div class="det-people-card">
+    <div class="det-people-title">Who's going ({rsvps.length})</div>
+    {rsvps.length > 0 ? (
+      <div class="det-people-list">
+        {rsvps.map((r: any, i: number) => (
+          <div class="det-person">
+            <div class="det-person-av" style={`background:${avatarColors[i % avatarColors.length]}`}>{(r.name || '?')[0]}</div>
+            <span class="det-person-name">{r.name}</span>
+            {r.neighborhood && <span class="det-person-hood">{r.neighborhood}</span>}
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div class="det-people-empty">No one's RSVP'd yet. Be the person who starts the wave.</div>
+    )}
+  </div>
+
+  <!-- Discord CTA -->
+  <div class="det-discord">
+    <span class="det-discord-icon">💬</span>
+    <div class="det-discord-text">
+      <strong>Plans happen in Discord first</strong>
+      <span>Chat about this event, coordinate rides, or just hang</span>
+    </div>
+    <a href={event.discord_link || "https://discord.gg/S8SFNkdSgK"} class="det-discord-btn" target="_blank" rel="noopener">Join →</a>
   </div>
 </div>
 
 <style is:inline>
+  /* ── Full-page background ── */
   .det-bg {
     position: fixed; top: 0; left: 0; right: 0; height: 100vh;
     background-size: cover; background-position: center;
@@ -168,91 +178,135 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
   }
   .det-bg-overlay {
     position: absolute; inset: 0;
-    background: linear-gradient(to bottom, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.95) 50%, rgba(255,255,255,1) 100%);
+    background: linear-gradient(to bottom,
+      rgba(255,255,255,0.7) 0%,
+      rgba(255,255,255,0.88) 30%,
+      rgba(255,255,255,0.97) 60%,
+      rgba(255,255,255,1) 80%
+    );
     z-index: -1;
   }
 
-  .det-page { max-width: 780px; margin: 0 auto; padding: 24px 24px 48px; position: relative; z-index: 1; }
+  /* ── Page container ── */
+  .det-page { max-width: 600px; margin: 0 auto; padding: 24px 20px 48px; position: relative; z-index: 1; }
+
   .det-back {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600;
-    color: #6B7280; margin-bottom: 18px; transition: color .2s;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
+    color: #6B7280; margin-bottom: 20px; transition: color .2s;
+    text-decoration: none;
   }
   .det-back:hover { color: var(--ev-accent, #7C3AED); }
 
-  .det-head {
+  /* ── Hero block: emoji + tag + title ── */
+  .det-hero-block { margin-bottom: 24px; }
+  .det-emoji { font-size: 52px; margin-bottom: 8px; }
+  .det-type-tag {
+    display: inline-block; padding: 5px 14px; border-radius: 8px; font-size: 11px;
+    font-weight: 700; font-family: 'Outfit', sans-serif;
+    text-transform: capitalize; letter-spacing: 0.04em; margin-bottom: 10px;
+  }
+  .det-title {
+    font-family: 'Outfit', sans-serif; font-size: clamp(26px, 5vw, 32px);
+    font-weight: 900; letter-spacing: -0.02em; color: #111827;
+    margin-bottom: 6px; line-height: 1.15;
+  }
+  .det-subtitle { font-size: 14px; color: #6B7280; }
+  .det-loc-hint { color: #9CA3AF; font-size: 12px; }
+
+  /* ── Info pills ── */
+  .det-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .det-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 16px; border-radius: 12px;
+    background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid #E5E7EB; font-size: 13px; font-weight: 500; color: #374151;
+  }
+  .det-pill-icon { font-size: 16px; }
+  .det-pill strong { font-weight: 700; color: #111827; }
+
+  /* ── Description card ── */
+  .det-desc-card {
+    background: rgba(255,255,255,0.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     border: 1px solid #E5E7EB; border-radius: 16px;
-    padding: 28px; margin-bottom: 20px; position: relative;
-    background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    padding: 20px 22px; margin-bottom: 16px;
   }
-  .dh-date {
-    position: absolute; top: 24px; right: 24px; text-align: center;
-    padding: 10px 14px; background: #fff; border-radius: 12px;
-    border: 1px solid #E5E7EB; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  }
-  .dh-month { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #7C3AED; letter-spacing: .06em; }
-  .dh-day { font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 900; color: #111827; line-height: 1; }
-  .dh-time { font-size: 9px; color: #9CA3AF; margin-top: 2px; }
-  .dh-tag {
-    display: inline-block; padding: 3px 10px; border-radius: 50px;
-    font-size: 9px; font-weight: 700; background: #EEF2FF; color: #4338CA;
-    margin-bottom: 10px; text-transform: capitalize;
-  }
-  .dh-title { font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900; letter-spacing: -0.02em; color: #111827; margin-bottom: 4px; }
-  .dh-loc { font-size: 13px; color: #6B7280; }
-  .dh-loc-hint { font-size: 11px; color: #9CA3AF; }
+  .det-desc-card p { font-size: 15px; line-height: 1.8; color: #374151; }
 
-  .det-grid { display: grid; grid-template-columns: 1fr 260px; gap: 20px; }
-
-  .det-main {}
-  .dm-sec { margin-bottom: 20px; }
-  .dm-sec h3 { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 8px; }
-  .dm-sec p { font-size: 13px; color: #6B7280; line-height: 1.7; }
-
-  .dm-details { display: flex; flex-direction: column; gap: 8px; }
-  .dm-detail {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 14px; background: rgba(248,249,251,0.8); border-radius: 10px; border: 1px solid #E5E7EB;
+  /* ── Spots + RSVP card ── */
+  .det-spots-card {
+    background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid #E5E7EB; border-radius: 16px;
+    padding: 18px 20px; margin-bottom: 16px;
   }
-  .dm-detail-label { font-size: 11px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; }
-  .dm-detail-val { font-size: 13px; font-weight: 600; color: #111827; }
+  .det-spots-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .det-spots-label { font-size: 14px; font-weight: 600; font-family: 'Outfit', sans-serif; color: #111827; }
+  .det-spots-count { font-size: 13px; color: #6B7280; }
 
-  .det-side {}
-  .ds-card {
-    background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    border: 1px solid #E5E7EB; border-radius: 14px;
-    padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  }
-  .ds-card h4 { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 12px; }
-  .ds-rsvp {
-    display: block; width: 100%; padding: 12px; border-radius: 12px; border: none;
-    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
-    cursor: pointer; text-align: center; text-decoration: none;
-    background: #7C3AED; color: #fff; margin-bottom: 10px; transition: all .2s;
-  }
-  .ds-rsvp:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--ev-accent-shadow, rgba(124,58,237,0.2)); }
-  .ds-rsvp.rsvped { background: rgba(220,38,38,0.08); color: #DC2626; }
-  .ds-rsvp.rsvped:hover { background: rgba(220,38,38,0.12); }
-  .ds-info { font-size: 12px; color: #6B7280; margin-bottom: 4px; }
-  .ds-info strong { color: #111827; }
-  .ds-urgent { font-size: 11px; font-weight: 700; color: #DC2626; }
+  .det-bar { height: 8px; background: #E5E7EB; border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
+  .det-bar-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
 
-  .att-list { display: flex; flex-direction: column; gap: 8px; }
-  .att-row { display: flex; align-items: center; gap: 10px; }
-  .att-avatar {
-    width: 32px; height: 32px; border-radius: 50%;
+  .det-rsvp-btn {
+    display: block; width: 100%; padding: 14px; border-radius: 14px;
+    font-size: 15px; font-weight: 700; font-family: 'Outfit', sans-serif;
+    border: none; cursor: pointer; text-align: center; text-decoration: none;
+    background: #7C3AED; color: #fff; transition: all .2s;
+  }
+  .det-rsvp-btn:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 20px var(--ev-accent-shadow, rgba(124,58,237,0.2)); }
+  .det-rsvp-btn.rsvped { background: rgba(220,38,38,0.08); color: #DC2626; }
+  .det-rsvp-btn.rsvped:hover { background: rgba(220,38,38,0.14); }
+
+  .det-urgent { font-size: 12px; font-weight: 600; color: #DC2626; margin-top: 10px; text-align: center; }
+
+  /* ── People card ── */
+  .det-people-card {
+    background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid #E5E7EB; border-radius: 16px;
+    padding: 18px 20px; margin-bottom: 16px;
+  }
+  .det-people-title { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 12px; }
+  .det-people-list { display: flex; flex-direction: column; gap: 0; }
+
+  .det-person {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid #F3F4F6; font-size: 14px;
+  }
+  .det-person:last-child { border-bottom: none; }
+  .det-person-av {
+    width: 34px; height: 34px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+    font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
   }
-  .att-info {}
-  .att-name { font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; color: #111827; }
-  .att-meta { font-size: 10px; color: #9CA3AF; }
-  .att-more { font-size: 10px; color: #9CA3AF; padding-top: 4px; }
+  .det-person-name { font-family: 'Outfit', sans-serif; font-weight: 600; color: #111827; }
+  .det-person-hood { font-size: 12px; color: #9CA3AF; margin-left: auto; }
+
+  .det-people-empty {
+    padding: 20px 0; text-align: center; color: #9CA3AF; font-size: 13px; line-height: 1.6;
+  }
+
+  /* ── Discord CTA ── */
+  .det-discord {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 22px; border-radius: 16px;
+    background: rgba(124,58,237,0.04); border: 1px solid rgba(124,58,237,0.1);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .det-discord-icon { font-size: 24px; flex-shrink: 0; }
+  .det-discord-text { flex: 1; }
+  .det-discord-text strong { display: block; font-size: 13px; color: #111827; font-family: 'Outfit', sans-serif; }
+  .det-discord-text span { font-size: 12px; color: #6B7280; }
+  .det-discord-btn {
+    padding: 8px 18px; background: #7C3AED; color: #fff;
+    border-radius: 50px; font-size: 12px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; flex-shrink: 0; text-decoration: none;
+    transition: opacity .2s;
+  }
+  .det-discord-btn:hover { opacity: 0.9; }
 
   @media (max-width: 768px) {
-    .det-grid { grid-template-columns: 1fr; }
-    .dh-date { position: static; display: inline-block; margin-bottom: 10px; }
+    .det-page { padding: 20px 16px 48px; }
+    .det-pills { gap: 6px; }
+    .det-pill { padding: 8px 12px; font-size: 12px; }
   }
 </style>
 
@@ -268,8 +322,8 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
         const d = await r.json();
         if (d.error) { btn.textContent = d.message || 'Error'; return; }
         rsvped = d.rsvped;
-        btn.className = 'ds-rsvp' + (rsvped ? ' rsvped' : '');
-        btn.textContent = rsvped ? "✓ You're In — Cancel RSVP" : "RSVP — I'm in 🎉";
+        btn.className = 'det-rsvp-btn' + (rsvped ? ' rsvped' : '');
+        btn.textContent = rsvped ? "✓ You're In — Cancel RSVP" : "I'm In";
         btn.style.background = rsvped ? '' : themeAccent;
       } catch { btn.textContent = 'Error — try again'; }
     });
