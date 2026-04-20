@@ -33,13 +33,13 @@ function getInitials(name: string): string {
 }
 
 const faqs = [
-  { q:"Is this free to join?", a:"Completely free. No membership fees, no subscriptions, no hidden costs." },
-  { q:"Do I need to know anyone?", a:"Nope — that's the whole point. Most people come solo. We keep groups small (6–12) so nobody gets lost in the crowd." },
-  { q:"What kind of events do you do?", a:"Dinners, bowling nights, hikes, pottery, game nights, food truck crawls, park hangouts, and more. We're always trying new things based on what the crew suggests." },
-  { q:"How do I RSVP?", a:"Create a free profile, browse the events page, and hit RSVP. You can also join our Discord — that's where new events drop first and plans come together." },
-  { q:"What does it cost to attend?", a:"Each event shows the price upfront. Many events are free. Dinners run $20–35/person. We always include the cost so there are no surprises." },
-  { q:"What if I can't make it after RSVPing?", a:"Just cancel your RSVP so someone else can grab the spot. We get it — life happens. Just don't no-show repeatedly." },
-  { q:"Is this a dating thing?", a:"No. It's a friendship thing. People of all ages, backgrounds, and relationship statuses come out. The goal is real connections, not romance." },
+  { q:"Wait, this is actually free?", a:"Yep. No catch. No \"premium tier\" coming later. We just like hanging out." },
+  { q:"I don't know anyone — is that weird?", a:"That's literally the point. Most people show up solo. Within 20 minutes you'll forget you came alone." },
+  { q:"What if I'm awkward?", a:"Same. Honestly, everyone's a little nervous the first time. It goes away fast because the groups are small and nobody's performing." },
+  { q:"What kind of stuff do you do?", a:"Dinners, bowling, hikes, pottery, game nights, food trucks, park hangs — we rotate based on what people suggest. If you have an idea, throw it out there." },
+  { q:"How much does stuff cost?", a:"Depends on the event. A lot are free. Dinners are usually $20–35 per person. We always show the price upfront so there's no surprise bill at the end." },
+  { q:"What if I RSVP and can't make it?", a:"Just cancel so someone else can grab the spot. Life happens. Just don't ghost repeatedly or we'll have to have a talk." },
+  { q:"Is this a dating thing?", a:"Nope. Friendship only. All ages, all backgrounds, all relationship statuses. Come to make friends, not to shoot your shot." },
 ];
 ---
 <Base title="About">
@@ -49,8 +49,8 @@ const faqs = [
   <!-- HERO -->
   <section class="about-hero">
     <div class="about-hero-tag">About Denver Social</div>
-    <h1 class="about-hero-h1">We got tired of not knowing anyone.<br/>So we <em>fixed it.</em></h1>
-    <p class="about-hero-sub">Denver Social is a free community that organizes small-group hangouts across Denver. No algorithms. No awkwardness. Just real people showing up.</p>
+    <h1 class="about-hero-h1">Look — making friends after college is <em>weird.</em></h1>
+    <p class="about-hero-sub">We're just a group of people in Denver who got tired of sitting at home on weekends. So we started doing stuff together. Dinners, hikes, bowling, whatever. No app, no algorithm — just "hey, who wants to come?"</p>
   </section>
 
   <!-- STATS -->
@@ -76,26 +76,26 @@ const faqs = [
     <div class="about-story-head">
       <div class="about-story-avatar">S</div>
       <div>
-        <strong>Seth Tharpe</strong>
-        <span>Founder · Denver Social</span>
+        <strong>Seth</strong>
+        <span>the guy who texts everyone "are you coming?"</span>
       </div>
     </div>
     <div class="about-story-body">
-      <h2>The problem</h2>
-      <p>Denver has incredible people. But meeting them — actually meeting them — is weirdly hard.</p>
-      <p>I moved here and kept hitting the same wall: bars are loud, Meetup groups are huge and impersonal, apps are exhausting. I just wanted a small group of people to grab dinner with.</p>
-      <h2>The fix</h2>
-      <p>So I started organizing dinners. 8 people, one long table, no agenda. Just show up and see what happens.</p>
-      <p>It worked. People kept coming back. They brought friends. We started doing more — bowling, hikes, pottery, game nights. Now it's a whole community.</p>
-      <h2>The rules</h2>
-      <p>We keep it simple: small groups (6–12 people), every member is verified, locations stay private until you RSVP, and there's a one-strike policy for bad behavior. That's it.</p>
+      <h2>Real talk</h2>
+      <p>I moved to Denver and realized I had zero friends here. Like, none. And every time I tried to fix that it sucked — bars were too loud, meetup groups had 400 people standing around awkwardly, and bumble BFF felt like a job interview.</p>
+      <p>All I wanted was a few people to grab dinner with on a Tuesday.</p>
+      <h2>So I just... started inviting people</h2>
+      <p>I booked a table for 8 at a random restaurant in RiNo and posted it. Strangers showed up. It was great. Nobody was weird about it.</p>
+      <p>People kept asking "when's the next one?" — so I kept doing it. Then we added bowling. Then hikes. Then pottery (surprisingly fun). Now there's like 80+ of us and it still feels small because we cap every event at 12 people.</p>
+      <h2>The only rules</h2>
+      <p>Don't be a creep. Show up if you say you will. That's basically it. We verify everyone, keep locations private until you RSVP, and if someone's being weird they're gone — no second chances.</p>
     </div>
   </section>
 
   <!-- THE CREW (merged from /members) -->
   <section class="about-crew" id="crew">
     <div class="about-section-tag">The Crew</div>
-    <h2 class="about-section-h2">{totalMembers || '88'}+ locals who show <em>up.</em></h2>
+    <h2 class="about-section-h2">These people actually leave the <em>house.</em></h2>
 
     {members.length > 0 ? (
       <div class="mem-grid">
@@ -133,27 +133,27 @@ const faqs = [
   <!-- HOW IT WORKS -->
   <section class="about-how">
     <div class="about-section-tag">How it works</div>
-    <h2 class="about-section-h2">Three steps. <em>That's it.</em></h2>
+    <h2 class="about-section-h2">It's not <em>complicated.</em></h2>
     <div class="about-steps">
       <div class="about-step">
         <div class="about-step-num">1</div>
         <div class="about-step-text">
-          <h3>Join free</h3>
-          <p>60 seconds — connect with Discord and tell us what you're into. No credit card, ever.</p>
+          <h3>Make a profile</h3>
+          <p>Takes like 60 seconds. Sign in with Discord, tell us your neighborhood and what sounds fun. That's it — no credit card, no quiz, no "tell us your love language."</p>
         </div>
       </div>
       <div class="about-step">
         <div class="about-step-num">2</div>
         <div class="about-step-text">
-          <h3>Pick something</h3>
-          <p>Browse the events page or watch the Discord. Pottery, dinner, hike — whatever sounds fun.</p>
+          <h3>Find something that sounds fun</h3>
+          <p>We post new events every week. Scroll through, see what grabs you. Pottery on Saturday? A dinner in LoHi? Bowling and cheap beer? Just hit RSVP.</p>
         </div>
       </div>
       <div class="about-step">
         <div class="about-step-num">3</div>
         <div class="about-step-text">
-          <h3>Show up</h3>
-          <p>Small group, real people. Walk-ins welcome. No icebreakers, we promise.</p>
+          <h3>Actually show up</h3>
+          <p>That's the whole thing. You walk in, there's 8 people at a table, and within 20 minutes you're laughing about something dumb. No icebreakers. No name tags.</p>
         </div>
       </div>
     </div>
@@ -161,35 +161,35 @@ const faqs = [
 
   <!-- TRUST -->
   <section class="about-trust">
-    <div class="about-section-tag">Safety first</div>
-    <h2 class="about-section-h2">Built for <em>trust.</em></h2>
+    <div class="about-section-tag">The "is this safe?" section</div>
+    <h2 class="about-section-h2">Yeah, we thought about <em>that.</em></h2>
     <div class="about-trust-grid">
       <div class="about-trust-item">
         <div class="about-trust-icon">✓</div>
         <div>
-          <strong>Verified members</strong>
-          <p>Every member is approved before they can RSVP to events.</p>
+          <strong>Everyone's verified</strong>
+          <p>You can't just show up — members get approved first. We know who's coming.</p>
         </div>
       </div>
       <div class="about-trust-item">
         <div class="about-trust-icon">✓</div>
         <div>
-          <strong>Private locations</strong>
-          <p>Exact venue details are only shared with people who RSVP.</p>
+          <strong>Locations stay private</strong>
+          <p>You don't see where the event is until you RSVP. Keeps things controlled.</p>
         </div>
       </div>
       <div class="about-trust-item">
         <div class="about-trust-icon">✓</div>
         <div>
-          <strong>Small groups only</strong>
-          <p>6 to 12 people per event. Big enough for energy, small enough to connect.</p>
+          <strong>Intentionally small</strong>
+          <p>6–12 people max. It's not a party. You'll actually talk to everyone there.</p>
         </div>
       </div>
       <div class="about-trust-item">
         <div class="about-trust-icon">✓</div>
         <div>
-          <strong>One-strike policy</strong>
-          <p>Be respectful or you're out. No warnings for serious issues.</p>
+          <strong>Zero tolerance</strong>
+          <p>Be weird or make someone uncomfortable? You're done. No second chances on that.</p>
         </div>
       </div>
     </div>
@@ -197,8 +197,8 @@ const faqs = [
 
   <!-- FAQ -->
   <section class="about-faq">
-    <div class="about-section-tag">Questions</div>
-    <h2 class="about-section-h2">Frequently <em>asked</em></h2>
+    <div class="about-section-tag">You're probably wondering</div>
+    <h2 class="about-section-h2">Totally fair <em>questions.</em></h2>
     <div class="about-faq-list">
       {faqs.map((f) => (
         <details class="about-faq-item">
@@ -212,9 +212,9 @@ const faqs = [
   <!-- CONTACT / CTA -->
   <section class="about-contact">
     <div class="about-contact-card">
-      <span class="about-contact-icon">💬</span>
-      <h2>Come say hey</h2>
-      <p>The best way to reach us is on Discord. That's where plans happen, ideas get tossed around, and the crew hangs out between events.</p>
+      <span class="about-contact-icon">👋</span>
+      <h2>Alright, you in?</h2>
+      <p>The Discord is where everything happens — new events, random plans, people just being goofy between hangs. Come lurk if you want. Or just say hi.</p>
       <div class="about-contact-btns">
         <a href="https://discord.gg/S8SFNkdSgK" class="about-btn-cta" target="_blank" rel="noopener">Join the Discord →</a>
         <a href="mailto:stharpe98@gmail.com" class="about-btn-ghost">Email Seth</a>
