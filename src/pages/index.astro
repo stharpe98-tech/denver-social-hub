@@ -45,9 +45,9 @@ const activities = [
 ];
 
 const crew = [
-  { initial:"S", name:"Sarah M.",  zone:"Capitol Hill", fav:"Dinner hangs",     quote:"Moved here knowing nobody. Now I have a group text.",    tint:"#F05A28" },
-  { initial:"M", name:"Marco D.",  zone:"Highlands",    fav:"Brewery crawls",   quote:"Tuesdays are now the best night of my week.",             tint:"#fbbf24" },
-  { initial:"P", name:"Priya L.",  zone:"RiNo",         fav:"Pottery nights",   quote:"I came for the clay, stayed for the dumpling crawl.",     tint:"#ec4899" },
+  { initial:"S", name:"Sarah M.", zone:"Capitol Hill", fav:"Dinner hangs",   quote:"Moved here knowing nobody. Now I have a group text." },
+  { initial:"M", name:"Marco D.", zone:"Highlands",    fav:"Brewery crawls", quote:"Tuesdays are now the best night of my week." },
+  { initial:"P", name:"Priya L.", zone:"RiNo",         fav:"Pottery nights", quote:"I came for the clay, stayed for the dumpling crawl." },
 ];
 ---
 <!DOCTYPE html>
@@ -91,14 +91,6 @@ const crew = [
   ))}
 
   <div class="hero-overlay"></div>
-
-  <div class="hero-stickers" aria-hidden="true">
-    <span class="sticker s1">🍕</span>
-    <span class="sticker s2">🏔️</span>
-    <span class="sticker s3">🎲</span>
-    <span class="sticker s4">🍻</span>
-    <span class="sticker s5">🎨</span>
-  </div>
 
   <div class="hero-content">
     <div class="hero-badge">
@@ -154,11 +146,11 @@ const crew = [
   </div>
   <div class="activity-grid">
     {activities.map((a) => (
-      <div class="activity-card fade-up" style={`--tint:${a.color}`}>
+      <div class="activity-card fade-up">
         <img src={a.img} alt={a.title} class="activity-img" loading="lazy" />
         <div class="activity-overlay"></div>
-        <div class="activity-sticker">{a.emoji}</div>
         <div class="activity-content">
+          <span class="activity-emoji">{a.emoji}</span>
           <h3 class="activity-title">{a.title}</h3>
           <p class="activity-desc">{a.desc}</p>
         </div>
@@ -177,7 +169,7 @@ const crew = [
   </div>
   <div class="crew-grid">
     {crew.map((m) => (
-      <div class="crew-card fade-up" style={`--tint:${m.tint}`}>
+      <div class="crew-card fade-up">
         <div class="crew-avatar">{m.initial}</div>
         <div class="crew-meta">
           <strong>{m.name}</strong>
@@ -200,7 +192,7 @@ const crew = [
     </div>
     <div class="steps">
       <div class="step fade-up">
-        <div class="step-number s-coral">1</div>
+        <div class="step-number">1</div>
         <div class="step-body">
           <h3>Join free</h3>
           <p>60 seconds — name, email, done. No credit card, no subscription.</p>
@@ -208,7 +200,7 @@ const crew = [
       </div>
       <div class="step-divider fade-up"></div>
       <div class="step fade-up">
-        <div class="step-number s-pink">2</div>
+        <div class="step-number">2</div>
         <div class="step-body">
           <h3>Pick something</h3>
           <p>Pottery, dinner, hike, game night. Whatever sounds like you.</p>
@@ -216,7 +208,7 @@ const crew = [
       </div>
       <div class="step-divider fade-up"></div>
       <div class="step fade-up">
-        <div class="step-number s-purple">3</div>
+        <div class="step-number">3</div>
         <div class="step-body">
           <h3>Show up</h3>
           <p>Small group, real people. Walk-ins welcome. No icebreakers, we promise.</p>
@@ -236,23 +228,20 @@ const crew = [
     </div>
     <div class="events-grid">
       {upcomingEvents.slice(0, 4).map((ev: any) => (
-        <a href={`/events/${ev.id}`} class="event-card fade-up" style={`--ev-tint:${typeTint[ev.event_type] || '#F05A28'}`}>
-          <div class="event-strip"></div>
-          <div class="event-body">
-            <div class="event-date-badge">
-              <span class="event-month">{ev.event_month || 'TBD'}</span>
-              <span class="event-day">{ev.event_day || '—'}</span>
-            </div>
-            <div class="event-info">
-              <div class="event-type-row">
-                <span class="event-type-emoji">{typeEmoji[ev.event_type] || '📅'}</span>
-                <span class="event-type-label">{(ev.event_type || '').replace('_', ' ')}</span>
-              </div>
-              <h3 class="event-title">{ev.title}</h3>
-              <p class="event-meta">{ev.zone || ev.location} · up to {ev.spots} people</p>
-            </div>
-            <span class="event-arrow" aria-hidden="true">→</span>
+        <a href={`/events/${ev.id}`} class="event-card fade-up">
+          <div class="event-date-badge">
+            <span class="event-month">{ev.event_month || 'TBD'}</span>
+            <span class="event-day">{ev.event_day || '—'}</span>
           </div>
+          <div class="event-info">
+            <div class="event-type-row">
+              <span class="event-type-emoji">{typeEmoji[ev.event_type] || '📅'}</span>
+              <span class="event-type-label">{(ev.event_type || '').replace('_', ' ')}</span>
+            </div>
+            <h3 class="event-title">{ev.title}</h3>
+            <p class="event-meta">{ev.zone || ev.location} · up to {ev.spots} people</p>
+          </div>
+          <span class="event-arrow" aria-hidden="true">→</span>
         </a>
       ))}
     </div>
@@ -306,12 +295,6 @@ const crew = [
 <!-- ═══ FINAL CTA — gradient mesh ═══ -->
 <section class="final-cta">
   <div class="final-cta-mesh" aria-hidden="true"></div>
-  <div class="final-cta-stickers" aria-hidden="true">
-    <span class="sticker s1">🌮</span>
-    <span class="sticker s2">⛺</span>
-    <span class="sticker s3">🪩</span>
-    <span class="sticker s4">🎟️</span>
-  </div>
   <div class="final-cta-content fade-up">
     <h2>See you <em>Thursday?</em></h2>
     <p>Pick a hang. Show up. We handle the rest.</p>
@@ -417,10 +400,8 @@ const crew = [
   .hero-overlay {
     position: absolute; inset: 0; z-index: 2;
     background:
-      linear-gradient(to bottom, rgba(5,7,13,.25) 0%, rgba(5,7,13,.05) 25%, rgba(5,7,13,.3) 55%, rgba(5,7,13,.95) 82%, #05070d 100%),
-      radial-gradient(ellipse at 15% 90%, rgba(240,90,40,.18), transparent 55%),
-      radial-gradient(ellipse at 85% 85%, rgba(251,191,36,.08), transparent 60%),
-      radial-gradient(ellipse at 20% 50%, rgba(59,130,246,.06), transparent 60%);
+      linear-gradient(to bottom, rgba(5,7,13,.3) 0%, rgba(5,7,13,.1) 30%, rgba(5,7,13,.5) 70%, rgba(5,7,13,.95) 88%, #05070d 100%),
+      radial-gradient(ellipse at 20% 95%, rgba(240,90,40,.10), transparent 60%);
   }
 
   .hero-content {
@@ -474,28 +455,6 @@ const crew = [
   .btn-ghost-lg:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); transform: translateY(-1px); }
   .btn-ghost-lg:active { transform: translateY(0); }
 
-  /* ─── HERO STICKERS ─── */
-  .hero-stickers { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
-  .hero-stickers .sticker {
-    position: absolute; font-size: clamp(34px, 5vw, 52px);
-    filter: drop-shadow(0 8px 18px rgba(0,0,0,.35));
-    animation: bob 6s ease-in-out infinite;
-  }
-  .hero-stickers .s1 { top: 12%;  left: 8%;   animation-delay: 0s;   transform: rotate(-12deg); }
-  .hero-stickers .s2 { top: 22%;  right: 12%; animation-delay: .6s;  transform: rotate(8deg); }
-  .hero-stickers .s3 { top: 54%;  right: 18%; animation-delay: 1.2s; transform: rotate(-6deg); }
-  .hero-stickers .s4 { top: 40%;  left: 14%;  animation-delay: 1.8s; transform: rotate(14deg); }
-  .hero-stickers .s5 { top: 68%;  right: 8%;  animation-delay: 2.4s; transform: rotate(-10deg); }
-  @keyframes bob {
-    0%, 100% { translate: 0 0; }
-    50%      { translate: 0 -10px; }
-  }
-  @media (max-width: 768px) {
-    .hero-stickers .s3, .hero-stickers .s4 { display: none; }
-    .hero-stickers .s1 { top: 8%; left: 6%; }
-    .hero-stickers .s2 { top: 14%; right: 6%; }
-    .hero-stickers .s5 { top: 44%; right: 6%; }
-  }
 
   .hero-dots { position: absolute; bottom: 40px; right: 48px; z-index: 12; display: flex; gap: 6px; align-items: center; }
   .hero-dot {
@@ -559,12 +518,11 @@ const crew = [
     transition: transform .25s cubic-bezier(.22,1,.36,1), background .25s, border-color .25s, box-shadow .25s;
   }
   .cat-pill:hover {
-    transform: translateY(-3px) rotate(-.6deg);
-    background: color-mix(in srgb, var(--tint) 18%, rgba(255,255,255,.04));
-    border-color: color-mix(in srgb, var(--tint) 55%, transparent);
-    box-shadow: 0 12px 28px color-mix(in srgb, var(--tint) 25%, transparent);
+    transform: translateY(-2px);
+    background: color-mix(in srgb, var(--tint) 16%, rgba(255,255,255,.04));
+    border-color: color-mix(in srgb, var(--tint) 50%, transparent);
   }
-  .cat-pill:active { transform: translateY(-1px) rotate(0); }
+  .cat-pill:active { transform: translateY(0); }
   .cat-emoji {
     font-size: 26px; line-height: 1;
     width: 44px; height: 44px; border-radius: 50%;
@@ -581,99 +539,72 @@ const crew = [
 
   /* ─── ACTIVITY CARDS ─── */
   .activity-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
   }
   .activity-card {
-    position: relative; border-radius: 22px; overflow: hidden;
-    height: 240px; display: flex;
-    border: 1px solid color-mix(in srgb, var(--tint, #fff) 15%, transparent);
-    transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s, border-color .3s;
+    position: relative; border-radius: 18px; overflow: hidden;
+    height: 220px; display: flex;
+    border: 1px solid rgba(255,255,255,.06);
+    transition: transform .3s cubic-bezier(.22,1,.36,1), border-color .3s;
   }
   .activity-card:hover {
-    transform: translateY(-4px) rotate(-.4deg);
-    border-color: color-mix(in srgb, var(--tint, #fff) 50%, transparent);
-    box-shadow: 0 18px 40px color-mix(in srgb, var(--tint, #000) 35%, rgba(0,0,0,.4));
+    transform: translateY(-3px);
+    border-color: rgba(255,255,255,.18);
   }
-  .activity-card:hover .activity-img { transform: scale(1.06); }
+  .activity-card:hover .activity-img { transform: scale(1.04); }
   .activity-img {
     position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
     transition: transform .6s cubic-bezier(.22,1,.36,1);
   }
   .activity-overlay {
     position: absolute; inset: 0;
-    background:
-      linear-gradient(to top, rgba(0,0,0,.78) 0%, rgba(0,0,0,.15) 55%, transparent 100%),
-      linear-gradient(135deg, color-mix(in srgb, var(--tint, transparent) 55%, transparent) 0%, transparent 55%);
+    background: linear-gradient(to top, rgba(0,0,0,.78) 0%, rgba(0,0,0,.2) 55%, transparent 100%);
   }
-  .activity-sticker {
-    position: absolute; top: 14px; left: 14px; z-index: 3;
-    width: 44px; height: 44px; border-radius: 50%;
-    background: #fff;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
-    box-shadow: 0 6px 14px rgba(0,0,0,.35), 0 0 0 3px color-mix(in srgb, var(--tint, #fff) 60%, transparent);
-    transform: rotate(-8deg);
-    transition: transform .3s cubic-bezier(.22,1,.36,1);
-  }
-  .activity-card:hover .activity-sticker { transform: rotate(6deg) scale(1.08); }
   .activity-content {
     position: relative; z-index: 2; margin-top: auto; padding: 20px;
   }
+  .activity-emoji { font-size: 22px; display: block; margin-bottom: 8px; }
   .activity-title { font-size: 17px; color: #fff; font-weight: 700; margin-bottom: 4px; letter-spacing: -.2px; }
-  .activity-desc { font-size: 12px; color: rgba(255,255,255,.7); line-height: 1.5; }
+  .activity-desc { font-size: 12px; color: rgba(255,255,255,.65); line-height: 1.5; }
 
   /* ─── CREW CARDS ─── */
-  .crew-section {
-    background:
-      radial-gradient(ellipse at 90% 0%, rgba(236,72,153,.06), transparent 55%),
-      radial-gradient(ellipse at 10% 100%, rgba(240,90,40,.06), transparent 55%);
-    border-radius: 28px;
-    max-width: 1040px; margin: 0 auto;
-  }
   .crew-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
   }
   .crew-card {
     position: relative;
-    padding: 28px 22px 24px;
-    border-radius: 22px;
-    background: color-mix(in srgb, var(--tint, #fff) 5%, rgba(255,255,255,.025));
-    border: 1px solid color-mix(in srgb, var(--tint, #fff) 18%, rgba(255,255,255,.05));
-    transition: transform .3s cubic-bezier(.22,1,.36,1), border-color .3s, box-shadow .3s;
+    padding: 28px 24px 24px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06);
+    transition: transform .3s cubic-bezier(.22,1,.36,1), border-color .3s;
   }
   .crew-card:hover {
-    transform: translateY(-4px) rotate(-.3deg);
-    border-color: color-mix(in srgb, var(--tint, #fff) 45%, transparent);
-    box-shadow: 0 16px 36px color-mix(in srgb, var(--tint, #000) 22%, rgba(0,0,0,.3));
+    transform: translateY(-3px);
+    border-color: rgba(255,255,255,.18);
   }
   .crew-avatar {
-    width: 52px; height: 52px; border-radius: 50%;
+    width: 48px; height: 48px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Instrument Serif', serif; font-size: 26px; color: #fff;
+    font-family: 'Instrument Serif', serif; font-size: 22px; color: #fff;
     font-weight: 500; letter-spacing: -.5px;
-    background: linear-gradient(135deg,
-      color-mix(in srgb, var(--tint, #F05A28) 100%, transparent) 0%,
-      color-mix(in srgb, var(--tint, #ec4899) 65%, #ec4899) 100%);
-    box-shadow: 0 8px 20px color-mix(in srgb, var(--tint, #000) 30%, rgba(0,0,0,.35)), inset 0 0 0 2px rgba(255,255,255,.14);
-    margin-bottom: 14px;
-    transform: rotate(-4deg);
-    transition: transform .3s cubic-bezier(.22,1,.36,1);
+    background: var(--coral);
+    margin-bottom: 16px;
   }
-  .crew-card:hover .crew-avatar { transform: rotate(4deg) scale(1.05); }
-  .crew-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-  .crew-meta strong { font-size: 16px; color: #fff; font-weight: 700; letter-spacing: -.2px; }
-  .crew-meta span { font-size: 12px; color: rgba(255,255,255,.45); }
+  .crew-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .crew-meta strong { font-size: 15px; color: #fff; font-weight: 700; letter-spacing: -.2px; }
+  .crew-meta span { font-size: 12px; color: rgba(255,255,255,.4); }
   .crew-fav {
     display: inline-block;
     font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
     padding: 4px 10px; border-radius: 999px;
-    background: color-mix(in srgb, var(--tint, #F05A28) 16%, transparent);
-    color: color-mix(in srgb, var(--tint, #fff) 75%, #fff);
+    background: rgba(240,90,40,.12);
+    color: var(--coral-2);
     margin-bottom: 14px;
   }
   .crew-quote {
     font-family: 'Instrument Serif', serif;
-    font-size: 17px; line-height: 1.35; color: rgba(255,255,255,.88);
+    font-size: 16px; line-height: 1.4; color: rgba(255,255,255,.82);
     font-style: italic;
   }
   @media (max-width: 768px) {
@@ -682,9 +613,6 @@ const crew = [
 
   /* ─── HOW IT WORKS ─── */
   .how-section {
-    background:
-      radial-gradient(ellipse at 15% 0%, rgba(240,90,40,.08), transparent 55%),
-      radial-gradient(ellipse at 85% 100%, rgba(168,85,247,.07), transparent 55%);
     border-top: 1px solid rgba(255,255,255,.04);
     border-bottom: 1px solid rgba(255,255,255,.04);
     padding: 72px 0;
@@ -693,75 +621,64 @@ const crew = [
   .steps { display: flex; align-items: flex-start; gap: 0; margin-top: 12px; }
   .step { flex: 1; display: flex; align-items: flex-start; gap: 16px; }
   .step-number {
-    width: 56px; height: 56px; flex-shrink: 0;
+    width: 44px; height: 44px; flex-shrink: 0;
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Instrument Serif', serif; font-size: 26px; color: #fff;
+    font-family: 'Instrument Serif', serif; font-size: 22px; color: #fff;
     font-style: italic; font-weight: 500;
-    box-shadow: 0 10px 24px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.12);
-    transform: rotate(-6deg);
-    transition: transform .3s cubic-bezier(.22,1,.36,1);
+    background: var(--coral);
   }
-  .step:hover .step-number { transform: rotate(6deg) scale(1.06); }
-  .step-number.s-coral  { background: linear-gradient(135deg, #F05A28 0%, #fbbf24 100%); }
-  .step-number.s-pink   { background: linear-gradient(135deg, #ec4899 0%, #F05A28 100%); }
-  .step-number.s-purple { background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); }
-  .step-body h3 { font-size: 17px; color: #fff; margin-bottom: 6px; font-weight: 700; }
+  .step-body h3 { font-size: 16px; color: #fff; margin-bottom: 6px; font-weight: 700; }
   .step-body p { font-size: 13px; color: rgba(255,255,255,.5); line-height: 1.6; }
   .step-divider {
     width: 1px; min-height: 60px; align-self: stretch;
-    background: linear-gradient(to bottom, rgba(236,72,153,.3), transparent);
+    background: linear-gradient(to bottom, rgba(255,255,255,.12), transparent);
     margin: 0 20px; flex-shrink: 0;
   }
 
   /* ─── EVENT CARDS ─── */
-  .events-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .events-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .event-card {
-    position: relative; display: flex; flex-direction: column;
-    border-radius: 20px; overflow: hidden; text-decoration: none;
+    position: relative;
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 20px 18px 22px;
+    border-radius: 16px; text-decoration: none;
     background: rgba(255,255,255,.03);
-    border: 1px solid color-mix(in srgb, var(--ev-tint, #fff) 14%, rgba(255,255,255,.06));
-    transition: transform .3s cubic-bezier(.22,1,.36,1), border-color .3s, box-shadow .3s;
+    border: 1px solid rgba(255,255,255,.06);
+    transition: transform .3s cubic-bezier(.22,1,.36,1), border-color .3s, background .3s;
+  }
+  .event-card::before {
+    content: ''; position: absolute; left: 0; top: 16px; bottom: 16px;
+    width: 3px; border-radius: 0 3px 3px 0; background: var(--coral);
+    opacity: .7; transition: opacity .3s;
   }
   .event-card:hover {
-    transform: translateY(-4px);
-    border-color: color-mix(in srgb, var(--ev-tint, #fff) 50%, transparent);
-    box-shadow: 0 18px 38px color-mix(in srgb, var(--ev-tint, #000) 25%, rgba(0,0,0,.35));
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,.18);
+    background: rgba(255,255,255,.045);
   }
-  .event-strip {
-    height: 8px;
-    background: linear-gradient(90deg,
-      color-mix(in srgb, var(--ev-tint, #F05A28) 100%, transparent) 0%,
-      color-mix(in srgb, var(--ev-tint, #F05A28) 60%, #ec4899) 100%);
-  }
-  .event-body {
-    display: flex; align-items: center; gap: 16px;
-    padding: 20px 22px;
-  }
+  .event-card:hover::before { opacity: 1; }
   .event-date-badge {
-    text-align: center; padding: 10px 12px; min-width: 58px;
-    background: color-mix(in srgb, var(--ev-tint, #F05A28) 14%, transparent);
-    border: 1px solid color-mix(in srgb, var(--ev-tint, #F05A28) 28%, transparent);
-    border-radius: 14px;
+    text-align: center; padding: 8px 12px; min-width: 54px;
+    background: rgba(240,90,40,.1);
+    border-radius: 12px;
   }
-  .event-month { display: block; font-size: 10px; font-weight: 700; color: color-mix(in srgb, var(--ev-tint, #fff) 80%, #fff); text-transform: uppercase; letter-spacing: .08em; }
-  .event-day { display: block; font-family: 'Instrument Serif', serif; font-size: 26px; color: #fff; line-height: 1.05; }
+  .event-month { display: block; font-size: 10px; font-weight: 700; color: var(--coral-2); text-transform: uppercase; letter-spacing: .08em; }
+  .event-day { display: block; font-family: 'Instrument Serif', serif; font-size: 22px; color: #fff; line-height: 1.05; }
   .event-info { flex: 1; min-width: 0; }
-  .event-type-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .event-type-emoji { font-size: 16px; }
+  .event-type-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .event-type-emoji { font-size: 14px; }
   .event-type-label {
-    font-size: 10px; color: color-mix(in srgb, var(--ev-tint, #fff) 75%, #fff);
-    font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
-    padding: 3px 10px; border-radius: 999px;
-    background: color-mix(in srgb, var(--ev-tint, #F05A28) 14%, transparent);
+    font-size: 11px; color: rgba(255,255,255,.5);
+    font-weight: 600; text-transform: capitalize; letter-spacing: 0;
   }
-  .event-title { font-size: 16px; color: #fff; font-weight: 700; margin-bottom: 4px; letter-spacing: -.2px; }
-  .event-meta { font-size: 12px; color: rgba(255,255,255,.5); }
+  .event-title { font-size: 15px; color: #fff; font-weight: 700; margin-bottom: 2px; letter-spacing: -.2px; }
+  .event-meta { font-size: 12px; color: rgba(255,255,255,.4); }
   .event-arrow {
-    font-size: 18px; color: rgba(255,255,255,.35);
+    font-size: 18px; color: rgba(255,255,255,.25);
     flex-shrink: 0; transition: transform .3s cubic-bezier(.22,1,.36,1), color .2s;
   }
-  .event-card:hover .event-arrow { transform: translateX(4px); color: color-mix(in srgb, var(--ev-tint, #fff) 85%, #fff); }
+  .event-card:hover .event-arrow { transform: translateX(3px); color: rgba(255,255,255,.7); }
   @media (max-width: 680px) {
     .events-grid { grid-template-columns: 1fr; }
   }
@@ -837,29 +754,13 @@ const crew = [
   .final-cta-mesh {
     position: absolute; inset: 0;
     background:
-      radial-gradient(ellipse 60% 55% at 18% 30%, rgba(240,90,40,.55), transparent 65%),
-      radial-gradient(ellipse 55% 50% at 82% 25%, rgba(236,72,153,.5), transparent 60%),
-      radial-gradient(ellipse 70% 60% at 50% 110%, rgba(168,85,247,.55), transparent 55%),
-      radial-gradient(ellipse 40% 40% at 20% 95%, rgba(251,191,36,.28), transparent 60%),
+      radial-gradient(ellipse 60% 55% at 22% 75%, rgba(240,90,40,.35), transparent 60%),
+      radial-gradient(ellipse 55% 55% at 78% 35%, rgba(236,72,153,.28), transparent 60%),
       linear-gradient(180deg, #0a0712 0%, #05070d 100%);
-    filter: saturate(1.1);
   }
   .final-cta-mesh::after {
     content: ''; position: absolute; inset: 0;
-    background: radial-gradient(ellipse at center, transparent 40%, rgba(5,7,13,.55) 100%);
-  }
-  .final-cta-stickers { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
-  .final-cta-stickers .sticker {
-    position: absolute; font-size: clamp(32px, 4.5vw, 48px);
-    filter: drop-shadow(0 8px 18px rgba(0,0,0,.4));
-    animation: bob 7s ease-in-out infinite;
-  }
-  .final-cta-stickers .s1 { top: 18%; left: 10%;  animation-delay: 0s;   transform: rotate(-12deg); }
-  .final-cta-stickers .s2 { top: 22%; right: 12%; animation-delay: .8s;  transform: rotate(10deg); }
-  .final-cta-stickers .s3 { bottom: 18%; left: 16%; animation-delay: 1.6s; transform: rotate(14deg); }
-  .final-cta-stickers .s4 { bottom: 22%; right: 14%; animation-delay: 2.4s; transform: rotate(-8deg); }
-  @media (max-width: 768px) {
-    .final-cta-stickers .s2, .final-cta-stickers .s4 { display: none; }
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(5,7,13,.5) 100%);
   }
   .final-cta-content { position: relative; z-index: 2; padding: 72px 24px; }
   .final-cta-content h2 {
