@@ -46,6 +46,28 @@ const typeThemes: Record<string, { accent: string; grad1: string; grad2: string;
 };
 
 const theme = typeThemes[event.event_type] || typeThemes.other;
+
+const typeImages: Record<string, string> = {
+  dinner:        "https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=900&q=75",
+  game_night:    "https://images.unsplash.com/photo-1632501641765-e568d28b0015?w=900&q=75",
+  outdoor:       "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=75",
+  brewery:       "https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=900&q=75",
+  coffee:        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=900&q=75",
+  arts:          "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=900&q=75",
+  music:         "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=900&q=75",
+  social:        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=900&q=75",
+  group_tickets: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=900&q=75",
+  camping:       "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=900&q=75",
+  sports_outing: "https://images.unsplash.com/photo-1461896836934-bd45ba8fcbf5?w=900&q=75",
+  bowling:       "https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?w=900&q=75",
+  active:        "https://images.unsplash.com/photo-1522163182402-834f871fd851?w=900&q=75",
+  casino:        "https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=900&q=75",
+  food_trucks:   "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=900&q=75",
+  potluck:       "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=900&q=75",
+  other:         "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=900&q=75",
+};
+const heroImage = typeImages[event.event_type] || typeImages.other;
+
 const spotsLeft = Math.max(0, (parseInt(event.spots) || 10) - rsvps.length);
 const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444","#6366F1"];
 ---
@@ -54,13 +76,18 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
 <div class="det-page" style={`--ev-accent: ${theme.accent}; --ev-accent-shadow: ${theme.accent}33;`}>
   <a href="/events" class="det-back">← Back to events</a>
 
-  <!-- Event header card -->
-  <div class="det-head" style={`background: linear-gradient(135deg, ${theme.grad1}, ${theme.grad2}); border-color: ${theme.accent}20;`}>
-    <div class="dh-date" style={`border-color: ${theme.accent}20;`}>
+  <!-- Hero image -->
+  <div class="det-hero" style={`background-image: url(${heroImage});`}>
+    <div class="det-hero-overlay"></div>
+    <div class="dh-date">
       <div class="dh-month" style={`color: ${theme.accent};`}>{(event.event_month || 'TBD').slice(0, 3)}</div>
       <div class="dh-day">{event.event_day || '—'}</div>
       {event.event_time && <div class="dh-time">{event.event_time}</div>}
     </div>
+  </div>
+
+  <!-- Event header card -->
+  <div class="det-head" style={`border-color: ${theme.accent}20;`}>
     <div class="dh-tag" style={`background: ${theme.tagBg}; color: ${theme.tagText};`}>{typeEmoji[event.event_type] || '📅'} {(event.event_type || '').replace('_', ' ')}</div>
     <h1 class="dh-title">{event.title}</h1>
     <div class="dh-loc">{myRsvp ? (event.location || event.zone) : (event.zone || 'TBD')} {!myRsvp && <span class="dh-loc-hint">(RSVP to see full address)</span>}</div>
@@ -141,16 +168,27 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
   }
   .det-back:hover { color: var(--ev-accent, #7C3AED); }
 
+  .det-hero {
+    position: relative; height: 200px; border-radius: 16px 16px 0 0;
+    background-size: cover; background-position: center;
+    overflow: hidden;
+  }
+  .det-hero-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.4) 100%);
+  }
+  .det-hero .dh-date {
+    position: absolute; top: 16px; right: 16px; z-index: 1;
+  }
   .det-head {
-    background: linear-gradient(135deg, #F8F9FB, #EEF2FF, #F0FDF4);
-    border: 1px solid #E5E7EB; border-radius: 16px;
-    padding: 28px; margin-bottom: 20px; position: relative;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #E5E7EB; border-top: none; border-radius: 0 0 16px 16px;
+    padding: 20px 28px 24px; margin-bottom: 20px;
+    background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
   .dh-date {
-    position: absolute; top: 24px; right: 24px; text-align: center;
+    text-align: center;
     padding: 10px 14px; background: #fff; border-radius: 12px;
-    border: 1px solid #E5E7EB; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #E5E7EB; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   }
   .dh-month { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #7C3AED; letter-spacing: .06em; }
   .dh-day { font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 900; color: #111827; line-height: 1; }
@@ -212,7 +250,7 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
 
   @media (max-width: 768px) {
     .det-grid { grid-template-columns: 1fr; }
-    .dh-date { position: static; display: inline-block; margin-top: 12px; }
+    .det-hero { height: 160px; }
   }
 </style>
 

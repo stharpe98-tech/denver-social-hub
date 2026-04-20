@@ -39,6 +39,26 @@ function getTypeColor(type: string) {
   return typeColors[type] || typeColors.other;
 }
 
+const typeImages: Record<string, string> = {
+  dinner:        "https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=600&q=70",
+  game_night:    "https://images.unsplash.com/photo-1632501641765-e568d28b0015?w=600&q=70",
+  outdoor:       "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=70",
+  brewery:       "https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=600&q=70",
+  coffee:        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&q=70",
+  arts:          "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&q=70",
+  music:         "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&q=70",
+  social:        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=70",
+  group_tickets: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600&q=70",
+  camping:       "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&q=70",
+  sports_outing: "https://images.unsplash.com/photo-1461896836934-bd45ba8fcbf5?w=600&q=70",
+  bowling:       "https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?w=600&q=70",
+  active:        "https://images.unsplash.com/photo-1522163182402-834f871fd851?w=600&q=70",
+  casino:        "https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=600&q=70",
+  food_trucks:   "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=600&q=70",
+  potluck:       "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=70",
+  other:         "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=70",
+};
+
 function spotsLeft(ev: any): number {
   const total = parseInt(ev.spots) || 10;
   const taken = rsvpCounts[ev.id] || 0;
@@ -92,12 +112,15 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
         const tc = getTypeColor(ev.event_type);
         return (
           <a href={`/events/${ev.id}`} class={`ec ${isHot ? 'ec-hot' : ''}`} data-type={ev.event_type} style={`--card-accent: ${tc.accent};`}>
-            <div class="ec-head" style={`border-bottom-color: ${tc.accent}15;`}>
+            <div class="ec-img" style={`background-image: url(${typeImages[ev.event_type] || typeImages.other});`}>
+              <div class="ec-img-overlay"></div>
               {isHot && <span class="hot-tag">Filling up</span>}
               <div class="ec-date">
                 <div class="ec-month" style={`color: ${tc.accent};`}>{(ev.event_month || 'TBD').slice(0, 3)}</div>
                 <div class="ec-day">{ev.event_day || '—'}</div>
               </div>
+            </div>
+            <div class="ec-head">
               <div class="ec-tag" style={`background: ${tc.tagBg}; color: ${tc.tagText};`}>{typeEmoji[ev.event_type] || '📅'} {(ev.event_type || '').replace('_', ' ')}</div>
               <div class="ec-title">{ev.title}</div>
               <div class="ec-loc">{ev.zone || ev.location}</div>
@@ -178,12 +201,25 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   .ec {
     background: #fff; border: 1px solid #E5E7EB; border-radius: 16px;
     overflow: hidden; transition: all .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    text-decoration: none;
   }
   .ec:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-color: #D1D5DB; }
-  .ec-head { padding: 16px 18px 12px; position: relative; border-bottom: 1px solid #E5E7EB; }
-  .ec-date { position: absolute; top: 14px; right: 14px; text-align: center; }
+  .ec-img {
+    position: relative; height: 120px; background-size: cover; background-position: center;
+  }
+  .ec-img-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.35) 100%);
+  }
+  .ec-img .ec-date {
+    position: absolute; top: 10px; right: 10px; text-align: center;
+    padding: 6px 10px; background: #fff; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  .ec-img .hot-tag { position: absolute; top: 10px; left: 10px; }
+  .ec-head { padding: 12px 18px 10px; border-bottom: 1px solid #E5E7EB; }
   .ec-month { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #7C3AED; letter-spacing: .06em; }
-  .ec-day { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 900; color: #111827; }
+  .ec-day { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 900; color: #111827; line-height: 1; }
   .ec-tag {
     display: inline-block; padding: 3px 10px; border-radius: 50px;
     font-size: 9px; font-weight: 700; background: #EEF2FF; color: #4338CA;
@@ -207,10 +243,10 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   .ec-hot { border: 2px solid rgba(220,38,38,0.15); }
   .ec-hot .ec-head { background: #FEF2F2; }
   .hot-tag {
-    position: absolute; top: 14px; left: 14px;
     padding: 3px 10px; border-radius: 50px;
     background: #FEF2F2; color: #DC2626;
     font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+    z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   }
 
   .ev-discord {
