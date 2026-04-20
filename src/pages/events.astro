@@ -186,13 +186,13 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       <div class="wiz-card">
         <!-- Progress bar -->
         <div class="wiz-progress">
-          <div class="wiz-progress-fill" id="wizProgress" style="width:33%;"></div>
+          <div class="wiz-progress-fill" id="wizProgress" style="width:20%;"></div>
         </div>
 
         <!-- Step 1: Name -->
         <div class="wiz-step" id="wizStep1">
           <div class="wiz-step-icon">💡</div>
-          <div class="wiz-num">Step 1 of 3</div>
+          <div class="wiz-num">Step 1 of 5</div>
           <h2 class="wiz-q">What's the event?</h2>
           <p class="wiz-hint">Give it a short, catchy name.</p>
           <input type="text" id="wizTitle" class="wiz-input" placeholder="e.g. Rooftop BBQ, Trivia Night, Group Hike" maxlength="100" autofocus />
@@ -203,7 +203,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
         <!-- Step 2: Type -->
         <div class="wiz-step" id="wizStep2" style="display:none;">
           <div class="wiz-step-icon">🎨</div>
-          <div class="wiz-num">Step 2 of 3</div>
+          <div class="wiz-num">Step 2 of 5</div>
           <h2 class="wiz-q">What kind of event?</h2>
           <p class="wiz-hint">Pick the closest category.</p>
           <div class="wiz-type-grid" id="wizTypeGrid">
@@ -227,19 +227,71 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
           </div>
         </div>
 
-        <!-- Step 3: Description + Submit -->
+        <!-- Step 3: When & Where -->
         <div class="wiz-step" id="wizStep3" style="display:none;">
-          <div class="wiz-step-icon">✍️</div>
-          <div class="wiz-num">Step 3 of 3</div>
-          <h2 class="wiz-q">Quick pitch <span class="wiz-opt">(optional)</span></h2>
-          <p class="wiz-hint">What would this look like? A sentence or two is plenty.</p>
-          <textarea id="wizDesc" class="wiz-textarea" placeholder="e.g. Meet at Sloan's Lake, bring a frisbee, we'll grab beers after..." rows="3" maxlength="300"></textarea>
-          <button class="wiz-submit" id="wizSubmit">Submit Idea</button>
-          <div class="wiz-err" id="wizErr3"></div>
+          <div class="wiz-step-icon">📍</div>
+          <div class="wiz-num">Step 3 of 5</div>
+          <h2 class="wiz-q">When & where?</h2>
+          <p class="wiz-hint">Doesn't need to be exact — a rough idea helps.</p>
+          <label class="wiz-label">When should it happen?</label>
+          <div class="wiz-type-grid wiz-when-grid">
+            <button class="wiz-pill-btn" data-field="date" data-val="weeknight">Weeknight</button>
+            <button class="wiz-pill-btn" data-field="date" data-val="friday">Friday</button>
+            <button class="wiz-pill-btn" data-field="date" data-val="saturday">Saturday</button>
+            <button class="wiz-pill-btn" data-field="date" data-val="sunday">Sunday</button>
+            <button class="wiz-pill-btn" data-field="date" data-val="flexible">Flexible</button>
+          </div>
+          <label class="wiz-label" style="margin-top:18px;">Where in Denver?</label>
+          <div class="wiz-type-grid wiz-where-grid">
+            <button class="wiz-pill-btn" data-field="location" data-val="RiNo">RiNo</button>
+            <button class="wiz-pill-btn" data-field="location" data-val="Cap Hill">Cap Hill</button>
+            <button class="wiz-pill-btn" data-field="location" data-val="Highlands">Highlands</button>
+            <button class="wiz-pill-btn" data-field="location" data-val="LoDo">LoDo</button>
+            <button class="wiz-pill-btn" data-field="location" data-val="South Denver">South Denver</button>
+            <button class="wiz-pill-btn" data-field="location" data-val="Aurora">Aurora</button>
+            <button class="wiz-pill-btn" data-field="location" data-val="Lakewood">Lakewood</button>
+            <button class="wiz-pill-btn" data-field="location" data-val="Anywhere">Anywhere</button>
+          </div>
+          <button class="wiz-next" id="wizNext3">Next →</button>
         </div>
 
-        <!-- Step 4: Done -->
-        <div class="wiz-step wiz-done" id="wizStep4" style="display:none;">
+        <!-- Step 4: Budget & Group Size -->
+        <div class="wiz-step" id="wizStep4" style="display:none;">
+          <div class="wiz-step-icon">👥</div>
+          <div class="wiz-num">Step 4 of 5</div>
+          <h2 class="wiz-q">Budget & group size</h2>
+          <p class="wiz-hint">Helps people know what to expect.</p>
+          <label class="wiz-label">Price per person</label>
+          <div class="wiz-type-grid wiz-budget-grid">
+            <button class="wiz-pill-btn" data-field="budget" data-val="Free">Free</button>
+            <button class="wiz-pill-btn" data-field="budget" data-val="$1–10">$1–10</button>
+            <button class="wiz-pill-btn" data-field="budget" data-val="$10–25">$10–25</button>
+            <button class="wiz-pill-btn" data-field="budget" data-val="$25–50">$25–50</button>
+            <button class="wiz-pill-btn" data-field="budget" data-val="$50+">$50+</button>
+          </div>
+          <label class="wiz-label" style="margin-top:18px;">Ideal group size</label>
+          <div class="wiz-type-grid wiz-size-grid">
+            <button class="wiz-pill-btn" data-field="group_size" data-val="Small (4–6)">Small (4–6)</button>
+            <button class="wiz-pill-btn" data-field="group_size" data-val="Medium (8–12)">Medium (8–12)</button>
+            <button class="wiz-pill-btn" data-field="group_size" data-val="Large (15+)">Large (15+)</button>
+            <button class="wiz-pill-btn" data-field="group_size" data-val="Any size">Any size</button>
+          </div>
+          <button class="wiz-next" id="wizNext4">Next →</button>
+        </div>
+
+        <!-- Step 5: Description + Submit -->
+        <div class="wiz-step" id="wizStep5" style="display:none;">
+          <div class="wiz-step-icon">✍️</div>
+          <div class="wiz-num">Step 5 of 5</div>
+          <h2 class="wiz-q">Quick pitch <span class="wiz-opt">(optional)</span></h2>
+          <p class="wiz-hint">Anything else? A sentence or two is plenty.</p>
+          <textarea id="wizDesc" class="wiz-textarea" placeholder="e.g. Meet at Sloan's Lake, bring a frisbee, we'll grab beers after..." rows="3" maxlength="300"></textarea>
+          <button class="wiz-submit" id="wizSubmit">Submit Idea</button>
+          <div class="wiz-err" id="wizErr5"></div>
+        </div>
+
+        <!-- Step 6: Done -->
+        <div class="wiz-step wiz-done" id="wizStep6" style="display:none;">
           <div class="wiz-done-icon">🎉</div>
           <h2 class="wiz-q">Submitted!</h2>
           <p class="wiz-hint">The community will vote on your idea. Thanks for making Denver more fun.</p>
@@ -431,6 +483,23 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   .wiz-type-btn:hover { border-color: #D1D5DB; background: #fff; transform: translateY(-1px); }
   .wiz-type-btn.selected { border-color: #7C3AED; background: rgba(124,58,237,0.06); color: #7C3AED; box-shadow: 0 2px 8px rgba(124,58,237,0.12); }
 
+  /* Pill select buttons (when/where/budget/size) */
+  .wiz-label {
+    display: block; font-size: 12px; font-weight: 700; color: #6B7280;
+    font-family: 'Outfit', sans-serif; text-transform: uppercase;
+    letter-spacing: .06em; margin-bottom: 10px;
+  }
+  .wiz-pill-btn {
+    padding: 11px 16px; background: #F8F9FB; border: 2px solid #E5E7EB;
+    border-radius: 50px; font-size: 13px; font-weight: 600; color: #374151;
+    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
+    text-align: center;
+  }
+  .wiz-pill-btn:hover { border-color: #D1D5DB; background: #fff; }
+  .wiz-pill-btn.selected { border-color: #7C3AED; background: rgba(124,58,237,0.06); color: #7C3AED; }
+  .wiz-when-grid, .wiz-budget-grid, .wiz-size-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  .wiz-where-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+
   /* Done step */
   .wiz-done { text-align: center; padding: 32px 32px 28px; }
   .wiz-done-icon { font-size: 52px; margin-bottom: 12px; }
@@ -481,21 +550,22 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   });
 
   // ── Wizard state ──
-  var wizData = { title: '', type: 'social', description: '' };
+  var TOTAL_STEPS = 5;
+  var wizData = { title: '', type: 'social', suggested_date: '', location: '', budget: '', group_size: '', description: '' };
 
   function showStep(n) {
-    for (var i = 1; i <= 4; i++) {
+    for (var i = 1; i <= 6; i++) {
       document.getElementById('wizStep' + i).style.display = (i === n) ? '' : 'none';
     }
-    var pct = n >= 4 ? 100 : Math.round((n / 3) * 100);
+    var pct = n >= 6 ? 100 : Math.round((n / TOTAL_STEPS) * 100);
     document.getElementById('wizProgress').style.width = pct + '%';
   }
 
   function resetWizard() {
-    wizData = { title: '', type: 'social', description: '' };
+    wizData = { title: '', type: 'social', suggested_date: '', location: '', budget: '', group_size: '', description: '' };
     document.getElementById('wizTitle').value = '';
     document.getElementById('wizDesc').value = '';
-    document.querySelectorAll('.wiz-type-btn').forEach(function(b) { b.classList.remove('selected'); });
+    document.querySelectorAll('.wiz-type-btn, .wiz-pill-btn').forEach(function(b) { b.classList.remove('selected'); });
     document.querySelectorAll('.wiz-err').forEach(function(e) { e.textContent = ''; });
     showStep(1);
   }
@@ -520,18 +590,34 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       document.querySelectorAll('.wiz-type-btn').forEach(function(b) { b.classList.remove('selected'); });
       btn.classList.add('selected');
       wizData.type = btn.getAttribute('data-val');
-      // Auto-advance after a short beat
       setTimeout(function() { showStep(3); }, 250);
     });
   });
 
-  // Step 3 → submit
+  // Pill buttons (date, location, budget, group_size) — toggle within same field
+  document.querySelectorAll('.wiz-pill-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var field = btn.getAttribute('data-field');
+      // Deselect siblings with same field
+      document.querySelectorAll('.wiz-pill-btn[data-field="' + field + '"]').forEach(function(b) { b.classList.remove('selected'); });
+      btn.classList.add('selected');
+      wizData[field] = btn.getAttribute('data-val');
+    });
+  });
+
+  // Step 3 → 4
+  document.getElementById('wizNext3').addEventListener('click', function() { showStep(4); });
+
+  // Step 4 → 5
+  document.getElementById('wizNext4').addEventListener('click', function() { showStep(5); });
+
+  // Step 5 → submit
   document.getElementById('wizSubmit').addEventListener('click', function() {
     var btn = this;
     wizData.description = document.getElementById('wizDesc').value.trim();
     btn.disabled = true;
     btn.textContent = 'Submitting...';
-    document.getElementById('wizErr3').textContent = '';
+    document.getElementById('wizErr5').textContent = '';
 
     fetch('/api/suggest', {
       method: 'POST',
@@ -541,14 +627,14 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       btn.disabled = false;
       btn.textContent = 'Submit Idea';
       if (data.ok) {
-        showStep(4);
+        showStep(6);
       } else {
-        document.getElementById('wizErr3').textContent = data.error || 'Something went wrong.';
+        document.getElementById('wizErr5').textContent = data.error || 'Something went wrong.';
       }
     }).catch(function() {
       btn.disabled = false;
       btn.textContent = 'Submit Idea';
-      document.getElementById('wizErr3').textContent = 'Network error. Try again.';
+      document.getElementById('wizErr5').textContent = 'Network error. Try again.';
     });
   });
 
