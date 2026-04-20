@@ -22,7 +22,7 @@ try {
 } catch {}
 
 if (!event) return Astro.redirect("/events");
-const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",potluck:"🍲",other:"📅" };
+const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",sports:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",potluck:"🍲",other:"📅" };
 
 // Per-type theme colors: [accent, light bg tint, tag bg, tag text]
 const typeThemes: Record<string, { accent: string; grad1: string; grad2: string; tagBg: string; tagText: string }> = {
@@ -42,6 +42,7 @@ const typeThemes: Record<string, { accent: string; grad1: string; grad2: string;
   casino:        { accent:"#DC2626", grad1:"#FEF2F2", grad2:"#FFFBEB", tagBg:"#FEF2F2", tagText:"#991B1B" },
   food_trucks:   { accent:"#EA580C", grad1:"#FFF7ED", grad2:"#FFFBEB", tagBg:"#FFF7ED", tagText:"#C2410C" },
   potluck:       { accent:"#F05A28", grad1:"#FFF7ED", grad2:"#FEF2F2", tagBg:"#FFF7ED", tagText:"#C2410C" },
+  sports:        { accent:"#2563EB", grad1:"#EFF6FF", grad2:"#DBEAFE", tagBg:"#EFF6FF", tagText:"#1E40AF" },
   other:         { accent:"#7C3AED", grad1:"#F8F9FB", grad2:"#EEF2FF", tagBg:"#EEF2FF", tagText:"#4338CA" },
 };
 
@@ -64,6 +65,7 @@ const typeImages: Record<string, string> = {
   casino:        "https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=900&q=75",
   food_trucks:   "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=900&q=75",
   potluck:       "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=900&q=75",
+  sports:        "https://images.unsplash.com/photo-1461896836934-bd45ba8fcbf5?w=900&q=75",
   other:         "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=900&q=75",
 };
 const heroImage = typeImages[event.event_type] || typeImages.other;
