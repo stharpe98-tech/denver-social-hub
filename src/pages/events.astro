@@ -101,9 +101,9 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
         <span class="chooser-desc">See what's coming up and RSVP</span>
       </button>
       <button class="chooser-card chooser-card-alt" id="pickSuggest">
-        <span class="chooser-emoji">{isLoggedIn ? '🚀' : '💡'}</span>
-        <span class="chooser-label">{isLoggedIn ? 'Create an Event' : 'Suggest an Event'}</span>
-        <span class="chooser-desc">{isLoggedIn ? 'Post a real event for people to join' : 'Pitch an idea for the community'}</span>
+        <span class="chooser-emoji">💡</span>
+        <span class="chooser-label">Submit an Event</span>
+        <span class="chooser-desc">Create or suggest something for the group</span>
       </button>
     </div>
   </div>
@@ -250,6 +250,11 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
             <button class="wiz-pill-btn" data-field="location" data-val="Lakewood">Lakewood</button>
             <button class="wiz-pill-btn" data-field="location" data-val="Anywhere">Anywhere</button>
           </div>
+          <label class="wiz-label" style="margin-top:18px;" id="wizVenueLabel">Specific spot?</label>
+          <div class="wiz-suggestions" id="wizVenueSuggestions"></div>
+          <input type="text" id="wizVenue" class="wiz-input" placeholder="e.g. Uncle, Guard & Grace, Punch Bowl Social..." maxlength="120" style="border-radius:14px;" />
+          <label class="wiz-label" style="margin-top:14px;">Link <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:#9CA3AF;">(optional)</span></label>
+          <input type="url" id="wizLink" class="wiz-input" placeholder="https://..." maxlength="300" style="border-radius:14px;" />
           <button class="wiz-next" id="wizNext2">Next →</button>
         </div>
 
@@ -281,20 +286,26 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
         <div class="wiz-step" id="wizStep4" style="display:none;">
           <div class="wiz-step-icon">✍️</div>
           <div class="wiz-num">Step 4 of 4</div>
-          <h2 class="wiz-q">Quick pitch <span class="wiz-opt">(optional)</span></h2>
-          <p class="wiz-hint">Anything else? A sentence or two is plenty.</p>
+          <h2 class="wiz-q">Almost done!</h2>
+          <p class="wiz-hint">Add a quick pitch and choose how to submit.</p>
           <textarea id="wizDesc" class="wiz-textarea" placeholder="e.g. Meet at Sloan's Lake, bring a frisbee, we'll grab beers after..." rows="3" maxlength="300"></textarea>
-          <button class="wiz-submit" id="wizSubmit">{isLoggedIn ? 'Create Event' : 'Submit Idea'}</button>
+          {isLoggedIn && (
+            <div class="wiz-mode-toggle">
+              <button type="button" class="wiz-mode-btn selected" id="wizModeLive" data-mode="live">🚀 Make it live</button>
+              <button type="button" class="wiz-mode-btn" id="wizModeSuggest" data-mode="suggest">💡 Suggest for voting</button>
+            </div>
+          )}
+          <button class="wiz-submit" id="wizSubmit">{isLoggedIn ? 'Create Event' : 'Submit Suggestion'}</button>
           <div class="wiz-err" id="wizErr4"></div>
         </div>
 
         <!-- Step 5: Done -->
         <div class="wiz-step wiz-done" id="wizStep5" style="display:none;">
           <div class="wiz-done-icon">🎉</div>
-          <h2 class="wiz-q" id="wizDoneTitle">{isLoggedIn ? 'Event Created!' : 'Submitted!'}</h2>
-          <p class="wiz-hint" id="wizDoneHint">{isLoggedIn ? 'Your event is live — people can RSVP now.' : 'The community will vote on your idea. Thanks for making Denver more fun.'}</p>
+          <h2 class="wiz-q" id="wizDoneTitle">Submitted!</h2>
+          <p class="wiz-hint" id="wizDoneHint">Thanks for making Denver more fun.</p>
           <div class="wiz-done-btns">
-            <button class="wiz-next" id="wizAnother">Suggest Another</button>
+            <button class="wiz-next" id="wizAnother">Submit Another</button>
             <button class="wiz-ghost" id="wizBrowse">Browse Events →</button>
           </div>
         </div>
@@ -517,6 +528,21 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   .wiz-when-grid, .wiz-budget-grid, .wiz-size-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
   .wiz-where-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
 
+  /* Mode toggle */
+  .wiz-mode-toggle {
+    display: flex; gap: 8px; margin: 16px 0 4px;
+  }
+  .wiz-mode-btn {
+    flex: 1; padding: 12px 10px; border-radius: 12px;
+    background: #F8F9FB; border: 2px solid #E5E7EB;
+    font-size: 13px; font-weight: 700; color: #6B7280;
+    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
+    text-align: center;
+  }
+  .wiz-mode-btn:hover { border-color: #D1D5DB; color: #374151; }
+  .wiz-mode-btn.selected[data-mode="live"] { border-color: #10B981; background: rgba(16,185,129,0.06); color: #059669; }
+  .wiz-mode-btn.selected[data-mode="suggest"] { border-color: #7C3AED; background: rgba(124,58,237,0.06); color: #7C3AED; }
+
   /* Done step */
   .wiz-done { text-align: center; padding: 32px 32px 28px; }
   .wiz-done-icon { font-size: 52px; margin-bottom: 12px; }
@@ -565,7 +591,8 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 
   // ── Wizard ──
   var TOTAL_STEPS = 4;
-  var wizData = { title: '', type: 'social', suggested_date: '', location: '', budget: '', group_size: '', description: '' };
+  var wizMode = isLoggedIn ? 'live' : 'suggest'; // 'live' = create event, 'suggest' = suggestion
+  var wizData = { title: '', type: 'social', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '' };
 
   // Auto-suggestion names by type
   var suggestions = {
@@ -588,6 +615,34 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     other:         ['Hangout', 'Meetup', 'Get-Together', 'Group Outing']
   };
 
+  // Venue suggestions by type
+  var venueSuggestions = {
+    dinner:        ['Guard & Grace', 'Uncle', 'Tavernetta', 'El Five', 'Hop Alley', 'Safta'],
+    brewery:       ['Ratio Beerworks', 'Great Divide', 'Odell Brewing', 'Cerebral Brewing', 'Our Mutual Friend'],
+    outdoor:       ['Red Rocks', 'Sloan\'s Lake', 'Wash Park', 'Chatfield', 'Bear Creek Trail', 'South Table Mountain'],
+    game_night:    ['Board Game Republic', 'Grandma\'s House', 'Punch Bowl Social', 'Dave & Buster\'s'],
+    coffee:        ['Crema', 'Huckleberry', 'Thump Coffee', 'Little Owl', 'Novo Coffee'],
+    arts:          ['Denver Art Museum', 'Meow Wolf', 'RINO Art District', 'Artwork Network'],
+    music:         ['Red Rocks', 'Dazzle', 'Globe Hall', 'Cervantes', 'Mission Ballroom'],
+    social:        ['Punch Bowl Social', 'Topgolf', 'ViewHouse', 'Finn\'s Manor', 'Lustre Pearl'],
+    sports:        ['City Park', 'Sloans Lake', 'Ruby Hill', 'Coors Field area'],
+    group_tickets: ['Ball Arena', 'Coors Field', 'Empower Field', 'Dick\'s Sporting Goods Park'],
+    camping:       ['Mueller State Park', 'Golden Gate Canyon', 'Chatfield', 'Cherry Creek State Park'],
+    bowling:       ['Lucky Strike', 'Elitch Lanes', 'AMF', 'Bowlero'],
+    active:        ['Movement RiNo', 'Earth Treks', 'Confluence Kayaks', 'Denver Bouldering Club'],
+    casino:        ['Ameristar (Blackhawk)', 'Monarch (Blackhawk)', 'Johnny Z\'s (Central City)', 'The Lodge (Blackhawk)'],
+    food_trucks:   ['Civic Center Eats', 'Stanley Marketplace', 'Union Station', 'RiNo Food Truck Park'],
+    potluck:       ['Someone\'s place', 'Community center', 'Park pavilion'],
+    other:         []
+  };
+
+  // Venue label by type
+  var venueLabels = {
+    dinner: 'Which restaurant?', brewery: 'Which brewery?', casino: 'Which casino?',
+    coffee: 'Which café?', music: 'Which venue?', bowling: 'Which alley?',
+    arts: 'Which gallery/museum?', active: 'Which gym/spot?'
+  };
+
   function renderSuggestions(type) {
     var container = document.getElementById('wizSuggestions');
     var items = suggestions[type] || suggestions.other;
@@ -606,6 +661,26 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     });
   }
 
+  function renderVenueSuggestions(type) {
+    var container = document.getElementById('wizVenueSuggestions');
+    var items = venueSuggestions[type] || [];
+    var label = document.getElementById('wizVenueLabel');
+    label.textContent = venueLabels[type] || 'Specific spot?';
+    container.innerHTML = '';
+    items.forEach(function(name) {
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'wiz-sug-chip';
+      chip.textContent = name;
+      chip.addEventListener('click', function() {
+        container.querySelectorAll('.wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
+        chip.classList.add('selected');
+        document.getElementById('wizVenue').value = name;
+      });
+      container.appendChild(chip);
+    });
+  }
+
   function showStep(n) {
     for (var i = 1; i <= 5; i++) {
       var el = document.getElementById('wizStep' + i);
@@ -616,38 +691,54 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
 
   function resetWizard() {
-    wizData = { title: '', type: 'social', suggested_date: '', location: '', budget: '', group_size: '', description: '' };
+    wizData = { title: '', type: 'social', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '' };
+    wizMode = isLoggedIn ? 'live' : 'suggest';
     document.getElementById('wizTitle').value = '';
     document.getElementById('wizType').value = 'social';
     document.getElementById('wizDesc').value = '';
+    document.getElementById('wizVenue').value = '';
+    document.getElementById('wizLink').value = '';
     document.querySelectorAll('.wiz-pill-btn, .wiz-sug-chip').forEach(function(b) { b.classList.remove('selected'); });
     document.querySelectorAll('.wiz-err').forEach(function(e) { e.textContent = ''; });
+    // Reset mode toggle
+    if (isLoggedIn) {
+      document.getElementById('wizModeLive').classList.add('selected');
+      document.getElementById('wizModeSuggest').classList.remove('selected');
+      document.getElementById('wizSubmit').textContent = 'Create Event';
+    }
     renderSuggestions('social');
+    renderVenueSuggestions('social');
     showStep(1);
   }
 
   // Render initial suggestions
   renderSuggestions('social');
+  renderVenueSuggestions('social');
 
-  // Dropdown change → update suggestions
+  // Dropdown change → update suggestions + venue suggestions
   document.getElementById('wizType').addEventListener('change', function() {
     wizData.type = this.value;
     document.getElementById('wizTitle').value = '';
     renderSuggestions(this.value);
+    renderVenueSuggestions(this.value);
   });
 
   // Clear suggestion selection when user types manually
   document.getElementById('wizTitle').addEventListener('input', function() {
-    document.querySelectorAll('.wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
+    document.querySelectorAll('#wizSuggestions .wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
+  });
+  document.getElementById('wizVenue').addEventListener('input', function() {
+    document.querySelectorAll('#wizVenueSuggestions .wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
   });
 
-  // Step 1 → 2
+  // Step 1 → 2 (also update venue suggestions for selected type)
   document.getElementById('wizNext1').addEventListener('click', function() {
     var val = document.getElementById('wizTitle').value.trim();
     if (!val) { document.getElementById('wizErr1').textContent = 'Pick a suggestion or type a name.'; return; }
     wizData.title = val;
     wizData.type = document.getElementById('wizType').value;
     document.getElementById('wizErr1').textContent = '';
+    renderVenueSuggestions(wizData.type);
     showStep(2);
   });
 
@@ -665,38 +756,63 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     });
   });
 
-  // Step 2 → 3
-  document.getElementById('wizNext2').addEventListener('click', function() { showStep(3); });
+  // Step 2 → 3 (capture venue + link)
+  document.getElementById('wizNext2').addEventListener('click', function() {
+    wizData.venue = document.getElementById('wizVenue').value.trim();
+    wizData.link = document.getElementById('wizLink').value.trim();
+    showStep(3);
+  });
 
   // Step 3 → 4
   document.getElementById('wizNext3').addEventListener('click', function() { showStep(4); });
 
-  // Step 4 → submit
-  var submitLabel = isLoggedIn ? 'Create Event' : 'Submit Idea';
-  var submitEndpoint = isLoggedIn ? '/api/create-event' : '/api/suggest';
+  // Mode toggle (live vs suggest) — only exists for logged-in users
+  if (isLoggedIn) {
+    document.querySelectorAll('.wiz-mode-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.wiz-mode-btn').forEach(function(b) { b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        wizMode = btn.getAttribute('data-mode');
+        document.getElementById('wizSubmit').textContent = wizMode === 'live' ? 'Create Event' : 'Submit Suggestion';
+      });
+    });
+  }
 
+  // Step 4 → submit
   document.getElementById('wizSubmit').addEventListener('click', function() {
     var btn = this;
     wizData.description = document.getElementById('wizDesc').value.trim();
     btn.disabled = true;
-    btn.textContent = isLoggedIn ? 'Creating...' : 'Submitting...';
+    btn.textContent = wizMode === 'live' ? 'Creating...' : 'Submitting...';
     document.getElementById('wizErr4').textContent = '';
 
-    fetch(submitEndpoint, {
+    var endpoint = wizMode === 'live' ? '/api/create-event' : '/api/suggest';
+
+    fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(wizData)
     }).then(function(r) { return r.json(); }).then(function(data) {
       btn.disabled = false;
-      btn.textContent = submitLabel;
+      btn.textContent = wizMode === 'live' ? 'Create Event' : 'Submit Suggestion';
       if (data.ok) {
+        // Update done screen messaging
+        var doneTitle = document.getElementById('wizDoneTitle');
+        var doneHint = document.getElementById('wizDoneHint');
+        if (wizMode === 'live') {
+          doneTitle.textContent = 'Event Created!';
+          doneHint.textContent = 'Your event is live — people can RSVP now.';
+        } else {
+          doneTitle.textContent = 'Suggestion Submitted!';
+          doneHint.textContent = 'The community will vote on your idea. Thanks for making Denver more fun.';
+        }
         showStep(5);
       } else {
         document.getElementById('wizErr4').textContent = data.error || 'Something went wrong.';
       }
     }).catch(function() {
       btn.disabled = false;
-      btn.textContent = submitLabel;
+      btn.textContent = wizMode === 'live' ? 'Create Event' : 'Submit Suggestion';
       document.getElementById('wizErr4').textContent = 'Network error. Try again.';
     });
   });

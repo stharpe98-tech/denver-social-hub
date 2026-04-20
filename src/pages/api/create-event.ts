@@ -16,7 +16,7 @@ export async function POST({ request, cookies }: APIContext) {
   if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
 
   try {
-    const { title, description, type, suggested_date, location, budget, group_size } = await request.json() as any;
+    const { title, description, type, suggested_date, location, budget, group_size, venue, link } = await request.json() as any;
 
     if (!title || !title.trim()) {
       return new Response(JSON.stringify({ error: 'Title is required' }), { status: 400 });
@@ -25,6 +25,10 @@ export async function POST({ request, cookies }: APIContext) {
     const eventType = type || 'other';
     const desc = (description || '').trim();
     const loc = (location || '').trim();
+    const venueName = (venue || '').trim();
+    const eventLink = (link || '').trim();
+    // Use venue as location if provided, otherwise use area
+    const finalLocation = venueName || loc || '';
     const zone = loc || 'TBD';
     const submittedBy = user.name || 'Community Member';
 
@@ -52,19 +56,26 @@ export async function POST({ request, cookies }: APIContext) {
     const now = new Date();
     const eventMonth = monthNames[now.getMonth()] || 'TBD';
 
+    // Build description with venue and link if provided
+    let fullDesc = desc;
+    if (venueName && !fullDesc.includes(venueName)) {
+      fullDesc = fullDesc ? venueName + ' — ' + fullDesc : venueName;
+    }
+
     await db.prepare(
-      `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, discord_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       title.trim(),
-      desc,
+      fullDesc,
       eventType,
-      loc,
+      finalLocation,
       zone,
       eventMonth,
       suggested_date || 'TBD',
       spots,
       priceCap,
-      submittedBy
+      submittedBy,
+      eventLink
     ).run();
 
     return new Response(JSON.stringify({ ok: true, created: true }));
