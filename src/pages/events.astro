@@ -2,6 +2,11 @@
 import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
 
+let user: any = null;
+const cookie = Astro.cookies.get("dsn_user")?.value;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+const isLoggedIn = !!user;
+
 const db = getDB();
 let events: any[] = [];
 let rsvpCounts: Record<number, number> = {};
@@ -96,9 +101,9 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
         <span class="chooser-desc">See what's coming up and RSVP</span>
       </button>
       <button class="chooser-card chooser-card-alt" id="pickSuggest">
-        <span class="chooser-emoji">💡</span>
-        <span class="chooser-label">Suggest an Event</span>
-        <span class="chooser-desc">Pitch an idea for the community</span>
+        <span class="chooser-emoji">{isLoggedIn ? '🚀' : '💡'}</span>
+        <span class="chooser-label">{isLoggedIn ? 'Create an Event' : 'Suggest an Event'}</span>
+        <span class="chooser-desc">{isLoggedIn ? 'Post a real event for people to join' : 'Pitch an idea for the community'}</span>
       </button>
     </div>
   </div>
@@ -279,15 +284,15 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
           <h2 class="wiz-q">Quick pitch <span class="wiz-opt">(optional)</span></h2>
           <p class="wiz-hint">Anything else? A sentence or two is plenty.</p>
           <textarea id="wizDesc" class="wiz-textarea" placeholder="e.g. Meet at Sloan's Lake, bring a frisbee, we'll grab beers after..." rows="3" maxlength="300"></textarea>
-          <button class="wiz-submit" id="wizSubmit">Submit Idea</button>
+          <button class="wiz-submit" id="wizSubmit">{isLoggedIn ? 'Create Event' : 'Submit Idea'}</button>
           <div class="wiz-err" id="wizErr4"></div>
         </div>
 
         <!-- Step 5: Done -->
         <div class="wiz-step wiz-done" id="wizStep5" style="display:none;">
           <div class="wiz-done-icon">🎉</div>
-          <h2 class="wiz-q">Submitted!</h2>
-          <p class="wiz-hint">The community will vote on your idea. Thanks for making Denver more fun.</p>
+          <h2 class="wiz-q" id="wizDoneTitle">{isLoggedIn ? 'Event Created!' : 'Submitted!'}</h2>
+          <p class="wiz-hint" id="wizDoneHint">{isLoggedIn ? 'Your event is live — people can RSVP now.' : 'The community will vote on your idea. Thanks for making Denver more fun.'}</p>
           <div class="wiz-done-btns">
             <button class="wiz-next" id="wizAnother">Suggest Another</button>
             <button class="wiz-ghost" id="wizBrowse">Browse Events →</button>
@@ -525,7 +530,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
 </style>
 
-<script is:inline>
+<script is:inline define:vars={{ isLoggedIn }}>
 (function() {
   var chooser = document.getElementById('chooser');
   var browsePath = document.getElementById('browsePath');
@@ -667,20 +672,23 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   document.getElementById('wizNext3').addEventListener('click', function() { showStep(4); });
 
   // Step 4 → submit
+  var submitLabel = isLoggedIn ? 'Create Event' : 'Submit Idea';
+  var submitEndpoint = isLoggedIn ? '/api/create-event' : '/api/suggest';
+
   document.getElementById('wizSubmit').addEventListener('click', function() {
     var btn = this;
     wizData.description = document.getElementById('wizDesc').value.trim();
     btn.disabled = true;
-    btn.textContent = 'Submitting...';
+    btn.textContent = isLoggedIn ? 'Creating...' : 'Submitting...';
     document.getElementById('wizErr4').textContent = '';
 
-    fetch('/api/suggest', {
+    fetch(submitEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(wizData)
     }).then(function(r) { return r.json(); }).then(function(data) {
       btn.disabled = false;
-      btn.textContent = 'Submit Idea';
+      btn.textContent = submitLabel;
       if (data.ok) {
         showStep(5);
       } else {
@@ -688,7 +696,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       }
     }).catch(function() {
       btn.disabled = false;
-      btn.textContent = 'Submit Idea';
+      btn.textContent = submitLabel;
       document.getElementById('wizErr4').textContent = 'Network error. Try again.';
     });
   });
