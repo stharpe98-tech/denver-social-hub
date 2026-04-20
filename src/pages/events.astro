@@ -183,60 +183,70 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     <button class="path-back" id="suggestBack">← Back</button>
 
     <div class="wiz-container">
-      <!-- Step 1: Name -->
-      <div class="wiz-step" id="wizStep1">
-        <div class="wiz-num">1 of 3</div>
-        <h2 class="wiz-q">What's the event?</h2>
-        <p class="wiz-hint">Give it a short, catchy name.</p>
-        <input type="text" id="wizTitle" class="wiz-input" placeholder="e.g. Rooftop BBQ, Trivia Night, Group Hike" maxlength="100" autofocus />
-        <button class="wiz-next" id="wizNext1">Next →</button>
-        <div class="wiz-err" id="wizErr1"></div>
-      </div>
-
-      <!-- Step 2: Type -->
-      <div class="wiz-step" id="wizStep2" style="display:none;">
-        <div class="wiz-num">2 of 3</div>
-        <h2 class="wiz-q">What kind of event?</h2>
-        <p class="wiz-hint">Pick the closest category.</p>
-        <div class="wiz-type-grid" id="wizTypeGrid">
-          <button class="wiz-type-btn" data-val="dinner">🍽️ Dinner</button>
-          <button class="wiz-type-btn" data-val="brewery">🍺 Brewery</button>
-          <button class="wiz-type-btn" data-val="outdoor">🏔️ Outdoor</button>
-          <button class="wiz-type-btn" data-val="game_night">🎳 Game Night</button>
-          <button class="wiz-type-btn" data-val="coffee">☕ Coffee</button>
-          <button class="wiz-type-btn" data-val="arts">🎨 Arts</button>
-          <button class="wiz-type-btn" data-val="music">🎵 Music</button>
-          <button class="wiz-type-btn" data-val="social">🎉 Social</button>
-          <button class="wiz-type-btn" data-val="sports">🏒 Sports</button>
-          <button class="wiz-type-btn" data-val="group_tickets">🎫 Group Tickets</button>
-          <button class="wiz-type-btn" data-val="camping">🏕️ Camping</button>
-          <button class="wiz-type-btn" data-val="bowling">🎳 Bowling</button>
-          <button class="wiz-type-btn" data-val="active">🧗 Active</button>
-          <button class="wiz-type-btn" data-val="casino">🎰 Casino</button>
-          <button class="wiz-type-btn" data-val="food_trucks">🌮 Food Trucks</button>
-          <button class="wiz-type-btn" data-val="potluck">🍲 Potluck</button>
-          <button class="wiz-type-btn" data-val="other">📅 Other</button>
+      <div class="wiz-card">
+        <!-- Progress bar -->
+        <div class="wiz-progress">
+          <div class="wiz-progress-fill" id="wizProgress" style="width:33%;"></div>
         </div>
-      </div>
 
-      <!-- Step 3: Description + Submit -->
-      <div class="wiz-step" id="wizStep3" style="display:none;">
-        <div class="wiz-num">3 of 3</div>
-        <h2 class="wiz-q">Quick pitch <span class="wiz-opt">(optional)</span></h2>
-        <p class="wiz-hint">What would this look like? A sentence or two is plenty.</p>
-        <textarea id="wizDesc" class="wiz-textarea" placeholder="e.g. Meet at Sloan's Lake, bring a frisbee, we'll grab beers after..." rows="3" maxlength="300"></textarea>
-        <button class="wiz-submit" id="wizSubmit">Submit Idea</button>
-        <div class="wiz-err" id="wizErr3"></div>
-      </div>
+        <!-- Step 1: Name -->
+        <div class="wiz-step" id="wizStep1">
+          <div class="wiz-step-icon">💡</div>
+          <div class="wiz-num">Step 1 of 3</div>
+          <h2 class="wiz-q">What's the event?</h2>
+          <p class="wiz-hint">Give it a short, catchy name.</p>
+          <input type="text" id="wizTitle" class="wiz-input" placeholder="e.g. Rooftop BBQ, Trivia Night, Group Hike" maxlength="100" autofocus />
+          <button class="wiz-next" id="wizNext1">Next →</button>
+          <div class="wiz-err" id="wizErr1"></div>
+        </div>
 
-      <!-- Step 4: Done -->
-      <div class="wiz-step wiz-done" id="wizStep4" style="display:none;">
-        <div class="wiz-done-icon">🎉</div>
-        <h2 class="wiz-q">Submitted!</h2>
-        <p class="wiz-hint">The community will vote on your idea. Thanks for making Denver more fun.</p>
-        <div class="wiz-done-btns">
-          <button class="wiz-next" id="wizAnother">Suggest Another</button>
-          <button class="wiz-ghost" id="wizBrowse">Browse Events →</button>
+        <!-- Step 2: Type -->
+        <div class="wiz-step" id="wizStep2" style="display:none;">
+          <div class="wiz-step-icon">🎨</div>
+          <div class="wiz-num">Step 2 of 3</div>
+          <h2 class="wiz-q">What kind of event?</h2>
+          <p class="wiz-hint">Pick the closest category.</p>
+          <div class="wiz-type-grid" id="wizTypeGrid">
+            <button class="wiz-type-btn" data-val="dinner">🍽️ Dinner</button>
+            <button class="wiz-type-btn" data-val="brewery">🍺 Brewery</button>
+            <button class="wiz-type-btn" data-val="outdoor">🏔️ Outdoor</button>
+            <button class="wiz-type-btn" data-val="game_night">🎳 Game Night</button>
+            <button class="wiz-type-btn" data-val="coffee">☕ Coffee</button>
+            <button class="wiz-type-btn" data-val="arts">🎨 Arts</button>
+            <button class="wiz-type-btn" data-val="music">🎵 Music</button>
+            <button class="wiz-type-btn" data-val="social">🎉 Social</button>
+            <button class="wiz-type-btn" data-val="sports">🏒 Sports</button>
+            <button class="wiz-type-btn" data-val="group_tickets">🎫 Group Tickets</button>
+            <button class="wiz-type-btn" data-val="camping">🏕️ Camping</button>
+            <button class="wiz-type-btn" data-val="bowling">🎳 Bowling</button>
+            <button class="wiz-type-btn" data-val="active">🧗 Active</button>
+            <button class="wiz-type-btn" data-val="casino">🎰 Casino</button>
+            <button class="wiz-type-btn" data-val="food_trucks">🌮 Food Trucks</button>
+            <button class="wiz-type-btn" data-val="potluck">🍲 Potluck</button>
+            <button class="wiz-type-btn" data-val="other">📅 Other</button>
+          </div>
+        </div>
+
+        <!-- Step 3: Description + Submit -->
+        <div class="wiz-step" id="wizStep3" style="display:none;">
+          <div class="wiz-step-icon">✍️</div>
+          <div class="wiz-num">Step 3 of 3</div>
+          <h2 class="wiz-q">Quick pitch <span class="wiz-opt">(optional)</span></h2>
+          <p class="wiz-hint">What would this look like? A sentence or two is plenty.</p>
+          <textarea id="wizDesc" class="wiz-textarea" placeholder="e.g. Meet at Sloan's Lake, bring a frisbee, we'll grab beers after..." rows="3" maxlength="300"></textarea>
+          <button class="wiz-submit" id="wizSubmit">Submit Idea</button>
+          <div class="wiz-err" id="wizErr3"></div>
+        </div>
+
+        <!-- Step 4: Done -->
+        <div class="wiz-step wiz-done" id="wizStep4" style="display:none;">
+          <div class="wiz-done-icon">🎉</div>
+          <h2 class="wiz-q">Submitted!</h2>
+          <p class="wiz-hint">The community will vote on your idea. Thanks for making Denver more fun.</p>
+          <div class="wiz-done-btns">
+            <button class="wiz-next" id="wizAnother">Suggest Another</button>
+            <button class="wiz-ghost" id="wizBrowse">Browse Events →</button>
+          </div>
         </div>
       </div>
     </div>
@@ -356,37 +366,56 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   .ev-discord-btn { padding: 8px 18px; background: #7C3AED; color: #fff; border-radius: 50px; font-size: 12px; font-weight: 700; font-family: 'Outfit', sans-serif; flex-shrink: 0; }
 
   /* ── Wizard ── */
-  .wiz-container { max-width: 480px; margin: 40px auto 0; }
-  .wiz-step { animation: fadeUp .3s ease; }
-  .wiz-num { font-size: 11px; font-weight: 600; color: #9CA3AF; font-family: 'Outfit', sans-serif; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .06em; }
-  .wiz-q { font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 800; color: #111827; margin-bottom: 6px; }
-  .wiz-q .wiz-opt { font-weight: 400; color: #9CA3AF; font-size: 16px; }
+  .wiz-container { max-width: 520px; margin: 32px auto 0; }
+  .wiz-card {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 24px;
+    padding: 0; overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .wiz-progress {
+    height: 5px; background: #F3F4F6; width: 100%;
+  }
+  .wiz-progress-fill {
+    height: 100%; background: linear-gradient(90deg, #7C3AED, #3B82F6);
+    border-radius: 0 3px 3px 0; transition: width .4s ease;
+  }
+  .wiz-step { padding: 32px 32px 28px; animation: fadeUp .3s ease; }
+  .wiz-step-icon { font-size: 36px; margin-bottom: 12px; }
+  .wiz-num {
+    font-size: 11px; font-weight: 700; color: #7C3AED; font-family: 'Outfit', sans-serif;
+    margin-bottom: 6px; text-transform: uppercase; letter-spacing: .08em;
+    background: rgba(124,58,237,0.06); display: inline-block; padding: 4px 12px;
+    border-radius: 50px;
+  }
+  .wiz-q { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800; color: #111827; margin-bottom: 6px; }
+  .wiz-q .wiz-opt { font-weight: 400; color: #9CA3AF; font-size: 15px; }
   .wiz-hint { font-size: 13px; color: #6B7280; margin-bottom: 20px; }
   .wiz-input {
-    width: 100%; padding: 16px 20px; background: #fff; border: 2px solid #E5E7EB;
-    border-radius: 16px; font-size: 16px; color: #111827; font-family: 'Inter', sans-serif;
+    width: 100%; padding: 16px 20px; background: #F8F9FB; border: 2px solid #E5E7EB;
+    border-radius: 14px; font-size: 16px; color: #111827; font-family: 'Inter', sans-serif;
     outline: none; transition: border-color .2s;
   }
-  .wiz-input:focus { border-color: #7C3AED; }
+  .wiz-input:focus { border-color: #7C3AED; background: #fff; }
   .wiz-input::placeholder { color: #D1D5DB; }
   .wiz-textarea {
-    width: 100%; padding: 16px 20px; background: #fff; border: 2px solid #E5E7EB;
-    border-radius: 16px; font-size: 15px; color: #111827; font-family: 'Inter', sans-serif;
+    width: 100%; padding: 16px 20px; background: #F8F9FB; border: 2px solid #E5E7EB;
+    border-radius: 14px; font-size: 15px; color: #111827; font-family: 'Inter', sans-serif;
     outline: none; resize: vertical; transition: border-color .2s;
   }
-  .wiz-textarea:focus { border-color: #7C3AED; }
+  .wiz-textarea:focus { border-color: #7C3AED; background: #fff; }
   .wiz-textarea::placeholder { color: #D1D5DB; }
   .wiz-next, .wiz-submit {
-    margin-top: 16px; padding: 14px 32px; background: #7C3AED; color: #fff;
+    margin-top: 18px; padding: 14px 32px; background: #7C3AED; color: #fff;
     border: none; border-radius: 50px; font-size: 15px; font-weight: 700;
     font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .2s;
+    width: 100%;
   }
-  .wiz-next:hover, .wiz-submit:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(124,58,237,0.25); }
+  .wiz-next:hover, .wiz-submit:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(124,58,237,0.25); }
   .wiz-next:disabled, .wiz-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
   .wiz-ghost {
-    margin-top: 16px; padding: 14px 32px; background: #F8F9FB; color: #6B7280;
+    margin-top: 10px; padding: 14px 32px; background: #F8F9FB; color: #6B7280;
     border: 1px solid #E5E7EB; border-radius: 50px; font-size: 15px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .2s;
+    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .2s; width: 100%;
   }
   .wiz-ghost:hover { color: #111827; border-color: #D1D5DB; }
   .wiz-err { font-size: 12px; font-weight: 600; color: #DC2626; margin-top: 8px; min-height: 18px; font-family: 'Outfit', sans-serif; }
@@ -394,18 +423,18 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   /* Type grid */
   .wiz-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
   .wiz-type-btn {
-    padding: 14px 12px; background: #fff; border: 2px solid #E5E7EB;
+    padding: 14px 12px; background: #F8F9FB; border: 2px solid #E5E7EB;
     border-radius: 14px; font-size: 13px; font-weight: 600; color: #374151;
     font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
     text-align: center;
   }
-  .wiz-type-btn:hover { border-color: #D1D5DB; background: #F8F9FB; }
-  .wiz-type-btn.selected { border-color: #7C3AED; background: rgba(124,58,237,0.06); color: #7C3AED; }
+  .wiz-type-btn:hover { border-color: #D1D5DB; background: #fff; transform: translateY(-1px); }
+  .wiz-type-btn.selected { border-color: #7C3AED; background: rgba(124,58,237,0.06); color: #7C3AED; box-shadow: 0 2px 8px rgba(124,58,237,0.12); }
 
   /* Done step */
-  .wiz-done { text-align: center; padding: 20px 0; }
+  .wiz-done { text-align: center; padding: 32px 32px 28px; }
   .wiz-done-icon { font-size: 52px; margin-bottom: 12px; }
-  .wiz-done-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .wiz-done-btns { display: flex; flex-direction: column; gap: 0; }
 
   @media (max-width: 768px) {
     .ev-page { padding: 0 20px 40px; }
@@ -458,6 +487,8 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     for (var i = 1; i <= 4; i++) {
       document.getElementById('wizStep' + i).style.display = (i === n) ? '' : 'none';
     }
+    var pct = n >= 4 ? 100 : Math.round((n / 3) * 100);
+    document.getElementById('wizProgress').style.width = pct + '%';
   }
 
   function resetWizard() {
