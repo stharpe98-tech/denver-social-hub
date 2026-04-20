@@ -22,23 +22,46 @@ try {
 } catch {}
 
 if (!event) return Astro.redirect("/events");
-const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",other:"📅" };
+const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",potluck:"🍲",other:"📅" };
+
+// Per-type theme colors: [accent, light bg tint, tag bg, tag text]
+const typeThemes: Record<string, { accent: string; grad1: string; grad2: string; tagBg: string; tagText: string }> = {
+  dinner:        { accent:"#F05A28", grad1:"#FFF7ED", grad2:"#FEF2F2", tagBg:"#FFF7ED", tagText:"#C2410C" },
+  game_night:    { accent:"#7C3AED", grad1:"#F5F3FF", grad2:"#EEF2FF", tagBg:"#EEF2FF", tagText:"#5B21B6" },
+  outdoor:       { accent:"#059669", grad1:"#ECFDF5", grad2:"#F0FDF4", tagBg:"#F0FDF4", tagText:"#047857" },
+  brewery:       { accent:"#D97706", grad1:"#FFFBEB", grad2:"#FEF3C7", tagBg:"#FFFBEB", tagText:"#92400E" },
+  coffee:        { accent:"#92400E", grad1:"#FFFBEB", grad2:"#FEF9EE", tagBg:"#FEF3C7", tagText:"#78350F" },
+  arts:          { accent:"#DB2777", grad1:"#FDF2F8", grad2:"#FCE7F3", tagBg:"#FDF2F8", tagText:"#9D174D" },
+  music:         { accent:"#7C3AED", grad1:"#F5F3FF", grad2:"#FDF2F8", tagBg:"#F5F3FF", tagText:"#6D28D9" },
+  social:        { accent:"#EC4899", grad1:"#FDF2F8", grad2:"#FFF1F2", tagBg:"#FCE7F3", tagText:"#BE185D" },
+  group_tickets: { accent:"#2563EB", grad1:"#EFF6FF", grad2:"#EEF2FF", tagBg:"#EFF6FF", tagText:"#1D4ED8" },
+  camping:       { accent:"#059669", grad1:"#ECFDF5", grad2:"#F0FDF4", tagBg:"#ECFDF5", tagText:"#065F46" },
+  sports_outing: { accent:"#2563EB", grad1:"#EFF6FF", grad2:"#DBEAFE", tagBg:"#EFF6FF", tagText:"#1E40AF" },
+  bowling:       { accent:"#3B82F6", grad1:"#EFF6FF", grad2:"#E0F2FE", tagBg:"#EFF6FF", tagText:"#1D4ED8" },
+  active:        { accent:"#059669", grad1:"#ECFDF5", grad2:"#D1FAE5", tagBg:"#ECFDF5", tagText:"#065F46" },
+  casino:        { accent:"#DC2626", grad1:"#FEF2F2", grad2:"#FFFBEB", tagBg:"#FEF2F2", tagText:"#991B1B" },
+  food_trucks:   { accent:"#EA580C", grad1:"#FFF7ED", grad2:"#FFFBEB", tagBg:"#FFF7ED", tagText:"#C2410C" },
+  potluck:       { accent:"#F05A28", grad1:"#FFF7ED", grad2:"#FEF2F2", tagBg:"#FFF7ED", tagText:"#C2410C" },
+  other:         { accent:"#7C3AED", grad1:"#F8F9FB", grad2:"#EEF2FF", tagBg:"#EEF2FF", tagText:"#4338CA" },
+};
+
+const theme = typeThemes[event.event_type] || typeThemes.other;
 const spotsLeft = Math.max(0, (parseInt(event.spots) || 10) - rsvps.length);
 const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444","#6366F1"];
 ---
 <Base title={event.title}>
 
-<div class="det-page">
+<div class="det-page" style={`--ev-accent: ${theme.accent}; --ev-accent-shadow: ${theme.accent}33;`}>
   <a href="/events" class="det-back">← Back to events</a>
 
   <!-- Event header card -->
-  <div class="det-head">
-    <div class="dh-date">
-      <div class="dh-month">{(event.event_month || 'TBD').slice(0, 3)}</div>
+  <div class="det-head" style={`background: linear-gradient(135deg, ${theme.grad1}, ${theme.grad2}); border-color: ${theme.accent}20;`}>
+    <div class="dh-date" style={`border-color: ${theme.accent}20;`}>
+      <div class="dh-month" style={`color: ${theme.accent};`}>{(event.event_month || 'TBD').slice(0, 3)}</div>
       <div class="dh-day">{event.event_day || '—'}</div>
       {event.event_time && <div class="dh-time">{event.event_time}</div>}
     </div>
-    <div class="dh-tag">{typeEmoji[event.event_type] || '📅'} {(event.event_type || '').replace('_', ' ')}</div>
+    <div class="dh-tag" style={`background: ${theme.tagBg}; color: ${theme.tagText};`}>{typeEmoji[event.event_type] || '📅'} {(event.event_type || '').replace('_', ' ')}</div>
     <h1 class="dh-title">{event.title}</h1>
     <div class="dh-loc">{myRsvp ? (event.location || event.zone) : (event.zone || 'TBD')} {!myRsvp && <span class="dh-loc-hint">(RSVP to see full address)</span>}</div>
   </div>
@@ -78,11 +101,11 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
     <div class="det-side">
       <div class="ds-card">
         {user ? (
-          <button id="rsvp-btn" class={`ds-rsvp ${myRsvp ? 'rsvped' : ''}`}>
+          <button id="rsvp-btn" class={`ds-rsvp ${myRsvp ? 'rsvped' : ''}`} style={myRsvp ? '' : `background: ${theme.accent};`}>
             {myRsvp ? "✓ You're In — Cancel RSVP" : "RSVP — I'm in 🎉"}
           </button>
         ) : (
-          <a href={`/login?next=/events/${id}`} class="ds-rsvp">Sign in to RSVP</a>
+          <a href={`/login?next=/events/${id}`} class="ds-rsvp" style={`background: ${theme.accent};`}>Sign in to RSVP</a>
         )}
         <div class="ds-info"><strong>{rsvps.length} of {event.spots}</strong> spots filled</div>
         {spotsLeft <= 4 && spotsLeft > 0 && <div class="ds-urgent">Only {spotsLeft} spots left!</div>}
@@ -116,7 +139,7 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
     font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600;
     color: #6B7280; margin-bottom: 18px; transition: color .2s;
   }
-  .det-back:hover { color: #7C3AED; }
+  .det-back:hover { color: var(--ev-accent, #7C3AED); }
 
   .det-head {
     background: linear-gradient(135deg, #F8F9FB, #EEF2FF, #F0FDF4);
@@ -168,7 +191,7 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
     cursor: pointer; text-align: center; text-decoration: none;
     background: #7C3AED; color: #fff; margin-bottom: 10px; transition: all .2s;
   }
-  .ds-rsvp:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.2); }
+  .ds-rsvp:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--ev-accent-shadow, rgba(124,58,237,0.2)); }
   .ds-rsvp.rsvped { background: rgba(220,38,38,0.08); color: #DC2626; }
   .ds-rsvp.rsvped:hover { background: rgba(220,38,38,0.12); }
   .ds-info { font-size: 12px; color: #6B7280; margin-bottom: 4px; }
@@ -193,7 +216,7 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
   }
 </style>
 
-<script define:vars={{ eventId: id, initialRsvp: myRsvp }}>
+<script define:vars={{ eventId: id, initialRsvp: myRsvp, themeAccent: theme.accent }}>
   let rsvped = initialRsvp;
   const btn = document.getElementById('rsvp-btn');
   if (btn) {
@@ -207,6 +230,7 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
         rsvped = d.rsvped;
         btn.className = 'ds-rsvp' + (rsvped ? ' rsvped' : '');
         btn.textContent = rsvped ? "✓ You're In — Cancel RSVP" : "RSVP — I'm in 🎉";
+        btn.style.background = rsvped ? '' : themeAccent;
       } catch { btn.textContent = 'Error — try again'; }
     });
   }

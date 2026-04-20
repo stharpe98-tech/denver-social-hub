@@ -15,6 +15,30 @@ try {
 
 const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",potluck:"🍲",other:"📅" };
 
+const typeColors: Record<string, { accent: string; tagBg: string; tagText: string }> = {
+  dinner:        { accent:"#F05A28", tagBg:"#FFF7ED", tagText:"#C2410C" },
+  game_night:    { accent:"#7C3AED", tagBg:"#EEF2FF", tagText:"#5B21B6" },
+  outdoor:       { accent:"#059669", tagBg:"#F0FDF4", tagText:"#047857" },
+  brewery:       { accent:"#D97706", tagBg:"#FFFBEB", tagText:"#92400E" },
+  coffee:        { accent:"#92400E", tagBg:"#FEF3C7", tagText:"#78350F" },
+  arts:          { accent:"#DB2777", tagBg:"#FDF2F8", tagText:"#9D174D" },
+  music:         { accent:"#7C3AED", tagBg:"#F5F3FF", tagText:"#6D28D9" },
+  social:        { accent:"#EC4899", tagBg:"#FCE7F3", tagText:"#BE185D" },
+  group_tickets: { accent:"#2563EB", tagBg:"#EFF6FF", tagText:"#1D4ED8" },
+  camping:       { accent:"#059669", tagBg:"#ECFDF5", tagText:"#065F46" },
+  sports_outing: { accent:"#2563EB", tagBg:"#EFF6FF", tagText:"#1E40AF" },
+  bowling:       { accent:"#3B82F6", tagBg:"#EFF6FF", tagText:"#1D4ED8" },
+  active:        { accent:"#059669", tagBg:"#ECFDF5", tagText:"#065F46" },
+  casino:        { accent:"#DC2626", tagBg:"#FEF2F2", tagText:"#991B1B" },
+  food_trucks:   { accent:"#EA580C", tagBg:"#FFF7ED", tagText:"#C2410C" },
+  potluck:       { accent:"#F05A28", tagBg:"#FFF7ED", tagText:"#C2410C" },
+  other:         { accent:"#7C3AED", tagBg:"#EEF2FF", tagText:"#4338CA" },
+};
+
+function getTypeColor(type: string) {
+  return typeColors[type] || typeColors.other;
+}
+
 function spotsLeft(ev: any): number {
   const total = parseInt(ev.spots) || 10;
   const taken = rsvpCounts[ev.id] || 0;
@@ -65,15 +89,16 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
         const left = spotsLeft(ev);
         const going = rsvpCounts[ev.id] || 0;
         const isHot = isHotEvent(ev);
+        const tc = getTypeColor(ev.event_type);
         return (
-          <a href={`/events/${ev.id}`} class={`ec ${isHot ? 'ec-hot' : ''}`} data-type={ev.event_type}>
-            <div class="ec-head">
+          <a href={`/events/${ev.id}`} class={`ec ${isHot ? 'ec-hot' : ''}`} data-type={ev.event_type} style={`--card-accent: ${tc.accent};`}>
+            <div class="ec-head" style={`border-bottom-color: ${tc.accent}15;`}>
               {isHot && <span class="hot-tag">Filling up</span>}
               <div class="ec-date">
-                <div class="ec-month">{(ev.event_month || 'TBD').slice(0, 3)}</div>
+                <div class="ec-month" style={`color: ${tc.accent};`}>{(ev.event_month || 'TBD').slice(0, 3)}</div>
                 <div class="ec-day">{ev.event_day || '—'}</div>
               </div>
-              <div class="ec-tag">{typeEmoji[ev.event_type] || '📅'} {(ev.event_type || '').replace('_', ' ')}</div>
+              <div class="ec-tag" style={`background: ${tc.tagBg}; color: ${tc.tagText};`}>{typeEmoji[ev.event_type] || '📅'} {(ev.event_type || '').replace('_', ' ')}</div>
               <div class="ec-title">{ev.title}</div>
               <div class="ec-loc">{ev.zone || ev.location}</div>
             </div>
@@ -87,7 +112,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
                   <span class="ec-att-text"><strong>{going} going</strong></span>
                 </div>
               )}
-              <div class="ec-rsvp-row">RSVP — I'm in</div>
+              <div class="ec-rsvp-row" style={`background: ${tc.accent};`}>RSVP — I'm in</div>
             </div>
           </a>
         );
@@ -122,6 +147,22 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
   .fpill:hover { border-color: #D1D5DB; color: #111827; }
   .fpill.active { background: rgba(124,58,237,0.06); color: #7C3AED; border-color: rgba(124,58,237,0.2); }
+  .fpill[data-type="dinner"].active { background: #FFF7ED; color: #C2410C; border-color: #F05A2830; }
+  .fpill[data-type="outdoor"].active { background: #F0FDF4; color: #047857; border-color: #05966930; }
+  .fpill[data-type="game_night"].active { background: #EEF2FF; color: #5B21B6; border-color: #7C3AED30; }
+  .fpill[data-type="brewery"].active { background: #FFFBEB; color: #92400E; border-color: #D9770630; }
+  .fpill[data-type="coffee"].active { background: #FEF3C7; color: #78350F; border-color: #92400E30; }
+  .fpill[data-type="arts"].active { background: #FDF2F8; color: #9D174D; border-color: #DB277730; }
+  .fpill[data-type="music"].active { background: #F5F3FF; color: #6D28D9; border-color: #7C3AED30; }
+  .fpill[data-type="social"].active { background: #FCE7F3; color: #BE185D; border-color: #EC489930; }
+  .fpill[data-type="bowling"].active { background: #EFF6FF; color: #1D4ED8; border-color: #3B82F630; }
+  .fpill[data-type="group_tickets"].active { background: #EFF6FF; color: #1D4ED8; border-color: #2563EB30; }
+  .fpill[data-type="camping"].active { background: #ECFDF5; color: #065F46; border-color: #05966930; }
+  .fpill[data-type="sports_outing"].active { background: #EFF6FF; color: #1E40AF; border-color: #2563EB30; }
+  .fpill[data-type="active"].active { background: #ECFDF5; color: #065F46; border-color: #05966930; }
+  .fpill[data-type="casino"].active { background: #FEF2F2; color: #991B1B; border-color: #DC262630; }
+  .fpill[data-type="food_trucks"].active { background: #FFF7ED; color: #C2410C; border-color: #EA580C30; }
+  .fpill[data-type="potluck"].active { background: #FFF7ED; color: #C2410C; border-color: #F05A2830; }
 
   .ev-empty {
     text-align: center; padding: 56px 20px;
@@ -161,7 +202,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700;
     background: #7C3AED; color: #fff; transition: all .2s;
   }
-  .ec:hover .ec-rsvp-row { box-shadow: 0 4px 12px rgba(124,58,237,0.2); }
+  .ec:hover .ec-rsvp-row { box-shadow: 0 4px 12px color-mix(in srgb, var(--card-accent, #7C3AED) 25%, transparent); }
 
   .ec-hot { border: 2px solid rgba(220,38,38,0.15); }
   .ec-hot .ec-head { background: #FEF2F2; }
