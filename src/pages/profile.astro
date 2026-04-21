@@ -29,10 +29,16 @@ if (Astro.request.method === "POST") {
 }
 
 let streak: any = null;
+let mySuggestions: any[] = [];
+let myRsvps: any[] = [];
 try {
   if (db && user?.email) {
     streak = await db.prepare("SELECT * FROM member_streaks WHERE email=?").bind(user.email).first();
     member = await db.prepare("SELECT * FROM members WHERE email=?").bind(user.email).first();
+    const sugResult = await db.prepare("SELECT title, type, status, votes FROM suggestions WHERE member_name=? ORDER BY rowid DESC LIMIT 10").bind(user.name || '').all();
+    mySuggestions = sugResult.results || [];
+    const rsvpResult = await db.prepare("SELECT e.title, e.event_type, e.event_month, e.event_day FROM event_rsvps r JOIN events e ON r.event_id=e.id WHERE r.email=? ORDER BY r.rowid DESC LIMIT 10").bind(user.email).all();
+    myRsvps = rsvpResult.results || [];
   }
 } catch {}
 
@@ -40,27 +46,27 @@ const interestOptions = ["Food & Dining","Craft Beer","Hiking","Board Games","Li
 const lookingOptions  = ["New friends","Hiking buddy","Dinner companion","Workout partner","Explore Denver","Professional networking","Just vibing"];
 const myInterests = (member?.interests||"").split(",").filter(Boolean);
 const myLooking   = (member?.looking_for||"").split(",").filter(Boolean);
-const totalEvts = streak?.total_events||0;
+const totalEvts = member?.events_attended || streak?.total_events || 0;
 const level = getLevel(totalEvts);
 const next  = getNextLevel(level);
 ---
 <Base title="My Profile">
   <div style="max-width:520px;margin:0 auto;padding:24px 20px">
-    <h1 style="font-size:24px;color:#fff;margin-bottom:16px">My Profile</h1>
-    {error   && <div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:12px;padding:12px;color:#f87171;font-size:13px;margin-bottom:12px">{error}</div>}
-    {success && <div style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.15);border-radius:12px;padding:12px;color:#4ade80;font-size:13px;margin-bottom:12px">Profile saved!</div>}
+    <h1 style="font-size:24px;color:var(--text);margin-bottom:16px">My Profile</h1>
+    {error   && <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:12px;color:#DC2626;font-size:13px;margin-bottom:12px">{error}</div>}
+    {success && <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:12px;color:#047857;font-size:13px;margin-bottom:12px">Profile saved!</div>}
     <div class="card" style="margin-bottom:16px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
         <div style={`width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;background:${level.color}22;border:2px solid ${level.color}44`}>{level.emoji}</div>
         <div>
           <div style={`font-size:14px;font-weight:700;color:${level.color}`}>{level.name}</div>
-          <div style="font-size:12px;color:#6b7a8e">{totalEvts} events attended</div>
+          <div style="font-size:12px;color:var(--text-sec)">{totalEvts} events attended</div>
         </div>
-        {(streak?.current_streak||0)>=3 && <span style="margin-left:auto;font-size:12px;color:#fbbf24;font-weight:700">🔥 {streak.current_streak} streak</span>}
+        {(streak?.current_streak||0)>=3 && <span style="margin-left:auto;font-size:12px;color:#F59E0B;font-weight:700">🔥 {streak.current_streak} streak</span>}
       </div>
       {next && (
         <div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7a8e;margin-bottom:4px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-sec);margin-bottom:4px">
             <span>Next: {next.emoji} {next.name}</span><span>{totalEvts}/{next.eventsRequired}</span>
           </div>
           <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px">
@@ -72,19 +78,19 @@ const next  = getNextLevel(level);
     <form method="POST">
       <div class="card">
         <div style="margin-bottom:12px">
-          <label style="display:block;font-size:12px;font-weight:600;color:#6b7a8e;margin-bottom:6px">Name</label>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-sec);margin-bottom:6px">Name</label>
           <input type="text" name="name" value={member?.name||user.name||''} required class="input" />
         </div>
         <div style="margin-bottom:12px">
-          <label style="display:block;font-size:12px;font-weight:600;color:#6b7a8e;margin-bottom:6px">Neighborhood</label>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-sec);margin-bottom:6px">Neighborhood</label>
           <input type="text" name="neighborhood" value={member?.neighborhood||''} placeholder="RiNo, Cap Hill, LoDo..." class="input" />
         </div>
         <div style="margin-bottom:12px">
-          <label style="display:block;font-size:12px;font-weight:600;color:#6b7a8e;margin-bottom:6px">Bio</label>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-sec);margin-bottom:6px">Bio</label>
           <textarea name="bio" rows={3} placeholder="Tell the crew a bit about yourself..." class="input" style="resize:vertical">{member?.bio||''}</textarea>
         </div>
         <div style="margin-bottom:12px">
-          <label style="display:block;font-size:12px;font-weight:600;color:#6b7a8e;margin-bottom:8px">Interests</label>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-sec);margin-bottom:8px">Interests</label>
           <div style="display:flex;flex-wrap:wrap;gap:6px">
             {interestOptions.map(opt => (
               <label style="cursor:pointer">
@@ -95,7 +101,7 @@ const next  = getNextLevel(level);
           </div>
         </div>
         <div style="margin-bottom:20px">
-          <label style="display:block;font-size:12px;font-weight:600;color:#6b7a8e;margin-bottom:8px">Looking for</label>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-sec);margin-bottom:8px">Looking for</label>
           <div style="display:flex;flex-wrap:wrap;gap:6px">
             {lookingOptions.map(opt => (
               <label style="cursor:pointer">
@@ -108,28 +114,63 @@ const next  = getNextLevel(level);
         <button type="submit" class="btn btn-primary" style="width:100%">Save Profile</button>
       </div>
     </form>
+    <!-- My Activity -->
+    {(mySuggestions.length > 0 || myRsvps.length > 0) && (
+      <div class="card" style="margin-top:16px">
+        <h3 style="font-family:var(--heading);font-size:16px;font-weight:700;color:var(--text);margin-bottom:14px">My Activity</h3>
+        {mySuggestions.length > 0 && (
+          <div style="margin-bottom:14px">
+            <div style="font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Suggestions</div>
+            {mySuggestions.map((s: any) => (
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+                <div>
+                  <span style="font-size:13px;font-weight:600;color:var(--text)">{s.title}</span>
+                  <span style="font-size:11px;color:var(--text-faint);margin-left:6px">{s.type}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:11px;color:var(--text-faint)">{s.votes || 0} votes</span>
+                  <span style={`font-size:10px;font-weight:700;padding:2px 8px;border-radius:50px;${s.status === 'open' ? 'background:var(--tag-bg2);color:var(--tag-text2)' : 'background:var(--tag-bg);color:var(--tag-text)'}`}>{s.status}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {myRsvps.length > 0 && (
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">RSVPs</div>
+            {myRsvps.map((r: any) => (
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span style="font-size:13px;font-weight:600;color:var(--text)">{r.title}</span>
+                <span style="font-size:11px;color:var(--text-faint)">{r.event_month} {r.event_day}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+
     <div style="margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:12px">
-      <a href="/api/logout" style="font-size:13px;color:#6b7a8e;text-decoration:none">Sign out</a>
+      <a href="/api/logout" style="font-size:13px;color:var(--text-sec);text-decoration:none">Sign out</a>
       <button id="delete-btn" style="font-size:12px;color:#4a5568;background:none;border:none;cursor:pointer;text-decoration:underline;padding:4px">
         Delete my account
       </button>
     </div>
 
     <!-- Delete confirmation modal (hidden by default via class) -->
-    <div id="delete-modal" class="modal-hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center;padding:24px">
-      <div style="background:#0f1117;border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:28px;max-width:380px;width:100%">
+    <div id="delete-modal" class="modal-hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:24px">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.15)">
         <div style="font-size:32px;text-align:center;margin-bottom:16px">⚠️</div>
-        <h3 style="font-size:18px;color:#fff;text-align:center;margin-bottom:8px">Delete your account?</h3>
-        <p style="font-size:13px;color:#6b7a8e;text-align:center;line-height:1.6;margin-bottom:24px">
+        <h3 style="font-size:18px;color:var(--text);text-align:center;margin-bottom:8px">Delete your account?</h3>
+        <p style="font-size:13px;color:var(--text-sec);text-align:center;line-height:1.6;margin-bottom:24px">
           This permanently deletes your profile, RSVPs, and all your data. Cannot be undone.
         </p>
         <div style="display:flex;flex-direction:column;gap:10px">
           <form method="POST" action="/api/delete-account">
-            <button type="submit" style="width:100%;padding:14px;background:rgba(248,113,113,.15);color:#f87171;border:1.5px solid rgba(248,113,113,.3);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">
+            <button type="submit" style="width:100%;padding:14px;background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--heading)">
               Yes, delete everything
             </button>
           </form>
-          <button id="cancel-btn" style="width:100%;padding:14px;background:rgba(255,255,255,.04);color:#6b7a8e;border:1px solid rgba(255,255,255,.08);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
+          <button id="cancel-btn" style="width:100%;padding:14px;background:var(--surface);color:var(--text-sec);border:1px solid var(--border);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--heading)">
             Cancel
           </button>
         </div>
@@ -138,9 +179,20 @@ const next  = getNextLevel(level);
   </div>
 </Base>
 
-<style>
+<style is:inline>
   .modal-hidden { display: none !important; }
   .modal-visible { display: flex !important; }
+  .chip {
+    display: inline-block; padding: 8px 14px; border-radius: 50px;
+    font-size: 12px; font-weight: 500; color: var(--text-sec);
+    background: var(--surface); border: 1px solid var(--border);
+    cursor: pointer; transition: all .15s; user-select: none;
+  }
+  .chip:hover { border-color: var(--border-hover); color: var(--text); }
+  .chip.selected {
+    background: var(--accent-bg); border-color: var(--accent);
+    color: var(--accent); font-weight: 600;
+  }
 </style>
 
 <script>

@@ -18,14 +18,15 @@ if (Astro.request.method === "POST") {
         member = await db.prepare("SELECT * FROM members WHERE email=?").bind(email).first();
       }
       if (member) {
-        const val = encodeURIComponent(JSON.stringify({ email: member.email, name: member.name }));
-        return new Response(null, { status: 302, headers: { "Location": Astro.url.searchParams.get("next")||"/members", "Set-Cookie": `dsn_user=${val}; Path=/; Max-Age=604800; SameSite=Lax` } });
+        const val = encodeURIComponent(JSON.stringify({ id: member.id, email: member.email, name: member.name, role: member.role || 'member' }));
+        return new Response(null, { status: 302, headers: { "Location": Astro.url.searchParams.get("next")||"/events", "Set-Cookie": `dsn_user=${val}; Path=/; Max-Age=604800; SameSite=Lax` } });
       } else { error = "No account found. Want to join instead?"; }
     } else if (action === "join") {
       const name = form.get("name")?.toString().trim();
       if (email && name && db) {
         await db.prepare("INSERT INTO members (email,name,bio,neighborhood) VALUES (?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name").bind(email,name,"","").run();
-        const val = encodeURIComponent(JSON.stringify({ email, name }));
+        const newMember: any = await db.prepare("SELECT id, role FROM members WHERE email=?").bind(email).first();
+        const val = encodeURIComponent(JSON.stringify({ id: newMember?.id, email, name, role: newMember?.role || 'member' }));
         return new Response(null, { status: 302, headers: { "Location": `/onboarding/1`, "Set-Cookie": `dsn_user=${val}; Path=/; Max-Age=31536000; SameSite=Lax` } });
       } else { error = "Email and name are required."; }
     }
@@ -34,7 +35,7 @@ if (Astro.request.method === "POST") {
 ---
 <Base title="Join / Sign In">
   <div style="max-width:440px;margin:0 auto;padding:40px 20px">
-    {error && <div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:12px;padding:14px;color:#f87171;font-size:13px;margin-bottom:16px">{error}</div>}
+    {error && <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:14px;color:#DC2626;font-size:13px;margin-bottom:16px">{error}</div>}
     <!-- Discord OAuth -->
     <a href="/auth/discord" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#5865F2;color:#fff;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;margin-bottom:16px">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
@@ -44,14 +45,14 @@ if (Astro.request.method === "POST") {
     </a>
 
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div>
-      <span style="font-size:12px;color:#4a5568">or sign up with email</span>
-      <div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="font-size:12px;color:var(--text-faint)">or sign up with email</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
     </div>
 
     <div class="card" style="margin-bottom:16px">
-        <h2 style="font-size:22px;color:#fff;margin-bottom:4px;font-family:'Instrument Serif',serif">Join Denver Social</h2>
-        <p class="muted" style="font-size:13px;margin-bottom:20px">No cost to join. 60 seconds to sign up.</p>
+        <h2 style="font-size:22px;color:var(--text);margin-bottom:4px;font-family:var(--heading);font-weight:800">Join Denver Social</h2>
+        <p style="font-size:13px;color:var(--text-sec);margin-bottom:20px">No cost to join. 60 seconds to sign up.</p>
         <form method="POST">
           <input type="hidden" name="action" value="join" />
           <input type="text"  name="name"  placeholder="Your name"  required class="input" style="margin-bottom:10px" />
@@ -60,7 +61,7 @@ if (Astro.request.method === "POST") {
         </form>
       </div>
     <div class="card">
-        <h2 style="font-size:18px;color:#fff;margin-bottom:16px">Already a member?</h2>
+        <h2 style="font-size:18px;color:var(--text);margin-bottom:16px;font-family:var(--heading);font-weight:700">Already a member?</h2>
         <form method="POST">
           <input type="hidden" name="action" value="login" />
           <input type="email" name="email" placeholder="Your email" required class="input" style="margin-bottom:12px" />

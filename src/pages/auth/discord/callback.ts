@@ -79,8 +79,8 @@ export const GET = async ({ request }: { request: Request }) => {
       } catch {}
     }
 
-    const cookieVal = encodeURIComponent(JSON.stringify({ email, name: member?.name || name }));
-    const destination = isNew ? "/onboarding/1" : "/discover";
+    const cookieVal = encodeURIComponent(JSON.stringify({ id: member?.id, email, name: member?.name || name, role: member?.role || 'member' }));
+    const destination = isNew ? "/onboarding/1" : "/events";
 
     return new Response(null, {
       status: 302,
