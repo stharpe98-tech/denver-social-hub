@@ -12,21 +12,19 @@ let events: any[] = [];
 let rsvpCounts: Record<number, number> = {};
 try {
   if (db) {
-    // Get current month/year to filter past events
     const now = new Date();
-    const currentMonth = now.getMonth(); // 0-indexed
+    const currentMonth = now.getMonth();
     const currentDay = now.getDate();
     const monthOrder: Record<string,number> = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
 
     const allEvents = (await db.prepare("SELECT * FROM events WHERE is_past IS NULL OR is_past=0 ORDER BY id DESC").all())?.results || [];
 
-    // Filter out past events and sort chronologically
     events = allEvents.filter((e: any) => {
       const m = monthOrder[(e.event_month || '').toUpperCase()];
       const d = parseInt(e.event_day) || 99;
-      if (m === undefined) return true; // keep TBD events but push to end
-      if (m < currentMonth) return false; // past month
-      if (m === currentMonth && d < currentDay) return false; // past day this month
+      if (m === undefined) return true;
+      if (m < currentMonth) return false;
+      if (m === currentMonth && d < currentDay) return false;
       return true;
     }).sort((a: any, b: any) => {
       const ma = monthOrder[(a.event_month || '').toUpperCase()] ?? 99;
@@ -105,7 +103,6 @@ function isHotEvent(ev: any): boolean {
   return left >= 1 && left <= 4;
 }
 
-// Interest matching: check if user's interests overlap with event type
 const typeToInterests: Record<string, string[]> = {
   dinner: ["Food & Dining","Craft Beer"], brewery: ["Craft Beer","Food & Dining"],
   coffee: ["Coffee & Cafes"], outdoor: ["Hiking","Outdoors"], camping: ["Hiking","Outdoors"],
@@ -130,24 +127,70 @@ function eventMatchesUser(eventType: string): boolean {
   return keywords.some(k => userInterests.some(ui => k.includes(ui) || ui.includes(k)));
 }
 
+// ── Group events by timeframe ──
+const monthOrder: Record<string,number> = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+const now = new Date();
+
+function daysUntilEvent(ev: any): number {
+  const m = monthOrder[(ev.event_month || '').toUpperCase()];
+  const d = parseInt(ev.event_day) || 99;
+  if (m === undefined) return 999;
+  const target = new Date(now.getFullYear(), m, d);
+  return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+const thisWeekEvents = events.filter(e => daysUntilEvent(e) <= 7 && daysUntilEvent(e) >= 0);
+const laterEvents = events.filter(e => daysUntilEvent(e) > 7 || daysUntilEvent(e) < 0);
+const featured = thisWeekEvents[0] || events[0];
+const alsoSoon = thisWeekEvents.slice(featured && thisWeekEvents.includes(featured) ? 1 : 0);
+const comingUp = thisWeekEvents.includes(featured) ? laterEvents : events.slice(1);
+
+// Day name helper
+const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function eventDayName(ev: any): string {
+  const m = monthOrder[(ev.event_month || '').toUpperCase()];
+  const d = parseInt(ev.event_day);
+  if (m === undefined || isNaN(d)) return '';
+  const date = new Date(now.getFullYear(), m, d);
+  return dayNames[date.getDay()] || '';
+}
+
+// Dynamic headline
+const weekendCount = thisWeekEvents.length;
+const headline = weekendCount > 0
+  ? `${weekendCount} thing${weekendCount > 1 ? 's' : ''} happening this week`
+  : 'New events drop every week';
+
 const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 ---
 <Base title="Events">
 
 <div class="ev-page">
 
-  <!-- ═══ BROWSE — events shown immediately ═══ -->
+  <!-- ═══ BROWSE — Weekend Magazine Layout ═══ -->
   <div id="browsePath" class="path">
-    <div class="ev-header">
-      <h1 class="ev-h1">What's happening <span class="ev-h1-accent">in Denver</span></h1>
-      <p class="ev-sub">Voted by the community. Tap something that sounds fun.</p>
+
+    <!-- HERO -->
+    <div class="mag-hero">
+      <div class="mag-hero-glow"></div>
+      <div class="mag-hero-content">
+        {isLoggedIn && user?.name && (
+          <p class="mag-greeting">Hey {user.name.split(' ')[0]} 👋</p>
+        )}
+        <h1 class="mag-headline">{headline}</h1>
+        <div class="mag-week-pill">
+          <span class="mag-week-dot"></span>
+          Denver · {events.length} upcoming
+        </div>
+      </div>
     </div>
 
+    <!-- FILTER CHIPS -->
     <div class="filters-wrap">
       <div class="filters" id="filterStrip">
         <button class="fpill active" data-type="all">
           <span class="fpill-emoji">🔥</span>
-          <span class="fpill-label">All Events</span>
+          <span class="fpill-label">All</span>
         </button>
         {userInterests.length > 0 && (
           <button class="fpill fpill-foryou" data-type="foryou">
@@ -169,61 +212,141 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     </div>
 
     {events.length === 0 ? (
-      <div class="ev-empty">
-        <div class="ev-empty-icon">🗓️</div>
-        <h2>Nothing scheduled yet</h2>
-        <p>New events drop every week. Join to be the first to know.</p>
-        <a href="/login?mode=join" class="ev-empty-btn">Join Free →</a>
+      <!-- EMPTY STATE -->
+      <div class="mag-empty">
+        <div class="mag-empty-icon">🗓️</div>
+        <h2 class="mag-empty-title">Nothing on the calendar yet</h2>
+        <p class="mag-empty-sub">New events drop every week — mostly weekends. Join the Discord so you don't miss one.</p>
+        <div class="mag-empty-actions">
+          <a href="https://discord.gg/S8SFNkdSgK" class="mag-empty-btn" target="_blank" rel="noopener">Join the Discord</a>
+          {isLoggedIn && <button class="mag-empty-btn mag-empty-btn-alt" id="emptyCreate">Suggest an event</button>}
+        </div>
       </div>
     ) : (
-      <div class="ev-grid">
-        {events.map((ev: any) => {
-          const left = spotsLeft(ev);
-          const going = rsvpCounts[ev.id] || 0;
-          const isHot = isHotEvent(ev);
-          const tc = getTypeColor(ev.event_type);
-          const isMatch = eventMatchesUser(ev.event_type);
-          return (
-            <a href={`/events/${ev.id}`} class={`ec ${isHot ? 'ec-hot' : ''}`} data-type={ev.event_type} style={`--card-accent: ${tc.accent};`}>
-              <div class="ec-img" style={`background-image: url(${typeImages[ev.event_type] || typeImages.other});`}>
-                <div class="ec-img-overlay"></div>
-                {isHot && <span class="hot-tag">Filling up</span>}
-                {isMatch && !isHot && <span class="match-tag">✨ For you</span>}
-                <div class="ec-date">
-                  <div class="ec-month" style={`color: ${tc.accent};`}>{(ev.event_month || 'TBD').slice(0, 3)}</div>
-                  <div class="ec-day">{ev.event_day || '—'}</div>
-                </div>
+      <div class="mag-content" id="magContent">
+
+        <!-- FEATURED EVENT (big card) -->
+        {featured && (
+          <a href={`/events/${featured.id}`} class="feat" data-type={featured.event_type}>
+            <div class="feat-img" style={`background-image: url(${typeImages[featured.event_type] || typeImages.other});`}>
+              <div class="feat-img-overlay"></div>
+              <span class="feat-badge">
+                {isHotEvent(featured) ? '🔥 Filling up' : `${typeEmoji[featured.event_type] || '📅'} Featured`}
+              </span>
+              {eventMatchesUser(featured.event_type) && <span class="feat-match">✨ Matches your interests</span>}
+            </div>
+            <div class="feat-body">
+              <div class="feat-tag" style={`background: ${getTypeColor(featured.event_type).tagBg}; color: ${getTypeColor(featured.event_type).tagText};`}>
+                {typeEmoji[featured.event_type] || '📅'} {(featured.event_type || '').replace('_', ' ')}
               </div>
-              <div class="ec-head">
-                <div class="ec-tag" style={`background: ${tc.tagBg}; color: ${tc.tagText};`}>{typeEmoji[ev.event_type] || '📅'} {(ev.event_type || '').replace('_', ' ')}</div>
-                <div class="ec-title">{ev.title}</div>
-                <div class="ec-loc">{ev.zone || ev.location}</div>
+              <h2 class="feat-title">{featured.title}</h2>
+              <div class="feat-meta">
+                <span>📅 {eventDayName(featured)}, {(featured.event_month || 'TBD').slice(0,3)} {featured.event_day || ''}</span>
+                <span>📍 {featured.zone || featured.location || 'Denver'}</span>
+                {priceLabel(featured) !== 'Free' && <span>💰 {priceLabel(featured)}</span>}
               </div>
-              <div class="ec-body">
-                <div class="ec-meta">
-                  <span><strong>{left ? `${left} spots left` : 'Full'}</strong> of {ev.spots}</span>
-                  <span>{priceLabel(ev)}</span>
-                </div>
-                {going > 0 && (
-                  <div class="ec-att">
-                    <span class="ec-att-text"><strong>{going} going</strong></span>
+              {featured.description && (
+                <p class="feat-desc">{featured.description.length > 100 ? featured.description.slice(0, 100) + '...' : featured.description}</p>
+              )}
+              <div class="feat-footer">
+                <div class="feat-going">
+                  <div class="feat-faces">
+                    {Array.from({length: Math.min(rsvpCounts[featured.id] || 0, 5)}).map((_, i) => (
+                      <div class="feat-face" style={`background: hsl(${260 + i * 30}, 60%, 60%); z-index: ${5 - i};`}>
+                        {String.fromCharCode(65 + i)}
+                      </div>
+                    ))}
                   </div>
-                )}
-                <div class="ec-rsvp-row" style={`background: ${tc.accent};`}>RSVP — I'm in</div>
+                  <span class="feat-going-text">
+                    <strong>{rsvpCounts[featured.id] || 0} going</strong> · {spotsLeft(featured)} spots left
+                  </span>
+                </div>
+                <span class="feat-rsvp-btn">RSVP →</span>
               </div>
-            </a>
-          );
-        })}
+            </div>
+          </a>
+        )}
+
+        <!-- ALSO THIS WEEK -->
+        {alsoSoon.length > 0 && (
+          <div class="also-section">
+            <h3 class="also-label">Also this week</h3>
+            {alsoSoon.map((ev: any) => {
+              const tc = getTypeColor(ev.event_type);
+              const going = rsvpCounts[ev.id] || 0;
+              return (
+                <a href={`/events/${ev.id}`} class="mini" data-type={ev.event_type}>
+                  <div class="mini-date">
+                    <div class="mini-day-name" style={`color: ${tc.accent};`}>{eventDayName(ev).slice(0,3)}</div>
+                    <div class="mini-day-num">{ev.event_day || '—'}</div>
+                  </div>
+                  <div class="mini-info">
+                    <div class="mini-title">{ev.title}</div>
+                    <div class="mini-sub">
+                      {ev.zone || ev.location || 'Denver'} · {going} going · {priceLabel(ev)}
+                    </div>
+                    {eventMatchesUser(ev.event_type) && <span class="mini-match">✨ For you</span>}
+                    {isHotEvent(ev) && <span class="mini-hot">🔥 Filling up</span>}
+                  </div>
+                  <div class="mini-emoji">{typeEmoji[ev.event_type] || '📅'}</div>
+                </a>
+              );
+            })}
+          </div>
+        )}
+
+        <!-- COMING UP (further out) -->
+        {comingUp.length > 0 && (
+          <div class="also-section">
+            <h3 class="also-label">Coming up</h3>
+            {comingUp.map((ev: any) => {
+              const tc = getTypeColor(ev.event_type);
+              const going = rsvpCounts[ev.id] || 0;
+              return (
+                <a href={`/events/${ev.id}`} class="mini" data-type={ev.event_type}>
+                  <div class="mini-date">
+                    <div class="mini-day-name" style={`color: ${tc.accent};`}>{(ev.event_month || 'TBD').slice(0,3)}</div>
+                    <div class="mini-day-num">{ev.event_day || '—'}</div>
+                  </div>
+                  <div class="mini-info">
+                    <div class="mini-title">{ev.title}</div>
+                    <div class="mini-sub">
+                      {ev.zone || ev.location || 'Denver'} · {going} going · {priceLabel(ev)}
+                    </div>
+                    {eventMatchesUser(ev.event_type) && <span class="mini-match">✨ For you</span>}
+                    {isHotEvent(ev) && <span class="mini-hot">🔥 Filling up</span>}
+                  </div>
+                  <div class="mini-emoji">{typeEmoji[ev.event_type] || '📅'}</div>
+                </a>
+              );
+            })}
+          </div>
+        )}
+
+        <!-- SUGGEST CTA -->
+        <div class="mag-suggest">
+          <div class="mag-suggest-icon">💡</div>
+          <div class="mag-suggest-text">
+            <strong>Got an idea for an event?</strong>
+            <span>Suggest something and let the community vote on it.</span>
+          </div>
+          {isLoggedIn ? (
+            <button class="mag-suggest-btn" id="suggestCta">Suggest →</button>
+          ) : (
+            <a href="/login?mode=join" class="mag-suggest-btn">Join Free →</a>
+          )}
+        </div>
       </div>
     )}
 
-    <div class="ev-discord">
-      <span class="ev-discord-icon">💬</span>
-      <div class="ev-discord-text">
+    <!-- DISCORD CTA -->
+    <div class="mag-discord">
+      <span class="mag-discord-icon">💬</span>
+      <div class="mag-discord-text">
         <strong>Plans happen in Discord first</strong>
         <span>88 locals and growing</span>
       </div>
-      <a href="https://discord.gg/S8SFNkdSgK" class="ev-discord-btn" target="_blank" rel="noopener">Join →</a>
+      <a href="https://discord.gg/S8SFNkdSgK" class="mag-discord-btn" target="_blank" rel="noopener">Join →</a>
     </div>
   </div>
 
@@ -241,12 +364,10 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 
     <div class="wiz-container">
       <div class="wiz-card">
-        <!-- Progress bar -->
         <div class="wiz-progress">
           <div class="wiz-progress-fill" id="wizProgress" style="width:20%;"></div>
         </div>
 
-        <!-- Step 1: Type + Name -->
         <div class="wiz-step" id="wizStep1">
           <div class="wiz-step-icon">💡</div>
           <div class="wiz-num">Step 1 of 4</div>
@@ -278,7 +399,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
           <div class="wiz-err" id="wizErr1"></div>
         </div>
 
-        <!-- Step 2: When & Where -->
         <div class="wiz-step" id="wizStep2" style="display:none;">
           <div class="wiz-step-icon">📍</div>
           <div class="wiz-num">Step 2 of 4</div>
@@ -311,7 +431,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
           <button class="wiz-next" id="wizNext2">Next →</button>
         </div>
 
-        <!-- Step 3: Budget & Group Size -->
         <div class="wiz-step" id="wizStep3" style="display:none;">
           <div class="wiz-step-icon">👥</div>
           <div class="wiz-num">Step 3 of 4</div>
@@ -335,7 +454,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
           <button class="wiz-next" id="wizNext3">Next →</button>
         </div>
 
-        <!-- Step 4: Description + Submit -->
         <div class="wiz-step" id="wizStep4" style="display:none;">
           <div class="wiz-step-icon">✍️</div>
           <div class="wiz-num">Step 4 of 4</div>
@@ -352,7 +470,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
           <div class="wiz-err" id="wizErr4"></div>
         </div>
 
-        <!-- Step 5: Done -->
         <div class="wiz-step wiz-done" id="wizStep5" style="display:none;">
           <div class="wiz-done-icon">🎉</div>
           <h2 class="wiz-q" id="wizDoneTitle">Submitted!</h2>
@@ -369,13 +486,261 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 </div>
 
 <style is:inline>
-  .ev-page { max-width: 900px; margin: 0 auto; padding: 0 32px 40px; }
-  .ev-header { padding: 32px 0 16px; }
-  .ev-h1 { font-family: 'Outfit', sans-serif; font-size: clamp(24px, 4vw, 32px); font-weight: 800; letter-spacing: -0.02em; color: #111827; margin-bottom: 4px; }
-  .ev-sub { font-size: 13px; color: #6B7280; }
-  .ev-h1-accent { background: linear-gradient(135deg, #7C3AED, #EC4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  /* ═══ PAGE ═══ */
+  .ev-page { max-width: 640px; margin: 0 auto; padding: 0 20px 40px; }
 
-  /* ── Floating Action Button ── */
+  .path { animation: fadeUp .3s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .path-back {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
+    color: #6B7280; background: none; border: none; cursor: pointer;
+    padding: 8px 0; margin-bottom: 4px; transition: color .15s;
+  }
+  .path-back:hover { color: #111827; }
+
+  /* ═══ HERO ═══ */
+  .mag-hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d1b4e 100%);
+    border-radius: 24px; padding: 32px 24px 28px; margin-bottom: 20px;
+    position: relative; overflow: hidden; margin-top: 20px;
+  }
+  .mag-hero-glow {
+    position: absolute; top: -60px; right: -60px;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,58,237,0.35), transparent 70%);
+    pointer-events: none;
+  }
+  .mag-hero-content { position: relative; z-index: 1; }
+  .mag-greeting {
+    font-family: 'Outfit', sans-serif; font-size: 14px; color: rgba(255,255,255,0.5);
+    font-weight: 500; margin-bottom: 6px;
+  }
+  .mag-headline {
+    font-family: 'Outfit', sans-serif; font-size: clamp(22px, 5vw, 28px);
+    font-weight: 900; color: #fff; line-height: 1.2; margin-bottom: 14px;
+  }
+  .mag-week-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 7px 16px; border-radius: 50px;
+    color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+  }
+  .mag-week-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #34D399; animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
+  /* ═══ FILTER CHIPS ═══ */
+  .filters-wrap { position: relative; margin-bottom: 24px; }
+  .filters {
+    display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 12px;
+    scrollbar-width: none; -ms-overflow-style: none;
+    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+  }
+  .filters::-webkit-scrollbar { display: none; }
+  .filter-fade-r {
+    position: absolute; right: 0; top: 0; bottom: 12px; width: 48px;
+    background: linear-gradient(to right, transparent, #FFF5F0);
+    pointer-events: none;
+  }
+  .fpill {
+    display: flex; align-items: center; gap: 5px;
+    padding: 8px 14px; border-radius: 50px;
+    background: #fff; border: 1.5px solid #E5E7EB;
+    color: #6B7280; font-family: 'Outfit', sans-serif;
+    cursor: pointer; transition: all .2s; white-space: nowrap; flex-shrink: 0;
+  }
+  .fpill-emoji { font-size: 14px; line-height: 1; }
+  .fpill-label { font-size: 12px; font-weight: 700; text-transform: capitalize; }
+  .fpill:hover {
+    border-color: var(--pill-accent, #7C3AED);
+    background: var(--pill-bg, rgba(124,58,237,0.04));
+    color: var(--pill-text, #7C3AED);
+  }
+  .fpill.active {
+    background: var(--pill-bg, rgba(124,58,237,0.08));
+    color: var(--pill-text, #7C3AED);
+    border-color: var(--pill-accent, #7C3AED);
+  }
+  .fpill[data-type="all"] { --pill-accent: #7C3AED; --pill-bg: rgba(124,58,237,0.08); --pill-text: #7C3AED; }
+  .fpill-foryou {
+    background: linear-gradient(135deg, #FCE7F3 0%, #EEF2FF 50%, #ECFDF5 100%);
+    border-color: #D8B4FE;
+  }
+  .fpill-foryou .fpill-label { background: linear-gradient(135deg, #EC4899, #7C3AED); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .fpill-foryou.active { border-color: #7C3AED; }
+
+  /* ═══ FEATURED CARD ═══ */
+  .feat {
+    display: block; background: #fff; border-radius: 20px;
+    overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    border: 1px solid #E5E7EB; text-decoration: none;
+    transition: all .25s; margin-bottom: 20px;
+  }
+  .feat:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.12); }
+  .feat-img {
+    height: 180px; background-size: cover; background-position: center;
+    position: relative; display: flex; align-items: flex-end;
+  }
+  .feat-img-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(transparent 30%, rgba(0,0,0,0.55));
+  }
+  .feat-badge {
+    position: absolute; top: 14px; left: 14px; z-index: 2;
+    background: linear-gradient(135deg, #7C3AED, #EC4899);
+    color: #fff; font-size: 11px; font-weight: 800; padding: 6px 14px;
+    border-radius: 50px; font-family: 'Outfit', sans-serif;
+    letter-spacing: 0.3px; text-transform: uppercase;
+    box-shadow: 0 4px 12px rgba(124,58,237,0.3);
+  }
+  .feat-match {
+    position: absolute; top: 14px; right: 14px; z-index: 2;
+    background: rgba(255,255,255,0.95); color: #7C3AED;
+    font-size: 10px; font-weight: 800; padding: 5px 12px;
+    border-radius: 50px; font-family: 'Outfit', sans-serif;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .feat-body { padding: 20px; }
+  .feat-tag {
+    display: inline-block; padding: 4px 12px; border-radius: 50px;
+    font-size: 11px; font-weight: 700; margin-bottom: 10px;
+    text-transform: capitalize; font-family: 'Outfit', sans-serif;
+  }
+  .feat-title {
+    font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 900;
+    color: #111827; margin-bottom: 10px; line-height: 1.2;
+  }
+  .feat-meta {
+    display: flex; flex-wrap: wrap; gap: 12px; color: #6B7280;
+    font-size: 13px; margin-bottom: 12px;
+  }
+  .feat-meta span { display: flex; align-items: center; gap: 4px; }
+  .feat-desc { font-size: 13px; color: #6B7280; line-height: 1.6; margin-bottom: 16px; }
+  .feat-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 16px; border-top: 1px solid #F3F4F6;
+  }
+  .feat-going { display: flex; align-items: center; gap: 10px; }
+  .feat-faces { display: flex; }
+  .feat-face {
+    width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff;
+    margin-left: -8px; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff; position: relative;
+  }
+  .feat-face:first-child { margin-left: 0; }
+  .feat-going-text { font-size: 12px; color: #6B7280; }
+  .feat-going-text strong { color: #10B981; }
+  .feat-rsvp-btn {
+    background: #7C3AED; color: #fff; padding: 10px 22px;
+    border-radius: 50px; font-size: 13px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; transition: all .2s;
+    box-shadow: 0 4px 12px rgba(124,58,237,0.2);
+  }
+  .feat:hover .feat-rsvp-btn { box-shadow: 0 6px 20px rgba(124,58,237,0.35); }
+
+  /* ═══ ALSO THIS WEEK / COMING UP ═══ */
+  .also-section { margin-bottom: 24px; }
+  .also-label {
+    font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800;
+    color: #111827; margin-bottom: 12px;
+  }
+  .mini {
+    display: flex; gap: 14px; padding: 16px; background: #fff;
+    border-radius: 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border: 1px solid #F3F4F6; align-items: center; text-decoration: none;
+    transition: all .2s;
+  }
+  .mini:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); border-color: #E5E7EB; }
+  .mini-date {
+    min-width: 52px; text-align: center; padding: 8px 4px;
+    background: #F9FAFB; border-radius: 12px; flex-shrink: 0;
+  }
+  .mini-day-name {
+    font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .mini-day-num {
+    font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 900;
+    color: #111827; line-height: 1.1;
+  }
+  .mini-info { flex: 1; min-width: 0; }
+  .mini-title {
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+    color: #111827; margin-bottom: 3px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .mini-sub { font-size: 12px; color: #9CA3AF; }
+  .mini-match {
+    font-size: 10px; font-weight: 700; color: #7C3AED;
+    background: #F3EEFF; padding: 2px 8px; border-radius: 50px;
+    display: inline-block; margin-top: 4px;
+  }
+  .mini-hot {
+    font-size: 10px; font-weight: 700; color: #DC2626;
+    background: #FEF2F2; padding: 2px 8px; border-radius: 50px;
+    display: inline-block; margin-top: 4px;
+  }
+  .mini-emoji { font-size: 24px; flex-shrink: 0; }
+
+  /* ═══ SUGGEST CTA ═══ */
+  .mag-suggest {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 20px; border-radius: 16px;
+    background: linear-gradient(135deg, #F3EEFF 0%, #FDF2F8 100%);
+    border: 1px solid #E9D5FF; margin-bottom: 20px;
+  }
+  .mag-suggest-icon { font-size: 24px; flex-shrink: 0; }
+  .mag-suggest-text { flex: 1; }
+  .mag-suggest-text strong { display: block; font-size: 13px; color: #1a1a2e; font-family: 'Outfit', sans-serif; }
+  .mag-suggest-text span { font-size: 12px; color: #6B7280; }
+  .mag-suggest-btn {
+    padding: 8px 18px; background: #7C3AED; color: #fff; border: none;
+    border-radius: 50px; font-size: 12px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; cursor: pointer; flex-shrink: 0;
+    text-decoration: none; transition: all .2s;
+  }
+  .mag-suggest-btn:hover { opacity: .9; }
+
+  /* ═══ DISCORD CTA ═══ */
+  .mag-discord {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 22px; border-radius: 16px;
+    background: rgba(124,58,237,0.04); border: 1px solid rgba(124,58,237,0.1);
+    margin-bottom: 20px;
+  }
+  .mag-discord-icon { font-size: 24px; flex-shrink: 0; }
+  .mag-discord-text { flex: 1; }
+  .mag-discord-text strong { display: block; font-size: 13px; color: #111827; }
+  .mag-discord-text span { font-size: 11px; color: #6B7280; }
+  .mag-discord-btn {
+    padding: 8px 18px; background: #7C3AED; color: #fff;
+    border-radius: 50px; font-size: 12px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; flex-shrink: 0; text-decoration: none;
+  }
+
+  /* ═══ EMPTY STATE ═══ */
+  .mag-empty {
+    text-align: center; padding: 48px 24px;
+    background: #fff; border: 2px dashed #E5E7EB; border-radius: 20px;
+    margin-bottom: 24px;
+  }
+  .mag-empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .mag-empty-title { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800; color: #111827; margin-bottom: 6px; }
+  .mag-empty-sub { font-size: 13px; color: #6B7280; margin-bottom: 20px; line-height: 1.5; max-width: 320px; margin-left: auto; margin-right: auto; }
+  .mag-empty-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .mag-empty-btn {
+    padding: 12px 24px; background: #1a1a2e; color: #fff; border: none;
+    border-radius: 50px; font-size: 13px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; cursor: pointer; text-decoration: none;
+  }
+  .mag-empty-btn-alt { background: #fff; color: #6B7280; border: 1.5px solid #E5E7EB; }
+
+  /* ═══ FAB ═══ */
   .ev-fab {
     position: fixed; bottom: 90px; right: 24px; z-index: 50;
     display: flex; align-items: center; gap: 8px;
@@ -391,127 +756,14 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   .ev-fab-icon { font-size: 20px; font-weight: 300; line-height: 1; }
   .ev-fab-label { letter-spacing: 0.02em; }
 
-  /* ── Paths (fade in) ── */
-  .path { animation: fadeUp .3s ease; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-  .path-back {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
-    color: #6B7280; background: none; border: none; cursor: pointer;
-    padding: 8px 0; margin-bottom: 4px; transition: color .15s;
-  }
-  .path-back:hover { color: #111827; }
-
-  /* ── Browse events — scrollable filter strip ── */
-  .filters-wrap {
-    position: relative; margin-bottom: 24px;
-  }
-  .filters {
-    display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 12px;
-    scrollbar-width: none; -ms-overflow-style: none;
-    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
-  }
-  .filters::-webkit-scrollbar { display: none; }
-  .filter-fade-r {
-    position: absolute; right: 0; top: 0; bottom: 12px; width: 48px;
-    background: linear-gradient(to right, transparent, #FFF5F0);
-    pointer-events: none; border-radius: 0 0 12px 0;
-  }
-  .fpill {
-    display: flex; align-items: center; gap: 6px;
-    padding: 10px 18px; border-radius: 50px;
-    background: #fff; border: 2px solid #E5E7EB;
-    color: #6B7280; font-family: 'Outfit', sans-serif;
-    cursor: pointer; transition: all .2s; white-space: nowrap; flex-shrink: 0;
-  }
-  .fpill-emoji { font-size: 16px; line-height: 1; }
-  .fpill-label { font-size: 13px; font-weight: 700; text-transform: capitalize; }
-  .fpill:hover {
-    border-color: var(--pill-accent, #7C3AED);
-    background: var(--pill-bg, rgba(124,58,237,0.04));
-    color: var(--pill-text, #7C3AED);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-  }
-  .fpill.active {
-    background: var(--pill-bg, rgba(124,58,237,0.08));
-    color: var(--pill-text, #7C3AED);
-    border-color: var(--pill-accent, #7C3AED);
-    box-shadow: 0 2px 10px color-mix(in srgb, var(--pill-accent, #7C3AED) 20%, transparent);
-  }
-  .fpill.active .fpill-emoji { transform: scale(1.15); }
-  /* "All" pill uses purple */
-  .fpill[data-type="all"] { --pill-accent: #7C3AED; --pill-bg: rgba(124,58,237,0.08); --pill-text: #7C3AED; }
-  /* "For You" pill — special gradient border */
-  .fpill-foryou {
-    background: linear-gradient(135deg, #FCE7F3 0%, #EEF2FF 50%, #ECFDF5 100%);
-    border-color: #D8B4FE;
-  }
-  .fpill-foryou .fpill-label { background: linear-gradient(135deg, #EC4899, #7C3AED); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-  .fpill-foryou:hover { border-color: #A78BFA; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(124,58,237,0.15); }
-  .fpill-foryou.active { border-color: #7C3AED; box-shadow: 0 4px 16px rgba(124,58,237,0.2); }
-
-  .ev-empty {
-    text-align: center; padding: 56px 20px;
-    background: #F8F9FB; border: 1px solid #E5E7EB; border-radius: 20px;
-  }
-  .ev-empty-icon { font-size: 40px; margin-bottom: 14px; }
-  .ev-empty h2 { font-family: 'Outfit', sans-serif; font-size: 22px; color: #111827; margin-bottom: 6px; font-weight: 700; }
-  .ev-empty p { font-size: 13px; color: #6B7280; margin-bottom: 20px; }
-  .ev-empty-btn { display: inline-block; padding: 12px 28px; background: #7C3AED; color: #fff; border-radius: 50px; font-size: 13px; font-weight: 700; font-family: 'Outfit', sans-serif; }
-
-  .ev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 28px; }
-
-  .ec {
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 16px;
-    overflow: hidden; transition: all .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    text-decoration: none;
-  }
-  .ec:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-color: #D1D5DB; }
-  .ec-img { position: relative; height: 120px; background-size: cover; background-position: center; }
-  .ec-img-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.35) 100%); }
-  .ec-img .ec-date { position: absolute; top: 10px; right: 10px; text-align: center; padding: 6px 10px; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
-  .ec-img .hot-tag { position: absolute; top: 10px; left: 10px; }
-  .ec-head { padding: 12px 18px 10px; border-bottom: 1px solid #E5E7EB; }
-  .ec-month { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #7C3AED; letter-spacing: .06em; }
-  .ec-day { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 900; color: #111827; line-height: 1; }
-  .ec-tag { display: inline-block; padding: 3px 10px; border-radius: 50px; font-size: 9px; font-weight: 700; background: #EEF2FF; color: #4338CA; margin-bottom: 8px; text-transform: capitalize; }
-  .ec-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 15px; color: #111827; margin-bottom: 3px; }
-  .ec-loc { font-size: 11px; color: #6B7280; }
-  .ec-body { padding: 14px 18px; }
-  .ec-meta { display: flex; justify-content: space-between; font-size: 11px; color: #9CA3AF; margin-bottom: 8px; }
-  .ec-meta strong { color: #10B981; }
-  .ec-att { margin-bottom: 10px; }
-  .ec-att-text { font-size: 10px; color: #6B7280; }
-  .ec-att-text strong { color: #10B981; }
-  .ec-rsvp-row {
-    width: 100%; padding: 9px; border-radius: 12px; text-align: center;
-    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700;
-    background: #7C3AED; color: #fff; transition: all .2s;
-  }
-  .ec:hover .ec-rsvp-row { box-shadow: 0 4px 12px color-mix(in srgb, var(--card-accent, #7C3AED) 25%, transparent); }
-  .ec-hot { border: 2px solid rgba(220,38,38,0.15); }
-  .ec-hot .ec-head { background: #FEF2F2; }
-  .hot-tag { padding: 3px 10px; border-radius: 50px; background: #FEF2F2; color: #DC2626; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
-  .match-tag { position: absolute; top: 10px; left: 10px; padding: 3px 10px; border-radius: 50px; background: rgba(124,58,237,0.9); color: #fff; font-size: 9px; font-weight: 800; font-family: 'Outfit', sans-serif; letter-spacing: .04em; z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
-
-  .ev-discord { display: flex; align-items: center; gap: 14px; padding: 18px 22px; border-radius: 16px; background: rgba(124,58,237,0.04); border: 1px solid rgba(124,58,237,0.1); }
-  .ev-discord-icon { font-size: 24px; flex-shrink: 0; }
-  .ev-discord-text { flex: 1; }
-  .ev-discord-text strong { display: block; font-size: 13px; color: #111827; }
-  .ev-discord-text span { font-size: 11px; color: #6B7280; }
-  .ev-discord-btn { padding: 8px 18px; background: #7C3AED; color: #fff; border-radius: 50px; font-size: 12px; font-weight: 700; font-family: 'Outfit', sans-serif; flex-shrink: 0; }
-
-  /* ── Wizard ── */
+  /* ═══ WIZARD ═══ */
   .wiz-container { max-width: 520px; margin: 32px auto 0; }
   .wiz-card {
     background: #fff; border: 1px solid #E5E7EB; border-radius: 24px;
     padding: 0; overflow: hidden;
     box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
   }
-  .wiz-progress {
-    height: 5px; background: #F3F4F6; width: 100%;
-  }
+  .wiz-progress { height: 5px; background: #F3F4F6; width: 100%; }
   .wiz-progress-fill {
     height: 100%; background: linear-gradient(90deg, #7C3AED, #3B82F6);
     border-radius: 0 3px 3px 0; transition: width .4s ease;
@@ -525,7 +777,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     border-radius: 50px;
   }
   .wiz-q { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800; color: #111827; margin-bottom: 6px; }
-  .wiz-q .wiz-opt { font-weight: 400; color: #9CA3AF; font-size: 15px; }
   .wiz-hint { font-size: 13px; color: #6B7280; margin-bottom: 20px; }
   .wiz-select {
     width: 100%; padding: 14px 20px; background: #F8F9FB; border: 2px solid #E5E7EB;
@@ -536,23 +787,18 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     background-repeat: no-repeat; background-position: right 16px center; background-size: 16px;
   }
   .wiz-select:focus { border-color: #7C3AED; background-color: #fff; }
-  .wiz-suggestions {
-    display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0;
-  }
+  .wiz-suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
   .wiz-sug-chip {
     padding: 9px 16px; background: #F8F9FB; border: 1.5px solid #E5E7EB;
     border-radius: 50px; font-size: 13px; font-weight: 600; color: #374151;
     font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
   }
-  .wiz-sug-chip:hover { border-color: #7C3AED; color: #7C3AED; background: rgba(124,58,237,0.04); transform: translateY(-1px); }
+  .wiz-sug-chip:hover { border-color: #7C3AED; color: #7C3AED; background: rgba(124,58,237,0.04); }
   .wiz-sug-chip.selected { border-color: #7C3AED; background: rgba(124,58,237,0.08); color: #7C3AED; }
-  .wiz-subcats {
-    display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px;
-  }
+  .wiz-subcats { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
   .wiz-subcat-label {
     width: 100%; font-size: 11px; font-weight: 700; color: #9CA3AF;
-    font-family: 'Outfit', sans-serif; text-transform: uppercase;
-    letter-spacing: .06em; margin-bottom: 2px;
+    font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px;
   }
   .wiz-subcat {
     padding: 7px 14px; background: #F8F9FB; border: 1.5px solid #E5E7EB;
@@ -581,8 +827,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   .wiz-next, .wiz-submit {
     margin-top: 18px; padding: 14px 32px; background: #7C3AED; color: #fff;
     border: none; border-radius: 50px; font-size: 15px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .2s;
-    width: 100%;
+    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .2s; width: 100%;
   }
   .wiz-next:hover, .wiz-submit:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(124,58,237,0.25); }
   .wiz-next:disabled, .wiz-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -593,60 +838,44 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
   .wiz-ghost:hover { color: #111827; border-color: #D1D5DB; }
   .wiz-err { font-size: 12px; font-weight: 600; color: #DC2626; margin-top: 8px; min-height: 18px; font-family: 'Outfit', sans-serif; }
-
-  /* Type grid */
   .wiz-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
-  .wiz-type-btn {
-    padding: 14px 12px; background: #F8F9FB; border: 2px solid #E5E7EB;
-    border-radius: 14px; font-size: 13px; font-weight: 600; color: #374151;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
-    text-align: center;
-  }
-  .wiz-type-btn:hover { border-color: #D1D5DB; background: #fff; transform: translateY(-1px); }
-  .wiz-type-btn.selected { border-color: #7C3AED; background: rgba(124,58,237,0.06); color: #7C3AED; box-shadow: 0 2px 8px rgba(124,58,237,0.12); }
-
-  /* Pill select buttons (when/where/budget/size) */
   .wiz-label {
     display: block; font-size: 12px; font-weight: 700; color: #6B7280;
-    font-family: 'Outfit', sans-serif; text-transform: uppercase;
-    letter-spacing: .06em; margin-bottom: 10px;
+    font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px;
   }
   .wiz-pill-btn {
     padding: 11px 16px; background: #F8F9FB; border: 2px solid #E5E7EB;
     border-radius: 50px; font-size: 13px; font-weight: 600; color: #374151;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
-    text-align: center;
+    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s; text-align: center;
   }
   .wiz-pill-btn:hover { border-color: #D1D5DB; background: #fff; }
   .wiz-pill-btn.selected { border-color: #7C3AED; background: rgba(124,58,237,0.06); color: #7C3AED; }
   .wiz-when-grid, .wiz-budget-grid, .wiz-size-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
   .wiz-where-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
-
-  /* Mode toggle */
-  .wiz-mode-toggle {
-    display: flex; gap: 8px; margin: 16px 0 4px;
-  }
+  .wiz-mode-toggle { display: flex; gap: 8px; margin: 16px 0 4px; }
   .wiz-mode-btn {
     flex: 1; padding: 12px 10px; border-radius: 12px;
     background: #F8F9FB; border: 2px solid #E5E7EB;
     font-size: 13px; font-weight: 700; color: #6B7280;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
-    text-align: center;
+    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s; text-align: center;
   }
   .wiz-mode-btn:hover { border-color: #D1D5DB; color: #374151; }
   .wiz-mode-btn.selected[data-mode="live"] { border-color: #10B981; background: rgba(16,185,129,0.06); color: #059669; }
   .wiz-mode-btn.selected[data-mode="suggest"] { border-color: #7C3AED; background: rgba(124,58,237,0.06); color: #7C3AED; }
-
-  /* Done step */
   .wiz-done { text-align: center; padding: 32px 32px 28px; }
   .wiz-done-icon { font-size: 52px; margin-bottom: 12px; }
   .wiz-done-btns { display: flex; flex-direction: column; gap: 0; }
 
+  /* ═══ RESPONSIVE ═══ */
   @media (max-width: 768px) {
-    .ev-page { padding: 0 20px 40px; }
-    .ev-grid { grid-template-columns: 1fr; }
-    .wiz-type-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+    .ev-page { padding: 0 16px 40px; }
+    .mag-hero { padding: 24px 20px 22px; border-radius: 20px; }
+    .feat-img { height: 150px; }
+    .feat-body { padding: 16px; }
+    .feat-title { font-size: 19px; }
+    .feat-meta { font-size: 12px; gap: 8px; }
     .ev-fab { bottom: 80px; right: 16px; padding: 12px 18px; font-size: 13px; }
+    .wiz-step { padding: 24px 20px 22px; }
   }
 </style>
 
@@ -659,29 +888,40 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   function showView(view) {
     browsePath.style.display = 'none';
     suggestPath.style.display = 'none';
-    fab.style.display = view === 'browse' ? '' : 'none';
+    if (fab) fab.style.display = view === 'browse' ? '' : 'none';
     if (view === 'browse') browsePath.style.display = '';
     if (view === 'suggest') suggestPath.style.display = '';
     window.scrollTo(0, 0);
   }
 
-  fab.addEventListener('click', function() { showView('suggest'); });
+  if (fab) fab.addEventListener('click', function() { showView('suggest'); });
   document.getElementById('suggestBack').addEventListener('click', function() { showView('browse'); resetWizard(); });
 
+  // Suggest CTA button
+  var suggestCta = document.getElementById('suggestCta');
+  if (suggestCta) suggestCta.addEventListener('click', function() { showView('suggest'); });
+  var emptyCreate = document.getElementById('emptyCreate');
+  if (emptyCreate) emptyCreate.addEventListener('click', function() { showView('suggest'); });
+
   // ── Filter pills ──
-  var matchTypes = [];
-  document.querySelectorAll('.match-tag').forEach(function(tag) {
-    var card = tag.closest('.ec');
-    if (card) matchTypes.push(card);
-  });
   document.querySelectorAll('.fpill').forEach(function(pill) {
     pill.addEventListener('click', function() {
       document.querySelectorAll('.fpill').forEach(function(p) { p.classList.remove('active'); });
       this.classList.add('active');
       var type = this.getAttribute('data-type');
-      document.querySelectorAll('.ec').forEach(function(card) {
+
+      // Filter featured card
+      var featCard = document.querySelector('.feat');
+      if (featCard) {
+        if (type === 'all') { featCard.style.display = ''; }
+        else if (type === 'foryou') { featCard.style.display = featCard.querySelector('.feat-match') ? '' : 'none'; }
+        else { featCard.style.display = featCard.getAttribute('data-type') === type ? '' : 'none'; }
+      }
+
+      // Filter mini cards
+      document.querySelectorAll('.mini').forEach(function(card) {
         if (type === 'all') { card.style.display = ''; }
-        else if (type === 'foryou') { card.style.display = card.querySelector('.match-tag') ? '' : 'none'; }
+        else if (type === 'foryou') { card.style.display = card.querySelector('.mini-match') ? '' : 'none'; }
         else { card.style.display = card.getAttribute('data-type') === type ? '' : 'none'; }
       });
     });
@@ -689,10 +929,9 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 
   // ── Wizard ──
   var TOTAL_STEPS = 4;
-  var wizMode = isLoggedIn ? 'live' : 'suggest'; // 'live' = create event, 'suggest' = suggestion
+  var wizMode = isLoggedIn ? 'live' : 'suggest';
   var wizData = { title: '', type: 'social', subcat: '', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '' };
 
-  // Sub-categories by type (only types that benefit from them)
   var subcategories = {
     dinner:        ['Mexican', 'Italian', 'Sushi', 'Ramen', 'BBQ', 'Thai', 'Indian', 'Korean', 'Brunch', 'Steakhouse'],
     outdoor:       ['Hiking', 'Biking', 'Kayaking', 'Trail Run', 'Park Hangout', 'Fishing'],
@@ -729,7 +968,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     });
   }
 
-  // Auto-suggestion names by type
   var suggestions = {
     dinner:        ['Taco Tuesday', 'Ramen Night', 'Sushi Hangout', 'Pizza Party', 'BBQ Cookout'],
     brewery:       ['Brewery Crawl', 'Taproom Hangout', 'Craft Beer Night', 'New Brewery Tour'],
@@ -750,7 +988,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     other:         ['Hangout', 'Meetup', 'Get-Together', 'Group Outing']
   };
 
-  // Venue suggestions by type
   var venueSuggestions = {
     dinner:        ['Guard & Grace', 'Uncle', 'Tavernetta', 'El Five', 'Hop Alley', 'Safta'],
     brewery:       ['Ratio Beerworks', 'Great Divide', 'Odell Brewing', 'Cerebral Brewing', 'Our Mutual Friend'],
@@ -771,7 +1008,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     other:         []
   };
 
-  // Venue label by type
   var venueLabels = {
     dinner: 'Which restaurant?', brewery: 'Which brewery?', casino: 'Which casino?',
     coffee: 'Which café?', music: 'Which venue?', bowling: 'Which alley?',
@@ -794,7 +1030,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       });
       container.appendChild(chip);
     });
-    // "Other" chip — clears input and focuses it
     var other = document.createElement('button');
     other.type = 'button';
     other.className = 'wiz-sug-chip wiz-sug-other';
@@ -826,7 +1061,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       });
       container.appendChild(chip);
     });
-    // "Other" chip — clears input and focuses it
     var other = document.createElement('button');
     other.type = 'button';
     other.className = 'wiz-sug-chip wiz-sug-other';
@@ -859,10 +1093,11 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     document.getElementById('wizLink').value = '';
     document.querySelectorAll('.wiz-pill-btn, .wiz-sug-chip, .wiz-subcat').forEach(function(b) { b.classList.remove('selected'); });
     document.querySelectorAll('.wiz-err').forEach(function(e) { e.textContent = ''; });
-    // Reset mode toggle
     if (isLoggedIn) {
-      document.getElementById('wizModeLive').classList.add('selected');
-      document.getElementById('wizModeSuggest').classList.remove('selected');
+      var ml = document.getElementById('wizModeLive');
+      var ms = document.getElementById('wizModeSuggest');
+      if (ml) ml.classList.add('selected');
+      if (ms) ms.classList.remove('selected');
       document.getElementById('wizSubmit').textContent = 'Create Event';
     }
     renderSubcats('social');
@@ -871,12 +1106,10 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     showStep(1);
   }
 
-  // Render initial suggestions
   renderSubcats('social');
   renderSuggestions('social');
   renderVenueSuggestions('social');
 
-  // Dropdown change → update subcats + suggestions + venue suggestions
   document.getElementById('wizType').addEventListener('change', function() {
     wizData.type = this.value;
     wizData.subcat = '';
@@ -886,7 +1119,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     renderVenueSuggestions(this.value);
   });
 
-  // Clear suggestion selection when user types manually
   document.getElementById('wizTitle').addEventListener('input', function() {
     document.querySelectorAll('#wizSuggestions .wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
   });
@@ -894,7 +1126,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     document.querySelectorAll('#wizVenueSuggestions .wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
   });
 
-  // Step 1 → 2 (also update venue suggestions for selected type)
   document.getElementById('wizNext1').addEventListener('click', function() {
     var val = document.getElementById('wizTitle').value.trim();
     if (!val) { document.getElementById('wizErr1').textContent = 'Pick a suggestion or type a name.'; return; }
@@ -909,7 +1140,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     if (e.key === 'Enter') { e.preventDefault(); document.getElementById('wizNext1').click(); }
   });
 
-  // Pill buttons (date, location, budget, group_size)
   document.querySelectorAll('.wiz-pill-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var field = btn.getAttribute('data-field');
@@ -919,17 +1149,14 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     });
   });
 
-  // Step 2 → 3 (capture venue + link)
   document.getElementById('wizNext2').addEventListener('click', function() {
     wizData.venue = document.getElementById('wizVenue').value.trim();
     wizData.link = document.getElementById('wizLink').value.trim();
     showStep(3);
   });
 
-  // Step 3 → 4
   document.getElementById('wizNext3').addEventListener('click', function() { showStep(4); });
 
-  // Mode toggle (live vs suggest) — only exists for logged-in users
   if (isLoggedIn) {
     document.querySelectorAll('.wiz-mode-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
@@ -941,7 +1168,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     });
   }
 
-  // Step 4 → submit
   document.getElementById('wizSubmit').addEventListener('click', function() {
     var btn = this;
     wizData.description = document.getElementById('wizDesc').value.trim();
@@ -959,7 +1185,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       btn.disabled = false;
       btn.textContent = wizMode === 'live' ? 'Create Event' : 'Submit Suggestion';
       if (data.ok) {
-        // Update done screen messaging
         var doneTitle = document.getElementById('wizDoneTitle');
         var doneHint = document.getElementById('wizDoneHint');
         if (wizMode === 'live') {
@@ -980,7 +1205,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     });
   });
 
-  // Done → another / browse
   document.getElementById('wizAnother').addEventListener('click', function() { resetWizard(); });
   document.getElementById('wizBrowse').addEventListener('click', function() { showView('browse'); resetWizard(); });
 })();
