@@ -12,7 +12,30 @@ let events: any[] = [];
 let rsvpCounts: Record<number, number> = {};
 try {
   if (db) {
-    events = (await db.prepare("SELECT * FROM events WHERE is_past IS NULL OR is_past=0 ORDER BY id DESC").all())?.results || [];
+    // Get current month/year to filter past events
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-indexed
+    const currentDay = now.getDate();
+    const monthOrder: Record<string,number> = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+
+    const allEvents = (await db.prepare("SELECT * FROM events WHERE is_past IS NULL OR is_past=0 ORDER BY id DESC").all())?.results || [];
+
+    // Filter out past events and sort chronologically
+    events = allEvents.filter((e: any) => {
+      const m = monthOrder[(e.event_month || '').toUpperCase()];
+      const d = parseInt(e.event_day) || 99;
+      if (m === undefined) return true; // keep TBD events but push to end
+      if (m < currentMonth) return false; // past month
+      if (m === currentMonth && d < currentDay) return false; // past day this month
+      return true;
+    }).sort((a: any, b: any) => {
+      const ma = monthOrder[(a.event_month || '').toUpperCase()] ?? 99;
+      const mb = monthOrder[(b.event_month || '').toUpperCase()] ?? 99;
+      if (ma !== mb) return ma - mb;
+      const da = parseInt(a.event_day) || 99;
+      const db2 = parseInt(b.event_day) || 99;
+      return da - db2;
+    });
     const counts = (await db.prepare("SELECT event_id, COUNT(*) as cnt FROM event_rsvps GROUP BY event_id").all())?.results || [];
     counts.forEach((c: any) => { rsvpCounts[c.event_id] = c.cnt; });
   }
@@ -204,11 +227,13 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     </div>
   </div>
 
-  <!-- FAB — floating button to create an event -->
-  <button class="ev-fab" id="fabCreate" title="Submit an Event">
-    <span class="ev-fab-icon">+</span>
-    <span class="ev-fab-label">New Event</span>
-  </button>
+  <!-- FAB — floating button to create an event (logged-in only) -->
+  {isLoggedIn && (
+    <button class="ev-fab" id="fabCreate" title="Submit an Event">
+      <span class="ev-fab-icon">+</span>
+      <span class="ev-fab-label">New Event</span>
+    </button>
+  )}
 
   <!-- ═══ SUGGEST PATH — one-box-at-a-time wizard ═══ -->
   <div id="suggestPath" class="path" style="display:none;">

@@ -227,8 +227,8 @@ if (db && isPastEvent) {
 
       {event.description && <p class="det-desc">{event.description}</p>}
 
-      <!-- Add to Calendar (only shown after RSVP) -->
-      {calDates && (
+      <!-- Add to Calendar (only rendered for logged-in users, shown after RSVP) -->
+      {user && calDates && (
         <div class="det-cal-row" id="cal-row" style={myRsvp ? '' : 'display:none'}>
           <a href={googleCalUrl} target="_blank" rel="noopener" class="det-cal-btn">
             <span class="det-cal-icon">📅</span> Add to Google Calendar

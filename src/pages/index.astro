@@ -9,9 +9,27 @@ let eventCount = 0;
 
 try {
   if (db) {
-    upcomingEvents = (await db.prepare("SELECT * FROM events WHERE is_past IS NULL OR is_past=0 ORDER BY id DESC LIMIT 3").all())?.results || [];
+    // Get upcoming events sorted by date
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentDay = now.getDate();
+    const monthOrder: Record<string,number> = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+    const allEvts = (await db.prepare("SELECT * FROM events WHERE is_past IS NULL OR is_past=0 ORDER BY id DESC").all())?.results || [];
+    upcomingEvents = allEvts.filter((e: any) => {
+      const m = monthOrder[(e.event_month || '').toUpperCase()];
+      const d = parseInt(e.event_day) || 99;
+      if (m === undefined) return false; // hide TBD from homepage
+      if (m < currentMonth) return false;
+      if (m === currentMonth && d < currentDay) return false;
+      return true;
+    }).sort((a: any, b: any) => {
+      const ma = monthOrder[(a.event_month || '').toUpperCase()] ?? 99;
+      const mb = monthOrder[(b.event_month || '').toUpperCase()] ?? 99;
+      if (ma !== mb) return ma - mb;
+      return (parseInt(a.event_day) || 99) - (parseInt(b.event_day) || 99);
+    }).slice(0, 3);
     const mc = await db.prepare("SELECT COUNT(*) as cnt FROM members").first();
-    memberCount = mc?.cnt || 0;
+    memberCount = Math.max(mc?.cnt || 0, 88); // At least show Discord community size
     const ec = await db.prepare("SELECT COUNT(*) as cnt FROM events").first();
     eventCount = ec?.cnt || 0;
     suggestions = (await db.prepare("SELECT * FROM event_suggestions ORDER BY votes DESC LIMIT 4").all())?.results || [];
@@ -78,7 +96,7 @@ const activities = [
 
 <!-- ═══ HERO ═══ -->
 <section class="hero">
-  <div class="hero-badge"><span class="hero-dot"></span> {memberCount || 88} locals and growing</div>
+  <div class="hero-badge"><span class="hero-dot"></span> {memberCount}+ locals and growing</div>
   <h1>Meet your people.<br/><em>Explore your city.</em></h1>
   <p class="hero-sub">Denver Social is a free community where members vote on what happens next. No algorithm. Just locals showing up.</p>
   <div class="hero-ctas">
@@ -122,7 +140,7 @@ const activities = [
 
 <!-- ═══ STATS STRIP ═══ -->
 <div class="stats-strip">
-  <div class="ss-item"><div class="ss-num">{memberCount || '88'}+</div><div class="ss-label">Members</div></div>
+  <div class="ss-item"><div class="ss-num">{memberCount}+</div><div class="ss-label">Members</div></div>
   <div class="ss-item"><div class="ss-num">{eventCount || '12'}</div><div class="ss-label">Events</div></div>
   <div class="ss-item"><div class="ss-num">{suggestions.length || '4'}</div><div class="ss-label">Voted On</div></div>
 </div>
