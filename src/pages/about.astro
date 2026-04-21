@@ -34,12 +34,15 @@ function getInitials(name: string): string {
 
 const faqs = [
   { q:"Wait, this is actually free?", a:"Yep. No catch. No \"premium tier\" coming later. No guy in a suit is going to upsell you. We just like hanging out." },
-  { q:"I don't know anyone — is that weird?", a:"That's literally the point. Most people show up solo. Within 20 minutes you'll forget you came alone. Within 40 minutes you'll have someone's number." },
-  { q:"What if I'm awkward?", a:"Hi, welcome, you'll fit right in. Everyone's a little nervous the first time. It goes away fast because the groups are small and nobody's performing. We're all just winging it." },
-  { q:"What kind of stuff do you do?", a:"Dinners, bowling, hikes, pottery, game nights, food trucks, park hangs, voice chats in Discord at weird hours — we rotate based on what people suggest. If you have an idea, throw it out there." },
-  { q:"How much does stuff cost?", a:"Depends on the event. A lot are free. Dinners are usually $20–35 per person. We always show the price upfront so there's no \"surprise, your share is $80\" energy." },
+  { q:"I don't know anyone — is that weird?", a:"That's literally the point. Most people show up solo. Within 20 minutes you'll forget you came alone. It goes away fast because the groups are small and nobody's performing." },
+  { q:"Is it safe? What about creeps?", a:"We take this seriously. Locations are hidden until you RSVP. Every event has a host who's accountable. We have a zero-tolerance policy for harassment — one report and you're out, no debate. Read our full safety policy at /conduct." },
+  { q:"Is this a dating thing?", a:"No. Friendship only. All genders, all backgrounds, all relationship statuses. If someone makes you uncomfortable, tell the host or message Seth directly. That person won't be back." },
+  { q:"How much does stuff cost?", a:"Depends on the event. A lot are free — hikes, park hangs, coffee walks. Dinners are usually $20–35 per person. Price is always shown upfront so there's no surprises." },
+  { q:"Can I suggest my own event?", a:"Yes! Hit \"Post Event\" on the events page. Your idea goes to moderation and if it's a fit, it goes live. You don't need permission to have a good idea." },
+  { q:"Do I need Discord?", a:"Nope. You can browse events, RSVP, and show up using just the website. Discord is where the community hangs between events — last-minute plans, polls, voice chats. It's fun but not required." },
   { q:"What if I RSVP and can't make it?", a:"Just cancel so someone else can grab the spot. Life happens. Just don't ghost repeatedly or we'll start taking it personally." },
-  { q:"Is this a dating thing?", a:"Nope. Friendship only. All ages, all backgrounds, all relationship statuses. Come to make friends, not to shoot your shot. Save that for Hinge." },
+  { q:"What's the age range?", a:"Most members are mid-20s to mid-30s, but we don't have an age requirement. If you're looking for chill people to do stuff with in Denver, you'll fit in." },
+  { q:"I live in the suburbs — is this just a downtown thing?", a:"Nope. We've got members in Lakewood, Aurora, Golden, Arvada, Littleton — all over. Events happen across the metro. We try to mix up locations so it's not always the same neighborhood." },
 ];
 ---
 <Base title="About">
@@ -169,28 +172,42 @@ const faqs = [
         <div class="about-trust-icon">✓</div>
         <div>
           <strong>Open to everyone</strong>
-          <p>No application, no gatekeeping. If you have a pulse and a semi-decent personality, you're in.</p>
+          <p>No application, no gatekeeping. All ages, backgrounds, and neighborhoods across the Denver metro.</p>
         </div>
       </div>
       <div class="about-trust-item">
         <div class="about-trust-icon">✓</div>
         <div>
           <strong>Intentionally small</strong>
-          <p>6–12 people max. Small enough that you can't hide in the corner pretending to check your phone.</p>
+          <p>6–12 people max. Small enough that you actually talk to people instead of standing in a crowd.</p>
+        </div>
+      </div>
+      <div class="about-trust-item">
+        <div class="about-trust-icon shield">🛡️</div>
+        <div>
+          <strong>Safety first</strong>
+          <p>Locations hidden until RSVP. Zero tolerance for harassment. One report and you're gone. <a href="/conduct" class="about-trust-link">Full safety policy →</a></p>
         </div>
       </div>
       <div class="about-trust-item">
         <div class="about-trust-icon">✓</div>
         <div>
-          <strong>Don't be harmful</strong>
-          <p>That's the only rule. Be cool to people and you're good. Make someone uncomfortable and you're out.</p>
+          <strong>No pressure</strong>
+          <p>Try one event, try ten. No commitment, no guilt. Plenty of sober-friendly events too — not everything's at a bar.</p>
         </div>
       </div>
       <div class="about-trust-item">
         <div class="about-trust-icon">✓</div>
         <div>
-          <strong>At your own risk</strong>
-          <p>Same as any meetup — we organize the events, but everyone's responsible for themselves.</p>
+          <strong>Your privacy matters</strong>
+          <p>Your email is never shown to other members. Only your first name and neighborhood are visible. We don't sell data — we don't even collect much.</p>
+        </div>
+      </div>
+      <div class="about-trust-item">
+        <div class="about-trust-icon">✓</div>
+        <div>
+          <strong>You can host too</strong>
+          <p>Suggest an event idea from the events page. If it's a fit, we'll make it happen. This is your community, not just ours.</p>
         </div>
       </div>
     </div>
@@ -355,8 +372,11 @@ const faqs = [
     background: rgba(16,185,129,0.08); display: flex; align-items: center; justify-content: center;
     color: #10B981; font-size: 11px; font-weight: 700;
   }
+  .about-trust-icon.shield { background: rgba(124,58,237,0.08); font-size: 14px; }
   .about-trust-item strong { display: block; font-family: 'Outfit', sans-serif; font-size: 12px; color: #111827; margin-bottom: 2px; font-weight: 700; }
   .about-trust-item p { font-size: 11px; color: #6B7280; line-height: 1.5; }
+  .about-trust-link { color: #7C3AED; font-weight: 600; text-decoration: none; }
+  .about-trust-link:hover { text-decoration: underline; }
 
   /* ─── FAQ ─── */
   .about-faq { margin-bottom: 36px; }

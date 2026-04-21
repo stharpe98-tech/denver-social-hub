@@ -1,97 +1,310 @@
 ---
 import Base from '../layouts/Base.astro';
 ---
-<Base title="Code of Conduct">
-  <div style="max-width:600px;margin:0 auto;padding:24px 20px">
-    <h1 style="font-size:28px;color:#111827;margin-bottom:8px;font-family:'Outfit',sans-serif;font-weight:900">Code of Conduct</h1>
-    <p style="font-size:14px;color:#6b7a8e;margin-bottom:28px;line-height:1.7">
-      Denver Social exists to help people connect. We take that seriously. Here's how we handle things when they go sideways.
-    </p>
+<Base title="Safety & Code of Conduct">
+<div class="conduct-page">
 
-    <!-- Instant removal -->
-    <div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:16px;padding:20px 24px;margin-bottom:16px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <span style="font-size:20px">🚫</span>
-        <h3 style="font-size:16px;color:#f87171;font-weight:700">Instant removal — no warning</h3>
+  <!-- HERO -->
+  <section class="cond-hero">
+    <div class="cond-tag">Safety & Code of Conduct</div>
+    <h1 class="cond-h1">We take this <em>seriously.</em></h1>
+    <p class="cond-sub">Denver Social exists to help people connect — and that only works if everyone feels safe. This isn't fine print. This is how we actually operate.</p>
+  </section>
+
+  <!-- SAFETY BY DESIGN -->
+  <section class="cond-section">
+    <h2 class="cond-h2">🛡️ Safety is built into the platform</h2>
+    <p class="cond-p">We didn't just write a policy and hope for the best. Safety is built into how the site works:</p>
+    <div class="cond-features">
+      <div class="cond-feature">
+        <strong>Hidden locations</strong>
+        <p>Event addresses are only revealed after you RSVP. No one can just browse locations — you have to commit to showing up.</p>
       </div>
-      <p style="font-size:13px;color:#6b7a8e;margin-bottom:10px">These are zero-tolerance. No second chances, no exceptions.</p>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        {[
-          "Sexual harassment or assault of any kind",
-          "Threatening or intimidating behavior",
-          "Sharing someone's private location outside the group",
-          "Showing up clearly intoxicated and causing problems",
-          "Any behavior that makes someone feel unsafe",
-        ].map(item => (
-          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#9ca3af">
-            <span style="color:#f87171;flex-shrink:0;margin-top:1px">✕</span>
-            {item}
+      <div class="cond-feature">
+        <strong>Every event has a named host</strong>
+        <p>Someone is always accountable. Hosts are visible on the event page. If anything goes wrong, you know exactly who organized it.</p>
+      </div>
+      <div class="cond-feature">
+        <strong>Moderated event submissions</strong>
+        <p>Anyone can suggest an event, but every suggestion is reviewed before it goes live. Nothing sketchy gets through.</p>
+      </div>
+      <div class="cond-feature">
+        <strong>Small groups only</strong>
+        <p>6–12 people max. Small enough that hosts can actually keep an eye on the vibe. Nobody gets lost in a crowd.</p>
+      </div>
+      <div class="cond-feature">
+        <strong>RSVP-gated contact</strong>
+        <p>You can only message a host after RSVPing. No random DMs from strangers who aren't even attending.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WOMEN'S SAFETY -->
+  <section class="cond-section cond-women">
+    <h2 class="cond-h2">For women especially</h2>
+    <p class="cond-p">We know meetups can feel riskier if you're a woman. We've thought about that, and here's what we want you to know:</p>
+    <div class="cond-callout women">
+      <div class="cond-callout-items">
+        <div class="cond-callout-item">
+          <span class="cond-check">✓</span>
+          <div>
+            <strong>This is not a dating group</strong>
+            <p>Friendship only. If someone treats an event like a singles mixer, that's a one-way ticket out. No warnings.</p>
           </div>
-        ))}
-      </div>
-    </div>
-
-    <!-- Warning first -->
-    <div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:16px;padding:20px 24px;margin-bottom:16px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <span style="font-size:20px">⚠️</span>
-        <h3 style="font-size:16px;color:#fbbf24;font-weight:700">Warning first, then removal</h3>
-      </div>
-      <p style="font-size:13px;color:#6b7a8e;margin-bottom:10px">You'll get a heads up. Keep it up and you're out.</p>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        {[
-          "No-showing 3+ times without notice — 4th strike is removal",
-          "Soliciting, MLM pitches, or using events to sell things",
-          "Being consistently rude or dismissive to members",
-          "Repeatedly showing up late without a heads up",
-        ].map(item => (
-          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#9ca3af">
-            <span style="color:#fbbf24;flex-shrink:0;margin-top:1px">!</span>
-            {item}
+        </div>
+        <div class="cond-callout-item">
+          <span class="cond-check">✓</span>
+          <div>
+            <strong>Report anything — even if you're not sure</strong>
+            <p>If someone made you uncomfortable, you don't need to prove it was "bad enough." Tell us. We'd rather hear about a false alarm than miss something real.</p>
           </div>
-        ))}
-      </div>
-    </div>
-
-    <!-- Gentle reminder -->
-    <div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:16px;padding:20px 24px;margin-bottom:28px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <span style="font-size:20px">💬</span>
-        <h3 style="font-size:16px;color:#60a5fa;font-weight:700">Just a friendly reminder</h3>
-      </div>
-      <p style="font-size:13px;color:#6b7a8e;margin-bottom:10px">Not a violation — we get it, life happens.</p>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        {[
-          "First no-show ever — things come up",
-          "Running a little late once in a while",
-          "Being a little awkward at first — we all are",
-        ].map(item => (
-          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#9ca3af">
-            <span style="color:#60a5fa;flex-shrink:0;margin-top:1px">→</span>
-            {item}
+        </div>
+        <div class="cond-callout-item">
+          <span class="cond-check">✓</span>
+          <div>
+            <strong>We believe you</strong>
+            <p>Reports are taken seriously immediately. We don't play devil's advocate or ask what you were wearing. If someone made you feel unsafe, they're gone.</p>
           </div>
-        ))}
+        </div>
+        <div class="cond-callout-item">
+          <span class="cond-check">✓</span>
+          <div>
+            <strong>Your personal info stays private</strong>
+            <p>Other members only see your first name and neighborhood. Your email, phone, and last name are never shared. Exact locations are hidden until you RSVP.</p>
+          </div>
+        </div>
+        <div class="cond-callout-item">
+          <span class="cond-check">✓</span>
+          <div>
+            <strong>Bring a friend if you want</strong>
+            <p>First time and want a +1? That's totally fine. Just RSVP for both. No one will judge you for wanting backup.</p>
+          </div>
+        </div>
+        <div class="cond-callout-item">
+          <span class="cond-check">✓</span>
+          <div>
+            <strong>All events are in public places</strong>
+            <p>Restaurants, parks, bowling alleys, coffee shops. We don't host events at private residences.</p>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <!-- The basics -->
-    <div class="card" style="margin-bottom:16px">
-      <h3 style="font-size:16px;color:#fff;margin-bottom:14px">The basics</h3>
-      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;color:#6b7a8e;line-height:1.7">
-        <p><b style="color:#e8ecf4">Be respectful.</b> Treat everyone the way you'd want to be treated at a friend's dinner table.</p>
-        <p><b style="color:#e8ecf4">Keep locations private.</b> Addresses are only shared with RSVPed members. Don't post them publicly.</p>
-        <p><b style="color:#e8ecf4">No soliciting.</b> This isn't a networking event or MLM opportunity.</p>
+  <!-- ZERO TOLERANCE -->
+  <section class="cond-section">
+    <h2 class="cond-h2">🚫 Zero tolerance — instant removal</h2>
+    <p class="cond-p">These are non-negotiable. No second chances, no "let me explain," no exceptions.</p>
+    <div class="cond-callout red">
+      <div class="cond-list">
+        <div class="cond-list-item red"><span>✕</span> Sexual harassment or unwanted advances of any kind</div>
+        <div class="cond-list-item red"><span>✕</span> Threatening, intimidating, or aggressive behavior</div>
+        <div class="cond-list-item red"><span>✕</span> Following someone after an event or showing up uninvited</div>
+        <div class="cond-list-item red"><span>✕</span> Sharing someone's private info or location outside the group</div>
+        <div class="cond-list-item red"><span>✕</span> Showing up severely intoxicated and making others uncomfortable</div>
+        <div class="cond-list-item red"><span>✕</span> Any behavior that makes someone feel unsafe — if we hear about it, you're done</div>
       </div>
     </div>
+  </section>
 
-    <!-- Reporting -->
-    <div class="card">
-      <h3 style="font-size:16px;color:#fff;margin-bottom:10px">Reporting something</h3>
-      <p style="font-size:13px;color:#6b7a8e;line-height:1.7;margin-bottom:14px">
-        If something happens — or you're not sure if it crosses a line — reach out. All reports are handled privately and taken seriously.
-      </p>
-      <a href="https://discord.gg/S8SFNkdSgK" style="display:inline-block;padding:10px 20px;background:#5865F2;color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;margin-right:10px">Message Seth on Discord</a>
-      <a href="mailto:stharpe98@gmail.com" style="display:inline-block;padding:10px 20px;background:rgba(255,255,255,.06);color:#e8ecf4;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;border:1px solid rgba(255,255,255,.08)">Email Seth</a>
+  <!-- WARNING -->
+  <section class="cond-section">
+    <h2 class="cond-h2">⚠️ Warning first, then removal</h2>
+    <p class="cond-p">These get a heads up. Keep it up and you're out.</p>
+    <div class="cond-callout yellow">
+      <div class="cond-list">
+        <div class="cond-list-item yellow"><span>!</span> No-showing 3+ times without canceling</div>
+        <div class="cond-list-item yellow"><span>!</span> Soliciting, MLM pitches, or using events to sell things</div>
+        <div class="cond-list-item yellow"><span>!</span> Being consistently rude or dismissive to members</div>
+        <div class="cond-list-item yellow"><span>!</span> Taking photos of people without asking</div>
+      </div>
     </div>
-  </div>
+  </section>
+
+  <!-- HOW REPORTING WORKS -->
+  <section class="cond-section">
+    <h2 class="cond-h2">📢 How to report something</h2>
+    <p class="cond-p">If something happens — or you're just not sure if it crossed a line — reach out. You don't need to have "proof." Your experience matters.</p>
+    <div class="cond-report-steps">
+      <div class="cond-report-step">
+        <div class="cond-step-num">1</div>
+        <div>
+          <strong>Tell us what happened</strong>
+          <p>Message Seth on Discord, email, or tell the event host in person. Whatever's easiest for you.</p>
+        </div>
+      </div>
+      <div class="cond-report-step">
+        <div class="cond-step-num">2</div>
+        <div>
+          <strong>We'll follow up privately</strong>
+          <p>Your report stays between you and us. We won't share your name with the person you're reporting. We won't make it a group discussion.</p>
+        </div>
+      </div>
+      <div class="cond-report-step">
+        <div class="cond-step-num">3</div>
+        <div>
+          <strong>Action is taken</strong>
+          <p>Depending on severity: the person gets a warning or they're immediately removed. For zero-tolerance violations, they're banned the same day. You'll know what we did.</p>
+        </div>
+      </div>
+    </div>
+    <div class="cond-report-btns">
+      <a href="https://discord.gg/S8SFNkdSgK" class="cond-btn discord" target="_blank" rel="noopener">Message Seth on Discord</a>
+      <a href="mailto:stharpe98@gmail.com" class="cond-btn email">Email Seth directly</a>
+    </div>
+  </section>
+
+  <!-- THE BASICS -->
+  <section class="cond-section">
+    <h2 class="cond-h2">The basics</h2>
+    <div class="cond-basics">
+      <div class="cond-basic">
+        <strong>Be respectful.</strong>
+        <p>Treat everyone the way you'd want to be treated at a friend's dinner table. Listen. Don't talk over people. Don't make assumptions.</p>
+      </div>
+      <div class="cond-basic">
+        <strong>Keep locations private.</strong>
+        <p>Event addresses are only shared with RSVP'd members. Don't screenshot them, don't post them publicly, don't share them with people who aren't attending.</p>
+      </div>
+      <div class="cond-basic">
+        <strong>No soliciting.</strong>
+        <p>This isn't a networking event or an MLM opportunity. If you're here to sell something, you're in the wrong place.</p>
+      </div>
+      <div class="cond-basic">
+        <strong>Drink responsibly.</strong>
+        <p>Some events involve alcohol, some don't. No one should ever feel pressured to drink. If you come drunk enough to make people uncomfortable, you'll be asked to leave.</p>
+      </div>
+      <div class="cond-basic">
+        <strong>Ask before photographing.</strong>
+        <p>Not everyone wants their picture on the internet. Always ask before taking photos of other members. Never post photos of someone without their permission.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- GRACE -->
+  <section class="cond-section cond-grace">
+    <div class="cond-callout blue">
+      <h3>💬 A note on grace</h3>
+      <p>Nobody's perfect. Being a little awkward at your first event? Totally fine. Running late because Denver traffic is a nightmare? We get it. Accidentally saying something dumb? It happens.</p>
+      <p>This code of conduct isn't about being perfect — it's about making sure everyone can relax and have a good time. If you're the kind of person who read this far, you're probably exactly the kind of person we want in this community.</p>
+    </div>
+  </section>
+
+</div>
+
+<style is:inline>
+  .conduct-page { max-width: 660px; margin: 0 auto; padding: 0 24px 48px; }
+
+  /* ─── HERO ─── */
+  .cond-hero { padding: 36px 0 32px; }
+  .cond-tag {
+    display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+    color: #7C3AED; font-weight: 700; margin-bottom: 14px;
+    padding: 5px 12px; background: rgba(124,58,237,0.06); border-radius: 50px;
+    font-family: 'Outfit', sans-serif;
+  }
+  .cond-h1 {
+    font-family: 'Outfit', sans-serif; font-size: clamp(26px, 4vw, 34px);
+    color: #111827; line-height: 1.15; margin-bottom: 14px; font-weight: 900;
+    letter-spacing: -0.02em;
+  }
+  .cond-h1 em { font-style: normal; color: #7C3AED; }
+  .cond-sub { font-size: 14px; color: #6B7280; line-height: 1.7; max-width: 500px; }
+
+  /* ─── SECTIONS ─── */
+  .cond-section { margin-bottom: 36px; }
+  .cond-h2 {
+    font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800;
+    color: #111827; margin-bottom: 10px; letter-spacing: -0.01em;
+  }
+  .cond-p { font-size: 13px; color: #6B7280; line-height: 1.7; margin-bottom: 16px; }
+
+  /* ─── SAFETY FEATURES ─── */
+  .cond-features { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cond-feature {
+    padding: 14px 16px; border-radius: 12px;
+    background: #F8F9FB; border: 1px solid #E5E7EB;
+  }
+  .cond-feature strong { display: block; font-family: 'Outfit', sans-serif; font-size: 12px; color: #111827; font-weight: 700; margin-bottom: 4px; }
+  .cond-feature p { font-size: 11px; color: #6B7280; line-height: 1.5; }
+
+  /* ─── WOMEN'S SAFETY ─── */
+  .cond-women {}
+  .cond-callout {
+    border-radius: 16px; padding: 20px 24px;
+  }
+  .cond-callout.women {
+    background: linear-gradient(135deg, rgba(124,58,237,0.03), rgba(219,39,119,0.03));
+    border: 1px solid rgba(124,58,237,0.12);
+  }
+  .cond-callout-items { display: flex; flex-direction: column; gap: 16px; }
+  .cond-callout-item { display: flex; align-items: flex-start; gap: 12px; }
+  .cond-check {
+    width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
+    background: rgba(124,58,237,0.08); display: flex; align-items: center; justify-content: center;
+    color: #7C3AED; font-size: 10px; font-weight: 700; margin-top: 1px;
+  }
+  .cond-callout-item strong { display: block; font-family: 'Outfit', sans-serif; font-size: 13px; color: #111827; font-weight: 700; margin-bottom: 2px; }
+  .cond-callout-item p { font-size: 12px; color: #6B7280; line-height: 1.6; }
+
+  /* ─── RED / YELLOW / BLUE CALLOUTS ─── */
+  .cond-callout.red { background: rgba(248,113,113,0.04); border: 1px solid rgba(248,113,113,0.15); }
+  .cond-callout.yellow { background: rgba(251,191,36,0.04); border: 1px solid rgba(251,191,36,0.15); }
+  .cond-callout.blue { background: rgba(96,165,250,0.04); border: 1px solid rgba(96,165,250,0.15); padding: 24px; }
+  .cond-callout.blue h3 { font-family: 'Outfit', sans-serif; font-size: 15px; color: #111827; font-weight: 700; margin-bottom: 10px; }
+  .cond-callout.blue p { font-size: 13px; color: #6B7280; line-height: 1.7; margin-bottom: 8px; }
+  .cond-callout.blue p:last-child { margin-bottom: 0; }
+
+  .cond-list { display: flex; flex-direction: column; gap: 10px; }
+  .cond-list-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 13px; color: #6B7280; line-height: 1.5;
+  }
+  .cond-list-item span { flex-shrink: 0; font-weight: 700; margin-top: 1px; }
+  .cond-list-item.red span { color: #f87171; }
+  .cond-list-item.yellow span { color: #fbbf24; }
+
+  /* ─── REPORT STEPS ─── */
+  .cond-report-steps { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+  .cond-report-step {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px; border-radius: 12px;
+    background: #F8F9FB; border: 1px solid #E5E7EB;
+  }
+  .cond-step-num {
+    width: 32px; height: 32px; flex-shrink: 0; border-radius: 8px;
+    background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 800; color: #7C3AED;
+  }
+  .cond-report-step strong { display: block; font-family: 'Outfit', sans-serif; font-size: 13px; color: #111827; font-weight: 700; margin-bottom: 3px; }
+  .cond-report-step p { font-size: 12px; color: #6B7280; line-height: 1.6; }
+
+  .cond-report-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+  .cond-btn {
+    display: inline-block; padding: 11px 22px; border-radius: 50px;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+    text-decoration: none; transition: all .2s;
+  }
+  .cond-btn.discord { background: #5865F2; color: #fff; }
+  .cond-btn.discord:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(88,101,242,0.3); }
+  .cond-btn.email { background: #F8F9FB; color: #6B7280; border: 1px solid #E5E7EB; }
+  .cond-btn.email:hover { border-color: #D1D5DB; color: #111827; }
+
+  /* ─── BASICS ─── */
+  .cond-basics { display: flex; flex-direction: column; gap: 12px; }
+  .cond-basic {
+    padding: 16px 18px; border-radius: 12px;
+    background: #F8F9FB; border: 1px solid #E5E7EB;
+  }
+  .cond-basic strong { display: block; font-family: 'Outfit', sans-serif; font-size: 13px; color: #111827; font-weight: 700; margin-bottom: 4px; }
+  .cond-basic p { font-size: 12px; color: #6B7280; line-height: 1.6; }
+
+  /* ─── GRACE ─── */
+  .cond-grace { margin-top: 8px; }
+
+  @media (max-width: 600px) {
+    .cond-features { grid-template-columns: 1fr; }
+  }
+</style>
 </Base>
