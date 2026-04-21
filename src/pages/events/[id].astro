@@ -116,7 +116,11 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
 // ── Calendar link generation ──
 const monthMap: Record<string, string> = {
   January:"01", February:"02", March:"03", April:"04", May:"05", June:"06",
-  July:"07", August:"08", September:"09", October:"10", November:"11", December:"12"
+  July:"07", August:"08", September:"09", October:"10", November:"11", December:"12",
+  JAN:"01", FEB:"02", MAR:"03", APR:"04", MAY:"05", JUN:"06",
+  JUL:"07", AUG:"08", SEP:"09", OCT:"10", NOV:"11", DEC:"12",
+  Jan:"01", Feb:"02", Mar:"03", Apr:"04", May:"05", Jun:"06",
+  Jul:"07", Aug:"08", Sep:"09", Oct:"10", Nov:"11", Dec:"12"
 };
 function buildCalendarDate(month: string, day: string, time?: string): { start: string; end: string } | null {
   const mo = monthMap[month];
@@ -142,7 +146,7 @@ function buildCalendarDate(month: string, day: string, time?: string): { start: 
   return { start: `${year}${mo}${d}`, end: `${year}${mo}${String(parseInt(d)+1).padStart(2,'0')}` };
 }
 
-const calDates = buildCalendarDate(event.event_month || '', event.event_day || '', event.event_time);
+const calDates = buildCalendarDate(event.event_month || '', event.event_day || '');
 let googleCalUrl = '';
 let icsData = '';
 if (calDates) {
