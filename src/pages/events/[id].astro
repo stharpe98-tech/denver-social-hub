@@ -112,6 +112,71 @@ const heroImage = typeImages[event.event_type] || typeImages.other;
 
 const spotsLeft = Math.max(0, (parseInt(event.spots) || 10) - rsvps.length);
 const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444","#6366F1"];
+
+// ── Calendar link generation ──
+const monthMap: Record<string, string> = {
+  January:"01", February:"02", March:"03", April:"04", May:"05", June:"06",
+  July:"07", August:"08", September:"09", October:"10", November:"11", December:"12"
+};
+function buildCalendarDate(month: string, day: string, time?: string): { start: string; end: string } | null {
+  const mo = monthMap[month];
+  if (!mo || !day) return null;
+  const d = day.padStart(2, '0');
+  const year = new Date().getFullYear();
+  if (time) {
+    // Try to parse time like "7:00 PM", "7pm", "19:00"
+    let h = 18, m = 0;
+    const match = time.match(/(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
+    if (match) {
+      h = parseInt(match[1]);
+      m = parseInt(match[2] || '0');
+      if (match[3]?.toLowerCase() === 'pm' && h < 12) h += 12;
+      if (match[3]?.toLowerCase() === 'am' && h === 12) h = 0;
+    }
+    const startStr = `${year}${mo}${d}T${String(h).padStart(2,'0')}${String(m).padStart(2,'0')}00`;
+    const endH = h + 2; // Default 2-hour duration
+    const endStr = `${year}${mo}${d}T${String(endH).padStart(2,'0')}${String(m).padStart(2,'0')}00`;
+    return { start: startStr, end: endStr };
+  }
+  // All-day event
+  return { start: `${year}${mo}${d}`, end: `${year}${mo}${String(parseInt(d)+1).padStart(2,'0')}` };
+}
+
+const calDates = buildCalendarDate(event.event_month || '', event.event_day || '', event.event_time);
+let googleCalUrl = '';
+let icsData = '';
+if (calDates) {
+  const loc = encodeURIComponent(event.location || event.zone || 'Denver, CO');
+  const title = encodeURIComponent(event.title || 'Denver Social Event');
+  const desc = encodeURIComponent((event.description || 'Denver Social community event') + '\n\nRSVP: https://denver-social-hub.stharpe98.workers.dev/events/' + id);
+  const hasTime = calDates.start.includes('T');
+  const dates = hasTime ? `${calDates.start}/${calDates.end}` : `${calDates.start}/${calDates.end}`;
+  googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${desc}&location=${loc}`;
+
+  // Build .ics content
+  const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  icsData = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Denver Social//EN',
+    'BEGIN:VEVENT',
+    `DTSTART:${calDates.start}`, `DTEND:${calDates.end}`,
+    `SUMMARY:${event.title}`, `LOCATION:${event.location || event.zone || 'Denver, CO'}`,
+    `DESCRIPTION:${(event.description || 'Denver Social community event').replace(/\n/g, '\\n')}`,
+    `DTSTAMP:${now}`, `UID:dsn-event-${id}@denversocialhub.com`,
+    'END:VEVENT', 'END:VCALENDAR'
+  ].join('\n');
+}
+
+// Check if event is in the past (for photo gallery)
+const isPastEvent = !!event.is_past;
+
+// Load photos for past events
+let eventPhotos: any[] = [];
+if (db && isPastEvent) {
+  try {
+    const photoResult = await db.prepare("SELECT id, email, name, photo_url, caption, created_at FROM event_photos WHERE event_id=? ORDER BY created_at DESC").bind(id).all();
+    eventPhotos = photoResult?.results || [];
+  } catch {}
+}
 ---
 <Base title={event.title}>
 
@@ -157,6 +222,18 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
       </div>
 
       {event.description && <p class="det-desc">{event.description}</p>}
+
+      <!-- Add to Calendar -->
+      {calDates && (
+        <div class="det-cal-row">
+          <a href={googleCalUrl} target="_blank" rel="noopener" class="det-cal-btn">
+            <span class="det-cal-icon">📅</span> Add to Google Calendar
+          </a>
+          <button class="det-cal-btn det-cal-ics" data-ics={icsData}>
+            <span class="det-cal-icon">🗓️</span> Download .ics
+          </button>
+        </div>
+      )}
     </div>
   </div>
 
@@ -214,6 +291,40 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
           );
         })}
       </div>
+    </div>
+  )}
+
+  <!-- Post-event Photos -->
+  {isPastEvent && (
+    <div class="det-photos-card">
+      <div class="det-photos-header">
+        <div class="det-photos-title">📸 Event Photos</div>
+        {user && myRsvp && (
+          <label class="det-photo-upload-btn">
+            <input type="file" accept="image/*" id="photo-upload" style="display:none" data-event-id={id} />
+            + Add Photo
+          </label>
+        )}
+      </div>
+      {eventPhotos.length > 0 ? (
+        <div class="det-photos-grid">
+          {eventPhotos.map((p: any) => (
+            <div class="det-photo-item">
+              <img src={p.photo_url} alt={p.caption || 'Event photo'} loading="lazy" />
+              <div class="det-photo-meta">
+                <span class="det-photo-name">{p.name}</span>
+                {p.caption && <span class="det-photo-caption">{p.caption}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div class="det-photos-empty">
+          {user && myRsvp
+            ? "No photos yet — be the first to share a moment!"
+            : "No photos yet. Attendees can upload photos after the event."}
+        </div>
+      )}
     </div>
   )}
 
@@ -386,6 +497,62 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
     font-size: 10px; color: var(--ev-accent, #7C3AED); font-weight: 600;
   }
 
+  /* ── Add to Calendar ── */
+  .det-cal-row {
+    display: flex; gap: 8px; margin-top: 16px;
+  }
+  .det-cal-btn {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 14px; border-radius: 12px;
+    background: #F8F9FB; border: 1px solid #E5E7EB;
+    font-size: 12px; font-weight: 600; font-family: 'Outfit', sans-serif;
+    color: #374151; cursor: pointer; transition: all .15s;
+    text-decoration: none;
+  }
+  .det-cal-btn:hover { border-color: var(--ev-accent, #7C3AED); color: var(--ev-accent, #7C3AED); background: #fff; }
+  .det-cal-icon { font-size: 14px; }
+
+  /* ── Post-event Photos ── */
+  .det-photos-card {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 20px;
+    padding: 18px 20px; margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .det-photos-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .det-photos-title {
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827;
+  }
+  .det-photo-upload-btn {
+    padding: 6px 14px; border-radius: 50px;
+    background: var(--ev-accent, #7C3AED); color: #fff;
+    font-size: 11px; font-weight: 700; font-family: 'Outfit', sans-serif;
+    cursor: pointer; transition: opacity .2s;
+  }
+  .det-photo-upload-btn:hover { opacity: 0.9; }
+  .det-photos-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
+  }
+  .det-photo-item {
+    border-radius: 12px; overflow: hidden;
+    border: 1px solid #E5E7EB; background: #F8F9FB;
+  }
+  .det-photo-item img {
+    width: 100%; height: 120px; object-fit: cover;
+  }
+  .det-photo-meta { padding: 8px 10px; }
+  .det-photo-name {
+    display: block; font-size: 11px; font-weight: 600;
+    font-family: 'Outfit', sans-serif; color: #111827;
+  }
+  .det-photo-caption { font-size: 10px; color: #9CA3AF; }
+  .det-photos-empty {
+    padding: 20px 0; text-align: center; color: #9CA3AF;
+    font-size: 13px; line-height: 1.6;
+  }
+
   /* ── Discord CTA ── */
   .det-discord {
     display: flex; align-items: center; gap: 14px;
@@ -453,6 +620,49 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
       } catch { btn.textContent = 'Error — try again'; }
     });
   })();
+
+  // .ics download
+  var icsBtn = document.querySelector('.det-cal-ics');
+  if (icsBtn) {
+    icsBtn.addEventListener('click', function() {
+      var data = icsBtn.getAttribute('data-ics');
+      if (!data) return;
+      var blob = new Blob([data], { type: 'text/calendar;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'denver-social-event.ics';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  // Photo upload
+  var photoInput = document.getElementById('photo-upload');
+  if (photoInput) {
+    photoInput.addEventListener('change', async function() {
+      var file = this.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) { alert('Photo must be under 5MB'); return; }
+      var evId = this.getAttribute('data-event-id');
+      var reader = new FileReader();
+      reader.onload = async function() {
+        try {
+          var r = await fetch('/api/upload-photo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: evId, photo: reader.result })
+          });
+          var d = await r.json();
+          if (d.ok) { location.reload(); }
+          else { alert(d.error || 'Upload failed'); }
+        } catch { alert('Upload failed — try again'); }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 </script>
 
 </Base>
