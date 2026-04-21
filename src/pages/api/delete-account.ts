@@ -13,7 +13,7 @@ export const POST = async ({ cookies }: { cookies: any }) => {
   try {
     const tables = [
       "DELETE FROM members WHERE email=?",
-      "DELETE FROM event_rsvps WHERE email=?",
+      "DELETE FROM event_rsvps WHERE member_email=?",
       "DELETE FROM event_ratings WHERE email=?",
       "DELETE FROM member_streaks WHERE email=?",
       "DELETE FROM free_tonight WHERE email=?",

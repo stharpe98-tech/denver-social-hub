@@ -15,7 +15,7 @@ let myRsvp = false;
 try {
   if (db && id) {
     event = await db.prepare("SELECT * FROM events WHERE id=?").bind(id).first();
-    const r = await db.prepare("SELECT r.email,r.name,m.neighborhood FROM event_rsvps r LEFT JOIN members m ON r.email=m.email WHERE r.event_id=?").bind(id).all();
+    const r = await db.prepare("SELECT r.member_email as email,r.member_name as name,m.neighborhood FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=?").bind(id).all();
     rsvps = r?.results || [];
     if (user) myRsvp = rsvps.some((r:any) => r.email===user.email);
   }

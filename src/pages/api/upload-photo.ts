@@ -19,7 +19,7 @@ export async function POST({ request, cookies }: APIContext) {
     }
 
     // Verify user RSVP'd to this event
-    const rsvp = await db.prepare("SELECT id FROM event_rsvps WHERE event_id=? AND email=?")
+    const rsvp = await db.prepare("SELECT id FROM event_rsvps WHERE event_id=? AND member_email=?")
       .bind(event_id, user.email).first();
     if (!rsvp) {
       return new Response(JSON.stringify({ error: "You must RSVP to upload photos" }), { status: 403 });

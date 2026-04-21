@@ -41,7 +41,7 @@ try {
     member = await db.prepare("SELECT * FROM members WHERE email=?").bind(user.email).first();
     const sugResult = await db.prepare("SELECT title, type, status, votes FROM suggestions WHERE member_name=? ORDER BY rowid DESC LIMIT 10").bind(user.name || '').all();
     mySuggestions = sugResult.results || [];
-    const rsvpResult = await db.prepare("SELECT e.id, e.title, e.event_type, e.event_month, e.event_day, e.event_time, e.zone, e.location, e.is_past FROM event_rsvps r JOIN events e ON r.event_id=e.id WHERE r.email=? ORDER BY r.rowid DESC LIMIT 20").bind(user.email).all();
+    const rsvpResult = await db.prepare("SELECT e.id, e.title, e.event_type, e.event_month, e.event_day, e.event_time, e.zone, e.location, e.is_past FROM event_rsvps r JOIN events e ON r.event_id=e.id WHERE r.member_email=? ORDER BY r.rowid DESC LIMIT 20").bind(user.email).all();
     myRsvps = rsvpResult.results || [];
     upcomingRsvps = myRsvps.filter((r: any) => !r.is_past);
     pastRsvps = myRsvps.filter((r: any) => r.is_past);
