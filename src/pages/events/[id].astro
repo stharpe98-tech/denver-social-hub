@@ -22,6 +22,46 @@ try {
 } catch {}
 
 if (!event) return Astro.redirect("/events");
+
+// Map event types to member interest keywords for matching
+const typeToInterests: Record<string, string[]> = {
+  dinner: ["Food & Dining","Craft Beer"],
+  brewery: ["Craft Beer","Food & Dining"],
+  coffee: ["Coffee & Cafes"],
+  outdoor: ["Hiking","Outdoors"],
+  camping: ["Hiking","Outdoors"],
+  active: ["Fitness","Hiking","Outdoors"],
+  music: ["Live Music"],
+  arts: ["Art & Culture"],
+  game_night: ["Board Games","Trivia"],
+  bowling: ["Bowling"],
+  casino: ["Casino Trips"],
+  sports: ["Sports"],
+  sports_outing: ["Sports"],
+  social: ["Food & Dining","Craft Beer","Live Music"],
+  food_trucks: ["Food & Dining"],
+  potluck: ["Food & Dining"],
+  group_tickets: ["Live Music","Art & Culture","Sports"],
+};
+
+// Find members whose interests overlap with this event type
+let matchedMembers: any[] = [];
+const interestKeywords = typeToInterests[event.event_type] || [];
+if (db && interestKeywords.length > 0) {
+  try {
+    // Build LIKE conditions for each keyword
+    const conditions = interestKeywords.map(() => "interests LIKE ?").join(" OR ");
+    const params = interestKeywords.map(k => `%${k}%`);
+    const rsvpEmails = rsvps.map((r: any) => r.email);
+    const q = `SELECT name, neighborhood, interests FROM members WHERE suspended=0 AND (${conditions}) ORDER BY events_attended DESC LIMIT 8`;
+    const result = await db.prepare(q).bind(...params).all();
+    // Filter out people already RSVP'd and the current user
+    matchedMembers = (result.results || []).filter((m: any) =>
+      !rsvpEmails.includes(m.email) && m.email !== user?.email
+    );
+  } catch {}
+}
+
 const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",sports:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",potluck:"🍲",other:"📅" };
 
 // Per-type theme colors: [accent, light bg tint, tag bg, tag text]
@@ -153,6 +193,29 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
       <div class="det-att-empty">No one's RSVP'd yet. Be the person who starts the wave.</div>
     )}
   </div>
+
+  <!-- Members who'd love this -->
+  {matchedMembers.length > 0 && (
+    <div class="det-match-card">
+      <div class="det-match-title">✨ Members who'd love this</div>
+      <div class="det-match-sub">Based on shared interests in {interestKeywords.slice(0, 2).join(' & ')}</div>
+      <div class="det-match-grid">
+        {matchedMembers.map((m: any, i: number) => {
+          const sharedInterests = interestKeywords.filter(k => (m.interests || '').includes(k));
+          return (
+            <div class="det-match-pill">
+              <div class="det-match-av" style={`background:${avatarColors[i % avatarColors.length]}`}>{(m.name || '?')[0]}</div>
+              <div class="det-match-info">
+                <span class="det-match-name">{m.name}</span>
+                {m.neighborhood && <span class="det-match-hood">{m.neighborhood}</span>}
+                <span class="det-match-shared">Likes {sharedInterests[0]?.replace(/^[^\w\s]+\s*/, '') || interestKeywords[0]}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  )}
 
   <!-- Discord CTA -->
   <div class="det-discord">
@@ -286,6 +349,42 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
   .det-att-name { font-weight: 600; font-family: 'Outfit', sans-serif; color: #111827; }
   .det-att-hood { font-size: 11px; color: #9CA3AF; }
   .det-att-empty { padding: 20px 0; text-align: center; color: #9CA3AF; font-size: 13px; line-height: 1.6; }
+
+  /* ── Members who'd love this ── */
+  .det-match-card {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 20px;
+    padding: 18px 20px; margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .det-match-title {
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+    color: #111827; margin-bottom: 4px;
+  }
+  .det-match-sub {
+    font-size: 12px; color: #9CA3AF; margin-bottom: 14px;
+  }
+  .det-match-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .det-match-pill {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px 8px 8px; border-radius: 50px;
+    background: #F8F9FB; border: 1px solid #E5E7EB;
+    transition: border-color .15s;
+  }
+  .det-match-pill:hover { border-color: #D1D5DB; }
+  .det-match-av {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .det-match-info { display: flex; flex-direction: column; gap: 1px; }
+  .det-match-name {
+    font-weight: 600; font-family: 'Outfit', sans-serif;
+    font-size: 13px; color: #111827;
+  }
+  .det-match-hood { font-size: 10px; color: #9CA3AF; }
+  .det-match-shared {
+    font-size: 10px; color: var(--ev-accent, #7C3AED); font-weight: 600;
+  }
 
   /* ── Discord CTA ── */
   .det-discord {

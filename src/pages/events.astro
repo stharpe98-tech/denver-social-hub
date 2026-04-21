@@ -82,6 +82,31 @@ function isHotEvent(ev: any): boolean {
   return left >= 1 && left <= 4;
 }
 
+// Interest matching: check if user's interests overlap with event type
+const typeToInterests: Record<string, string[]> = {
+  dinner: ["Food & Dining","Craft Beer"], brewery: ["Craft Beer","Food & Dining"],
+  coffee: ["Coffee & Cafes"], outdoor: ["Hiking","Outdoors"], camping: ["Hiking","Outdoors"],
+  active: ["Fitness","Hiking","Outdoors"], music: ["Live Music"], arts: ["Art & Culture"],
+  game_night: ["Board Games","Trivia"], bowling: ["Bowling"], casino: ["Casino Trips"],
+  sports: ["Sports"], sports_outing: ["Sports"], food_trucks: ["Food & Dining"],
+  potluck: ["Food & Dining"], social: ["Food & Dining","Craft Beer","Live Music"],
+  group_tickets: ["Live Music","Art & Culture","Sports"],
+};
+
+let userInterests: string[] = [];
+if (user && db) {
+  try {
+    const m: any = await db.prepare("SELECT interests FROM members WHERE email=?").bind(user.email).first();
+    if (m?.interests) userInterests = m.interests.split(",").map((s: string) => s.replace(/^[^\w\s]+\s*/, '').trim());
+  } catch {}
+}
+
+function eventMatchesUser(eventType: string): boolean {
+  if (!userInterests.length) return false;
+  const keywords = typeToInterests[eventType] || [];
+  return keywords.some(k => userInterests.some(ui => k.includes(ui) || ui.includes(k)));
+}
+
 const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 ---
 <Base title="Events">
@@ -140,11 +165,13 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
           const going = rsvpCounts[ev.id] || 0;
           const isHot = isHotEvent(ev);
           const tc = getTypeColor(ev.event_type);
+          const isMatch = eventMatchesUser(ev.event_type);
           return (
             <a href={`/events/${ev.id}`} class={`ec ${isHot ? 'ec-hot' : ''}`} data-type={ev.event_type} style={`--card-accent: ${tc.accent};`}>
               <div class="ec-img" style={`background-image: url(${typeImages[ev.event_type] || typeImages.other});`}>
                 <div class="ec-img-overlay"></div>
                 {isHot && <span class="hot-tag">Filling up</span>}
+                {isMatch && !isHot && <span class="match-tag">✨ For you</span>}
                 <div class="ec-date">
                   <div class="ec-month" style={`color: ${tc.accent};`}>{(ev.event_month || 'TBD').slice(0, 3)}</div>
                   <div class="ec-day">{ev.event_day || '—'}</div>
@@ -419,6 +446,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   .ec-hot { border: 2px solid rgba(220,38,38,0.15); }
   .ec-hot .ec-head { background: #FEF2F2; }
   .hot-tag { padding: 3px 10px; border-radius: 50px; background: #FEF2F2; color: #DC2626; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+  .match-tag { position: absolute; top: 10px; left: 10px; padding: 3px 10px; border-radius: 50px; background: rgba(124,58,237,0.9); color: #fff; font-size: 9px; font-weight: 800; font-family: 'Outfit', sans-serif; letter-spacing: .04em; z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
 
   .ev-discord { display: flex; align-items: center; gap: 14px; padding: 18px 22px; border-radius: 16px; background: rgba(124,58,237,0.04); border: 1px solid rgba(124,58,237,0.1); }
   .ev-discord-icon { font-size: 24px; flex-shrink: 0; }
