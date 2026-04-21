@@ -14,112 +14,92 @@ if (Astro.request.method === "POST" && db) {
   const form = await Astro.request.formData();
   const neighborhood = form.get("neighborhood")?.toString().trim() || "";
   const age_range    = form.get("age_range")?.toString() || "";
-  const gender       = form.get("gender")?.toString() || "";
-  const open_to      = form.getAll("open_to").join(",");
   const interests    = form.getAll("interests").join(",");
   const looking_for  = form.getAll("looking_for").join(",");
   const availability = form.getAll("availability").join(",");
-  const vibe         = form.get("vibe")?.toString() || "";
-  try {
-    await db.prepare(
-      "UPDATE members SET neighborhood=?, interests=?, looking_for=?, onboarding_done=1 WHERE email=?"
-    ).bind(neighborhood, interests, looking_for, user.email).run();
-    // Store gender separately (best effort, column may not exist yet)
+  const personality  = form.getAll("personality").join(",");
+
+  if (!neighborhood) {
+    error = "Pick your neighborhood so we can show you nearby events!";
+  } else {
     try {
-      await db.prepare("UPDATE members SET gender=?, open_to=? WHERE email=?").bind(gender, open_to, user.email).run();
-    } catch {}
-    return Astro.redirect("/onboarding/done");
-  } catch { error = "Something went wrong, try again."; }
+      await db.prepare(
+        "UPDATE members SET neighborhood=?, age_range=?, interests=?, looking_for=?, onboarding_done=1 WHERE email=?"
+      ).bind(neighborhood, age_range, interests, looking_for, user.email).run();
+      return Astro.redirect("/onboarding/done");
+    } catch { error = "Something went wrong, try again."; }
+  }
 }
 
-const genderOptions = [
-  "Male","Female","Other","Prefer not to say"
-];
-
-const openToOptions = [
-  "Men","Women","Other","Doesn't matter"
-];
-
 const neighborhoods = [
-  // Downtown / Central
-  "LoDo / Downtown","RiNo / River North","Five Points","Curtis Park","Whittier",
-  // Capitol Hill / Central East
+  "LoDo / Downtown","RiNo / River North","Five Points","Curtis Park",
   "Capitol Hill","Cheesman Park","Congress Park","Uptown",
-  // East Denver
-  "Cherry Creek","Hilltop","Mayfair","Hale","South Park Hill","North Park Hill",
-  "Stapleton / Central Park",
-  // South Denver
-  "Washington Park","Platt Park","Baker","Hampden","Virginia Village",
-  "Green Valley Ranch",
-  // West / Northwest Denver
-  "Highlands / LoHi","Sunnyside","Jefferson Park","Berkeley","Sloan's Lake",
-  "Wheat Ridge",
-  // Suburbs — South
+  "Cherry Creek","Hilltop","Stapleton / Central Park",
+  "Washington Park","Platt Park","Baker","Green Valley Ranch",
+  "Highlands / LoHi","Sunnyside","Berkeley","Sloan's Lake",
   "Englewood","Littleton","Centennial","Parker",
-  // Suburbs — West
   "Lakewood","Golden","Arvada",
-  // Suburbs — North
   "Westminster","Thornton","Broomfield",
-  // Other
   "Aurora","Boulder","Other / Outside Denver"
 ];
 
-const ageRanges = ["18–24","25–29","30–34","35–39","40–44","45–49","50+"];
+const ageRanges = ["21–25","26–30","31–35","36–40","41–50","50+"];
 
 const interestOptions = [
   "🍽️ Food & Dining","🍺 Craft Beer","🥾 Hiking","🎲 Board Games",
   "🎵 Live Music","🎨 Art & Culture","🎳 Bowling","💪 Fitness",
-  "😂 Comedy","🎰 Casino Trips","🏔️ Outdoor Adventures","☕ Coffee & Cafes",
-  "🧠 Trivia Nights","🎤 Karaoke","🍜 New Restaurants","🏒 Sports Outings",
+  "😂 Comedy","🎰 Casino Trips","🏔️ Outdoors","☕ Coffee & Cafes",
+  "🧠 Trivia","🎤 Karaoke","🏒 Sports","📸 Photography",
 ];
 
 const lookingOptions = [
-  "👯 New friends","🥾 Hiking buddy","🍽️ Dinner companion","🏋️ Workout partner",
-  "🗺️ Explore Denver","💼 Networking","😎 Just vibing","🎮 Gaming crew",
-  "🐕 Dog walk buddy","📸 Adventure partner",
+  "👯 New friends","🥾 Hiking buddy","🍽️ Dinner companion",
+  "🏋️ Workout partner","🗺️ Explore Denver","💼 Networking",
+  "😎 Just vibing","🐕 Dog walk buddy",
 ];
 
 const availabilityOptions = [
-  "☀️ Weekday lunches","🌆 Weekday evenings","🎉 Friday nights",
-  "🌙 Saturday nights","🌅 Weekend days","🎉 Whenever, I'm easy",
-  "🏠 Mostly remote / flexible","⚡ Last minute is fine",
-  "💸 Budget-friendly options please",
-];
-
-const meetStyleOptions = [
-  "🍽️ Sit-down dinner (small table)",
-  "🍺 Bar / casual hangout",
-  "🏔️ Activity first, talk second",
-  "☕ Coffee after a group event",
-  "🎲 Game night / low pressure",
-  "🚶 Walk & talk outdoors",
+  "🌆 Weekday evenings","🎉 Friday nights","🌙 Saturday nights",
+  "🌅 Weekend days","⚡ Last minute is fine","🎉 Whenever, I'm easy",
 ];
 
 const personalityOptions = [
-  "😌 Homebody at heart","🗣️ Oversharer",
-  "😶 Quiet observer","🤓 Nerd & proud","🎨 Creative type",
-  "🔥 Workaholic","🥱 Allergic to plans","🌊 Former coastal transplant",
-  "🐶 Dog person","🐱 Cat person",
-];
-
-const lifestyleOptions = [
-  "🌙 Night owl","🌅 Early riser","🏔️ Outdoorsy","🚴 Active & sporty",
-  "🏋️ Gym rat","🧘 Wellness focused","🌱 Sober curious","✈️ Always traveling",
-  "💻 Remote worker","🎮 Gamer","🆕 New to Denver","🏙️ Denver native",
+  "🗣️ Social butterfly","😌 Chill vibes","🤓 Nerd & proud",
+  "🎨 Creative type","🌊 Transplant","🆕 New to Denver",
+  "🏙️ Denver native","🌙 Night owl","🌅 Early riser",
 ];
 ---
 
-<Base title="Welcome to DSN">
+<Base title="Welcome to Denver Social">
   <div style="max-width:480px;margin:0 auto;padding:32px 20px 120px">
 
-    <div style="text-align:center;margin-bottom:32px">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:28px">
       <div style="font-size:48px;margin-bottom:12px">👋</div>
-      <h1 style="font-family:var(--heading);font-size:28px;font-weight:800;color:var(--text);margin-bottom:8px">
+      <h1 style="font-family:var(--heading);font-size:26px;font-weight:800;color:var(--text);margin-bottom:6px">
         Hey {user.name?.split(' ')[0]}!
       </h1>
       <p style="font-size:14px;color:var(--text-sec);line-height:1.6">
-        Quick setup so we can match you with the right people and events.
+        Quick setup so we match you with the right events.
       </p>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="ob-progress">
+      <div class="ob-progress-step active">
+        <div class="ob-dot">1</div>
+        <span>Basics</span>
+      </div>
+      <div class="ob-progress-line active"></div>
+      <div class="ob-progress-step">
+        <div class="ob-dot">2</div>
+        <span>Interests</span>
+      </div>
+      <div class="ob-progress-line"></div>
+      <div class="ob-progress-step">
+        <div class="ob-dot">3</div>
+        <span>Vibe</span>
+      </div>
     </div>
 
     {error && (
@@ -128,219 +108,246 @@ const lifestyleOptions = [
       </div>
     )}
 
-    <form method="POST">
+    <form method="POST" id="ob-form">
 
-      <!-- Neighborhood -->
-      <div class="ob-section">
-        <div class="ob-label">📍 Your neighborhood</div>
-        <select name="neighborhood" class="ob-select" required>
-          <option value="" disabled selected>Pick your area…</option>
-          {neighborhoods.map(n => <option value={n}>{n}</option>)}
-        </select>
+      <!-- STEP 1: Basics -->
+      <div class="ob-step" id="step-1">
+        <div class="ob-section">
+          <div class="ob-label">📍 Your neighborhood</div>
+          <select name="neighborhood" class="ob-select" required>
+            <option value="" disabled selected>Pick your area…</option>
+            {neighborhoods.map(n => <option value={n}>{n}</option>)}
+          </select>
+        </div>
+
+        <div class="ob-section">
+          <div class="ob-label">🎂 Age range <span class="ob-optional">optional</span></div>
+          <div class="ob-pills">
+            {ageRanges.map(a => (
+              <label class="ob-pill-wrap">
+                <input type="radio" name="age_range" value={a} />
+                <span>{a}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-primary ob-next" data-next="2" style="width:100%;padding:14px;font-size:15px;margin-top:8px">
+          Next → Interests
+        </button>
       </div>
 
-      <!-- Age range -->
-      <div class="ob-section">
-        <div class="ob-label">🎂 Age range</div>
-        <div class="ob-pills">
-          {ageRanges.map(a => (
-            <label class="ob-pill-wrap">
-              <input type="radio" name="age_range" value={a} />
-              <span>{a}</span>
-            </label>
-          ))}
+      <!-- STEP 2: Interests -->
+      <div class="ob-step hidden" id="step-2">
+        <div class="ob-section">
+          <div class="ob-label">✨ What are you into? <span class="ob-hint">pick a few</span></div>
+          <div class="ob-pills">
+            {interestOptions.map(i => (
+              <label class="ob-pill-wrap">
+                <input type="checkbox" name="interests" value={i} />
+                <span>{i}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div class="ob-section">
+          <div class="ob-label">🔍 What are you looking for? <span class="ob-hint">pick all that apply</span></div>
+          <div class="ob-pills">
+            {lookingOptions.map(l => (
+              <label class="ob-pill-wrap">
+                <input type="checkbox" name="looking_for" value={l} />
+                <span>{l}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button type="button" class="btn btn-ghost ob-back" data-back="1" style="flex:1;padding:14px;font-size:15px">← Back</button>
+          <button type="button" class="btn btn-primary ob-next" data-next="3" style="flex:2;padding:14px;font-size:15px">Next → Vibe</button>
         </div>
       </div>
 
-      <!-- Gender -->
-      <div class="ob-section">
-        <div class="ob-label">👤 I identify as</div>
-        <div class="ob-pills">
-          {genderOptions.map(g => (
-            <label class="ob-pill-wrap">
-              <input type="radio" name="gender" value={g} />
-              <span>{g}</span>
-            </label>
-          ))}
+      <!-- STEP 3: Vibe -->
+      <div class="ob-step hidden" id="step-3">
+        <div class="ob-section">
+          <div class="ob-label">📅 When are you usually free? <span class="ob-hint">pick all that apply</span></div>
+          <div class="ob-pills">
+            {availabilityOptions.map(a => (
+              <label class="ob-pill-wrap">
+                <input type="checkbox" name="availability" value={a} />
+                <span>{a}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div class="ob-section">
+          <div class="ob-label">🧠 How would you describe yourself? <span class="ob-hint">pick a few</span></div>
+          <div class="ob-pills">
+            {personalityOptions.map(v => (
+              <label class="ob-pill-wrap">
+                <input type="checkbox" name="personality" value={v} />
+                <span>{v}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button type="button" class="btn btn-ghost ob-back" data-back="2" style="flex:1;padding:14px;font-size:15px">← Back</button>
+          <button type="submit" class="btn btn-primary" style="flex:2;padding:14px;font-size:15px">Let's go 🎉</button>
         </div>
       </div>
-
-      <!-- Open to -->
-      <div class="ob-section">
-        <div class="ob-label">👥 I'm open to hanging with <span class="ob-hint">(pick all that apply)</span></div>
-        <div class="ob-pills">
-          {openToOptions.map(o => (
-            <label class="ob-pill-wrap">
-              <input type="checkbox" name="open_to" value={o} />
-              <span>{o}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <!-- Interests -->
-      <div class="ob-section">
-        <div class="ob-label">✨ What are you into? <span class="ob-hint">(pick a few)</span></div>
-        <div class="ob-pills">
-          {interestOptions.map(i => (
-            <label class="ob-pill-wrap">
-              <input type="checkbox" name="interests" value={i} />
-              <span>{i}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <!-- Looking for -->
-      <div class="ob-section">
-        <div class="ob-label">🔍 What are you looking for? <span class="ob-hint">(pick all that apply)</span></div>
-        <div class="ob-pills">
-          {lookingOptions.map(l => (
-            <label class="ob-pill-wrap">
-              <input type="checkbox" name="looking_for" value={l} />
-              <span>{l}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <!-- Availability -->
-      <div class="ob-section">
-        <div class="ob-label">📅 When are you usually free? <span class="ob-hint">(pick all that apply)</span></div>
-        <div class="ob-pills">
-          {availabilityOptions.map(a => (
-            <label class="ob-pill-wrap">
-              <input type="checkbox" name="availability" value={a} />
-              <span>{a}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <!-- Meet style -->
-      <div class="ob-section">
-        <div class="ob-label">🤝 How do you prefer to meet people? <span class="ob-hint">(pick your faves)</span></div>
-        <div class="ob-pills">
-          {meetStyleOptions.map(m => (
-            <label class="ob-pill-wrap">
-              <input type="checkbox" name="meet_style" value={m} />
-              <span>{m}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <!-- Personality -->
-      <div class="ob-section">
-        <div class="ob-label">🧠 Your personality <span class="ob-hint">(pick a few)</span></div>
-        <div class="ob-pills">
-          {personalityOptions.map(v => (
-            <label class="ob-pill-wrap">
-              <input type="checkbox" name="personality" value={v} />
-              <span>{v}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <!-- Lifestyle -->
-      <div class="ob-section">
-        <div class="ob-label">🌀 Your lifestyle <span class="ob-hint">(pick a few)</span></div>
-        <div class="ob-pills">
-          {lifestyleOptions.map(v => (
-            <label class="ob-pill-wrap">
-              <input type="checkbox" name="lifestyle" value={v} />
-              <span>{v}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <button type="submit" class="btn btn-primary" style="width:100%;padding:16px;font-size:16px;margin-top:8px">
-        Let's go →
-      </button>
 
     </form>
   </div>
 </Base>
 
 <style is:inline>
-  .ob-section { margin-bottom: 32px; }
-
-  .ob-label {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    margin-bottom: 12px;
+  .ob-progress {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; margin-bottom: 28px;
   }
+  .ob-progress-step {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .ob-progress-step span {
+    font-size: 11px; font-weight: 600; color: var(--text-faint);
+    font-family: var(--heading);
+  }
+  .ob-progress-step.active span { color: var(--accent); }
+  .ob-progress-step.done span { color: var(--mint); }
+  .ob-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; font-family: var(--heading);
+    background: var(--surface); border: 2px solid var(--border);
+    color: var(--text-faint); transition: all .3s;
+  }
+  .ob-progress-step.active .ob-dot {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+  }
+  .ob-progress-step.done .ob-dot {
+    background: var(--mint); border-color: var(--mint); color: #fff;
+  }
+  .ob-progress-line {
+    width: 40px; height: 2px; background: var(--border);
+    margin: 0 8px; margin-bottom: 18px; transition: background .3s;
+  }
+  .ob-progress-line.active { background: var(--accent); }
+  .ob-progress-line.done { background: var(--mint); }
 
+  .ob-step { animation: fadeIn .3s ease; }
+  .ob-step.hidden { display: none; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .ob-section { margin-bottom: 28px; }
+  .ob-label {
+    font-size: 12px; font-weight: 700; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px;
+  }
   .ob-hint {
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--text-faint);
-    text-transform: none;
-    letter-spacing: 0;
+    font-size: 12px; font-weight: 400; color: var(--text-faint);
+    text-transform: none; letter-spacing: 0;
+  }
+  .ob-optional {
+    font-size: 10px; font-weight: 500; color: var(--text-faint);
+    text-transform: none; letter-spacing: 0;
+    background: var(--surface); padding: 2px 8px; border-radius: 50px;
+    margin-left: 4px;
   }
 
   .ob-select {
-    width: 100%;
-    padding: 14px 16px;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 14px;
-    font-size: 15px;
-    color: var(--text);
-    font-family: var(--body);
-    appearance: none;
+    width: 100%; padding: 14px 16px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 14px; font-size: 15px; color: var(--text);
+    font-family: var(--body); appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 16px center;
-    cursor: pointer;
-    transition: border-color .2s;
+    background-repeat: no-repeat; background-position: right 16px center;
+    cursor: pointer; transition: border-color .2s;
   }
   .ob-select:focus { border-color: var(--accent); outline: none; }
 
   .ob-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-
   .ob-pill-wrap {
-    display: inline-flex;
-    cursor: pointer;
+    display: inline-flex; cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
-
   .ob-pill-wrap input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-    pointer-events: none;
+    position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
   }
-
   .ob-pill-wrap span {
-    display: inline-block;
-    padding: 9px 16px;
-    border-radius: 50px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-sec);
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    transition: all .15s ease;
-    user-select: none;
-    white-space: nowrap;
+    display: inline-block; padding: 9px 16px; border-radius: 50px;
+    font-size: 13px; font-weight: 500; color: var(--text-sec);
+    background: var(--surface); border: 1.5px solid var(--border);
+    transition: all .15s ease; user-select: none; white-space: nowrap;
   }
-
   .ob-pill-wrap:hover span {
-    border-color: var(--border-hover);
-    color: var(--text);
+    border-color: var(--border-hover); color: var(--text);
   }
-
   .ob-pill-wrap input:checked + span {
-    background: var(--accent-bg);
-    border-color: var(--accent);
-    color: var(--accent);
-    font-weight: 600;
+    background: var(--accent-bg); border-color: var(--accent);
+    color: var(--accent); font-weight: 600;
   }
 </style>
+
+<script is:inline>
+  const steps = document.querySelectorAll('.ob-step');
+  const dots = document.querySelectorAll('.ob-progress-step');
+  const lines = document.querySelectorAll('.ob-progress-line');
+
+  function showStep(n) {
+    steps.forEach(s => s.classList.add('hidden'));
+    const target = document.getElementById('step-' + n);
+    if (target) {
+      target.classList.remove('hidden');
+      // Force re-animation
+      target.style.animation = 'none';
+      target.offsetHeight;
+      target.style.animation = '';
+    }
+
+    // Update progress dots
+    dots.forEach((dot, i) => {
+      const stepNum = i + 1;
+      dot.classList.remove('active', 'done');
+      if (stepNum === n) dot.classList.add('active');
+      else if (stepNum < n) dot.classList.add('done');
+    });
+
+    // Update progress lines
+    lines.forEach((line, i) => {
+      const lineAfterStep = i + 1;
+      line.classList.remove('active', 'done');
+      if (lineAfterStep < n) line.classList.add('done');
+      else if (lineAfterStep === n) line.classList.add('active');
+    });
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.querySelectorAll('.ob-next').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const next = parseInt(btn.dataset.next);
+      // Validate step 1: neighborhood required
+      if (next === 2) {
+        const sel = document.querySelector('.ob-select');
+        if (sel && !sel.value) {
+          sel.focus();
+          sel.style.borderColor = '#DC2626';
+          setTimeout(() => sel.style.borderColor = '', 2000);
+          return;
+        }
+      }
+      showStep(next);
+    });
+  });
+
+  document.querySelectorAll('.ob-back').forEach(btn => {
+    btn.addEventListener('click', () => {
+      showStep(parseInt(btn.dataset.back));
+    });
+  });
+</script>

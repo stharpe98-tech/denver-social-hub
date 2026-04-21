@@ -128,8 +128,8 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
       {spotsLeft <= 4 && spotsLeft > 0 && <div class="det-urgent">🔥 Only {spotsLeft} left — don't sleep on this</div>}
     </div>
     {user ? (
-      <button id="rsvp-btn" class={`det-rsvp-btn ${myRsvp ? 'rsvped' : ''}`} style={myRsvp ? '' : `background: ${theme.accent};`}>
-        {myRsvp ? "✓ You're In — Cancel" : "I'm In"}
+      <button id="rsvp-btn" class={`det-rsvp-btn ${myRsvp ? 'rsvped' : ''}`} style={myRsvp ? '' : `background: ${theme.accent};`} data-event-id={id} data-rsvped={myRsvp ? 'true' : 'false'} data-accent={theme.accent} data-spots={event.spots || '10'}>
+        {myRsvp ? "✓ You're In — Cancel RSVP" : "I'm In"}
       </button>
     ) : (
       <a href={`/login?next=/events/${id}`} class="det-rsvp-btn" style={`background: ${theme.accent};`}>Sign in to RSVP</a>
@@ -317,24 +317,43 @@ const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444
   }
 </style>
 
-<script define:vars={{ eventId: id, initialRsvp: myRsvp, themeAccent: theme.accent }}>
-  let rsvped = initialRsvp;
-  const btn = document.getElementById('rsvp-btn');
-  if (btn) {
+<script is:inline>
+  (function() {
+    var btn = document.getElementById('rsvp-btn');
+    if (!btn) return;
+    var eventId = btn.getAttribute('data-event-id');
+    var rsvped = btn.getAttribute('data-rsvped') === 'true';
+    var accent = btn.getAttribute('data-accent');
+    var spots = parseInt(btn.getAttribute('data-spots') || '10');
+
     btn.addEventListener('click', async function() {
       btn.textContent = 'Loading...';
       try {
-        const r = await fetch('/api/rsvp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event_id: eventId }) });
+        var r = await fetch('/api/rsvp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event_id: eventId }) });
         if (r.status === 401) { location.href = '/login?next=' + location.pathname; return; }
-        const d = await r.json();
+        var d = await r.json();
         if (d.error) { btn.textContent = d.message || 'Error'; return; }
         rsvped = d.rsvped;
         btn.className = 'det-rsvp-btn' + (rsvped ? ' rsvped' : '');
         btn.textContent = rsvped ? "✓ You're In — Cancel RSVP" : "I'm In";
-        btn.style.background = rsvped ? '' : themeAccent;
+        btn.style.background = rsvped ? '' : accent;
+        btn.setAttribute('data-rsvped', rsvped ? 'true' : 'false');
+        // Update the count display
+        var filled = document.querySelector('.det-rsvp-filled');
+        if (filled && typeof d.count === 'number') {
+          filled.innerHTML = '<strong>' + d.count + ' of ' + spots + '</strong> spots filled';
+        }
+        var fill = document.querySelector('.det-rsvp-fill');
+        if (fill && typeof d.count === 'number') {
+          fill.style.width = Math.round((d.count / spots) * 100) + '%';
+        }
+        var heroSpots = document.querySelector('.det-hero-spots');
+        if (heroSpots && typeof d.count === 'number') {
+          heroSpots.textContent = d.count + ' of ' + spots + ' going';
+        }
       } catch { btn.textContent = 'Error — try again'; }
     });
-  }
+  })();
 </script>
 
 </Base>
