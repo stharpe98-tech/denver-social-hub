@@ -113,30 +113,8 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 
 <div class="ev-page">
 
-  <!-- ═══ CHOOSER — first thing you see ═══ -->
-  <div id="chooser" class="chooser">
-    <div class="chooser-header">
-      <h1 class="ev-h1">Denver Social Events</h1>
-      <p class="ev-sub">What brings you here?</p>
-    </div>
-    <div class="chooser-cards">
-      <button class="chooser-card" id="pickBrowse">
-        <span class="chooser-emoji">📅</span>
-        <span class="chooser-label">Browse Events</span>
-        <span class="chooser-desc">See what's coming up and RSVP</span>
-      </button>
-      <button class="chooser-card chooser-card-alt" id="pickSuggest">
-        <span class="chooser-emoji">💡</span>
-        <span class="chooser-label">Submit an Event</span>
-        <span class="chooser-desc">Create or suggest something for the group</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- ═══ BROWSE PATH ═══ -->
-  <div id="browsePath" class="path" style="display:none;">
-    <button class="path-back" id="browseBack">← Back</button>
-
+  <!-- ═══ BROWSE — events shown immediately ═══ -->
+  <div id="browsePath" class="path">
     <div class="ev-header">
       <h1 class="ev-h1">What's happening <span class="ev-h1-accent">in Denver</span></h1>
       <p class="ev-sub">Voted by the community. Tap something that sounds fun.</p>
@@ -226,9 +204,15 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     </div>
   </div>
 
+  <!-- FAB — floating button to create an event -->
+  <button class="ev-fab" id="fabCreate" title="Submit an Event">
+    <span class="ev-fab-icon">+</span>
+    <span class="ev-fab-label">New Event</span>
+  </button>
+
   <!-- ═══ SUGGEST PATH — one-box-at-a-time wizard ═══ -->
   <div id="suggestPath" class="path" style="display:none;">
-    <button class="path-back" id="suggestBack">← Back</button>
+    <button class="path-back" id="suggestBack">← Back to events</button>
 
     <div class="wiz-container">
       <div class="wiz-card">
@@ -366,22 +350,21 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   .ev-sub { font-size: 13px; color: #6B7280; }
   .ev-h1-accent { background: linear-gradient(135deg, #7C3AED, #EC4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
-  /* ── Chooser ── */
-  .chooser { padding: 48px 0 0; }
-  .chooser-header { text-align: center; margin-bottom: 32px; }
-  .chooser-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 520px; margin: 0 auto; }
-  .chooser-card {
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    padding: 36px 20px; border-radius: 20px;
-    background: #fff; border: 2px solid #E5E7EB;
-    cursor: pointer; transition: all .2s;
-    font-family: 'Outfit', sans-serif; text-align: center;
+  /* ── Floating Action Button ── */
+  .ev-fab {
+    position: fixed; bottom: 90px; right: 24px; z-index: 50;
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 22px; border-radius: 50px;
+    background: linear-gradient(135deg, #7C3AED, #EC4899);
+    color: #fff; border: none; cursor: pointer;
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+    box-shadow: 0 6px 24px rgba(124,58,237,0.35), 0 2px 8px rgba(0,0,0,0.1);
+    transition: all .25s ease;
   }
-  .chooser-card:hover { border-color: #7C3AED; transform: translateY(-3px); box-shadow: 0 8px 24px rgba(124,58,237,0.1); }
-  .chooser-card-alt:hover { border-color: #10B981; box-shadow: 0 8px 24px rgba(16,185,129,0.1); }
-  .chooser-emoji { font-size: 40px; }
-  .chooser-label { font-size: 17px; font-weight: 800; color: #111827; }
-  .chooser-desc { font-size: 12px; color: #6B7280; font-weight: 400; font-family: 'Inter', sans-serif; }
+  .ev-fab:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 10px 32px rgba(124,58,237,0.4); }
+  .ev-fab:active { transform: translateY(0) scale(0.98); }
+  .ev-fab-icon { font-size: 20px; font-weight: 300; line-height: 1; }
+  .ev-fab-label { letter-spacing: 0.02em; }
 
   /* ── Paths (fade in) ── */
   .path { animation: fadeUp .3s ease; }
@@ -637,31 +620,28 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   @media (max-width: 768px) {
     .ev-page { padding: 0 20px 40px; }
     .ev-grid { grid-template-columns: 1fr; }
-    .chooser-cards { grid-template-columns: 1fr; max-width: 320px; }
     .wiz-type-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+    .ev-fab { bottom: 80px; right: 16px; padding: 12px 18px; font-size: 13px; }
   }
 </style>
 
 <script is:inline define:vars={{ isLoggedIn }}>
 (function() {
-  var chooser = document.getElementById('chooser');
   var browsePath = document.getElementById('browsePath');
   var suggestPath = document.getElementById('suggestPath');
+  var fab = document.getElementById('fabCreate');
 
   function showView(view) {
-    chooser.style.display = 'none';
     browsePath.style.display = 'none';
     suggestPath.style.display = 'none';
-    if (view === 'chooser') chooser.style.display = '';
+    fab.style.display = view === 'browse' ? '' : 'none';
     if (view === 'browse') browsePath.style.display = '';
     if (view === 'suggest') suggestPath.style.display = '';
     window.scrollTo(0, 0);
   }
 
-  document.getElementById('pickBrowse').addEventListener('click', function() { showView('browse'); });
-  document.getElementById('pickSuggest').addEventListener('click', function() { showView('suggest'); });
-  document.getElementById('browseBack').addEventListener('click', function() { showView('chooser'); });
-  document.getElementById('suggestBack').addEventListener('click', function() { showView('chooser'); resetWizard(); });
+  fab.addEventListener('click', function() { showView('suggest'); });
+  document.getElementById('suggestBack').addEventListener('click', function() { showView('browse'); resetWizard(); });
 
   // ── Filter pills ──
   var matchTypes = [];
@@ -977,7 +957,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 
   // Done → another / browse
   document.getElementById('wizAnother').addEventListener('click', function() { resetWizard(); });
-  document.getElementById('wizBrowse').addEventListener('click', function() { resetWizard(); showView('browse'); });
+  document.getElementById('wizBrowse').addEventListener('click', function() { showView('browse'); resetWizard(); });
 })();
 </script>
 
