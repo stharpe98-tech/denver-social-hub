@@ -223,9 +223,9 @@ if (db && isPastEvent) {
 
       {event.description && <p class="det-desc">{event.description}</p>}
 
-      <!-- Add to Calendar -->
+      <!-- Add to Calendar (only shown after RSVP) -->
       {calDates && (
-        <div class="det-cal-row">
+        <div class="det-cal-row" id="cal-row" style={myRsvp ? '' : 'display:none'}>
           <a href={googleCalUrl} target="_blank" rel="noopener" class="det-cal-btn">
             <span class="det-cal-icon">📅</span> Add to Google Calendar
           </a>
@@ -617,6 +617,9 @@ if (db && isPastEvent) {
         if (heroSpots && typeof d.count === 'number') {
           heroSpots.textContent = d.count + ' of ' + spots + ' going';
         }
+        // Toggle calendar row
+        var calRow = document.getElementById('cal-row');
+        if (calRow) calRow.style.display = rsvped ? '' : 'none';
       } catch { btn.textContent = 'Error — try again'; }
     });
   })();
