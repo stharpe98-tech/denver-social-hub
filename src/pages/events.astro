@@ -6,6 +6,7 @@ let user: any = null;
 const cookie = Astro.cookies.get("dsn_user")?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 const isLoggedIn = !!user;
+const isAdmin = user?.role === 'admin';
 
 const db = getDB();
 let events: any[] = [];
@@ -481,13 +482,13 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
               <p class="wiz-identity-note">No passwords, no spam. You'll be part of Denver Social.</p>
             </div>
           )}
-          {isLoggedIn && (
+          {isAdmin && (
             <div class="wiz-mode-toggle">
               <button type="button" class="wiz-mode-btn selected" id="wizModeLive" data-mode="live">🚀 Make it live</button>
               <button type="button" class="wiz-mode-btn" id="wizModeSuggest" data-mode="suggest">💡 Suggest for voting</button>
             </div>
           )}
-          <button class="wiz-submit" id="wizSubmit">{isLoggedIn ? 'Create Event' : 'Post Event'}</button>
+          <button class="wiz-submit" id="wizSubmit">{isAdmin ? 'Create Event' : 'Post Event'}</button>
           <div class="wiz-err" id="wizErr4"></div>
         </div>
 
@@ -969,7 +970,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
 </style>
 
-<script is:inline define:vars={{ isLoggedIn }}>
+<script is:inline define:vars={{ isLoggedIn, isAdmin }}>
 (function() {
   var browsePath = document.getElementById('browsePath');
   var suggestPath = document.getElementById('suggestPath');
@@ -1021,7 +1022,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 
   // ── Wizard ──
   var TOTAL_STEPS = 4;
-  var wizMode = isLoggedIn ? 'live' : 'suggest';
+  var wizMode = isAdmin ? 'live' : 'suggest';
   var wizData = { title: '', type: 'social', subcat: '', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '' };
 
   var subcategories = {
@@ -1177,7 +1178,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 
   function resetWizard() {
     wizData = { title: '', type: 'social', subcat: '', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '' };
-    wizMode = isLoggedIn ? 'live' : 'suggest';
+    wizMode = isAdmin ? 'live' : 'suggest';
     document.getElementById('wizTitle').value = '';
     document.getElementById('wizType').value = 'social';
     document.getElementById('wizDesc').value = '';
@@ -1191,7 +1192,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     document.querySelectorAll('.wiz-err').forEach(function(e) { e.textContent = ''; });
     var welcomeCard = document.getElementById('wizWelcome');
     if (welcomeCard) welcomeCard.style.display = 'none';
-    if (isLoggedIn) {
+    if (isAdmin) {
       var ml = document.getElementById('wizModeLive');
       var ms = document.getElementById('wizModeSuggest');
       if (ml) ml.classList.add('selected');
@@ -1255,7 +1256,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 
   document.getElementById('wizNext3').addEventListener('click', function() { showStep(4); });
 
-  if (isLoggedIn) {
+  if (isAdmin) {
     document.querySelectorAll('.wiz-mode-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
         document.querySelectorAll('.wiz-mode-btn').forEach(function(b) { b.classList.remove('selected'); });

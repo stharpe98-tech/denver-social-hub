@@ -12,6 +12,11 @@ export async function POST({ request, cookies }: APIContext) {
     return new Response(JSON.stringify({ error: 'You must be logged in to create an event.' }), { status: 401 });
   }
 
+  // Only admins can create events directly — everyone else goes through /api/suggest
+  if (user.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Only admins can create events directly. Please submit a suggestion instead.' }), { status: 403 });
+  }
+
   const db = getDB();
   if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
 
