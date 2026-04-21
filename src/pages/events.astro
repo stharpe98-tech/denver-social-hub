@@ -138,17 +138,33 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
     <button class="path-back" id="browseBack">← Back</button>
 
     <div class="ev-header">
-      <h1 class="ev-h1">Upcoming Events</h1>
-      <p class="ev-sub">Voted by the community. Show up to what sounds good.</p>
+      <h1 class="ev-h1">What's happening <span class="ev-h1-accent">in Denver</span></h1>
+      <p class="ev-sub">Voted by the community. Tap something that sounds fun.</p>
     </div>
 
-    <div class="filters">
-      <button class="fpill active" data-type="all">All</button>
-      {Array.from(typeSet).map((t: any) => (
-        <button class="fpill" data-type={t}>
-          {typeEmoji[t] || '📅'} {(t || '').replace('_', ' ')}
+    <div class="filters-wrap">
+      <div class="filters" id="filterStrip">
+        <button class="fpill active" data-type="all">
+          <span class="fpill-emoji">🔥</span>
+          <span class="fpill-label">All Events</span>
         </button>
-      ))}
+        {userInterests.length > 0 && (
+          <button class="fpill fpill-foryou" data-type="foryou">
+            <span class="fpill-emoji">✨</span>
+            <span class="fpill-label">For You</span>
+          </button>
+        )}
+        {Array.from(typeSet).map((t: any) => {
+          const tc = getTypeColor(t as string);
+          return (
+            <button class="fpill" data-type={t} style={`--pill-accent: ${tc.accent}; --pill-bg: ${tc.tagBg}; --pill-text: ${tc.tagText};`}>
+              <span class="fpill-emoji">{typeEmoji[t as string] || '📅'}</span>
+              <span class="fpill-label">{((t as string) || '').replace('_', ' ')}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div class="filter-fade-r"></div>
     </div>
 
     {events.length === 0 ? (
@@ -348,6 +364,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   .ev-header { padding: 32px 0 16px; }
   .ev-h1 { font-family: 'Outfit', sans-serif; font-size: clamp(24px, 4vw, 32px); font-weight: 800; letter-spacing: -0.02em; color: #111827; margin-bottom: 4px; }
   .ev-sub { font-size: 13px; color: #6B7280; }
+  .ev-h1-accent { background: linear-gradient(135deg, #7C3AED, #EC4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
   /* ── Chooser ── */
   .chooser { padding: 48px 0 0; }
@@ -377,32 +394,54 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
   .path-back:hover { color: #111827; }
 
-  /* ── Browse events ── */
-  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
-  .fpill {
-    padding: 7px 16px; border-radius: 50px; background: #F8F9FB;
-    border: 1px solid #E5E7EB; color: #6B7280; font-size: 11px; font-weight: 600;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
-    text-transform: capitalize;
+  /* ── Browse events — scrollable filter strip ── */
+  .filters-wrap {
+    position: relative; margin-bottom: 24px;
   }
-  .fpill:hover { border-color: #D1D5DB; color: #111827; }
-  .fpill.active { background: rgba(124,58,237,0.06); color: #7C3AED; border-color: rgba(124,58,237,0.2); }
-  .fpill[data-type="dinner"].active { background: #FFF7ED; color: #C2410C; border-color: #F05A2830; }
-  .fpill[data-type="outdoor"].active { background: #F0FDF4; color: #047857; border-color: #05966930; }
-  .fpill[data-type="game_night"].active { background: #EEF2FF; color: #5B21B6; border-color: #7C3AED30; }
-  .fpill[data-type="brewery"].active { background: #FFFBEB; color: #92400E; border-color: #D9770630; }
-  .fpill[data-type="coffee"].active { background: #FEF3C7; color: #78350F; border-color: #92400E30; }
-  .fpill[data-type="arts"].active { background: #FDF2F8; color: #9D174D; border-color: #DB277730; }
-  .fpill[data-type="music"].active { background: #F5F3FF; color: #6D28D9; border-color: #7C3AED30; }
-  .fpill[data-type="social"].active { background: #FCE7F3; color: #BE185D; border-color: #EC489930; }
-  .fpill[data-type="bowling"].active { background: #EFF6FF; color: #1D4ED8; border-color: #3B82F630; }
-  .fpill[data-type="group_tickets"].active { background: #EFF6FF; color: #1D4ED8; border-color: #2563EB30; }
-  .fpill[data-type="camping"].active { background: #ECFDF5; color: #065F46; border-color: #05966930; }
-  .fpill[data-type="sports_outing"].active { background: #EFF6FF; color: #1E40AF; border-color: #2563EB30; }
-  .fpill[data-type="active"].active { background: #ECFDF5; color: #065F46; border-color: #05966930; }
-  .fpill[data-type="casino"].active { background: #FEF2F2; color: #991B1B; border-color: #DC262630; }
-  .fpill[data-type="food_trucks"].active { background: #FFF7ED; color: #C2410C; border-color: #EA580C30; }
-  .fpill[data-type="potluck"].active { background: #FFF7ED; color: #C2410C; border-color: #F05A2830; }
+  .filters {
+    display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 12px;
+    scrollbar-width: none; -ms-overflow-style: none;
+    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+  }
+  .filters::-webkit-scrollbar { display: none; }
+  .filter-fade-r {
+    position: absolute; right: 0; top: 0; bottom: 12px; width: 48px;
+    background: linear-gradient(to right, transparent, #FFF5F0);
+    pointer-events: none; border-radius: 0 0 12px 0;
+  }
+  .fpill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 18px; border-radius: 50px;
+    background: #fff; border: 2px solid #E5E7EB;
+    color: #6B7280; font-family: 'Outfit', sans-serif;
+    cursor: pointer; transition: all .2s; white-space: nowrap; flex-shrink: 0;
+  }
+  .fpill-emoji { font-size: 16px; line-height: 1; }
+  .fpill-label { font-size: 13px; font-weight: 700; text-transform: capitalize; }
+  .fpill:hover {
+    border-color: var(--pill-accent, #7C3AED);
+    background: var(--pill-bg, rgba(124,58,237,0.04));
+    color: var(--pill-text, #7C3AED);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+  .fpill.active {
+    background: var(--pill-bg, rgba(124,58,237,0.08));
+    color: var(--pill-text, #7C3AED);
+    border-color: var(--pill-accent, #7C3AED);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--pill-accent, #7C3AED) 20%, transparent);
+  }
+  .fpill.active .fpill-emoji { transform: scale(1.15); }
+  /* "All" pill uses purple */
+  .fpill[data-type="all"] { --pill-accent: #7C3AED; --pill-bg: rgba(124,58,237,0.08); --pill-text: #7C3AED; }
+  /* "For You" pill — special gradient border */
+  .fpill-foryou {
+    background: linear-gradient(135deg, #FCE7F3 0%, #EEF2FF 50%, #ECFDF5 100%);
+    border-color: #D8B4FE;
+  }
+  .fpill-foryou .fpill-label { background: linear-gradient(135deg, #EC4899, #7C3AED); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .fpill-foryou:hover { border-color: #A78BFA; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(124,58,237,0.15); }
+  .fpill-foryou.active { border-color: #7C3AED; box-shadow: 0 4px 16px rgba(124,58,237,0.2); }
 
   .ev-empty {
     text-align: center; padding: 56px 20px;
@@ -625,13 +664,20 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   document.getElementById('suggestBack').addEventListener('click', function() { showView('chooser'); resetWizard(); });
 
   // ── Filter pills ──
+  var matchTypes = [];
+  document.querySelectorAll('.match-tag').forEach(function(tag) {
+    var card = tag.closest('.ec');
+    if (card) matchTypes.push(card);
+  });
   document.querySelectorAll('.fpill').forEach(function(pill) {
     pill.addEventListener('click', function() {
       document.querySelectorAll('.fpill').forEach(function(p) { p.classList.remove('active'); });
       this.classList.add('active');
       var type = this.getAttribute('data-type');
       document.querySelectorAll('.ec').forEach(function(card) {
-        card.style.display = (type === 'all' || card.getAttribute('data-type') === type) ? '' : 'none';
+        if (type === 'all') { card.style.display = ''; }
+        else if (type === 'foryou') { card.style.display = card.querySelector('.match-tag') ? '' : 'none'; }
+        else { card.style.display = card.getAttribute('data-type') === type ? '' : 'none'; }
       });
     });
   });
