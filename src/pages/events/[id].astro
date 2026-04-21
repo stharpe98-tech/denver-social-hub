@@ -170,6 +170,25 @@ if (calDates) {
   ].join('\n');
 }
 
+// ── Host info ──
+let host: any = null;
+if (db && event.host_id) {
+  try {
+    host = await db.prepare("SELECT id, name, neighborhood, bio, joined_at, events_attended, suggestions_submitted FROM members WHERE id = ?").bind(event.host_id).first();
+  } catch {}
+}
+const isHost = user && host && user.id === host.id;
+const isAdmin = user?.role === 'admin';
+
+// ── Host updates (logistics notes) ──
+let eventUpdates: any[] = [];
+if (db) {
+  try {
+    const updResult = await db.prepare("SELECT id, author_name, message, created_at FROM event_updates WHERE event_id = ? ORDER BY created_at DESC LIMIT 10").bind(id).all();
+    eventUpdates = updResult?.results || [];
+  } catch {}
+}
+
 // Check if event is in the past (for photo gallery)
 const isPastEvent = !!event.is_past;
 
@@ -240,6 +259,73 @@ if (db && isPastEvent) {
       )}
     </div>
   </div>
+
+  <!-- Host info -->
+  {host && (
+    <div class="det-host-card">
+      <div class="det-host-left">
+        <div class="det-host-av" style={`background: ${theme.accent}`}>{(host.name || '?')[0]}</div>
+        <div class="det-host-info">
+          <div class="det-host-label">Hosted by</div>
+          <div class="det-host-name">{host.name}</div>
+          {host.neighborhood && <div class="det-host-hood">📍 {host.neighborhood}</div>}
+        </div>
+      </div>
+      <div class="det-host-right">
+        {myRsvp && host && !isHost ? (
+          <button class="det-host-msg-btn" id="msgHostBtn" data-host-name={host.name}>💬 Message Host</button>
+        ) : !myRsvp && !isHost ? (
+          <span class="det-host-rsvp-note">RSVP to contact host</span>
+        ) : null}
+      </div>
+    </div>
+  )}
+
+  <!-- Host message modal (hidden) -->
+  {myRsvp && host && !isHost && (
+    <div class="det-msg-overlay" id="msgOverlay" style="display:none">
+      <div class="det-msg-modal">
+        <div class="det-msg-header">
+          <strong>Message {host.name}</strong>
+          <button class="det-msg-close" id="msgClose">✕</button>
+        </div>
+        <p class="det-msg-note">Your message and email will be shared with the host so they can reply.</p>
+        <textarea class="det-msg-input" id="msgText" placeholder="Hey! Quick question about the event..." maxlength="500" rows="4"></textarea>
+        <button class="det-msg-send" id="msgSend" data-event-id={id} data-host-id={host.id} style={`background: ${theme.accent}`}>Send Message</button>
+      </div>
+    </div>
+  )}
+
+  <!-- Host updates / logistics -->
+  {(eventUpdates.length > 0 || isHost || isAdmin) && (
+    <div class="det-updates-card">
+      <div class="det-updates-header">
+        <div class="det-updates-title">📋 Host Updates</div>
+        {eventUpdates.length === 0 && <span class="det-updates-badge">New</span>}
+      </div>
+      {(isHost || isAdmin) && (
+        <div class="det-update-form">
+          <textarea class="det-update-input" id="updateText" placeholder="Post a logistics note — parking info, what to bring, meeting spot..." maxlength="500" rows="2"></textarea>
+          <button class="det-update-post" id="postUpdateBtn" data-event-id={id} style={`background: ${theme.accent}`}>Post Update</button>
+        </div>
+      )}
+      {eventUpdates.length > 0 ? (
+        <div class="det-updates-list" id="updatesList">
+          {eventUpdates.map((u: any) => (
+            <div class="det-update-item">
+              <div class="det-update-meta">
+                <strong>{u.author_name}</strong>
+                <span class="det-update-time">{new Date(u.created_at + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+              </div>
+              <p class="det-update-msg">{u.message}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p class="det-updates-empty">No updates yet. The host will post logistics info here.</p>
+      )}
+    </div>
+  )}
 
   <!-- RSVP bar -->
   <div class="det-rsvp-bar">
@@ -576,6 +662,112 @@ if (db && isPastEvent) {
   }
   .det-discord-btn:hover { opacity: 0.9; }
 
+  /* ── Host card ── */
+  .det-host-card {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px 20px; border-radius: 20px;
+    background: #fff; border: 1px solid #E5E7EB;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    margin-bottom: 16px;
+  }
+  .det-host-left { display: flex; align-items: center; gap: 12px; }
+  .det-host-av {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .det-host-info { display: flex; flex-direction: column; gap: 1px; }
+  .det-host-label { font-size: 10px; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .det-host-name { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #111827; }
+  .det-host-hood { font-size: 11px; color: #6B7280; }
+  .det-host-msg-btn {
+    padding: 8px 16px; border-radius: 50px;
+    background: #F8F9FB; border: 1px solid #E5E7EB;
+    font-size: 12px; font-weight: 600; font-family: 'Outfit', sans-serif;
+    color: #374151; cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .det-host-msg-btn:hover { border-color: var(--ev-accent); color: var(--ev-accent); }
+  .det-host-rsvp-note { font-size: 11px; color: #9CA3AF; font-style: italic; white-space: nowrap; }
+
+  /* ── Message host modal ── */
+  .det-msg-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .det-msg-modal {
+    background: #fff; border-radius: 20px; padding: 24px;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .det-msg-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .det-msg-header strong { font-family: 'Outfit', sans-serif; font-size: 16px; color: #111827; }
+  .det-msg-close {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: none; background: #F3F4F6; cursor: pointer;
+    font-size: 14px; color: #6B7280; display: flex; align-items: center; justify-content: center;
+  }
+  .det-msg-note { font-size: 12px; color: #9CA3AF; margin-bottom: 12px; line-height: 1.5; }
+  .det-msg-input {
+    width: 100%; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid #E5E7EB; font-size: 14px;
+    font-family: 'Inter', system-ui, sans-serif;
+    resize: vertical; min-height: 80px; margin-bottom: 12px;
+    box-sizing: border-box;
+  }
+  .det-msg-input:focus { outline: none; border-color: var(--ev-accent); box-shadow: 0 0 0 3px var(--ev-accent-shadow); }
+  .det-msg-send {
+    width: 100%; padding: 12px; border-radius: 12px;
+    border: none; color: #fff; font-size: 14px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; cursor: pointer;
+    transition: opacity .2s;
+  }
+  .det-msg-send:hover { opacity: 0.92; }
+
+  /* ── Host updates ── */
+  .det-updates-card {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 20px;
+    padding: 18px 20px; margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .det-updates-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  }
+  .det-updates-title { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; }
+  .det-updates-badge {
+    padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;
+    background: #ECFDF5; color: #059669; text-transform: uppercase;
+  }
+  .det-update-form { margin-bottom: 14px; }
+  .det-update-input {
+    width: 100%; padding: 10px 12px; border-radius: 12px;
+    border: 1px solid #E5E7EB; font-size: 13px;
+    font-family: 'Inter', system-ui, sans-serif;
+    resize: none; margin-bottom: 8px; box-sizing: border-box;
+  }
+  .det-update-input:focus { outline: none; border-color: var(--ev-accent); box-shadow: 0 0 0 3px var(--ev-accent-shadow); }
+  .det-update-post {
+    padding: 8px 18px; border-radius: 10px;
+    border: none; color: #fff; font-size: 12px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; cursor: pointer;
+    transition: opacity .2s;
+  }
+  .det-update-post:hover { opacity: 0.92; }
+  .det-updates-list { display: flex; flex-direction: column; gap: 10px; }
+  .det-update-item {
+    padding: 12px 14px; border-radius: 12px;
+    background: #F8F9FB; border: 1px solid #F3F4F6;
+  }
+  .det-update-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .det-update-meta strong { font-family: 'Outfit', sans-serif; font-size: 12px; color: #111827; }
+  .det-update-time { font-size: 10px; color: #9CA3AF; }
+  .det-update-msg { font-size: 13px; color: #374151; line-height: 1.6; margin: 0; }
+  .det-updates-empty { font-size: 12px; color: #9CA3AF; margin: 0; }
+
   @media (max-width: 768px) {
     .det-page { padding: 20px 16px 48px; }
     .det-hero-img { height: 220px; }
@@ -584,6 +776,9 @@ if (db && isPastEvent) {
     .det-rsvp-bar { flex-direction: column; gap: 12px; }
     .det-rsvp-btn { width: 100%; padding: 14px; }
     .det-rsvp-btn.rsvped { padding: 14px; }
+    .det-host-card { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .det-host-right { width: 100%; }
+    .det-host-msg-btn { width: 100%; text-align: center; }
   }
 </style>
 
@@ -643,6 +838,104 @@ if (db && isPastEvent) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    });
+  }
+
+  // ── Message Host modal ──
+  var msgBtn = document.getElementById('msgHostBtn');
+  var msgOverlay = document.getElementById('msgOverlay');
+  var msgClose = document.getElementById('msgClose');
+  var msgSend = document.getElementById('msgSend');
+
+  if (msgBtn && msgOverlay) {
+    msgBtn.addEventListener('click', function() { msgOverlay.style.display = ''; });
+    msgClose && msgClose.addEventListener('click', function() { msgOverlay.style.display = 'none'; });
+    msgOverlay.addEventListener('click', function(e) { if (e.target === msgOverlay) msgOverlay.style.display = 'none'; });
+  }
+
+  if (msgSend) {
+    msgSend.addEventListener('click', async function() {
+      var text = document.getElementById('msgText');
+      if (!text || !text.value.trim()) { alert('Please type a message'); return; }
+      msgSend.textContent = 'Sending...';
+      msgSend.disabled = true;
+      try {
+        var r = await fetch('/api/contact-host', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_id: msgSend.getAttribute('data-event-id'),
+            host_id: msgSend.getAttribute('data-host-id'),
+            message: text.value.trim()
+          })
+        });
+        var d = await r.json();
+        if (d.ok) {
+          text.value = '';
+          msgSend.textContent = '✓ Sent!';
+          setTimeout(function() {
+            msgOverlay.style.display = 'none';
+            msgSend.textContent = 'Send Message';
+            msgSend.disabled = false;
+          }, 1500);
+        } else {
+          alert(d.error || 'Failed to send');
+          msgSend.textContent = 'Send Message';
+          msgSend.disabled = false;
+        }
+      } catch {
+        alert('Failed to send — try again');
+        msgSend.textContent = 'Send Message';
+        msgSend.disabled = false;
+      }
+    });
+  }
+
+  // ── Post host update ──
+  var postUpdateBtn = document.getElementById('postUpdateBtn');
+  if (postUpdateBtn) {
+    postUpdateBtn.addEventListener('click', async function() {
+      var input = document.getElementById('updateText');
+      if (!input || !input.value.trim()) { alert('Write something first'); return; }
+      postUpdateBtn.textContent = 'Posting...';
+      postUpdateBtn.disabled = true;
+      try {
+        var r = await fetch('/api/event-updates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_id: postUpdateBtn.getAttribute('data-event-id'),
+            message: input.value.trim()
+          })
+        });
+        var d = await r.json();
+        if (d.ok) {
+          // Add the update to the list visually
+          var list = document.getElementById('updatesList');
+          var emptyMsg = document.querySelector('.det-updates-empty');
+          if (emptyMsg) emptyMsg.remove();
+          if (!list) {
+            // Create the list container
+            var card = document.querySelector('.det-updates-card');
+            list = document.createElement('div');
+            list.className = 'det-updates-list';
+            list.id = 'updatesList';
+            card.appendChild(list);
+          }
+          var item = document.createElement('div');
+          item.className = 'det-update-item';
+          var now = new Date();
+          item.innerHTML = '<div class="det-update-meta"><strong>You</strong><span class="det-update-time">Just now</span></div><p class="det-update-msg">' + input.value.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
+          list.insertBefore(item, list.firstChild);
+          input.value = '';
+        } else {
+          alert(d.error || 'Failed to post');
+        }
+      } catch {
+        alert('Failed to post — try again');
+      }
+      postUpdateBtn.textContent = 'Post Update';
+      postUpdateBtn.disabled = false;
     });
   }
 
