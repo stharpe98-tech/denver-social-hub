@@ -110,6 +110,18 @@ const typeImages: Record<string, string> = {
 };
 const heroImage = typeImages[event.event_type] || typeImages.other;
 
+// ── Google Maps link ──
+const venueOrLocation = event.location || event.zone || '';
+const mapsQuery = venueOrLocation ? encodeURIComponent(venueOrLocation + (venueOrLocation.toLowerCase().includes('denver') || venueOrLocation.toLowerCase().includes('co') ? '' : ', Denver, CO')) : '';
+const googleMapsUrl = mapsQuery ? `https://www.google.com/maps/search/?api=1&query=${mapsQuery}` : '';
+
+// Zone-level maps link (for non-RSVP'd users who only see the zone)
+const zoneQuery = event.zone ? encodeURIComponent(event.zone + ', Denver, CO') : '';
+const zoneMapsUrl = zoneQuery ? `https://www.google.com/maps/search/?api=1&query=${zoneQuery}` : '';
+
+// Budget display logic
+const hasBudget = event.price_cap && event.price_cap !== '' && event.price_cap !== 'Free' && event.price_cap !== '$0';
+
 const spotsLeft = Math.max(0, (parseInt(event.spots) || 10) - rsvps.length);
 const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444","#6366F1"];
 
@@ -232,12 +244,30 @@ if (db && isPastEvent) {
         </div>
         <div class="det-info-item">
           <div class="det-info-label">Where</div>
-          <div class="det-info-value">{myRsvp ? (event.location || event.zone || 'Denver') : (event.zone || 'Denver')}{!myRsvp ? ' · RSVP for address' : ''}</div>
+          {myRsvp ? (
+            <div class="det-info-value">
+              {event.location || event.zone || 'Denver'}
+              {googleMapsUrl && <a href={googleMapsUrl} target="_blank" rel="noopener" class="det-maps-link">📍 Map</a>}
+            </div>
+          ) : (
+            <div class="det-info-value">
+              {event.zone || 'Denver'}
+              {zoneMapsUrl && <a href={zoneMapsUrl} target="_blank" rel="noopener" class="det-maps-link">📍 Area</a>}
+              <span class="det-info-rsvp-hint">RSVP for exact spot</span>
+            </div>
+          )}
         </div>
-        <div class="det-info-item">
-          <div class="det-info-label">Price</div>
-          <div class="det-info-value" style={`color: ${event.price_cap && event.price_cap !== 'Free' && event.price_cap !== '$0' ? '#111827' : '#059669'};`}>{event.price_cap && event.price_cap !== 'Free' && event.price_cap !== '$0' ? event.price_cap : 'Free'}</div>
-        </div>
+        {hasBudget ? (
+          <div class="det-info-item">
+            <div class="det-info-label">Price</div>
+            <div class="det-info-value">{event.price_cap}</div>
+          </div>
+        ) : (
+          <div class="det-info-item">
+            <div class="det-info-label">Price</div>
+            <div class="det-info-value" style="color: #059669;">Free</div>
+          </div>
+        )}
         <div class="det-info-item">
           <div class="det-info-label">Group Size</div>
           <div class="det-info-value">{event.spots} people max</div>
@@ -496,7 +526,15 @@ if (db && isPastEvent) {
     padding: 14px 16px;
   }
   .det-info-label { font-size: 10px; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
-  .det-info-value { font-size: 14px; font-weight: 600; font-family: 'Outfit', sans-serif; color: #111827; }
+  .det-info-value { font-size: 14px; font-weight: 600; font-family: 'Outfit', sans-serif; color: #111827; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .det-maps-link {
+    display: inline-flex; align-items: center; gap: 2px;
+    font-size: 11px; font-weight: 700; color: var(--ev-accent, #7C3AED);
+    text-decoration: none; padding: 2px 8px; border-radius: 6px;
+    background: rgba(124,58,237,0.06); transition: all .15s;
+  }
+  .det-maps-link:hover { background: rgba(124,58,237,0.12); }
+  .det-info-rsvp-hint { font-size: 10px; color: #9CA3AF; font-weight: 500; display: block; width: 100%; }
 
   .det-desc { font-size: 15px; line-height: 1.8; color: #374151; margin: 0; }
 
