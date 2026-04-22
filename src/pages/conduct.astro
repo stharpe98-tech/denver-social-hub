@@ -91,6 +91,7 @@ import Base from '../layouts/Base.astro';
   <section class="cond-section">
     <div class="cond-callout blue">
       <p><strong>Real talk:</strong> Being awkward? Normal. Saying something dumb? Happens. Running late because I-25 is a parking lot? Every single time. This page isn't about being perfect — it's so everyone can relax and have fun. If you read this far, you're exactly the kind of person we want around.</p>
+      <a href="/events" class="cond-cta">See what's coming up →</a>
     </div>
   </section>
 
@@ -152,8 +153,14 @@ import Base from '../layouts/Base.astro';
   .cond-callout.blue {
     background: rgba(96,165,250,0.04); border: 1px solid rgba(96,165,250,0.15);
   }
-  .cond-callout.blue p { font-size: 13px; color: #6B7280; line-height: 1.7; }
+  .cond-callout.blue p { font-size: 13px; color: #6B7280; line-height: 1.7; margin-bottom: 0; }
   .cond-callout.blue strong { color: #111827; }
+  .cond-cta {
+    display: inline-block; margin-top: 16px; padding: 10px 24px; border-radius: 50px;
+    background: #7C3AED; color: #fff; font-family: 'Outfit', sans-serif;
+    font-size: 14px; font-weight: 700; text-decoration: none; transition: all .2s;
+  }
+  .cond-cta:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(124,58,237,0.3); }
 
   .cond-check-list { display: flex; flex-direction: column; gap: 10px; }
   .cond-check-list div { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #6B7280; line-height: 1.5; }
