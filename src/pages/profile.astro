@@ -24,7 +24,6 @@ if (Astro.request.method === "POST") {
     if (db && name) {
       await db.prepare("UPDATE members SET name=?,bio=?,neighborhood=?,interests=?,looking_for=? WHERE email=?").bind(name,bio,neighborhood,interests,looking_for,user.email).run();
       success = true;
-      // Update cookie name if changed
       user.name = name;
     }
   } catch { error = "Failed to save. Try again."; }
@@ -35,6 +34,7 @@ let mySuggestions: any[] = [];
 let myRsvps: any[] = [];
 let upcomingRsvps: any[] = [];
 let pastRsvps: any[] = [];
+let blindIntros: any[] = [];
 try {
   if (db && user?.email) {
     streak = await db.prepare("SELECT * FROM member_streaks WHERE email=?").bind(user.email).first();
@@ -45,6 +45,24 @@ try {
     myRsvps = rsvpResult.results || [];
     upcomingRsvps = myRsvps.filter((r: any) => !r.is_past);
     pastRsvps = myRsvps.filter((r: any) => r.is_past);
+    // Get blind intro matches
+    try {
+      const introResult = await db.prepare(
+        `SELECT bi.*, e.title as event_title FROM blind_intros bi
+         JOIN events e ON bi.event_id = e.id
+         WHERE bi.member1_email = ? OR bi.member2_email = ?
+         ORDER BY bi.created_at DESC LIMIT 5`
+      ).bind(user.email, user.email).all();
+      blindIntros = (introResult.results || []).map((intro: any) => {
+        const isMe1 = intro.member1_email === user.email;
+        return {
+          matchName: (isMe1 ? intro.member2_name : intro.member1_name || 'Someone').split(' ')[0],
+          matchFact: isMe1 ? intro.member2_fact : intro.member1_fact,
+          eventTitle: intro.event_title,
+          eventId: intro.event_id,
+        };
+      });
+    } catch {}
   }
 } catch {}
 
@@ -80,208 +98,269 @@ const next  = getNextLevel(level);
 const memberSince = member?.joined_at ? new Date(member.joined_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Recently';
 
 const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",sports:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",potluck:"🍲",other:"📅" };
-const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444","#6366F1"];
-const avatarColor = avatarColors[Math.abs((user.name || '').charCodeAt(0)) % avatarColors.length];
+
+// Generate a fun greeting
+const greetings = ["What's good", "Hey there", "Yo", "What's up", "Sup"];
+const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+const firstName = (member?.name || user.name || '').split(' ')[0];
+
+// Fun stat labels
+const funFactCount = totalEvts + (streak?.current_streak || 0) + mySuggestions.length;
+const socialLevel = totalEvts === 0 ? "Fresh face" : totalEvts < 3 ? "Getting out there" : totalEvts < 8 ? "Becoming a regular" : totalEvts < 15 ? "Denver knows your name" : "Absolute legend";
 ---
 <Base title="My Profile">
-<div class="prof-page">
+<div class="p">
 
-  {error   && <div class="prof-toast prof-toast-err">{error}</div>}
-  {success && <div class="prof-toast prof-toast-ok">✓ Profile saved!</div>}
+  {error   && <div class="p-toast err">{error}</div>}
+  {success && <div class="p-toast ok">Profile saved</div>}
 
-  <!-- ═══ Profile Header Card ═══ -->
-  <div class="prof-header-card">
-    <div class="prof-header-bg" style={`background: linear-gradient(135deg, ${level.color}15 0%, ${level.color}08 100%);`}></div>
-    <div class="prof-header-content">
-      <div class="prof-avatar" style={`background: ${avatarColor};`}>
-        {(user.name || '?')[0].toUpperCase()}
-      </div>
-      <div class="prof-header-info">
-        <h1 class="prof-name">{member?.name || user.name}</h1>
-        <div class="prof-meta">
-          {member?.neighborhood && <span class="prof-meta-item">📍 {member.neighborhood}</span>}
-          <span class="prof-meta-item">📅 Joined {memberSince}</span>
-        </div>
-        {member?.bio && <p class="prof-bio">{member.bio}</p>}
+  <!-- ═══ HERO ═══ -->
+  <div class="p-hero">
+    <div class="p-hero-bg"></div>
+    <div class="p-hero-content">
+      <div class="p-avatar">{firstName[0]?.toUpperCase() || '?'}</div>
+      <div class="p-greeting">{greeting}, {firstName}.</div>
+      <div class="p-tagline">{socialLevel}</div>
+      <div class="p-meta-row">
+        {member?.neighborhood && <span class="p-chip">📍 {member.neighborhood}</span>}
+        <span class="p-chip">📅 Since {memberSince}</span>
+        <span class="p-chip">{level.emoji} {level.name}</span>
       </div>
     </div>
-
-    <!-- Stats row -->
-    <div class="prof-stats">
-      <div class="prof-stat">
-        <div class="prof-stat-num">{totalEvts}</div>
-        <div class="prof-stat-label">Events</div>
-      </div>
-      <div class="prof-stat">
-        <div class="prof-stat-num">{streak?.current_streak || 0}</div>
-        <div class="prof-stat-label">Streak</div>
-      </div>
-      <div class="prof-stat">
-        <div class="prof-stat-num">{mySuggestions.length}</div>
-        <div class="prof-stat-label">Ideas</div>
-      </div>
-      <div class="prof-stat">
-        <div class="prof-stat-num">{myRsvps.length}</div>
-        <div class="prof-stat-label">RSVPs</div>
-      </div>
-    </div>
-
-    <!-- Level badge -->
-    <div class="prof-level-row">
-      <div class="prof-level-badge" style={`background: ${level.color}12; border-color: ${level.color}30;`}>
-        <span class="prof-level-emoji">{level.emoji}</span>
-        <span class="prof-level-name" style={`color: ${level.color};`}>{level.name}</span>
-      </div>
-      {next && (
-        <div class="prof-level-progress">
-          <div class="prof-level-track">
-            <div class="prof-level-fill" style={`width: ${Math.min(100,Math.round(totalEvts/next.eventsRequired*100))}%; background: ${level.color};`}></div>
-          </div>
-          <span class="prof-level-next">{next.emoji} {next.name} — {next.eventsRequired - totalEvts} more events</span>
-        </div>
-      )}
-      {(streak?.current_streak||0) >= 3 && <span class="prof-streak-badge">🔥 {streak.current_streak} streak!</span>}
-    </div>
-
-    <!-- Interest tags -->
-    {myInterests.length > 0 && (
-      <div class="prof-tags">
-        {myInterests.slice(0, 8).map((i: string) => <span class="prof-tag">{i}</span>)}
-      </div>
-    )}
   </div>
 
-  <!-- ═══ Tabs: Upcoming / Past / Edit ═══ -->
-  <div class="prof-tabs">
-    <button class="prof-tab active" data-tab="upcoming">Upcoming</button>
-    <button class="prof-tab" data-tab="past">Past Events</button>
-    <button class="prof-tab" data-tab="edit">Edit Profile</button>
+  <!-- ═══ BIO ═══ -->
+  {member?.bio ? (
+    <div class="p-bio-card">
+      <p class="p-bio-text">"{member.bio}"</p>
+    </div>
+  ) : (
+    <div class="p-bio-card p-bio-empty">
+      <p class="p-bio-text">No bio yet — <button class="p-bio-link" id="addBioBtn">tell people who you are</button></p>
+    </div>
+  )}
+
+  <!-- ═══ STATS ═══ -->
+  <div class="p-stats">
+    <div class="p-stat">
+      <div class="p-stat-big">{totalEvts}</div>
+      <div class="p-stat-label">hangouts</div>
+    </div>
+    <div class="p-stat-divider"></div>
+    <div class="p-stat">
+      <div class="p-stat-big">{streak?.current_streak || 0}</div>
+      <div class="p-stat-label">{(streak?.current_streak || 0) >= 3 ? '🔥 streak' : 'streak'}</div>
+    </div>
+    <div class="p-stat-divider"></div>
+    <div class="p-stat">
+      <div class="p-stat-big">{mySuggestions.length}</div>
+      <div class="p-stat-label">ideas pitched</div>
+    </div>
+    <div class="p-stat-divider"></div>
+    <div class="p-stat">
+      <div class="p-stat-big">{myRsvps.length}</div>
+      <div class="p-stat-label">RSVPs</div>
+    </div>
   </div>
 
-  <!-- TAB: Upcoming RSVPs -->
-  <div class="prof-tab-content" id="tab-upcoming">
+  <!-- ═══ LEVEL PROGRESS ═══ -->
+  {next && (
+    <div class="p-level">
+      <div class="p-level-bar">
+        <div class="p-level-fill" style={`width: ${Math.min(100,Math.round(totalEvts/next.eventsRequired*100))}%;`}></div>
+      </div>
+      <div class="p-level-text">{next.emoji} <strong>{next.name}</strong> — {next.eventsRequired - totalEvts} more hangouts to go</div>
+    </div>
+  )}
+
+  <!-- ═══ INTERESTS ═══ -->
+  {myInterests.length > 0 && (
+    <div class="p-section">
+      <div class="p-section-head">
+        <span class="p-section-title">Into</span>
+      </div>
+      <div class="p-tags">
+        {myInterests.map((i: string) => <span class="p-tag">{i}</span>)}
+      </div>
+    </div>
+  )}
+
+  {myLooking.length > 0 && (
+    <div class="p-section">
+      <div class="p-section-head">
+        <span class="p-section-title">Looking for</span>
+      </div>
+      <div class="p-tags">
+        {myLooking.map((l: string) => <span class="p-tag p-tag-looking">{l}</span>)}
+      </div>
+    </div>
+  )}
+
+  <!-- ═══ BLIND INTROS ═══ -->
+  {blindIntros.length > 0 && (
+    <div class="p-section">
+      <div class="p-section-head">
+        <span class="p-section-title">Your blind intros</span>
+        <span class="p-section-count">{blindIntros.length}</span>
+      </div>
+      <div class="p-intros">
+        {blindIntros.map((intro: any) => (
+          <a href={`/events/${intro.eventId}`} class="p-intro-card">
+            <div class="p-intro-emoji">🤝</div>
+            <div class="p-intro-info">
+              <div class="p-intro-name">{intro.matchName}</div>
+              <div class="p-intro-fact">{intro.matchFact}</div>
+              <div class="p-intro-event">{intro.eventTitle}</div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <!-- ═══ UPCOMING ═══ -->
+  <div class="p-section">
+    <div class="p-section-head">
+      <span class="p-section-title">Coming up</span>
+      {upcomingRsvps.length > 0 && <span class="p-section-count">{upcomingRsvps.length}</span>}
+    </div>
     {upcomingRsvps.length > 0 ? (
-      <div class="prof-events-list">
+      <div class="p-events">
         {upcomingRsvps.map((r: any) => (
-          <a href={`/events/${r.id}`} class="prof-event-card">
-            <div class="prof-event-emoji">{typeEmoji[r.event_type] || '📅'}</div>
-            <div class="prof-event-info">
-              <div class="prof-event-title">{r.title}</div>
-              <div class="prof-event-meta">{(r.event_month || 'TBD').slice(0,3)} {r.event_day || ''}{r.event_time ? ` · ${r.event_time}` : ''} · {r.zone || r.location || 'Denver'}</div>
+          <a href={`/events/${r.id}`} class="p-event">
+            <div class="p-event-left">
+              <div class="p-event-date">
+                <div class="p-event-month">{(r.event_month || 'TBD').slice(0,3)}</div>
+                <div class="p-event-day">{r.event_day || '—'}</div>
+              </div>
+              <div class="p-event-info">
+                <div class="p-event-title">{r.title}</div>
+                <div class="p-event-sub">{r.zone || r.location || 'Denver'}</div>
+              </div>
             </div>
-            <span class="prof-event-badge">Going ✓</span>
+            <span class="p-event-badge going">Going</span>
           </a>
         ))}
       </div>
     ) : (
-      <div class="prof-empty">
-        <div class="prof-empty-icon">📅</div>
-        <div class="prof-empty-text">No upcoming events yet</div>
-        <a href="/events" class="prof-empty-link">Browse events →</a>
+      <div class="p-empty">
+        <span>Nothing on the calendar</span>
+        <a href="/events">Find something →</a>
       </div>
     )}
   </div>
 
-  <!-- TAB: Past Events -->
-  <div class="prof-tab-content" id="tab-past" style="display:none">
-    {pastRsvps.length > 0 ? (
-      <div class="prof-events-list">
+  <!-- ═══ PAST ═══ -->
+  {pastRsvps.length > 0 && (
+    <div class="p-section">
+      <div class="p-section-head">
+        <span class="p-section-title">Memories</span>
+        <span class="p-section-count">{pastRsvps.length}</span>
+      </div>
+      <div class="p-events">
         {pastRsvps.map((r: any) => (
-          <a href={`/events/${r.id}`} class="prof-event-card prof-event-past">
-            <div class="prof-event-emoji">{typeEmoji[r.event_type] || '📅'}</div>
-            <div class="prof-event-info">
-              <div class="prof-event-title">{r.title}</div>
-              <div class="prof-event-meta">{(r.event_month || 'TBD').slice(0,3)} {r.event_day || ''}</div>
+          <a href={`/events/${r.id}`} class="p-event past">
+            <div class="p-event-left">
+              <div class="p-event-emoji">{typeEmoji[r.event_type] || '📅'}</div>
+              <div class="p-event-info">
+                <div class="p-event-title">{r.title}</div>
+                <div class="p-event-sub">{(r.event_month || '').slice(0,3)} {r.event_day || ''}</div>
+              </div>
             </div>
-            <span class="prof-event-badge prof-event-attended">Attended</span>
+            <span class="p-event-badge attended">Been</span>
           </a>
         ))}
       </div>
-    ) : (
-      <div class="prof-empty">
-        <div class="prof-empty-icon">🎉</div>
-        <div class="prof-empty-text">No past events yet — your memories will show up here</div>
-      </div>
-    )}
+    </div>
+  )}
 
-    {mySuggestions.length > 0 && (
-      <div class="prof-section">
-        <div class="prof-section-title">My Event Ideas</div>
+  <!-- ═══ IDEAS ═══ -->
+  {mySuggestions.length > 0 && (
+    <div class="p-section">
+      <div class="p-section-head">
+        <span class="p-section-title">Your event ideas</span>
+      </div>
+      <div class="p-ideas">
         {mySuggestions.map((s: any) => (
-          <div class="prof-idea-row">
-            <span class="prof-idea-title">{s.title}</span>
-            <div class="prof-idea-right">
-              <span class="prof-idea-votes">{s.votes || 0} votes</span>
-              <span class={`prof-idea-status ${s.status === 'open' ? 'open' : 'closed'}`}>{s.status}</span>
+          <div class="p-idea">
+            <span class="p-idea-title">{s.title}</span>
+            <div class="p-idea-right">
+              <span class="p-idea-votes">↑ {s.votes || 0}</span>
+              <span class={`p-idea-status ${s.status}`}>{s.status}</span>
             </div>
           </div>
         ))}
       </div>
-    )}
-  </div>
+    </div>
+  )}
 
-  <!-- TAB: Edit Profile -->
-  <div class="prof-tab-content" id="tab-edit" style="display:none">
-    <form method="POST" class="prof-form">
-      <div class="prof-form-card">
-        <div class="prof-field">
-          <label class="prof-label">Name</label>
-          <input type="text" name="name" value={member?.name||user.name||''} required class="prof-input" />
+  <!-- ═══ EDIT PROFILE ═══ -->
+  <div class="p-section">
+    <button class="p-edit-toggle" id="editToggle">
+      <span>Edit profile</span>
+      <span class="p-edit-arrow">›</span>
+    </button>
+
+    <div class="p-edit-panel" id="editPanel" style="display:none;">
+      <form method="POST" class="p-form">
+        <div class="p-field">
+          <label class="p-label">Name</label>
+          <input type="text" name="name" value={member?.name||user.name||''} required class="p-input" />
         </div>
-        <div class="prof-field">
-          <label class="prof-label">Neighborhood</label>
-          <select name="neighborhood" class="prof-select">
+        <div class="p-field">
+          <label class="p-label">Neighborhood</label>
+          <select name="neighborhood" class="p-input">
             <option value="">Pick your area…</option>
             {neighborhoods.map(n => <option value={n} selected={member?.neighborhood === n}>{n}</option>)}
           </select>
         </div>
-        <div class="prof-field">
-          <label class="prof-label">Bio</label>
-          <textarea name="bio" rows={3} placeholder="Tell the crew a bit about yourself..." class="prof-input" style="resize:vertical">{member?.bio||''}</textarea>
+        <div class="p-field">
+          <label class="p-label">Bio</label>
+          <textarea name="bio" rows={3} placeholder="What should people know about you?" class="p-input" style="resize:vertical">{member?.bio||''}</textarea>
         </div>
-        <div class="prof-field">
-          <label class="prof-label">Interests</label>
-          <div class="prof-pills">
+        <div class="p-field">
+          <label class="p-label">What are you into?</label>
+          <div class="p-pills">
             {interestOptions.map(opt => (
-              <label class="prof-pill-wrap">
+              <label class="p-pill-wrap">
                 <input type="checkbox" name="interests" value={opt} checked={myInterests.includes(opt)} />
-                <span class="prof-pill">{opt}</span>
+                <span class="p-pill">{opt}</span>
               </label>
             ))}
           </div>
         </div>
-        <div class="prof-field">
-          <label class="prof-label">Looking for</label>
-          <div class="prof-pills">
+        <div class="p-field">
+          <label class="p-label">Looking for</label>
+          <div class="p-pills">
             {lookingOptions.map(opt => (
-              <label class="prof-pill-wrap">
+              <label class="p-pill-wrap">
                 <input type="checkbox" name="looking_for" value={opt} checked={myLooking.includes(opt)} />
-                <span class="prof-pill">{opt}</span>
+                <span class="p-pill">{opt}</span>
               </label>
             ))}
           </div>
         </div>
-        <button type="submit" class="prof-save-btn">Save Profile</button>
-      </div>
-    </form>
+        <button type="submit" class="p-save">Save changes</button>
+      </form>
 
-    <div class="prof-danger-zone">
-      <a href="/api/logout" class="prof-signout">Sign out</a>
-      <button id="delete-btn" class="prof-delete-btn">Delete my account</button>
+      <div class="p-danger">
+        <a href="/api/logout" class="p-signout">Sign out</a>
+        <button id="delete-btn" class="p-delete">Delete account</button>
+      </div>
     </div>
   </div>
 
-  <!-- Delete confirmation modal -->
+  <!-- Delete modal -->
   <div id="delete-modal" class="modal-hidden">
-    <div class="prof-modal-inner">
+    <div class="p-modal">
       <div style="font-size:32px;text-align:center;margin-bottom:16px">⚠️</div>
-      <h3 class="prof-modal-title">Delete your account?</h3>
-      <p class="prof-modal-text">This permanently deletes your profile, RSVPs, and all your data. Cannot be undone.</p>
-      <div class="prof-modal-btns">
+      <h3 class="p-modal-title">Delete your account?</h3>
+      <p class="p-modal-text">This permanently deletes everything. Can't be undone.</p>
+      <div class="p-modal-btns">
         <form method="POST" action="/api/delete-account">
-          <button type="submit" class="prof-modal-danger">Yes, delete everything</button>
+          <button type="submit" class="p-modal-danger">Yes, delete everything</button>
         </form>
-        <button id="cancel-btn" class="prof-modal-cancel">Cancel</button>
+        <button id="cancel-btn" class="p-modal-cancel">Cancel</button>
       </div>
     </div>
   </div>
@@ -290,293 +369,335 @@ const avatarColor = avatarColors[Math.abs((user.name || '').charCodeAt(0)) % ava
 </Base>
 
 <style is:inline>
-  .prof-page { max-width: 560px; margin: 0 auto; padding: 20px 20px 48px; }
+  .p { max-width: 540px; margin: 0 auto; padding: 0 20px 48px; }
 
   /* ── Toasts ── */
-  .prof-toast {
+  .p-toast {
     padding: 12px 16px; border-radius: 12px; font-size: 13px;
     font-weight: 600; margin-bottom: 16px; font-family: 'Outfit', sans-serif;
   }
-  .prof-toast-err { background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; }
-  .prof-toast-ok  { background: #F0FDF4; border: 1px solid #BBF7D0; color: #047857; }
+  .p-toast.err { background: #FEF2F2; color: #DC2626; border: 1px solid rgba(220,38,38,0.1); }
+  .p-toast.ok { background: #F0FDF4; color: #16A34A; border: 1px solid rgba(22,163,74,0.1); }
 
-  /* ── Header card ── */
-  .prof-header-card {
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 24px;
-    overflow: hidden; padding: 0; margin-bottom: 0;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  /* ═══ HERO ═══ */
+  .p-hero {
+    position: relative; border-radius: 24px; overflow: hidden;
+    padding: 40px 28px 32px; margin-bottom: 16px;
   }
-  .prof-header-bg { height: 80px; }
-  .prof-header-content {
-    display: flex; align-items: flex-start; gap: 16px;
-    padding: 0 24px 16px; margin-top: -32px;
+  .p-hero-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #312e81 40%, #7c3aed 100%);
   }
-  .prof-avatar {
-    width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+  .p-hero-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 80% 20%, rgba(124,58,237,0.3) 0%, transparent 60%),
+                radial-gradient(circle at 20% 80%, rgba(59,130,246,0.2) 0%, transparent 50%);
+  }
+  .p-hero-content { position: relative; z-index: 1; }
+  .p-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
     display: flex; align-items: center; justify-content: center;
-    font-size: 26px; font-weight: 800; color: #fff;
-    font-family: 'Outfit', sans-serif;
-    border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800;
+    color: #fff; margin-bottom: 16px;
+    border: 2px solid rgba(255,255,255,0.2);
   }
-  .prof-header-info { padding-top: 36px; flex: 1; min-width: 0; }
-  .prof-name {
-    font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800;
-    color: #111827; margin-bottom: 4px;
+  .p-greeting {
+    font-family: 'Outfit', sans-serif; font-size: clamp(24px, 5vw, 32px);
+    font-weight: 900; color: #fff; letter-spacing: -0.03em;
+    line-height: 1.1; margin-bottom: 4px;
   }
-  .prof-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
-  .prof-meta-item { font-size: 12px; color: #6B7280; }
-  .prof-bio { font-size: 13px; color: #374151; line-height: 1.6; margin: 0; }
+  .p-tagline {
+    font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 16px;
+    font-family: 'Outfit', sans-serif; font-weight: 500;
+  }
+  .p-meta-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .p-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 12px; border-radius: 50px; font-size: 11px; font-weight: 600;
+    color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(4px); font-family: 'Outfit', sans-serif;
+  }
 
-  /* ── Stats ── */
-  .prof-stats {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB;
+  /* ═══ BIO ═══ */
+  .p-bio-card {
+    padding: 18px 22px; border-radius: 16px; margin-bottom: 16px;
+    background: #fff; border: 1px solid #E5E7EB;
   }
-  .prof-stat {
-    text-align: center; padding: 14px 8px;
-    border-right: 1px solid #E5E7EB;
+  .p-bio-text {
+    font-size: 14px; color: #374151; line-height: 1.6;
+    font-style: italic;
   }
-  .prof-stat:last-child { border-right: none; }
-  .prof-stat-num {
-    font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800;
-    color: #111827;
+  .p-bio-empty .p-bio-text { font-style: normal; color: #9CA3AF; }
+  .p-bio-link {
+    background: none; border: none; color: #7C3AED; font-weight: 600;
+    cursor: pointer; font-size: 14px; text-decoration: underline;
+    text-underline-offset: 2px;
   }
-  .prof-stat-label { font-size: 10px; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
 
-  /* ── Level ── */
-  .prof-level-row {
+  /* ═══ STATS ═══ */
+  .p-stats {
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 20px 16px; border-radius: 16px; margin-bottom: 16px;
+    background: #fff; border: 1px solid #E5E7EB;
+  }
+  .p-stat { text-align: center; flex: 1; }
+  .p-stat-big {
+    font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 900;
+    color: #111827; letter-spacing: -0.02em; line-height: 1;
+  }
+  .p-stat-label { font-size: 11px; color: #9CA3AF; font-weight: 500; margin-top: 4px; }
+  .p-stat-divider { width: 1px; height: 32px; background: #E5E7EB; flex-shrink: 0; }
+
+  /* ═══ LEVEL ═══ */
+  .p-level {
+    padding: 14px 18px; border-radius: 14px; margin-bottom: 16px;
+    background: #fff; border: 1px solid #E5E7EB;
+  }
+  .p-level-bar {
+    height: 6px; border-radius: 3px; background: #F3F4F6;
+    overflow: hidden; margin-bottom: 8px;
+  }
+  .p-level-fill {
+    height: 100%; border-radius: 3px; transition: width .5s ease;
+    background: linear-gradient(90deg, #7C3AED, #EC4899);
+  }
+  .p-level-text { font-size: 12px; color: #6B7280; }
+  .p-level-text strong { color: #111827; }
+
+  /* ═══ SECTIONS ═══ */
+  .p-section { margin-bottom: 16px; }
+  .p-section-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 10px; padding: 0 4px;
+  }
+  .p-section-title {
+    font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800;
+    color: #111827; letter-spacing: -0.01em;
+  }
+  .p-section-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #F3F4F6; font-size: 11px; font-weight: 700; color: #6B7280;
+  }
+
+  /* ═══ TAGS ═══ */
+  .p-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .p-tag {
+    padding: 6px 14px; border-radius: 50px; font-size: 12px; font-weight: 500;
+    background: #F3F4F6; color: #374151; border: 1px solid #E5E7EB;
+  }
+  .p-tag-looking { background: #EEF2FF; border-color: #C7D2FE; color: #4338CA; }
+
+  /* ═══ BLIND INTROS ═══ */
+  .p-intros { display: flex; flex-direction: column; gap: 8px; }
+  .p-intro-card {
     display: flex; align-items: center; gap: 12px;
-    padding: 14px 24px; flex-wrap: wrap;
+    padding: 14px 16px; border-radius: 14px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.03), rgba(219,39,119,0.03));
+    border: 1px solid rgba(124,58,237,0.1); text-decoration: none;
+    transition: all .2s;
   }
-  .prof-level-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 5px 14px; border-radius: 50px;
-    border: 1.5px solid; font-family: 'Outfit', sans-serif;
+  .p-intro-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.08); }
+  .p-intro-emoji { font-size: 20px; flex-shrink: 0; }
+  .p-intro-name {
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827;
   }
-  .prof-level-emoji { font-size: 14px; }
-  .prof-level-name { font-size: 12px; font-weight: 700; }
-  .prof-level-progress { flex: 1; min-width: 120px; }
-  .prof-level-track { height: 5px; background: #E5E7EB; border-radius: 3px; overflow: hidden; margin-bottom: 3px; }
-  .prof-level-fill { height: 100%; border-radius: 3px; transition: width .4s; }
-  .prof-level-next { font-size: 10px; color: #9CA3AF; }
-  .prof-streak-badge {
-    font-size: 11px; font-weight: 700; color: #F59E0B;
-    background: #FEF3C7; padding: 4px 10px; border-radius: 50px;
-  }
+  .p-intro-fact { font-size: 12px; color: #6B7280; }
+  .p-intro-event { font-size: 11px; color: #9CA3AF; margin-top: 2px; }
 
-  /* ── Tags ── */
-  .prof-tags {
-    display: flex; flex-wrap: wrap; gap: 6px;
-    padding: 0 24px 18px;
+  /* ═══ EVENTS ═══ */
+  .p-events { display: flex; flex-direction: column; gap: 6px; }
+  .p-event {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-radius: 14px;
+    background: #fff; border: 1px solid #E5E7EB; text-decoration: none;
+    transition: all .2s;
   }
-  .prof-tag {
-    padding: 4px 12px; border-radius: 50px; font-size: 11px; font-weight: 500;
-    background: #F8F9FB; border: 1px solid #E5E7EB; color: #374151;
+  .p-event:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+  .p-event.past { opacity: 0.7; }
+  .p-event-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .p-event-date { text-align: center; flex-shrink: 0; width: 40px; }
+  .p-event-month {
+    font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700;
+    color: #7C3AED; text-transform: uppercase;
   }
-
-  /* ── Tabs ── */
-  .prof-tabs {
-    display: flex; gap: 0; margin-top: 16px;
-    background: #F8F9FB; border-radius: 14px; padding: 4px;
-    border: 1px solid #E5E7EB;
+  .p-event-day {
+    font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 900;
+    color: #111827; line-height: 1;
   }
-  .prof-tab {
-    flex: 1; padding: 10px 8px; border-radius: 10px;
-    font-size: 12px; font-weight: 700; font-family: 'Outfit', sans-serif;
-    color: #6B7280; background: none; border: none; cursor: pointer;
-    transition: all .15s; text-align: center;
-  }
-  .prof-tab:hover { color: #111827; }
-  .prof-tab.active { background: #fff; color: #111827; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-
-  .prof-tab-content { margin-top: 16px; animation: fadeIn .3s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-
-  /* ── Events list ── */
-  .prof-events-list { display: flex; flex-direction: column; gap: 8px; }
-  .prof-event-card {
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 16px; background: #fff; border: 1px solid #E5E7EB;
-    border-radius: 16px; text-decoration: none; transition: all .15s;
-  }
-  .prof-event-card:hover { border-color: #D1D5DB; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-  .prof-event-past { opacity: 0.7; }
-  .prof-event-past:hover { opacity: 1; }
-  .prof-event-emoji { font-size: 24px; flex-shrink: 0; }
-  .prof-event-info { flex: 1; min-width: 0; }
-  .prof-event-title {
+  .p-event-emoji { font-size: 22px; flex-shrink: 0; }
+  .p-event-info { min-width: 0; }
+  .p-event-title {
     font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
     color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .prof-event-meta { font-size: 11px; color: #9CA3AF; }
-  .prof-event-badge {
-    font-size: 10px; font-weight: 700; font-family: 'Outfit', sans-serif;
-    padding: 4px 10px; border-radius: 50px;
-    background: #F0FDF4; color: #059669; flex-shrink: 0;
+  .p-event-sub { font-size: 12px; color: #9CA3AF; }
+  .p-event-badge {
+    padding: 4px 12px; border-radius: 50px; font-size: 11px; font-weight: 700;
+    font-family: 'Outfit', sans-serif; flex-shrink: 0;
   }
-  .prof-event-attended { background: #F8F9FB; color: #9CA3AF; }
+  .p-event-badge.going { background: #ECFDF5; color: #059669; }
+  .p-event-badge.attended { background: #F3F4F6; color: #9CA3AF; }
 
-  /* ── Empty state ── */
-  .prof-empty {
-    text-align: center; padding: 40px 20px;
-    background: #F8F9FB; border: 1px solid #E5E7EB; border-radius: 16px;
+  .p-empty {
+    padding: 24px; border-radius: 14px; text-align: center;
+    background: #F9FAFB; border: 1px dashed #E5E7EB;
   }
-  .prof-empty-icon { font-size: 32px; margin-bottom: 8px; }
-  .prof-empty-text { font-size: 13px; color: #6B7280; margin-bottom: 12px; }
-  .prof-empty-link {
-    font-size: 13px; font-weight: 700; color: #7C3AED;
-    font-family: 'Outfit', sans-serif; text-decoration: none;
-  }
-  .prof-empty-link:hover { text-decoration: underline; }
-
-  /* ── Suggestions / Ideas ── */
-  .prof-section { margin-top: 20px; }
-  .prof-section-title {
+  .p-empty span { display: block; font-size: 13px; color: #9CA3AF; margin-bottom: 8px; }
+  .p-empty a {
     font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
-    color: #6B7280; text-transform: uppercase; letter-spacing: .05em;
-    margin-bottom: 10px;
+    color: #7C3AED; text-decoration: none;
   }
-  .prof-idea-row {
+
+  /* ═══ IDEAS ═══ */
+  .p-ideas { display: flex; flex-direction: column; gap: 6px; }
+  .p-idea {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px; background: #fff; border: 1px solid #E5E7EB;
-    border-radius: 12px; margin-bottom: 6px;
+    padding: 12px 16px; border-radius: 12px;
+    background: #fff; border: 1px solid #E5E7EB;
   }
-  .prof-idea-title { font-size: 13px; font-weight: 600; color: #111827; }
-  .prof-idea-right { display: flex; align-items: center; gap: 8px; }
-  .prof-idea-votes { font-size: 11px; color: #9CA3AF; }
-  .prof-idea-status {
-    font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 50px;
-    text-transform: uppercase;
+  .p-idea-title { font-size: 13px; color: #374151; font-weight: 500; }
+  .p-idea-right { display: flex; align-items: center; gap: 8px; }
+  .p-idea-votes { font-size: 12px; color: #7C3AED; font-weight: 700; }
+  .p-idea-status {
+    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 50px;
+    text-transform: uppercase; letter-spacing: 0.03em;
   }
-  .prof-idea-status.open { background: #F0FDF4; color: #059669; }
-  .prof-idea-status.closed { background: #F8F9FB; color: #9CA3AF; }
+  .p-idea-status.open { background: #ECFDF5; color: #059669; }
+  .p-idea-status.approved { background: #EEF2FF; color: #6366F1; }
+  .p-idea-status.closed { background: #F3F4F6; color: #9CA3AF; }
 
-  /* ── Edit form ── */
-  .prof-form-card {
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 20px;
-    padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  /* ═══ EDIT ═══ */
+  .p-edit-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 16px 20px; border-radius: 14px;
+    background: #fff; border: 1px solid #E5E7EB; cursor: pointer;
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+    color: #374151; transition: all .2s;
   }
-  .prof-field { margin-bottom: 18px; }
-  .prof-label {
-    display: block; font-size: 11px; font-weight: 700; color: #6B7280;
-    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px;
-    font-family: 'Outfit', sans-serif;
+  .p-edit-toggle:hover { border-color: #7C3AED; color: #7C3AED; }
+  .p-edit-arrow {
+    font-size: 20px; color: #9CA3AF; transition: transform .2s;
   }
-  .prof-input {
-    width: 100%; padding: 12px 16px; background: #F8F9FB;
-    border: 1.5px solid #E5E7EB; border-radius: 12px;
-    font-size: 14px; color: #111827; font-family: 'Inter', sans-serif;
-    outline: none; transition: border-color .2s;
-  }
-  .prof-input:focus { border-color: #7C3AED; background: #fff; }
-  .prof-input::placeholder { color: #D1D5DB; }
-  .prof-select {
-    width: 100%; padding: 12px 16px; background: #F8F9FB;
-    border: 1.5px solid #E5E7EB; border-radius: 12px;
-    font-size: 14px; color: #111827; font-family: 'Inter', sans-serif;
-    outline: none; appearance: none; cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 16px center;
-    transition: border-color .2s;
-  }
-  .prof-select:focus { border-color: #7C3AED; background-color: #fff; }
+  .p-edit-toggle.open .p-edit-arrow { transform: rotate(90deg); }
 
-  .prof-pills { display: flex; flex-wrap: wrap; gap: 6px; }
-  .prof-pill-wrap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .prof-pill-wrap input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
-  .prof-pill {
-    display: inline-block; padding: 8px 14px; border-radius: 50px;
-    font-size: 12px; font-weight: 500; color: #6B7280;
-    background: #F8F9FB; border: 1.5px solid #E5E7EB;
-    transition: all .15s; user-select: none;
+  .p-edit-panel { margin-top: 12px; animation: fadeUp .3s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .p-form {
+    padding: 24px; border-radius: 16px;
+    background: #fff; border: 1px solid #E5E7EB;
   }
-  .prof-pill:hover { border-color: #D1D5DB; color: #374151; }
-  .prof-pill-wrap input:checked + .prof-pill {
-    background: rgba(124,58,237,0.06); border-color: #7C3AED;
-    color: #7C3AED; font-weight: 600;
+  .p-field { margin-bottom: 18px; }
+  .p-label {
+    display: block; font-family: 'Outfit', sans-serif; font-size: 12px;
+    font-weight: 700; color: #374151; margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .p-input {
+    width: 100%; padding: 10px 14px; border-radius: 10px;
+    border: 1px solid #E5E7EB; font-size: 14px; color: #111827;
+    background: #F9FAFB; transition: border-color .2s;
+    font-family: inherit; box-sizing: border-box;
+  }
+  .p-input:focus { outline: none; border-color: #7C3AED; background: #fff; }
+
+  .p-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .p-pill-wrap { cursor: pointer; }
+  .p-pill-wrap input { display: none; }
+  .p-pill {
+    display: inline-block; padding: 7px 14px; border-radius: 50px;
+    font-size: 12px; background: #F3F4F6; color: #6B7280;
+    border: 1px solid #E5E7EB; transition: all .2s; user-select: none;
+  }
+  .p-pill-wrap input:checked + .p-pill {
+    background: #EEF2FF; color: #4338CA; border-color: #C7D2FE; font-weight: 600;
   }
 
-  .prof-save-btn {
-    width: 100%; padding: 14px; margin-top: 4px;
-    background: #7C3AED; color: #fff; border: none; border-radius: 50px;
-    font-size: 15px; font-weight: 700; font-family: 'Outfit', sans-serif;
-    cursor: pointer; transition: all .2s;
+  .p-save {
+    width: 100%; padding: 12px; border-radius: 12px; border: none;
+    background: #7C3AED; color: #fff; font-family: 'Outfit', sans-serif;
+    font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s;
   }
-  .prof-save-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(124,58,237,0.25); }
+  .p-save:hover { background: #6D28D9; transform: translateY(-1px); }
 
-  /* ── Danger zone ── */
-  .prof-danger-zone {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 12px; margin-top: 24px; padding-top: 20px;
-    border-top: 1px solid #E5E7EB;
+  .p-danger {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; margin-top: 12px; border-radius: 14px;
+    background: #FAFAFA; border: 1px solid #F3F4F6;
   }
-  .prof-signout {
+  .p-signout {
     font-size: 13px; color: #6B7280; text-decoration: none;
-    font-family: 'Outfit', sans-serif; font-weight: 600;
+    font-weight: 500;
   }
-  .prof-signout:hover { color: #111827; }
-  .prof-delete-btn {
-    font-size: 12px; color: #9CA3AF; background: none; border: none;
-    cursor: pointer; text-decoration: underline; padding: 4px;
+  .p-signout:hover { color: #374151; }
+  .p-delete {
+    background: none; border: none; font-size: 13px; color: #EF4444;
+    cursor: pointer; font-weight: 500;
   }
-  .prof-delete-btn:hover { color: #DC2626; }
+  .p-delete:hover { text-decoration: underline; }
 
-  /* ── Modal ── */
-  .modal-hidden { display: none !important; }
+  /* ═══ MODAL ═══ */
+  .modal-hidden { display: none; }
   .modal-visible {
-    display: flex !important; position: fixed; inset: 0;
-    background: rgba(0,0,0,.5); z-index: 9999;
-    align-items: center; justify-content: center; padding: 24px;
+    display: flex; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
   }
-  .prof-modal-inner {
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 20px;
-    padding: 28px; max-width: 380px; width: 100%;
-    box-shadow: 0 20px 60px rgba(0,0,0,.15);
+  .p-modal {
+    background: #fff; border-radius: 20px; padding: 32px 28px;
+    max-width: 360px; width: 100%; box-shadow: 0 24px 60px rgba(0,0,0,0.2);
   }
-  .prof-modal-title { font-family: 'Outfit', sans-serif; font-size: 18px; color: #111827; text-align: center; margin-bottom: 8px; font-weight: 700; }
-  .prof-modal-text { font-size: 13px; color: #6B7280; text-align: center; line-height: 1.6; margin-bottom: 24px; }
-  .prof-modal-btns { display: flex; flex-direction: column; gap: 10px; }
-  .prof-modal-danger {
-    width: 100%; padding: 14px; background: #FEF2F2; color: #DC2626;
-    border: 1.5px solid #FECACA; border-radius: 12px; font-size: 14px;
-    font-weight: 700; cursor: pointer; font-family: 'Outfit', sans-serif;
+  .p-modal-title {
+    font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800;
+    color: #111827; text-align: center; margin-bottom: 8px;
   }
-  .prof-modal-cancel {
-    width: 100%; padding: 14px; background: #F8F9FB; color: #6B7280;
-    border: 1px solid #E5E7EB; border-radius: 12px; font-size: 14px;
-    font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif;
+  .p-modal-text { font-size: 13px; color: #6B7280; text-align: center; line-height: 1.5; margin-bottom: 20px; }
+  .p-modal-btns { display: flex; flex-direction: column; gap: 8px; }
+  .p-modal-danger {
+    width: 100%; padding: 12px; border-radius: 12px; border: none;
+    background: #EF4444; color: #fff; font-weight: 700; font-size: 14px;
+    cursor: pointer; font-family: 'Outfit', sans-serif;
   }
-  .prof-modal-cancel:hover { color: #111827; border-color: #D1D5DB; }
+  .p-modal-cancel {
+    width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #E5E7EB;
+    background: #fff; color: #6B7280; font-weight: 600; font-size: 14px;
+    cursor: pointer; font-family: 'Outfit', sans-serif;
+  }
 
   @media (max-width: 480px) {
-    .prof-header-content { flex-direction: column; align-items: center; text-align: center; }
-    .prof-header-info { padding-top: 8px; }
-    .prof-meta { justify-content: center; }
-    .prof-tags { justify-content: center; }
-    .prof-avatar { margin-top: -24px; }
+    .p-hero { padding: 32px 20px 24px; border-radius: 20px; }
+    .p-greeting { font-size: 24px; }
+    .p-stat-big { font-size: 22px; }
   }
 </style>
 
 <script is:inline>
-  // Tab switching
-  var tabs = document.querySelectorAll('.prof-tab');
-  tabs.forEach(function(tab) {
-    tab.addEventListener('click', function() {
-      tabs.forEach(function(t) { t.classList.remove('active'); });
-      tab.classList.add('active');
-      var target = tab.getAttribute('data-tab');
-      document.querySelectorAll('.prof-tab-content').forEach(function(c) {
-        c.style.display = 'none';
-      });
-      var el = document.getElementById('tab-' + target);
-      if (el) {
-        el.style.display = '';
-        el.style.animation = 'none';
-        el.offsetHeight;
-        el.style.animation = '';
-      }
+  // Edit toggle
+  var editToggle = document.getElementById('editToggle');
+  var editPanel = document.getElementById('editPanel');
+  if (editToggle && editPanel) {
+    editToggle.addEventListener('click', function() {
+      var isOpen = editPanel.style.display !== 'none';
+      editPanel.style.display = isOpen ? 'none' : '';
+      editToggle.classList.toggle('open', !isOpen);
     });
-  });
+  }
+
+  // Add bio button opens edit
+  var addBioBtn = document.getElementById('addBioBtn');
+  if (addBioBtn && editToggle) {
+    addBioBtn.addEventListener('click', function() {
+      editPanel.style.display = '';
+      editToggle.classList.add('open');
+      editPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function() {
+        var bio = editPanel.querySelector('textarea[name="bio"]');
+        if (bio) bio.focus();
+      }, 300);
+    });
+  }
 
   // Delete modal
   var modal = document.getElementById('delete-modal');
