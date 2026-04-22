@@ -87,6 +87,51 @@ import Base from '../layouts/Base.astro';
     </div>
   </section>
 
+  <!-- NEURODIVERGENT -->
+  <section class="cond-section">
+    <h2 class="cond-h2">All brains welcome</h2>
+    <p class="cond-p">If you're neurodivergent, autistic, have ADHD, social anxiety, or your brain just works a little differently — you're welcome here. Seriously. Here's what we want you to know:</p>
+    <div class="cond-callout nd">
+      <div class="cond-callout-items">
+        <div class="cond-callout-item">
+          <span class="cond-check nd">✓</span>
+          <div>
+            <strong>There's no "right way" to socialize</strong>
+            <p>Quiet? Cool. Talkative? Also cool. Need a minute to yourself outside? Go for it. Nobody's keeping score on how social you are.</p>
+          </div>
+        </div>
+        <div class="cond-callout-item">
+          <span class="cond-check nd">✓</span>
+          <div>
+            <strong>You can leave whenever you want</strong>
+            <p>If you hit your limit — sensory overload, social battery dead, just not feeling it — you can leave. No one will be weird about it. You don't owe anyone an explanation.</p>
+          </div>
+        </div>
+        <div class="cond-callout-item">
+          <span class="cond-check nd">✓</span>
+          <div>
+            <strong>Small talk isn't required</strong>
+            <p>Some events are more chill than others. A hike or bowling is way different than a dinner. Pick what works for you. Nobody's going to force an icebreaker on you.</p>
+          </div>
+        </div>
+        <div class="cond-callout-item">
+          <span class="cond-check nd">✓</span>
+          <div>
+            <strong>Ask questions if something's unclear</strong>
+            <p>Not sure where to go, what to wear, what the plan is? Just ask. Hosts are happy to give you the details. There's no such thing as a dumb question here.</p>
+          </div>
+        </div>
+        <div class="cond-callout-item">
+          <span class="cond-check nd">✓</span>
+          <div>
+            <strong>"Awkward" is not a problem</strong>
+            <p>Half the people here would describe themselves as awkward. That's kind of the whole point — this is a space where you don't have to perform. Just show up as you are.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- THE LINE -->
   <section class="cond-section">
     <h2 class="cond-h2">The stuff that's not okay</h2>
@@ -167,6 +212,11 @@ import Base from '../layouts/Base.astro';
     background: linear-gradient(135deg, rgba(124,58,237,0.03), rgba(219,39,119,0.03));
     border: 1px solid rgba(124,58,237,0.12);
   }
+  .cond-callout.nd {
+    background: linear-gradient(135deg, rgba(16,185,129,0.03), rgba(59,130,246,0.03));
+    border: 1px solid rgba(16,185,129,0.12);
+  }
+  .cond-check.nd { background: rgba(16,185,129,0.08); color: #10B981; }
   .cond-callout.red { background: rgba(248,113,113,0.04); border: 1px solid rgba(248,113,113,0.15); }
   .cond-callout.blue { background: rgba(96,165,250,0.04); border: 1px solid rgba(96,165,250,0.15); padding: 24px; }
   .cond-callout.blue h3 { font-family: 'Outfit', sans-serif; font-size: 15px; color: #111827; font-weight: 700; margin-bottom: 10px; }
