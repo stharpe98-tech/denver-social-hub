@@ -13,7 +13,7 @@ export async function POST({ request, cookies }: APIContext) {
 
   try {
     const body = await request.json() as any;
-    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link } = body;
+    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone } = body;
 
     // Guest fields (only used if not logged in)
     const guestName = (body.guest_name || '').trim();
@@ -92,10 +92,11 @@ export async function POST({ request, cookies }: APIContext) {
     const ven = (venue || '').trim();
     const lnk = (link || '').trim();
     const sub = (subcat || '').trim();
+    const phone = (contact_phone || '').trim();
 
     await db.prepare(
-      `INSERT INTO suggestions (title, description, type, votes, member_id, member_name, status, suggested_date, location, budget, group_size, venue, link, subcat) VALUES (?, ?, ?, 0, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(title.trim(), desc, eventType, memberId, memberName, date, loc, bud, size, ven, lnk, sub).run();
+      `INSERT INTO suggestions (title, description, type, votes, member_id, member_name, status, suggested_date, location, budget, group_size, venue, link, subcat, contact_phone) VALUES (?, ?, ?, 0, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(title.trim(), desc, eventType, memberId, memberName, date, loc, bud, size, ven, lnk, sub, phone).run();
 
     return new Response(JSON.stringify({
       ok: true,

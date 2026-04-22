@@ -21,7 +21,7 @@ export async function POST({ request, cookies }: APIContext) {
   if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
 
   try {
-    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link } = await request.json() as any;
+    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone } = await request.json() as any;
 
     if (!title || !title.trim()) {
       return new Response(JSON.stringify({ error: 'Title is required' }), { status: 400 });
@@ -67,8 +67,10 @@ export async function POST({ request, cookies }: APIContext) {
       fullDesc = fullDesc ? venueName + ' — ' + fullDesc : venueName;
     }
 
+    const phone = (contact_phone || '').trim();
+
     await db.prepare(
-      `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, discord_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, discord_link, contact_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       title.trim(),
       fullDesc,
@@ -80,7 +82,8 @@ export async function POST({ request, cookies }: APIContext) {
       spots,
       priceCap,
       submittedBy,
-      eventLink
+      eventLink,
+      phone
     ).run();
 
     return new Response(JSON.stringify({ ok: true, created: true }));

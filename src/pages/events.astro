@@ -467,6 +467,10 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
           <div class="wiz-num">Step 4 of 4</div>
           <h2 class="wiz-q">Almost done!</h2>
           <p class="wiz-hint">Add a quick description so people know what to expect.</p>
+          <div class="wiz-field-group">
+            <label class="wiz-field-label" for="wizPhone">📞 Your number <span class="wiz-optional">(optional — shown to RSVP'd attendees so they can find you)</span></label>
+            <input type="tel" id="wizPhone" class="wiz-input" placeholder="(303) 555-1234" maxlength="20" />
+          </div>
           <textarea id="wizDesc" class="wiz-textarea" placeholder="e.g. Meet at Sloan's Lake, bring a frisbee, we'll grab beers after..." rows="3" maxlength="300"></textarea>
           {!isLoggedIn && (
             <div class="wiz-identity">
@@ -870,6 +874,12 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
   .wiz-input:focus { border-color: #7C3AED; background: #fff; }
   .wiz-input::placeholder { color: #D1D5DB; }
+  .wiz-field-group { margin-bottom: 14px; }
+  .wiz-field-label {
+    display: block; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
+    color: #374151; margin-bottom: 6px;
+  }
+  .wiz-optional { font-weight: 400; color: #9CA3AF; font-size: 11px; }
   .wiz-textarea {
     width: 100%; padding: 16px 20px; background: #F8F9FB; border: 2px solid #E5E7EB;
     border-radius: 14px; font-size: 15px; color: #111827; font-family: 'Inter', sans-serif;
@@ -1023,7 +1033,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   // ── Wizard ──
   var TOTAL_STEPS = 4;
   var wizMode = isAdmin ? 'live' : 'suggest';
-  var wizData = { title: '', type: 'social', subcat: '', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '' };
+  var wizData = { title: '', type: 'social', subcat: '', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '', contact_phone: '' };
 
   var subcategories = {
     dinner:        ['Mexican', 'Italian', 'Sushi', 'Ramen', 'BBQ', 'Thai', 'Indian', 'Korean', 'Brunch', 'Steakhouse'],
@@ -1177,13 +1187,15 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
 
   function resetWizard() {
-    wizData = { title: '', type: 'social', subcat: '', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '' };
+    wizData = { title: '', type: 'social', subcat: '', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '', contact_phone: '' };
     wizMode = isAdmin ? 'live' : 'suggest';
     document.getElementById('wizTitle').value = '';
     document.getElementById('wizType').value = 'social';
     document.getElementById('wizDesc').value = '';
     document.getElementById('wizVenue').value = '';
     document.getElementById('wizLink').value = '';
+    var phoneResetEl = document.getElementById('wizPhone');
+    if (phoneResetEl) phoneResetEl.value = '';
     var nameEl = document.getElementById('wizName');
     var emailEl = document.getElementById('wizEmail');
     if (nameEl) nameEl.value = '';
@@ -1270,6 +1282,8 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   document.getElementById('wizSubmit').addEventListener('click', function() {
     var btn = this;
     wizData.description = document.getElementById('wizDesc').value.trim();
+    var phoneEl = document.getElementById('wizPhone');
+    if (phoneEl) wizData.contact_phone = phoneEl.value.trim();
 
     // Gather guest identity fields if present
     var nameEl = document.getElementById('wizName');

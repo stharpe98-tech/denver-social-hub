@@ -274,6 +274,26 @@ if (db && isPastEvent) {
         </div>
       </div>
 
+      <!-- Point of Contact — RSVP-gated -->
+      {myRsvp && event.contact_phone ? (
+        <div class="det-contact-bar">
+          <span class="det-contact-icon">📞</span>
+          <div>
+            <div class="det-contact-label">Point of contact</div>
+            <a href={`tel:${event.contact_phone}`} class="det-contact-phone">{event.contact_phone}</a>
+            <span class="det-contact-hint">Call or text if you can't find the group</span>
+          </div>
+        </div>
+      ) : !myRsvp && (
+        <div class="det-contact-bar locked">
+          <span class="det-contact-icon">📞</span>
+          <div>
+            <div class="det-contact-label">Point of contact</div>
+            <span class="det-contact-hint">RSVP to see host's number</span>
+          </div>
+        </div>
+      )}
+
       {event.description && <p class="det-desc">{event.description}</p>}
 
       <!-- Add to Calendar (only rendered for logged-in users, shown after RSVP) -->
@@ -537,6 +557,24 @@ if (db && isPastEvent) {
   .det-info-rsvp-hint { font-size: 10px; color: #9CA3AF; font-weight: 500; display: block; width: 100%; }
 
   .det-desc { font-size: 15px; line-height: 1.8; color: #374151; margin: 0; }
+
+  /* ─── CONTACT BAR ─── */
+  .det-contact-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px; border-radius: 12px; margin-bottom: 16px;
+    background: rgba(16,185,129,0.04); border: 1px solid rgba(16,185,129,0.15);
+  }
+  .det-contact-bar.locked {
+    background: #F8F9FB; border-color: #E5E7EB;
+  }
+  .det-contact-icon { font-size: 20px; flex-shrink: 0; }
+  .det-contact-label { font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+  .det-contact-phone {
+    font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: #111827;
+    text-decoration: none; margin-right: 8px;
+  }
+  .det-contact-phone:hover { color: #7C3AED; }
+  .det-contact-hint { font-size: 11px; color: #9CA3AF; }
 
   /* ── RSVP bar ── */
   .det-rsvp-bar {
