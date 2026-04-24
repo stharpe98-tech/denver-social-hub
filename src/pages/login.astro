@@ -6,6 +6,18 @@ const db = getDB();
 let error: string | null = null;
 const mode = Astro.url.searchParams.get("mode") || "choose";
 
+// Get member count and upcoming event count for social proof
+let memberCount = 0;
+let eventCount = 0;
+try {
+  if (db) {
+    const mc: any = await db.prepare("SELECT COUNT(*) as c FROM members").first();
+    memberCount = mc?.c || 0;
+    const ec: any = await db.prepare("SELECT COUNT(*) as c FROM events WHERE is_past IS NULL OR is_past = 0").first();
+    eventCount = ec?.c || 0;
+  }
+} catch {}
+
 if (Astro.request.method === "POST") {
   try {
     const form = await Astro.request.formData();
@@ -20,7 +32,7 @@ if (Astro.request.method === "POST") {
       if (member) {
         const val = encodeURIComponent(JSON.stringify({ id: member.id, email: member.email, name: member.name, role: member.role || 'member' }));
         return new Response(null, { status: 302, headers: { "Location": Astro.url.searchParams.get("next")||"/events", "Set-Cookie": `dsn_user=${val}; Path=/; Max-Age=604800; SameSite=Lax` } });
-      } else { error = "No account found. Want to join instead?"; }
+      } else { error = "No account with that email. Want to join instead?"; }
     } else if (action === "join") {
       const name = form.get("name")?.toString().trim();
       if (email && name && db) {
@@ -28,45 +40,329 @@ if (Astro.request.method === "POST") {
         const newMember: any = await db.prepare("SELECT id, role FROM members WHERE email=?").bind(email).first();
         const val = encodeURIComponent(JSON.stringify({ id: newMember?.id, email, name, role: newMember?.role || 'member' }));
         return new Response(null, { status: 302, headers: { "Location": `/onboarding/1`, "Set-Cookie": `dsn_user=${val}; Path=/; Max-Age=31536000; SameSite=Lax` } });
-      } else { error = "Email and name are required."; }
+      } else { error = "Name and email are both required."; }
     }
   } catch { error = "Something went wrong. Try again."; }
 }
 ---
-<Base title="Join / Sign In">
-  <div style="max-width:440px;margin:0 auto;padding:40px 20px">
-    {error && <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:14px;color:#DC2626;font-size:13px;margin-bottom:16px">{error}</div>}
-    <!-- Discord OAuth -->
-    <a href="/auth/discord" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#5865F2;color:#fff;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;margin-bottom:16px">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.033.055a19.917 19.917 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
-      </svg>
-      Continue with Discord
-    </a>
-
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <div style="flex:1;height:1px;background:var(--border)"></div>
-      <span style="font-size:12px;color:var(--text-faint)">or sign up with email</span>
-      <div style="flex:1;height:1px;background:var(--border)"></div>
+<Base title="Join Denver Social">
+  <div class="lg">
+    <!-- Hero -->
+    <div class="lg-hero">
+      <div class="lg-hero-bg"></div>
+      <div class="lg-hero-content">
+        <div class="lg-icon">🏔️</div>
+        <h1 class="lg-title">Find your people<br/>in Denver.</h1>
+        <p class="lg-sub">Real events. Real humans. No algorithms.</p>
+        {(memberCount > 5 || eventCount > 0) && (
+          <div class="lg-proof">
+            {memberCount > 5 && <span class="lg-proof-item">👥 {memberCount} members</span>}
+            {eventCount > 0 && <span class="lg-proof-item">📅 {eventCount} upcoming events</span>}
+          </div>
+        )}
+      </div>
     </div>
 
-    <div class="card" style="margin-bottom:16px">
-        <h2 style="font-size:22px;color:var(--text);margin-bottom:4px;font-family:var(--heading);font-weight:800">Join Denver Social</h2>
-        <p style="font-size:13px;color:var(--text-sec);margin-bottom:20px">No cost to join. 60 seconds to sign up.</p>
-        <form method="POST">
-          <input type="hidden" name="action" value="join" />
-          <input type="text"  name="name"  placeholder="Your name"  required class="input" style="margin-bottom:10px" />
-          <input type="email" name="email" placeholder="Your email" required class="input" style="margin-bottom:16px" />
-          <button type="submit" class="btn btn-primary" style="width:100%">Join Free →</button>
-        </form>
+    {error && <div class="lg-error">{error}</div>}
+
+    <!-- Join card -->
+    <div class="lg-card lg-card-join">
+      <h2 class="lg-card-title">Join the crew</h2>
+      <p class="lg-card-sub">Free forever. Takes 30 seconds.</p>
+      <form method="POST">
+        <input type="hidden" name="action" value="join" />
+        <div class="lg-input-group">
+          <label class="lg-label">Name</label>
+          <input type="text" name="name" placeholder="What should we call you?" required class="lg-input" />
+        </div>
+        <div class="lg-input-group">
+          <label class="lg-label">Email</label>
+          <input type="email" name="email" placeholder="you@email.com" required class="lg-input" />
+        </div>
+        <button type="submit" class="lg-btn lg-btn-primary">Join Free →</button>
+      </form>
+    </div>
+
+    <!-- Divider -->
+    <div class="lg-divider">
+      <div class="lg-divider-line"></div>
+      <span class="lg-divider-text">already a member?</span>
+      <div class="lg-divider-line"></div>
+    </div>
+
+    <!-- Sign in card -->
+    <div class="lg-card lg-card-signin">
+      <form method="POST">
+        <input type="hidden" name="action" value="login" />
+        <div class="lg-signin-row">
+          <input type="email" name="email" placeholder="Your email" required class="lg-input lg-input-signin" />
+          <button type="submit" class="lg-btn lg-btn-ghost">Sign in →</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- What you get -->
+    <div class="lg-perks">
+      <div class="lg-perk">
+        <span class="lg-perk-icon">🎲</span>
+        <div>
+          <strong>Solo Queue</strong>
+          <span>Can't decide? We'll pick an event for you.</span>
+        </div>
       </div>
-    <div class="card">
-        <h2 style="font-size:18px;color:var(--text);margin-bottom:16px;font-family:var(--heading);font-weight:700">Already a member?</h2>
-        <form method="POST">
-          <input type="hidden" name="action" value="login" />
-          <input type="email" name="email" placeholder="Your email" required class="input" style="margin-bottom:12px" />
-          <button type="submit" class="btn btn-ghost" style="width:100%">Sign In →</button>
-        </form>
+      <div class="lg-perk">
+        <span class="lg-perk-icon">🤝</span>
+        <div>
+          <strong>Blind Intros</strong>
+          <span>RSVP and we pair you with someone to meet.</span>
+        </div>
       </div>
+      <div class="lg-perk">
+        <span class="lg-perk-icon">📅</span>
+        <div>
+          <strong>Real Events</strong>
+          <span>Dinners, hikes, game nights — posted by members.</span>
+        </div>
+      </div>
+    </div>
   </div>
 </Base>
+
+<style is:inline>
+  .lg {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 20px 80px;
+  }
+
+  /* ── Hero ── */
+  .lg-hero {
+    position: relative;
+    margin: -20px -20px 0;
+    padding: 52px 32px 44px;
+    border-radius: 0 0 28px 28px;
+    overflow: hidden;
+    text-align: center;
+  }
+  .lg-hero-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #4a1a6b 40%, #7C3AED 70%, #a855f7 100%);
+    z-index: 0;
+  }
+  .lg-hero-content { position: relative; z-index: 1; }
+  .lg-icon {
+    font-size: 44px;
+    margin-bottom: 12px;
+    animation: popIn .6s cubic-bezier(.68,-.55,.27,1.55);
+  }
+  @keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .lg-title {
+    font-family: 'Outfit', var(--heading), sans-serif;
+    font-size: 30px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.15;
+    margin-bottom: 8px;
+  }
+  .lg-sub {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+  }
+  .lg-proof {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .lg-proof-item {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.12);
+    padding: 5px 12px;
+    border-radius: 50px;
+    backdrop-filter: blur(8px);
+  }
+
+  /* ── Error ── */
+  .lg-error {
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: 14px;
+    padding: 12px 16px;
+    color: #DC2626;
+    font-size: 13px;
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  /* ── Cards ── */
+  .lg-card {
+    margin-top: 24px;
+    padding: 28px 24px;
+    background: var(--surface, #f9f9f9);
+    border: 2px solid var(--border, #e5e5e5);
+    border-radius: 20px;
+  }
+  .lg-card-title {
+    font-family: 'Outfit', var(--heading), sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text, #1a1a1a);
+    margin-bottom: 4px;
+  }
+  .lg-card-sub {
+    font-size: 13px;
+    color: var(--text-sec, #777);
+    margin-bottom: 20px;
+  }
+
+  .lg-input-group { margin-bottom: 14px; }
+  .lg-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-faint, #999);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 6px;
+    font-family: 'Outfit', var(--heading), sans-serif;
+  }
+  .lg-input {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--bg, #fff);
+    border: 2px solid var(--border, #e5e5e5);
+    border-radius: 14px;
+    font-size: 15px;
+    color: var(--text, #1a1a1a);
+    font-family: inherit;
+    transition: all .2s;
+    box-sizing: border-box;
+  }
+  .lg-input:focus {
+    border-color: #7C3AED;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+  }
+  .lg-input::placeholder { color: var(--text-faint, #bbb); }
+
+  .lg-btn {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Outfit', var(--heading), sans-serif;
+    cursor: pointer;
+    transition: all .25s;
+  }
+  .lg-btn-primary {
+    background: linear-gradient(135deg, #7C3AED, #a855f7);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(124,58,237,0.25);
+    margin-top: 6px;
+  }
+  .lg-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124,58,237,0.35);
+  }
+  .lg-btn-ghost {
+    background: transparent;
+    color: #7C3AED;
+    border: 2px solid #7C3AED;
+    width: auto;
+    white-space: nowrap;
+    padding: 14px 24px;
+    flex-shrink: 0;
+  }
+  .lg-btn-ghost:hover {
+    background: rgba(124,58,237,0.06);
+  }
+
+  /* ── Divider ── */
+  .lg-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0 0;
+  }
+  .lg-divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border, #e5e5e5);
+  }
+  .lg-divider-text {
+    font-size: 12px;
+    color: var(--text-faint, #999);
+    white-space: nowrap;
+  }
+
+  /* ── Sign in row ── */
+  .lg-card-signin {
+    padding: 18px 20px;
+  }
+  .lg-signin-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .lg-input-signin {
+    flex: 1;
+    margin: 0;
+  }
+
+  /* ── Perks ── */
+  .lg-perks {
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .lg-perk {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--surface, #f9f9f9);
+    border-radius: 14px;
+    border: 1.5px solid var(--border, #e5e5e5);
+  }
+  .lg-perk-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .lg-perk div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .lg-perk strong {
+    font-family: 'Outfit', var(--heading), sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text, #1a1a1a);
+  }
+  .lg-perk span {
+    font-size: 13px;
+    color: var(--text-sec, #777);
+    line-height: 1.4;
+  }
+
+  /* ── Mobile ── */
+  @media (max-width: 480px) {
+    .lg { padding: 0 16px 60px; }
+    .lg-hero { padding: 40px 24px 36px; margin: -20px -16px 0; }
+    .lg-title { font-size: 26px; }
+    .lg-proof { flex-direction: column; gap: 6px; }
+    .lg-signin-row { flex-direction: column; }
+    .lg-btn-ghost { width: 100%; text-align: center; }
+  }
+</style>
