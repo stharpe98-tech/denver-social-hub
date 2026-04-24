@@ -101,30 +101,6 @@ if (Astro.request.method === "POST") {
       </form>
     </div>
 
-    <!-- What you get -->
-    <div class="lg-perks">
-      <div class="lg-perk">
-        <span class="lg-perk-icon">🎲</span>
-        <div>
-          <strong>Solo Queue</strong>
-          <span>Can't decide? We'll pick an event for you.</span>
-        </div>
-      </div>
-      <div class="lg-perk">
-        <span class="lg-perk-icon">🤝</span>
-        <div>
-          <strong>Blind Intros</strong>
-          <span>RSVP and we pair you with someone to meet.</span>
-        </div>
-      </div>
-      <div class="lg-perk">
-        <span class="lg-perk-icon">📅</span>
-        <div>
-          <strong>Real Events</strong>
-          <span>Dinners, hikes, game nights — posted by members.</span>
-        </div>
-      </div>
-    </div>
   </div>
 </Base>
 
@@ -318,43 +294,6 @@ if (Astro.request.method === "POST") {
     margin: 0;
   }
 
-  /* ── Perks ── */
-  .lg-perks {
-    margin-top: 32px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .lg-perk {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 14px 16px;
-    background: var(--surface, #f9f9f9);
-    border-radius: 14px;
-    border: 1.5px solid var(--border, #e5e5e5);
-  }
-  .lg-perk-icon {
-    font-size: 22px;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-  .lg-perk div {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .lg-perk strong {
-    font-family: 'Outfit', var(--heading), sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text, #1a1a1a);
-  }
-  .lg-perk span {
-    font-size: 13px;
-    color: var(--text-sec, #777);
-    line-height: 1.4;
-  }
 
   /* ── Mobile ── */
   @media (max-width: 480px) {

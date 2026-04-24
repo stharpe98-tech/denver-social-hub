@@ -199,34 +199,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       <button class="post-banner-btn" id="postBannerBtn">Post an event</button>
     </div>
 
-    <!-- SOLO QUEUE -->
-    {isLoggedIn && events.length > 0 && (
-      <div class="solo-q" id="soloQueue">
-        <div class="solo-q-left">
-          <span class="solo-q-icon">🎲</span>
-          <div>
-            <strong class="solo-q-title">Just put me somewhere</strong>
-            <span class="solo-q-sub">Random event, random people. Just show up.</span>
-          </div>
-        </div>
-        <button class="solo-q-btn" id="soloQueueBtn">Queue up</button>
-      </div>
-    )}
-
-    <!-- SOLO QUEUE RESULT (hidden until triggered) -->
-    <div class="solo-result" id="soloResult" style="display:none;">
-      <div class="solo-result-card">
-        <div class="solo-result-emoji">🎲</div>
-        <h2 class="solo-result-title" id="soloResultTitle"></h2>
-        <p class="solo-result-meta" id="soloResultMeta"></p>
-        <div class="solo-result-intro" id="soloResultIntro" style="display:none;">
-          <div class="solo-intro-label">🤝 Your blind intro</div>
-          <p class="solo-intro-text" id="soloIntroText"></p>
-        </div>
-        <a class="solo-result-btn" id="soloResultLink" href="#">See event details →</a>
-        <button class="solo-result-dismiss" id="soloResultDismiss">Back to events</button>
-      </div>
-    </div>
 
     <!-- FILTER CHIPS -->
     <div class="filters-wrap">
@@ -660,72 +632,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
   }
   .post-banner-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,58,237,0.4); }
 
-  /* ═══ SOLO QUEUE ═══ */
-  .solo-q {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 14px; padding: 16px 20px; border-radius: 16px;
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
-    margin-bottom: 20px; position: relative; overflow: hidden;
-  }
-  .solo-q::before {
-    content: ''; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px;
-    background: radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .solo-q-left { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
-  .solo-q-icon { font-size: 24px; flex-shrink: 0; }
-  .solo-q-title {
-    display: block; font-size: 14px; font-weight: 700; color: #fff;
-    font-family: 'Outfit', sans-serif;
-  }
-  .solo-q-sub { font-size: 12px; color: rgba(255,255,255,0.5); }
-  .solo-q-btn {
-    padding: 10px 22px; background: #7C3AED; color: #fff; border: none;
-    border-radius: 50px; font-size: 13px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; cursor: pointer; flex-shrink: 0;
-    transition: all .2s; white-space: nowrap; position: relative; z-index: 1;
-    box-shadow: 0 4px 12px rgba(124,58,237,0.3);
-  }
-  .solo-q-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,58,237,0.4); }
-  .solo-q-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-  /* Solo queue result */
-  .solo-result {
-    padding: 40px 0; text-align: center; animation: fadeUp .4s ease;
-  }
-  .solo-result-card {
-    background: #fff; border-radius: 20px; padding: 36px 28px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.08); border: 1px solid #E5E7EB;
-    max-width: 400px; margin: 0 auto;
-  }
-  .solo-result-emoji { font-size: 48px; margin-bottom: 16px; }
-  .solo-result-title {
-    font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800;
-    color: #111827; margin-bottom: 8px; letter-spacing: -0.02em;
-  }
-  .solo-result-meta { font-size: 13px; color: #6B7280; margin-bottom: 20px; }
-  .solo-result-intro {
-    background: linear-gradient(135deg, rgba(124,58,237,0.04), rgba(219,39,119,0.04));
-    border: 1px solid rgba(124,58,237,0.12); border-radius: 14px;
-    padding: 16px; margin-bottom: 20px; text-align: left;
-  }
-  .solo-intro-label {
-    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700;
-    color: #7C3AED; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
-  }
-  .solo-intro-text { font-size: 14px; color: #374151; line-height: 1.5; }
-  .solo-result-btn {
-    display: inline-block; padding: 12px 28px; background: #7C3AED; color: #fff;
-    border-radius: 50px; font-family: 'Outfit', sans-serif; font-size: 14px;
-    font-weight: 700; text-decoration: none; transition: all .2s; margin-bottom: 12px;
-  }
-  .solo-result-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,58,237,0.3); }
-  .solo-result-dismiss {
-    display: block; margin: 0 auto; background: none; border: none; color: #9CA3AF;
-    font-size: 13px; cursor: pointer; font-family: 'Outfit', sans-serif;
-  }
-  .solo-result-dismiss:hover { color: #6B7280; }
-
   /* ═══ FEATURED CARD ═══ */
   .feat {
     display: block; background: #fff; border-radius: 20px;
@@ -1124,70 +1030,6 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       });
     });
   });
-
-  // ── Solo Queue ──
-  var soloBtn = document.getElementById('soloQueueBtn');
-  var soloResult = document.getElementById('soloResult');
-  var soloQueue = document.getElementById('soloQueue');
-  if (soloBtn) {
-    soloBtn.addEventListener('click', function() {
-      soloBtn.disabled = true;
-      soloBtn.textContent = 'Finding you a spot...';
-      fetch('/api/solo-queue', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          soloBtn.disabled = false;
-          soloBtn.textContent = 'Queue up';
-          if (data.error) {
-            if (data.error === 'login_required') { window.location.href = '/login'; return; }
-            alert(data.message || 'No open events right now — try again later!');
-            return;
-          }
-          // Show result card
-          var magContent = document.getElementById('magContent');
-          if (magContent) magContent.style.display = 'none';
-          if (soloQueue) soloQueue.style.display = 'none';
-          var postBanner = document.getElementById('postBanner');
-          if (postBanner) postBanner.style.display = 'none';
-          var filtersWrap = document.querySelector('.filters-wrap');
-          if (filtersWrap) filtersWrap.style.display = 'none';
-          if (fab) fab.style.display = 'none';
-
-          document.getElementById('soloResultTitle').textContent = 'You\'re going to ' + data.event.title;
-          document.getElementById('soloResultMeta').textContent = (data.event.month || '') + ' ' + (data.event.day || '') + ' · ' + (data.event.zone || 'Denver');
-          document.getElementById('soloResultLink').href = '/events/' + data.event.id;
-
-          if (data.introMatch) {
-            document.getElementById('soloResultIntro').style.display = '';
-            document.getElementById('soloIntroText').textContent = 'Look for ' + data.introMatch.name + ' — ' + data.introMatch.fact;
-          }
-
-          soloResult.style.display = '';
-          window.scrollTo(0, 0);
-        })
-        .catch(function() {
-          soloBtn.disabled = false;
-          soloBtn.textContent = 'Queue up';
-          alert('Something went wrong — try again.');
-        });
-    });
-  }
-
-  var soloResultDismiss = document.getElementById('soloResultDismiss');
-  if (soloResultDismiss) {
-    soloResultDismiss.addEventListener('click', function() {
-      soloResult.style.display = 'none';
-      var magContent = document.getElementById('magContent');
-      if (magContent) magContent.style.display = '';
-      if (soloQueue) soloQueue.style.display = '';
-      var postBanner = document.getElementById('postBanner');
-      if (postBanner) postBanner.style.display = '';
-      var filtersWrap = document.querySelector('.filters-wrap');
-      if (filtersWrap) filtersWrap.style.display = '';
-      if (fab) fab.style.display = '';
-      document.getElementById('soloResultIntro').style.display = 'none';
-    });
-  }
 
   // ── Wizard ──
   var TOTAL_STEPS = 4;

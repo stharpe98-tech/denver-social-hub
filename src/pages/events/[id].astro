@@ -23,23 +23,6 @@ try {
 
 if (!event) return Astro.redirect("/events");
 
-// Blind intro — check if this user has a pairing for this event
-let blindIntro: any = null;
-if (user && myRsvp && db) {
-  try {
-    const intro: any = await db.prepare(
-      `SELECT * FROM blind_intros WHERE event_id = ? AND (member1_email = ? OR member2_email = ?)`
-    ).bind(id, user.email, user.email).first();
-    if (intro) {
-      const isMe1 = intro.member1_email === user.email;
-      blindIntro = {
-        matchName: (isMe1 ? intro.member2_name : intro.member1_name || 'Someone').split(' ')[0],
-        matchFact: isMe1 ? intro.member2_fact : intro.member1_fact,
-      };
-    }
-  } catch {}
-}
-
 // Map event types to member interest keywords for matching
 const typeToInterests: Record<string, string[]> = {
   dinner: ["Food & Dining","Craft Beer"],
@@ -308,21 +291,6 @@ if (db && isPastEvent) {
             <div class="det-contact-label">Point of contact</div>
             <span class="det-contact-hint">RSVP to see host's number</span>
           </div>
-        </div>
-      )}
-
-      <!-- Blind Intro match -->
-      {blindIntro && (
-        <div class="det-blind-intro">
-          <div class="det-blind-label">🤝 Your blind intro</div>
-          <p class="det-blind-text">Look for <strong>{blindIntro.matchName}</strong> — {blindIntro.matchFact}</p>
-          <p class="det-blind-hint">Say hi when you get there. They know about you too.</p>
-        </div>
-      )}
-      {myRsvp && !blindIntro && rsvps.length < 2 && (
-        <div class="det-blind-intro pending">
-          <div class="det-blind-label">🤝 Blind intro</div>
-          <p class="det-blind-text">You'll get paired with someone once more people RSVP.</p>
         </div>
       )}
 
@@ -607,24 +575,6 @@ if (db && isPastEvent) {
   }
   .det-contact-phone:hover { color: #7C3AED; }
   .det-contact-hint { font-size: 11px; color: #9CA3AF; }
-
-  /* ── Blind intro ── */
-  .det-blind-intro {
-    padding: 16px 18px; border-radius: 14px; margin-bottom: 16px;
-    background: linear-gradient(135deg, rgba(124,58,237,0.04), rgba(219,39,119,0.04));
-    border: 1px solid rgba(124,58,237,0.12);
-  }
-  .det-blind-intro.pending {
-    background: #F8F9FB; border-color: #E5E7EB;
-  }
-  .det-blind-label {
-    font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700;
-    color: #7C3AED; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;
-  }
-  .det-blind-intro.pending .det-blind-label { color: #9CA3AF; }
-  .det-blind-text { font-size: 14px; color: #374151; line-height: 1.5; margin-bottom: 4px; }
-  .det-blind-text strong { color: #111827; }
-  .det-blind-hint { font-size: 11px; color: #9CA3AF; }
 
   /* ── RSVP bar ── */
   .det-rsvp-bar {

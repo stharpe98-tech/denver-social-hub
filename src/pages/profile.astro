@@ -34,7 +34,6 @@ let mySuggestions: any[] = [];
 let myRsvps: any[] = [];
 let upcomingRsvps: any[] = [];
 let pastRsvps: any[] = [];
-let blindIntros: any[] = [];
 try {
   if (db && user?.email) {
     streak = await db.prepare("SELECT * FROM member_streaks WHERE email=?").bind(user.email).first();
@@ -45,24 +44,6 @@ try {
     myRsvps = rsvpResult.results || [];
     upcomingRsvps = myRsvps.filter((r: any) => !r.is_past);
     pastRsvps = myRsvps.filter((r: any) => r.is_past);
-    // Get blind intro matches
-    try {
-      const introResult = await db.prepare(
-        `SELECT bi.*, e.title as event_title FROM blind_intros bi
-         JOIN events e ON bi.event_id = e.id
-         WHERE bi.member1_email = ? OR bi.member2_email = ?
-         ORDER BY bi.created_at DESC LIMIT 5`
-      ).bind(user.email, user.email).all();
-      blindIntros = (introResult.results || []).map((intro: any) => {
-        const isMe1 = intro.member1_email === user.email;
-        return {
-          matchName: (isMe1 ? intro.member2_name : intro.member1_name || 'Someone').split(' ')[0],
-          matchFact: isMe1 ? intro.member2_fact : intro.member1_fact,
-          eventTitle: intro.event_title,
-          eventId: intro.event_id,
-        };
-      });
-    } catch {}
   }
 } catch {}
 
@@ -192,28 +173,6 @@ const socialLevel = totalEvts === 0 ? "Fresh face" : totalEvts < 3 ? "Getting ou
       </div>
       <div class="p-tags">
         {myLooking.map((l: string) => <span class="p-tag p-tag-looking">{l}</span>)}
-      </div>
-    </div>
-  )}
-
-  <!-- ═══ BLIND INTROS ═══ -->
-  {blindIntros.length > 0 && (
-    <div class="p-section">
-      <div class="p-section-head">
-        <span class="p-section-title">Your blind intros</span>
-        <span class="p-section-count">{blindIntros.length}</span>
-      </div>
-      <div class="p-intros">
-        {blindIntros.map((intro: any) => (
-          <a href={`/events/${intro.eventId}`} class="p-intro-card">
-            <div class="p-intro-emoji">🤝</div>
-            <div class="p-intro-info">
-              <div class="p-intro-name">{intro.matchName}</div>
-              <div class="p-intro-fact">{intro.matchFact}</div>
-              <div class="p-intro-event">{intro.eventTitle}</div>
-            </div>
-          </a>
-        ))}
       </div>
     </div>
   )}
@@ -488,23 +447,6 @@ const socialLevel = totalEvts === 0 ? "Fresh face" : totalEvts < 3 ? "Getting ou
     background: #F3F4F6; color: #374151; border: 1px solid #E5E7EB;
   }
   .p-tag-looking { background: #EEF2FF; border-color: #C7D2FE; color: #4338CA; }
-
-  /* ═══ BLIND INTROS ═══ */
-  .p-intros { display: flex; flex-direction: column; gap: 8px; }
-  .p-intro-card {
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 16px; border-radius: 14px;
-    background: linear-gradient(135deg, rgba(124,58,237,0.03), rgba(219,39,119,0.03));
-    border: 1px solid rgba(124,58,237,0.1); text-decoration: none;
-    transition: all .2s;
-  }
-  .p-intro-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.08); }
-  .p-intro-emoji { font-size: 20px; flex-shrink: 0; }
-  .p-intro-name {
-    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827;
-  }
-  .p-intro-fact { font-size: 12px; color: #6B7280; }
-  .p-intro-event { font-size: 11px; color: #9CA3AF; margin-top: 2px; }
 
   /* ═══ EVENTS ═══ */
   .p-events { display: flex; flex-direction: column; gap: 6px; }
