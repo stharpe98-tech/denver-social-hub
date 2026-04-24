@@ -1,17 +1,186 @@
 ---
 import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+
 let user: any = null;
 const cookie = Astro.cookies.get("dsn_user")?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+
+const firstName = (user?.name || '').split(' ')[0] || 'friend';
+
+// Get upcoming events count
+const db = getDB();
+let eventCount = 0;
+try {
+  if (db) {
+    const result: any = await db.prepare("SELECT COUNT(*) as c FROM events WHERE is_past IS NULL OR is_past = 0").first();
+    eventCount = result?.c || 0;
+  }
+} catch {}
 ---
+
 <Base title="You're in!">
-  <div style="max-width:480px;margin:0 auto;padding:60px 20px;text-align:center">
-    <div style="font-size:56px;margin-bottom:16px">🏔️</div>
-    <h1 style="font-family:var(--heading);font-size:32px;font-weight:800;color:var(--text);margin-bottom:12px">You're officially part of the crew.</h1>
-    <p style="font-size:15px;line-height:1.7;margin-bottom:32px;color:var(--text-sec)">Now go find an event and show up. That's really all there is to it.</p>
-    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-      <a href="/events" class="btn btn-primary">Browse Events →</a>
-      <a href="https://discord.gg/S8SFNkdSgK" class="btn btn-ghost" target="_blank">Join Discord</a>
+  <div class="done">
+    <div class="done-hero">
+      <div class="done-hero-bg"></div>
+      <div class="done-hero-content">
+        <div class="done-icon">🏔️</div>
+        <h1 class="done-title">You're in, {firstName}.</h1>
+        <p class="done-sub">Welcome to the crew. Now go find something fun.</p>
+      </div>
+    </div>
+
+    <div class="done-cards">
+      <a href="/events" class="done-card">
+        <div class="done-card-emoji">📅</div>
+        <div class="done-card-text">
+          <strong>Browse events</strong>
+          <span>{eventCount > 0 ? `${eventCount} events coming up` : 'See what\'s happening'}</span>
+        </div>
+        <div class="done-card-arrow">→</div>
+      </a>
+
+      <a href="/profile" class="done-card">
+        <div class="done-card-emoji">✏️</div>
+        <div class="done-card-text">
+          <strong>Finish your profile</strong>
+          <span>Add a bio so people know who you are</span>
+        </div>
+        <div class="done-card-arrow">→</div>
+      </a>
+
+      <a href="/members" class="done-card">
+        <div class="done-card-emoji">👥</div>
+        <div class="done-card-text">
+          <strong>Meet the crew</strong>
+          <span>See who else is hanging out</span>
+        </div>
+        <div class="done-card-arrow">→</div>
+      </a>
+    </div>
+
+    <div class="done-tip">
+      <span class="done-tip-icon">💡</span>
+      <span>Pro tip: RSVP to an event and we'll pair you with someone to meet — no awkward standing alone.</span>
     </div>
   </div>
 </Base>
+
+<style is:inline>
+  .done {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0 20px 80px;
+  }
+
+  .done-hero {
+    position: relative;
+    margin: -20px -20px 0;
+    padding: 56px 32px 48px;
+    border-radius: 0 0 28px 28px;
+    overflow: hidden;
+    text-align: center;
+  }
+  .done-hero-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #064e3b 0%, #059669 40%, #10B981 70%, #34d399 100%);
+    z-index: 0;
+  }
+  .done-hero-content { position: relative; z-index: 1; }
+  .done-icon {
+    font-size: 56px;
+    margin-bottom: 12px;
+    animation: popIn .6s cubic-bezier(.68,-.55,.27,1.55);
+  }
+  @keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .done-title {
+    font-family: 'Outfit', var(--heading), sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 8px;
+    animation: fadeUp .5s ease .2s both;
+  }
+  .done-sub {
+    font-size: 15px;
+    color: rgba(255,255,255,0.8);
+    animation: fadeUp .5s ease .35s both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Cards ── */
+  .done-cards {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-top: 28px;
+  }
+  .done-card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 20px;
+    background: var(--surface, #f9f9f9);
+    border: 2px solid var(--border, #e5e5e5);
+    border-radius: 18px;
+    text-decoration: none;
+    transition: all .25s cubic-bezier(.4,0,.2,1);
+    animation: fadeUp .4s ease both;
+  }
+  .done-card:nth-child(1) { animation-delay: .4s; }
+  .done-card:nth-child(2) { animation-delay: .5s; }
+  .done-card:nth-child(3) { animation-delay: .6s; }
+
+  .done-card:hover {
+    border-color: #c4b5fd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(124,58,237,0.1);
+  }
+  .done-card-emoji { font-size: 28px; flex-shrink: 0; }
+  .done-card-text {
+    flex: 1;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .done-card-text strong {
+    font-family: 'Outfit', var(--heading), sans-serif;
+    font-size: 15px; font-weight: 700;
+    color: var(--text, #1a1a1a);
+  }
+  .done-card-text span {
+    font-size: 13px;
+    color: var(--text-sec, #777);
+  }
+  .done-card-arrow {
+    font-size: 18px;
+    color: var(--text-faint, #ccc);
+    transition: all .2s;
+    flex-shrink: 0;
+  }
+  .done-card:hover .done-card-arrow {
+    color: #7C3AED;
+    transform: translateX(3px);
+  }
+
+  /* ── Tip ── */
+  .done-tip {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-top: 24px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(168,85,247,0.08));
+    border: 1.5px solid rgba(124,58,237,0.15);
+    border-radius: 16px;
+    font-size: 13px;
+    color: var(--text-sec, #666);
+    line-height: 1.6;
+    animation: fadeUp .4s ease .7s both;
+  }
+  .done-tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  @media (max-width: 480px) {
+    .done { padding: 0 16px 60px; }
+    .done-hero { padding: 44px 24px 40px; margin: -20px -16px 0; }
+    .done-title { font-size: 26px; }
+  }
+</style>

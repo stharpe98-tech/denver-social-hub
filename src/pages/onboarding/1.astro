@@ -31,6 +31,8 @@ if (Astro.request.method === "POST" && db) {
   }
 }
 
+const firstName = (user.name || '').split(' ')[0];
+
 const neighborhoods = [
   "LoDo / Downtown","RiNo / River North","Five Points","Curtis Park",
   "Capitol Hill","Cheesman Park","Congress Park","Uptown",
@@ -68,63 +70,66 @@ const personalityOptions = [
   "🎨 Creative type","🌊 Transplant","🆕 New to Denver",
   "🏙️ Denver native","🌙 Night owl","🌅 Early riser",
 ];
+
+const stepTitles = [
+  { emoji: "📍", title: "Where's home base?", sub: "We'll match you with nearby hangs." },
+  { emoji: "✨", title: "What gets you out?", sub: "Pick the stuff you'd actually show up for." },
+  { emoji: "🧠", title: "Last one — your vibe.", sub: "Helps us pair you with the right people." },
+];
 ---
 
 <Base title="Welcome to Denver Social">
-  <div style="max-width:480px;margin:0 auto;padding:32px 20px 120px">
+  <div class="ob">
 
-    <!-- Header -->
-    <div style="text-align:center;margin-bottom:28px">
-      <div style="font-size:48px;margin-bottom:12px">👋</div>
-      <h1 style="font-family:var(--heading);font-size:26px;font-weight:800;color:var(--text);margin-bottom:6px">
-        Hey {user.name?.split(' ')[0]}!
-      </h1>
-      <p style="font-size:14px;color:var(--text-sec);line-height:1.6">
-        Quick setup so we match you with the right events.
-      </p>
+    <!-- Hero banner -->
+    <div class="ob-hero">
+      <div class="ob-hero-bg"></div>
+      <div class="ob-hero-content">
+        <div class="ob-wave">👋</div>
+        <h1 class="ob-title">Welcome in, {firstName}.</h1>
+        <p class="ob-subtitle">Three quick questions. No wrong answers.</p>
+      </div>
     </div>
 
-    <!-- Progress bar -->
-    <div class="ob-progress">
-      <div class="ob-progress-step active">
-        <div class="ob-dot">1</div>
-        <span>Basics</span>
-      </div>
-      <div class="ob-progress-line active"></div>
-      <div class="ob-progress-step">
-        <div class="ob-dot">2</div>
-        <span>Interests</span>
-      </div>
-      <div class="ob-progress-line"></div>
-      <div class="ob-progress-step">
-        <div class="ob-dot">3</div>
-        <span>Vibe</span>
-      </div>
+    <!-- Step indicator -->
+    <div class="ob-steps-bar">
+      <div class="ob-step-dot active" data-step="1"><span>1</span></div>
+      <div class="ob-step-line" id="line-1"></div>
+      <div class="ob-step-dot" data-step="2"><span>2</span></div>
+      <div class="ob-step-line" id="line-2"></div>
+      <div class="ob-step-dot" data-step="3"><span>3</span></div>
+    </div>
+
+    <!-- Step title area -->
+    <div class="ob-step-header" id="step-header">
+      <div class="ob-step-emoji">{stepTitles[0].emoji}</div>
+      <h2 class="ob-step-title">{stepTitles[0].title}</h2>
+      <p class="ob-step-sub">{stepTitles[0].sub}</p>
     </div>
 
     {error && (
-      <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:12px;color:#DC2626;font-size:13px;margin-bottom:20px">
-        {error}
-      </div>
+      <div class="ob-error">{error}</div>
     )}
 
-    <form method="POST" id="ob-form">
+    <form method="POST" id="ob-form" class="ob-form">
 
       <!-- STEP 1: Basics -->
-      <div class="ob-step" id="step-1">
-        <div class="ob-section">
-          <div class="ob-label">📍 Your neighborhood</div>
-          <select name="neighborhood" class="ob-select" required>
-            <option value="" disabled selected>Pick your area…</option>
-            {neighborhoods.map(n => <option value={n}>{n}</option>)}
-          </select>
+      <div class="ob-panel" id="step-1">
+        <div class="ob-field">
+          <label class="ob-label">Your neighborhood</label>
+          <div class="ob-select-wrap">
+            <select name="neighborhood" class="ob-select" required>
+              <option value="" disabled selected>Pick your area…</option>
+              {neighborhoods.map(n => <option value={n}>{n}</option>)}
+            </select>
+          </div>
         </div>
 
-        <div class="ob-section">
-          <div class="ob-label">🎂 Age range <span class="ob-optional">optional</span></div>
+        <div class="ob-field">
+          <label class="ob-label">Age range <span class="ob-opt">optional</span></label>
           <div class="ob-pills">
             {ageRanges.map(a => (
-              <label class="ob-pill-wrap">
+              <label class="ob-pill">
                 <input type="radio" name="age_range" value={a} />
                 <span>{a}</span>
               </label>
@@ -132,18 +137,18 @@ const personalityOptions = [
           </div>
         </div>
 
-        <button type="button" class="btn btn-primary ob-next" data-next="2" style="width:100%;padding:14px;font-size:15px;margin-top:8px">
-          Next → Interests
+        <button type="button" class="ob-btn ob-next" data-next="2">
+          Next — what are you into? →
         </button>
       </div>
 
       <!-- STEP 2: Interests -->
-      <div class="ob-step hidden" id="step-2">
-        <div class="ob-section">
-          <div class="ob-label">✨ What are you into? <span class="ob-hint">pick a few</span></div>
+      <div class="ob-panel hidden" id="step-2">
+        <div class="ob-field">
+          <label class="ob-label">What are you into? <span class="ob-hint">tap a few</span></label>
           <div class="ob-pills">
             {interestOptions.map(i => (
-              <label class="ob-pill-wrap">
+              <label class="ob-pill">
                 <input type="checkbox" name="interests" value={i} />
                 <span>{i}</span>
               </label>
@@ -151,11 +156,11 @@ const personalityOptions = [
           </div>
         </div>
 
-        <div class="ob-section">
-          <div class="ob-label">🔍 What are you looking for? <span class="ob-hint">pick all that apply</span></div>
+        <div class="ob-field">
+          <label class="ob-label">What are you looking for? <span class="ob-hint">all that apply</span></label>
           <div class="ob-pills">
             {lookingOptions.map(l => (
-              <label class="ob-pill-wrap">
+              <label class="ob-pill">
                 <input type="checkbox" name="looking_for" value={l} />
                 <span>{l}</span>
               </label>
@@ -163,19 +168,19 @@ const personalityOptions = [
           </div>
         </div>
 
-        <div style="display:flex;gap:10px;margin-top:8px">
-          <button type="button" class="btn btn-ghost ob-back" data-back="1" style="flex:1;padding:14px;font-size:15px">← Back</button>
-          <button type="button" class="btn btn-primary ob-next" data-next="3" style="flex:2;padding:14px;font-size:15px">Next → Vibe</button>
+        <div class="ob-btn-row">
+          <button type="button" class="ob-btn-back ob-back" data-back="1">←</button>
+          <button type="button" class="ob-btn ob-next" data-next="3">Almost done →</button>
         </div>
       </div>
 
       <!-- STEP 3: Vibe -->
-      <div class="ob-step hidden" id="step-3">
-        <div class="ob-section">
-          <div class="ob-label">📅 When are you usually free? <span class="ob-hint">pick all that apply</span></div>
+      <div class="ob-panel hidden" id="step-3">
+        <div class="ob-field">
+          <label class="ob-label">When are you usually free? <span class="ob-hint">all that apply</span></label>
           <div class="ob-pills">
             {availabilityOptions.map(a => (
-              <label class="ob-pill-wrap">
+              <label class="ob-pill">
                 <input type="checkbox" name="availability" value={a} />
                 <span>{a}</span>
               </label>
@@ -183,11 +188,11 @@ const personalityOptions = [
           </div>
         </div>
 
-        <div class="ob-section">
-          <div class="ob-label">🧠 How would you describe yourself? <span class="ob-hint">pick a few</span></div>
+        <div class="ob-field">
+          <label class="ob-label">How would you describe yourself? <span class="ob-hint">pick a few</span></label>
           <div class="ob-pills">
             {personalityOptions.map(v => (
-              <label class="ob-pill-wrap">
+              <label class="ob-pill">
                 <input type="checkbox" name="personality" value={v} />
                 <span>{v}</span>
               </label>
@@ -195,159 +200,417 @@ const personalityOptions = [
           </div>
         </div>
 
-        <div style="display:flex;gap:10px;margin-top:8px">
-          <button type="button" class="btn btn-ghost ob-back" data-back="2" style="flex:1;padding:14px;font-size:15px">← Back</button>
-          <button type="submit" class="btn btn-primary" style="flex:2;padding:14px;font-size:15px">Let's go 🎉</button>
+        <div class="ob-btn-row">
+          <button type="button" class="ob-btn-back ob-back" data-back="2">←</button>
+          <button type="submit" class="ob-btn ob-submit">Let's go 🎉</button>
         </div>
       </div>
 
     </form>
+
+    <p class="ob-skip"><a href="/events">Skip for now — I'll do this later</a></p>
   </div>
 </Base>
 
 <style is:inline>
-  .ob-progress {
-    display: flex; align-items: center; justify-content: center;
-    gap: 0; margin-bottom: 28px;
+  .ob {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0 20px 80px;
   }
-  .ob-progress-step {
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-  }
-  .ob-progress-step span {
-    font-size: 11px; font-weight: 600; color: var(--text-faint);
-    font-family: var(--heading);
-  }
-  .ob-progress-step.active span { color: var(--accent); }
-  .ob-progress-step.done span { color: var(--mint); }
-  .ob-dot {
-    width: 28px; height: 28px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; font-family: var(--heading);
-    background: var(--surface); border: 2px solid var(--border);
-    color: var(--text-faint); transition: all .3s;
-  }
-  .ob-progress-step.active .ob-dot {
-    background: var(--accent); border-color: var(--accent); color: #fff;
-  }
-  .ob-progress-step.done .ob-dot {
-    background: var(--mint); border-color: var(--mint); color: #fff;
-  }
-  .ob-progress-line {
-    width: 40px; height: 2px; background: var(--border);
-    margin: 0 8px; margin-bottom: 18px; transition: background .3s;
-  }
-  .ob-progress-line.active { background: var(--accent); }
-  .ob-progress-line.done { background: var(--mint); }
 
-  .ob-step { animation: fadeIn .3s ease; }
-  .ob-step.hidden { display: none; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  /* ── Hero ── */
+  .ob-hero {
+    position: relative;
+    margin: -20px -20px 0;
+    padding: 48px 32px 40px;
+    border-radius: 0 0 28px 28px;
+    overflow: hidden;
+    text-align: center;
+  }
+  .ob-hero-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #4a1a6b 40%, #7C3AED 70%, #a855f7 100%);
+    z-index: 0;
+  }
+  .ob-hero-content { position: relative; z-index: 1; }
+  .ob-wave {
+    font-size: 48px;
+    margin-bottom: 8px;
+    animation: wave 1.8s ease-in-out infinite;
+    display: inline-block;
+    transform-origin: 70% 70%;
+  }
+  @keyframes wave {
+    0%,100% { transform: rotate(0deg); }
+    15% { transform: rotate(14deg); }
+    30% { transform: rotate(-8deg); }
+    40% { transform: rotate(14deg); }
+    50% { transform: rotate(-4deg); }
+    60% { transform: rotate(10deg); }
+    70% { transform: rotate(0deg); }
+  }
+  .ob-title {
+    font-family: 'Outfit', var(--heading), sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .ob-subtitle {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    font-weight: 400;
+  }
 
-  .ob-section { margin-bottom: 28px; }
+  /* ── Steps bar ── */
+  .ob-steps-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 28px 0 24px;
+  }
+  .ob-step-dot {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface, #f5f5f5);
+    border: 2.5px solid var(--border, #e5e5e5);
+    transition: all .35s cubic-bezier(.4,0,.2,1);
+    position: relative;
+  }
+  .ob-step-dot span {
+    font-size: 13px; font-weight: 700;
+    font-family: 'Outfit', var(--heading), sans-serif;
+    color: var(--text-faint, #999);
+    transition: color .35s;
+  }
+  .ob-step-dot.active {
+    background: #7C3AED;
+    border-color: #7C3AED;
+    box-shadow: 0 0 0 4px rgba(124,58,237,0.15);
+    transform: scale(1.1);
+  }
+  .ob-step-dot.active span { color: #fff; }
+  .ob-step-dot.done {
+    background: #10B981;
+    border-color: #10B981;
+  }
+  .ob-step-dot.done span { color: #fff; }
+
+  .ob-step-line {
+    width: 48px; height: 3px;
+    background: var(--border, #e5e5e5);
+    margin: 0 6px;
+    border-radius: 2px;
+    transition: background .4s;
+    position: relative;
+    overflow: hidden;
+  }
+  .ob-step-line::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0; width: 0;
+    background: linear-gradient(90deg, #10B981, #7C3AED);
+    border-radius: 2px;
+    transition: width .5s cubic-bezier(.4,0,.2,1);
+  }
+  .ob-step-line.done::after { width: 100%; }
+  .ob-step-line.active::after { width: 50%; }
+
+  /* ── Step header ── */
+  .ob-step-header {
+    text-align: center;
+    margin-bottom: 28px;
+    transition: opacity .3s;
+  }
+  .ob-step-emoji {
+    font-size: 32px;
+    margin-bottom: 6px;
+  }
+  .ob-step-title {
+    font-family: 'Outfit', var(--heading), sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text, #1a1a1a);
+    margin-bottom: 4px;
+  }
+  .ob-step-sub {
+    font-size: 14px;
+    color: var(--text-sec, #777);
+  }
+
+  /* ── Error ── */
+  .ob-error {
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: 14px;
+    padding: 12px 16px;
+    color: #DC2626;
+    font-size: 13px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  /* ── Form panels ── */
+  .ob-form { position: relative; }
+  .ob-panel {
+    animation: panelIn .4s cubic-bezier(.4,0,.2,1);
+  }
+  .ob-panel.hidden { display: none; }
+  @keyframes panelIn {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .ob-panel.slide-back {
+    animation: panelBack .4s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes panelBack {
+    from { opacity: 0; transform: translateX(-24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .ob-field { margin-bottom: 28px; }
   .ob-label {
-    font-size: 12px; font-weight: 700; color: var(--text-faint);
-    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px;
+    display: block;
+    font-size: 13px; font-weight: 700;
+    color: var(--text, #1a1a1a);
+    margin-bottom: 10px;
+    font-family: 'Outfit', var(--heading), sans-serif;
   }
   .ob-hint {
-    font-size: 12px; font-weight: 400; color: var(--text-faint);
-    text-transform: none; letter-spacing: 0;
+    font-weight: 400;
+    color: var(--text-faint, #999);
+    font-size: 12px;
   }
-  .ob-optional {
-    font-size: 10px; font-weight: 500; color: var(--text-faint);
-    text-transform: none; letter-spacing: 0;
-    background: var(--surface); padding: 2px 8px; border-radius: 50px;
-    margin-left: 4px;
+  .ob-opt {
+    font-size: 10px; font-weight: 500;
+    color: var(--text-faint, #999);
+    background: var(--surface, #f5f5f5);
+    padding: 2px 8px; border-radius: 50px;
+    margin-left: 6px; vertical-align: 1px;
   }
 
+  /* ── Select ── */
+  .ob-select-wrap { position: relative; }
   .ob-select {
-    width: 100%; padding: 14px 16px;
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 14px; font-size: 15px; color: var(--text);
-    font-family: var(--body); appearance: none;
+    width: 100%; padding: 14px 44px 14px 16px;
+    background: var(--surface, #f9f9f9);
+    border: 2px solid var(--border, #e5e5e5);
+    border-radius: 16px;
+    font-size: 15px; color: var(--text, #1a1a1a);
+    font-family: inherit; appearance: none;
+    cursor: pointer; transition: all .2s;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 16px center;
-    cursor: pointer; transition: border-color .2s;
   }
-  .ob-select:focus { border-color: var(--accent); outline: none; }
+  .ob-select:focus {
+    border-color: #7C3AED;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+  }
 
+  /* ── Pills ── */
   .ob-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-  .ob-pill-wrap {
+  .ob-pill {
     display: inline-flex; cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
-  .ob-pill-wrap input {
+  .ob-pill input {
     position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
   }
-  .ob-pill-wrap span {
-    display: inline-block; padding: 9px 16px; border-radius: 50px;
-    font-size: 13px; font-weight: 500; color: var(--text-sec);
-    background: var(--surface); border: 1.5px solid var(--border);
-    transition: all .15s ease; user-select: none; white-space: nowrap;
+  .ob-pill span {
+    display: inline-block; padding: 10px 18px; border-radius: 50px;
+    font-size: 13px; font-weight: 500;
+    color: var(--text-sec, #666);
+    background: var(--surface, #f9f9f9);
+    border: 2px solid var(--border, #e5e5e5);
+    transition: all .2s cubic-bezier(.4,0,.2,1);
+    user-select: none; white-space: nowrap;
   }
-  .ob-pill-wrap:hover span {
-    border-color: var(--border-hover); color: var(--text);
+  .ob-pill:hover span {
+    border-color: #c4b5fd;
+    color: var(--text, #1a1a1a);
+    transform: translateY(-1px);
   }
-  .ob-pill-wrap input:checked + span {
-    background: var(--accent-bg); border-color: var(--accent);
-    color: var(--accent); font-weight: 600;
+  .ob-pill input:checked + span {
+    background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(168,85,247,0.12));
+    border-color: #7C3AED;
+    color: #7C3AED;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(124,58,237,0.12);
+    transform: translateY(-1px);
+  }
+  .ob-pill:active span { transform: scale(0.97); }
+
+  /* ── Buttons ── */
+  .ob-btn {
+    display: block; width: 100%; padding: 16px;
+    background: linear-gradient(135deg, #7C3AED, #a855f7);
+    color: #fff; border: none; border-radius: 16px;
+    font-size: 15px; font-weight: 700;
+    font-family: 'Outfit', var(--heading), sans-serif;
+    cursor: pointer; transition: all .25s;
+    box-shadow: 0 4px 14px rgba(124,58,237,0.25);
+  }
+  .ob-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124,58,237,0.35);
+  }
+  .ob-btn:active { transform: scale(0.98); }
+
+  .ob-btn-row {
+    display: flex; gap: 10px; margin-top: 4px;
+  }
+  .ob-btn-back {
+    width: 52px; height: 52px; flex-shrink: 0;
+    background: var(--surface, #f5f5f5);
+    border: 2px solid var(--border, #e5e5e5);
+    border-radius: 16px;
+    font-size: 18px; color: var(--text-sec, #777);
+    cursor: pointer; transition: all .2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ob-btn-back:hover {
+    border-color: #c4b5fd;
+    color: #7C3AED;
+  }
+  .ob-btn-row .ob-btn { flex: 1; }
+
+  .ob-submit {
+    background: linear-gradient(135deg, #10B981, #059669);
+    box-shadow: 0 4px 14px rgba(16,185,129,0.25);
+  }
+  .ob-submit:hover {
+    box-shadow: 0 6px 20px rgba(16,185,129,0.35);
+  }
+
+  /* ── Skip link ── */
+  .ob-skip {
+    text-align: center;
+    margin-top: 24px;
+  }
+  .ob-skip a {
+    font-size: 13px;
+    color: var(--text-faint, #999);
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .ob-skip a:hover { color: var(--text-sec, #666); }
+
+  /* ── Mobile ── */
+  @media (max-width: 480px) {
+    .ob { padding: 0 16px 60px; }
+    .ob-hero { padding: 36px 24px 32px; margin: -20px -16px 0; }
+    .ob-title { font-size: 24px; }
+    .ob-step-title { font-size: 20px; }
+    .ob-pill span { padding: 9px 14px; font-size: 12px; }
   }
 </style>
 
 <script is:inline>
-  const steps = document.querySelectorAll('.ob-step');
-  const dots = document.querySelectorAll('.ob-progress-step');
-  const lines = document.querySelectorAll('.ob-progress-line');
+  const panels = document.querySelectorAll('.ob-panel');
+  const dots = document.querySelectorAll('.ob-step-dot');
+  const lines = document.querySelectorAll('.ob-step-line');
+  const header = document.getElementById('step-header');
 
-  function showStep(n) {
-    steps.forEach(s => s.classList.add('hidden'));
+  const stepData = [
+    { emoji: '📍', title: "Where's home base?", sub: "We'll match you with nearby hangs." },
+    { emoji: '✨', title: 'What gets you out?', sub: "Pick the stuff you'd actually show up for." },
+    { emoji: '🧠', title: 'Last one — your vibe.', sub: 'Helps us pair you with the right people.' },
+  ];
+
+  let currentStep = 1;
+
+  function goToStep(n, direction) {
+    const dir = direction || (n > currentStep ? 'forward' : 'back');
+    currentStep = n;
+
+    // Hide all panels
+    panels.forEach(p => p.classList.add('hidden'));
+
+    // Show target panel with animation direction
     const target = document.getElementById('step-' + n);
     if (target) {
-      target.classList.remove('hidden');
+      target.classList.remove('hidden', 'slide-back');
+      if (dir === 'back') target.classList.add('slide-back');
       // Force re-animation
       target.style.animation = 'none';
       target.offsetHeight;
       target.style.animation = '';
     }
 
-    // Update progress dots
-    dots.forEach((dot, i) => {
-      const stepNum = i + 1;
+    // Update dots
+    dots.forEach(dot => {
+      const s = parseInt(dot.dataset.step);
       dot.classList.remove('active', 'done');
-      if (stepNum === n) dot.classList.add('active');
-      else if (stepNum < n) dot.classList.add('done');
+      if (s === n) dot.classList.add('active');
+      else if (s < n) dot.classList.add('done');
     });
 
-    // Update progress lines
-    lines.forEach((line, i) => {
-      const lineAfterStep = i + 1;
-      line.classList.remove('active', 'done');
-      if (lineAfterStep < n) line.classList.add('done');
-      else if (lineAfterStep === n) line.classList.add('active');
-    });
+    // Update lines
+    const line1 = document.getElementById('line-1');
+    const line2 = document.getElementById('line-2');
+    [line1, line2].forEach(l => { if(l) l.classList.remove('active', 'done'); });
+    if (n === 1) {
+      // nothing
+    } else if (n === 2) {
+      if(line1) line1.classList.add('done');
+    } else if (n === 3) {
+      if(line1) line1.classList.add('done');
+      if(line2) line2.classList.add('done');
+    }
+
+    // Update header
+    if (header) {
+      header.style.opacity = '0';
+      setTimeout(() => {
+        const d = stepData[n - 1];
+        header.querySelector('.ob-step-emoji').textContent = d.emoji;
+        header.querySelector('.ob-step-title').textContent = d.title;
+        header.querySelector('.ob-step-sub').textContent = d.sub;
+        header.style.opacity = '1';
+      }, 150);
+    }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  // Next buttons
   document.querySelectorAll('.ob-next').forEach(btn => {
     btn.addEventListener('click', () => {
       const next = parseInt(btn.dataset.next);
-      // Validate step 1: neighborhood required
+      // Validate step 1
       if (next === 2) {
         const sel = document.querySelector('.ob-select');
         if (sel && !sel.value) {
           sel.focus();
           sel.style.borderColor = '#DC2626';
-          setTimeout(() => sel.style.borderColor = '', 2000);
+          sel.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.1)';
+          setTimeout(() => { sel.style.borderColor = ''; sel.style.boxShadow = ''; }, 2000);
           return;
         }
       }
-      showStep(next);
+      goToStep(next, 'forward');
     });
   });
 
+  // Back buttons
   document.querySelectorAll('.ob-back').forEach(btn => {
     btn.addEventListener('click', () => {
-      showStep(parseInt(btn.dataset.back));
+      goToStep(parseInt(btn.dataset.back), 'back');
+    });
+  });
+
+  // Animate pills on select
+  document.querySelectorAll('.ob-pill input').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const span = inp.nextElementSibling;
+      if (span && inp.checked) {
+        span.style.transform = 'scale(1.08)';
+        setTimeout(() => { span.style.transform = ''; }, 150);
+      }
     });
   });
 </script>
