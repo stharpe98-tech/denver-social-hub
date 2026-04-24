@@ -53,7 +53,7 @@ if (db && interestKeywords.length > 0) {
     const conditions = interestKeywords.map(() => "interests LIKE ?").join(" OR ");
     const params = interestKeywords.map(k => `%${k}%`);
     const rsvpEmails = rsvps.map((r: any) => r.email);
-    const q = `SELECT name, neighborhood, interests FROM members WHERE suspended=0 AND (${conditions}) ORDER BY events_attended DESC LIMIT 8`;
+    const q = `SELECT email, name, neighborhood, interests FROM members WHERE suspended=0 AND (${conditions}) ORDER BY events_attended DESC LIMIT 8`;
     const result = await db.prepare(q).bind(...params).all();
     // Filter out people already RSVP'd and the current user
     matchedMembers = (result.results || []).filter((m: any) =>

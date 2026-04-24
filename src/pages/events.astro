@@ -142,7 +142,9 @@ function daysUntilEvent(ev: any): number {
 
 const thisWeekEvents = events.filter(e => daysUntilEvent(e) <= 7 && daysUntilEvent(e) >= 0);
 const laterEvents = events.filter(e => daysUntilEvent(e) > 7 || daysUntilEvent(e) < 0);
-const featured = thisWeekEvents[0] || events[0];
+// Prefer featuring a core-type event (dinner, arts, game_night) if one is this week
+const coreThisWeek = thisWeekEvents.find(e => coreTypes.includes(e.event_type));
+const featured = coreThisWeek || thisWeekEvents[0] || events[0];
 const alsoSoon = thisWeekEvents.slice(featured && thisWeekEvents.includes(featured) ? 1 : 0);
 const comingUp = thisWeekEvents.includes(featured) ? laterEvents : events.slice(1);
 
@@ -163,6 +165,13 @@ const headline = weekendCount > 0
   : 'New events drop every week';
 
 const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
+
+// Core categories shown first in filter strip, then everything else
+const coreTypes = ['dinner', 'arts', 'game_night', 'outdoor'];
+const orderedTypes = [
+  ...coreTypes.filter(t => typeSet.has(t)),
+  ...Array.from(typeSet).filter(t => !coreTypes.includes(t as string))
+];
 ---
 <Base title="Events">
 
@@ -179,7 +188,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
           <p class="mag-greeting">Hey {user.name.split(' ')[0]} 👋</p>
         )}
         <h1 class="mag-headline">{headline}</h1>
-        <p class="mag-sub">Free to join. Free to host. No fees, no catch — just people making plans.</p>
+        <p class="mag-sub">Dinners, game nights, pottery, hikes — small groups, real plans, no flakes.</p>
         <div class="mag-week-pill">
           <span class="mag-week-dot"></span>
           Denver · {events.length} upcoming
@@ -213,7 +222,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
             <span class="fpill-label">For You</span>
           </button>
         )}
-        {Array.from(typeSet).map((t: any) => {
+        {orderedTypes.map((t: any) => {
           const tc = getTypeColor(t as string);
           return (
             <button class="fpill" data-type={t} style={`--pill-accent: ${tc.accent}; --pill-bg: ${tc.tagBg}; --pill-text: ${tc.tagText};`}>
@@ -231,7 +240,7 @@ const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
       <div class="mag-empty">
         <div class="mag-empty-icon">🗓️</div>
         <h2 class="mag-empty-title">Nothing on the calendar yet</h2>
-        <p class="mag-empty-sub">New events drop every week — mostly weekends. Join the Discord so you don't miss one.</p>
+        <p class="mag-empty-sub">Dinners, pottery nights, game nights, hikes — new events drop every week. Post one or join the Discord so you don't miss out.</p>
         <div class="mag-empty-actions">
           <button class="mag-empty-btn" id="emptyCreate">Post an event — it's free</button>
           <a href="https://discord.gg/S8SFNkdSgK" class="mag-empty-btn mag-empty-btn-alt" target="_blank" rel="noopener">Join the Discord</a>
