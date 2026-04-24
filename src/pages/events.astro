@@ -142,6 +142,8 @@ function daysUntilEvent(ev: any): number {
 
 const thisWeekEvents = events.filter(e => daysUntilEvent(e) <= 7 && daysUntilEvent(e) >= 0);
 const laterEvents = events.filter(e => daysUntilEvent(e) > 7 || daysUntilEvent(e) < 0);
+// Core categories — used for featured event selection and filter ordering
+const coreTypes = ['dinner', 'arts', 'game_night', 'outdoor'];
 // Prefer featuring a core-type event (dinner, arts, game_night) if one is this week
 const coreThisWeek = thisWeekEvents.find(e => coreTypes.includes(e.event_type));
 const featured = coreThisWeek || thisWeekEvents[0] || events[0];
@@ -167,7 +169,6 @@ const headline = weekendCount > 0
 const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
 
 // Core categories shown first in filter strip, then everything else
-const coreTypes = ['dinner', 'arts', 'game_night', 'outdoor'];
 const orderedTypes = [
   ...coreTypes.filter(t => typeSet.has(t)),
   ...Array.from(typeSet).filter(t => !coreTypes.includes(t as string))
