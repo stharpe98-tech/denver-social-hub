@@ -15,8 +15,6 @@ const DEFAULTS: Record<string, string> = {
   login_join_subtitle: 'Free forever. Takes 30 seconds.',
   recs_title: 'Denver Recs',
   recs_subtitle: 'Community-sourced spots. Upvote your favorites — they feed into our events.',
-  members_title: 'The Crew',
-  members_subtitle: 'Real people. Real plans. No flakes.',
   about_title: 'Look — making friends after college is <em>weird.</em>',
   about_subtitle: 'We\'re just a group of people in Denver who got tired of doom-scrolling on the couch every weekend. So we started doing stuff together. Dinners, hikes, bowling, whatever.',
   conduct_title: 'Just be <em>cool.</em>',

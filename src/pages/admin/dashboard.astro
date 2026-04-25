@@ -283,7 +283,6 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
     <div class="nav-section">
       <div class="nav-section-label">Main</div>
       <button class="nav-item active" data-panel="overview"><span class="nav-item-icon">📊</span><span class="nav-item-text">Overview</span></button>
-      <button class="nav-item" data-panel="members"><span class="nav-item-icon">👥</span><span class="nav-item-text">Members</span>{pendingApproval > 0 ? <span class="nav-item-badge">{pendingApproval}</span> : null}</button>
       <button class="nav-item" data-panel="events"><span class="nav-item-icon">📅</span><span class="nav-item-text">Events</span></button>
       <button class="nav-item" data-panel="suggestions"><span class="nav-item-icon">💡</span><span class="nav-item-text">Suggestions</span></button>
     </div>
@@ -351,13 +350,6 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div class="card">
-          <div class="card-head"><div class="card-title">Recent Members</div><button class="btn btn-sm" data-panel="members">View all</button></div>
-          {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
-            <table><thead><tr><th>Name</th><th>Email</th><th>Status</th></tr></thead><tbody>
-              {members.slice(0,6).map((m:any)=><tr><td class="td-name">{m.name||'--'}</td><td class="td-muted" style="font-size:11px">{m.email}</td><td>{m.suspended?<span class="badge badge-red">Suspended</span>:m.onboarding_done?<span class="badge badge-green">Active</span>:<span class="badge badge-muted">Pending</span>}</td></tr>)}
-            </tbody></table>)}
-        </div>
-        <div class="card">
           <div class="card-head"><div class="card-title">Upcoming Events</div><button class="btn btn-sm" data-panel="events">View all</button></div>
           {upcomingEvents.length===0?<div class="empty"><div class="empty-icon">📅</div><p>No upcoming events.</p></div>:(
             <table><thead><tr><th>Event</th><th>Date</th><th>RSVPs</th></tr></thead><tbody>
@@ -385,49 +377,6 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
     </div>
 
     <!-- ═══ MEMBERS ═══ -->
-    <div class="panel" id="panel-members">
-      <div class="card">
-        <div class="card-head">
-          <div class="card-title">All Members ({members.length})</div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <select class="field-select" id="member-filter" style="width:auto;padding:6px 10px;font-size:11px">
-              <option value="all">All</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="suspended">Suspended</option>
-              <option value="unapproved">Needs Approval</option>
-            </select>
-            <input class="search-input" id="search-members" placeholder="Search members..." />
-            <button class="btn" id="export-csv">Export CSV</button>
-          </div>
-        </div>
-        <div class="bulk-bar" id="bulk-bar">
-          <span class="bulk-count" id="bulk-count">0</span> selected
-          <button class="btn btn-sm" id="bulk-approve">Approve All</button>
-          <button class="btn btn-sm del" id="bulk-suspend">Suspend All</button>
-          <button class="btn btn-sm" id="bulk-cancel" style="margin-left:auto">Cancel</button>
-        </div>
-        {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
-          <table id="members-table"><thead><tr><th style="width:30px"><input type="checkbox" id="select-all-members" /></th><th>Name</th><th>Email</th><th>Hood</th><th>Status</th><th>Role</th><th>Events</th><th>No-shows</th><th>Actions</th></tr></thead><tbody>
-            {members.map((m:any)=><tr data-search={`${m.name} ${m.email} ${m.neighborhood}`} data-status={m.suspended?'suspended':m.onboarding_done?(m.approved?'active':'unapproved'):'pending'} data-mid={m.id}>
-              <td><input type="checkbox" class="member-check" value={m.id} /></td>
-              <td class="td-name" style="cursor:pointer" data-action="view-member" data-id={m.id}>{m.name||'--'}</td>
-              <td class="td-muted" style="font-size:11px">{m.email}</td>
-              <td class="td-muted">{m.neighborhood||'--'}</td>
-              <td>{m.suspended?<span class="badge badge-red">Suspended</span>:!m.approved&&m.onboarding_done?<span class="badge badge-accent">Needs Approval</span>:m.onboarding_done?<span class="badge badge-green">Active</span>:<span class="badge badge-muted">Pending</span>}</td>
-              <td><span class={`badge ${m.role==='admin'?'badge-purple':'badge-muted'}`}>{m.role||'member'}</span></td>
-              <td class="td-muted">{m.events_attended||0}</td>
-              <td class="td-muted">{m.no_show_count||0}</td>
-              <td class="td-actions">
-                {!m.approved&&m.onboarding_done&&<button class="btn btn-sm" data-action="approve-member" data-id={m.id}>Approve</button>}
-                {m.suspended?<button class="btn btn-sm" data-action="unsuspend-member" data-id={m.id}>Unsuspend</button>:<button class="btn btn-sm del" data-action="suspend-member" data-id={m.id} data-name={m.name||m.email}>Suspend</button>}
-                <button class="btn btn-sm del" data-action="remove-member" data-id={m.id} data-name={m.name||m.email}>Remove</button>
-              </td>
-            </tr>)}
-          </tbody></table>)}
-      </div>
-    </div>
-
     <!-- ═══ EVENTS ═══ -->
     <div class="panel" id="panel-events">
       <div class="create-form card" id="create-event-form">
@@ -706,7 +655,6 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
         <button class="app-tab" data-apptab="typography">Typography</button>
         <button class="app-tab" data-apptab="page-home">Homepage</button>
         <button class="app-tab" data-apptab="page-events">Events</button>
-        <button class="app-tab" data-apptab="page-members">Members</button>
         <button class="app-tab" data-apptab="page-about">About</button>
         <button class="app-tab" data-apptab="page-login">Login</button>
         <button class="app-tab" data-apptab="nav-footer">Nav &amp; Footer</button>
@@ -877,41 +825,6 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
         </div>
       </div>
 
-      <!-- ── MEMBERS PAGE ── -->
-      <div class="app-panel" id="apptab-page-members">
-        <div class="settings-grid">
-          <div class="settings-card" style="grid-column:span 2">
-            <div class="settings-title">Members Page Colors</div>
-            <div class="settings-sub">Color overrides for the member directory.</div>
-            <div class="color-grid">
-              <div class="color-field"><label class="color-label">Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="members_color_bg" value="#07060B" /></div></div>
-              <div class="color-field"><label class="color-label">Accent Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_accent" value="#A78BFA" /><input class="field-input color-hex" data-mirror="members_color_accent" value="#A78BFA" /></div></div>
-              <div class="color-field"><label class="color-label">Card Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_card" value="#1A1825" /><input class="field-input color-hex" data-mirror="members_color_card" value="#1A1825" /></div></div>
-              <div class="color-field"><label class="color-label">Heading Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_heading" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="members_color_heading" value="#FFFFFF" /></div></div>
-              <div class="color-field"><label class="color-label">Text Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_text" value="#E8E6F0" /><input class="field-input color-hex" data-mirror="members_color_text" value="#E8E6F0" /></div></div>
-              <div class="color-field"><label class="color-label">Avatar Ring</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="members_color_avatar" value="#A78BFA" /><input class="field-input color-hex" data-mirror="members_color_avatar" value="#A78BFA" /></div></div>
-            </div>
-          </div>
-          <div class="settings-card">
-            <div class="settings-title">Section Visibility</div><div class="settings-sub">Toggle member page elements.</div>
-            <div class="toggle-row"><div><div class="toggle-label">Search Bar</div><div class="toggle-desc">Allow search by name</div></div><label class="toggle"><input type="checkbox" data-setting="members_show_search" checked><span class="toggle-track"></span></label></div>
-            <div class="toggle-row"><div><div class="toggle-label">Neighborhood Filter</div><div class="toggle-desc">Filter by area</div></div><label class="toggle"><input type="checkbox" data-setting="members_show_filter" checked><span class="toggle-track"></span></label></div>
-            <div class="toggle-row"><div><div class="toggle-label">Member Bios</div><div class="toggle-desc">Show bio text on cards</div></div><label class="toggle"><input type="checkbox" data-setting="members_show_bios" checked><span class="toggle-track"></span></label></div>
-            <div class="toggle-row"><div><div class="toggle-label">Event Count</div><div class="toggle-desc">Show events attended</div></div><label class="toggle"><input type="checkbox" data-setting="members_show_events" checked><span class="toggle-track"></span></label></div>
-            <div class="toggle-row"><div><div class="toggle-label">Points / Badges</div><div class="toggle-desc">Show gamification stats</div></div><label class="toggle"><input type="checkbox" data-setting="members_show_points" checked><span class="toggle-track"></span></label></div>
-          </div>
-          <div class="settings-card">
-            <div class="settings-title">Layout Options</div><div class="settings-sub">How members are displayed.</div>
-            <div class="field"><label class="field-label">Card Layout</label><select class="field-select" data-setting="members_layout"><option value="grid" selected>Grid Cards</option><option value="list">List View</option><option value="compact">Compact Grid</option></select></div>
-            <div class="field"><label class="field-label">Members Per Row</label><select class="field-select" data-setting="members_per_row"><option value="3">3 Per Row</option><option value="4" selected>4 Per Row</option><option value="5">5 Per Row</option></select></div>
-            <div class="field"><label class="field-label">Avatar Style</label><select class="field-select" data-setting="members_avatar_style"><option value="circle" selected>Circle</option><option value="rounded">Rounded Square</option><option value="square">Square</option></select></div>
-          </div>
-          <div class="settings-card" style="grid-column:span 2;text-align:right">
-            <button class="btn-primary js-save">Save Members Page</button>
-          </div>
-        </div>
-      </div>
-
       <!-- ── ABOUT PAGE ── -->
       <div class="app-panel" id="apptab-page-about">
         <div class="settings-grid">
@@ -1054,11 +967,6 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
             <div class="field"><label class="field-label">Subtitle</label><input class="field-input ce-field" data-key="recs_subtitle" /></div>
           </div>
           <div class="settings-card">
-            <div class="settings-title">👥 Members Page</div><div class="settings-sub">Members directory header.</div>
-            <div class="field"><label class="field-label">Title</label><input class="field-input ce-field" data-key="members_title" /></div>
-            <div class="field"><label class="field-label">Subtitle</label><input class="field-input ce-field" data-key="members_subtitle" /></div>
-          </div>
-          <div class="settings-card">
             <div class="settings-title">ℹ️ About Page</div><div class="settings-sub">About page hero.</div>
             <div class="field"><label class="field-label">Title <span style="color:var(--text-faint);font-weight:400">(HTML ok)</span></label><input class="field-input ce-field" data-key="about_title" /></div>
             <div class="field"><label class="field-label">Subtitle</label><textarea class="field-input ce-field" data-key="about_subtitle" rows="3" style="resize:vertical"></textarea></div>
@@ -1083,7 +991,6 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
           <div class="settings-title">Site Controls</div><div class="settings-sub">Toggle major features on/off.</div>
           <div class="toggle-row"><div><div class="toggle-label">Maintenance Mode</div><div class="toggle-desc">Show "coming soon" page to visitors</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_maintenance"><span class="toggle-track"></span></label></div>
           <div class="toggle-row"><div><div class="toggle-label">New Signups</div><div class="toggle-desc">Allow new member registrations</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_signups" checked><span class="toggle-track"></span></label></div>
-          <div class="toggle-row"><div><div class="toggle-label">Member Directory</div><div class="toggle-desc">Public members page visible</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_directory" checked><span class="toggle-track"></span></label></div>
           <div class="toggle-row"><div><div class="toggle-label">Suggestions</div><div class="toggle-desc">Let members submit ideas</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_suggestions" checked><span class="toggle-track"></span></label></div>
           <div class="toggle-row"><div><div class="toggle-label">AI Chatbot</div><div class="toggle-desc">Show Groq chatbot on site</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_chatbot" checked><span class="toggle-track"></span></label></div>
           <button class="btn-primary js-save" style="margin-top:14px">Save</button>
@@ -1203,7 +1110,7 @@ function apiPost(b){return fetch('/api/admin/data',{method:'POST',headers:{'Cont
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
 // ============ SIDEBAR + PANELS ============
-var panelTitles={overview:'Overview',members:'Members',events:'Events',suggestions:'Suggestions',copyeditor:'Copy Editor',announcements:'Announcements',spotlights:'Spotlights',reports:'Reports',partners:'Partners',restaurants:'Restaurants',pages:'Pages',plugins:'Plugins',analytics:'Analytics',appearance:'Appearance',settings:'Settings'};
+var panelTitles={overview:'Overview',events:'Events',suggestions:'Suggestions',copyeditor:'Copy Editor',announcements:'Announcements',spotlights:'Spotlights',reports:'Reports',partners:'Partners',restaurants:'Restaurants',pages:'Pages',plugins:'Plugins',analytics:'Analytics',appearance:'Appearance',settings:'Settings'};
 var panelSubs={overview:'Dashboard overview and quick stats',members:'Manage all community members',events:'Create and manage events',suggestions:'Community ideas and feedback',copyeditor:'Edit headlines, subtitles, and copy across every page',announcements:'Broadcast messages',spotlights:'Highlight outstanding members',reports:'Review member reports',partners:'Business partnerships and deals',restaurants:'Denver restaurant database',pages:'Custom page management',plugins:'Code injection and plugins',analytics:'Charts and data insights',appearance:'Per-page colors, typography, layout and branding',settings:'Configuration and toggles'};
 
 function showPanel(id){
@@ -1930,8 +1837,6 @@ $('#ce-reset').addEventListener('click',function(){
     login_join_subtitle:'Free forever. Takes 30 seconds.',
     recs_title:'Denver Recs',
     recs_subtitle:'Community-sourced spots. Upvote your favorites — they feed into our events.',
-    members_title:'The Crew',
-    members_subtitle:'Real people. Real plans. No flakes.',
     about_title:'Look — making friends after college is <em>weird.</em>',
     about_subtitle:'We\'re just a group of people in Denver who got tired of doom-scrolling on the couch every weekend. So we started doing stuff together. Dinners, hikes, bowling, whatever.',
     conduct_title:'Just be <em>cool.</em>',
