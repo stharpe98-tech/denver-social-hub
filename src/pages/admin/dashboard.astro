@@ -707,10 +707,8 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
         <button class="app-tab" data-apptab="page-home">Homepage</button>
         <button class="app-tab" data-apptab="page-events">Events</button>
         <button class="app-tab" data-apptab="page-members">Members</button>
-        <button class="app-tab" data-apptab="page-discover">Discover</button>
         <button class="app-tab" data-apptab="page-about">About</button>
         <button class="app-tab" data-apptab="page-login">Login</button>
-        <button class="app-tab" data-apptab="page-fund">Fund</button>
         <button class="app-tab" data-apptab="nav-footer">Nav &amp; Footer</button>
       </div>
 
@@ -914,39 +912,6 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
         </div>
       </div>
 
-      <!-- ── DISCOVER PAGE ── -->
-      <div class="app-panel" id="apptab-page-discover">
-        <div class="settings-grid">
-          <div class="settings-card" style="grid-column:span 2">
-            <div class="settings-title">Discover Page Colors</div>
-            <div class="settings-sub">Color overrides for the discover/explore page.</div>
-            <div class="color-grid">
-              <div class="color-field"><label class="color-label">Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="discover_color_bg" value="#07060B" /></div></div>
-              <div class="color-field"><label class="color-label">Accent Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_accent" value="#38BDF8" /><input class="field-input color-hex" data-mirror="discover_color_accent" value="#38BDF8" /></div></div>
-              <div class="color-field"><label class="color-label">Card Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_card" value="#1A1825" /><input class="field-input color-hex" data-mirror="discover_color_card" value="#1A1825" /></div></div>
-              <div class="color-field"><label class="color-label">Heading Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_heading" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="discover_color_heading" value="#FFFFFF" /></div></div>
-              <div class="color-field"><label class="color-label">Text Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_text" value="#E8E6F0" /><input class="field-input color-hex" data-mirror="discover_color_text" value="#E8E6F0" /></div></div>
-              <div class="color-field"><label class="color-label">Category Pill</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="discover_color_pill" value="#F472B6" /><input class="field-input color-hex" data-mirror="discover_color_pill" value="#F472B6" /></div></div>
-            </div>
-          </div>
-          <div class="settings-card">
-            <div class="settings-title">Section Visibility</div><div class="settings-sub">Toggle discover page sections.</div>
-            <div class="toggle-row"><div><div class="toggle-label">Search</div><div class="toggle-desc">Search bar at top</div></div><label class="toggle"><input type="checkbox" data-setting="discover_show_search" checked><span class="toggle-track"></span></label></div>
-            <div class="toggle-row"><div><div class="toggle-label">Category Filters</div><div class="toggle-desc">Category pill tabs</div></div><label class="toggle"><input type="checkbox" data-setting="discover_show_categories" checked><span class="toggle-track"></span></label></div>
-            <div class="toggle-row"><div><div class="toggle-label">Restaurant Section</div><div class="toggle-desc">Show restaurant listings</div></div><label class="toggle"><input type="checkbox" data-setting="discover_show_restaurants" checked><span class="toggle-track"></span></label></div>
-            <div class="toggle-row"><div><div class="toggle-label">Partner Deals</div><div class="toggle-desc">Show partner deals section</div></div><label class="toggle"><input type="checkbox" data-setting="discover_show_partners" checked><span class="toggle-track"></span></label></div>
-          </div>
-          <div class="settings-card">
-            <div class="settings-title">Layout</div><div class="settings-sub">Discover page layout settings.</div>
-            <div class="field"><label class="field-label">Card Layout</label><select class="field-select" data-setting="discover_layout"><option value="grid" selected>Grid</option><option value="masonry">Masonry</option><option value="list">List</option></select></div>
-            <div class="field"><label class="field-label">Items Per Row</label><select class="field-select" data-setting="discover_per_row"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option></select></div>
-          </div>
-          <div class="settings-card" style="grid-column:span 2;text-align:right">
-            <button class="btn-primary js-save">Save Discover Page</button>
-          </div>
-        </div>
-      </div>
-
       <!-- ── ABOUT PAGE ── -->
       <div class="app-panel" id="apptab-page-about">
         <div class="settings-grid">
@@ -1003,43 +968,10 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
           <div class="settings-card">
             <div class="settings-title">Login Options</div><div class="settings-sub">Which methods are visible.</div>
             <div class="toggle-row"><div><div class="toggle-label">Magic Link</div><div class="toggle-desc">Email magic link login</div></div><label class="toggle"><input type="checkbox" data-setting="login_show_magic" checked><span class="toggle-track"></span></label></div>
-            <div class="toggle-row"><div><div class="toggle-label">Discord OAuth</div><div class="toggle-desc">Login with Discord</div></div><label class="toggle"><input type="checkbox" data-setting="login_show_discord" checked><span class="toggle-track"></span></label></div>
             <div class="toggle-row"><div><div class="toggle-label">Google OAuth</div><div class="toggle-desc">Login with Google</div></div><label class="toggle"><input type="checkbox" data-setting="login_show_google"><span class="toggle-track"></span></label></div>
           </div>
           <div class="settings-card" style="grid-column:span 2;text-align:right">
             <button class="btn-primary js-save">Save Login Page</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── FUND PAGE ── -->
-      <div class="app-panel" id="apptab-page-fund">
-        <div class="settings-grid">
-          <div class="settings-card" style="grid-column:span 2">
-            <div class="settings-title">Fund Page Colors</div>
-            <div class="settings-sub">Colors for the community fund/donation page.</div>
-            <div class="color-grid">
-              <div class="color-field"><label class="color-label">Background</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="fund_color_bg" value="#07060B" /><input class="field-input color-hex" data-mirror="fund_color_bg" value="#07060B" /></div></div>
-              <div class="color-field"><label class="color-label">Accent Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="fund_color_accent" value="#34D399" /><input class="field-input color-hex" data-mirror="fund_color_accent" value="#34D399" /></div></div>
-              <div class="color-field"><label class="color-label">Heading Color</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="fund_color_heading" value="#FFFFFF" /><input class="field-input color-hex" data-mirror="fund_color_heading" value="#FFFFFF" /></div></div>
-              <div class="color-field"><label class="color-label">Donate Button</label><div class="color-input-wrap"><input type="color" class="color-picker" data-setting="fund_color_button" value="#34D399" /><input class="field-input color-hex" data-mirror="fund_color_button" value="#34D399" /></div></div>
-            </div>
-          </div>
-          <div class="settings-card">
-            <div class="settings-title">Fund Page Content</div><div class="settings-sub">Donation page text.</div>
-            <div class="field"><label class="field-label">Page Title</label><input class="field-input" data-setting="fund_title" value="Support Denver Social Hub" /></div>
-            <div class="field"><label class="field-label">Description</label><textarea class="field-input" data-setting="fund_description" rows="3" style="resize:vertical">Help us keep events free and the community growing.</textarea></div>
-            <div class="field"><label class="field-label">Donation Link</label><input class="field-input" data-setting="fund_donation_url" placeholder="https://venmo.com/..." /></div>
-            <div class="field"><label class="field-label">Goal Amount ($)</label><input class="field-input" data-setting="fund_goal" type="number" placeholder="1000" /></div>
-          </div>
-          <div class="settings-card">
-            <div class="settings-title">Fund Visibility</div><div class="settings-sub">Control what shows on the fund page.</div>
-            <div class="toggle-row"><div><div class="toggle-label">Progress Bar</div><div class="toggle-desc">Show fundraising progress</div></div><label class="toggle"><input type="checkbox" data-setting="fund_show_progress" checked><span class="toggle-track"></span></label></div>
-            <div class="toggle-row"><div><div class="toggle-label">Donor List</div><div class="toggle-desc">Show recent donors</div></div><label class="toggle"><input type="checkbox" data-setting="fund_show_donors"><span class="toggle-track"></span></label></div>
-            <div class="toggle-row"><div><div class="toggle-label">Fund in Nav</div><div class="toggle-desc">Show fund link in navigation</div></div><label class="toggle"><input type="checkbox" data-setting="fund_show_nav" checked><span class="toggle-track"></span></label></div>
-          </div>
-          <div class="settings-card" style="grid-column:span 2;text-align:right">
-            <button class="btn-primary js-save">Save Fund Page</button>
           </div>
         </div>
       </div>
@@ -1159,14 +1091,11 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
         <div class="settings-card">
           <div class="settings-title">Member Rules</div><div class="settings-sub">Join and behavior controls.</div>
           <div class="toggle-row"><div><div class="toggle-label">Require Approval</div><div class="toggle-desc">Manually approve new members</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_require_approval"><span class="toggle-track"></span></label></div>
-          <div class="toggle-row"><div><div class="toggle-label">Discord Login Only</div><div class="toggle-desc">Only allow Discord OAuth</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_discord_login" checked><span class="toggle-track"></span></label></div>
-          <div class="toggle-row"><div><div class="toggle-label">Referral Codes</div><div class="toggle-desc">Require invite code to join</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_referrals"><span class="toggle-track"></span></label></div>
           <div class="field" style="margin-top:14px"><label class="field-label">Max No-Shows</label><select class="field-select" data-setting="max_no_shows"><option value="2">2</option><option value="3" selected>3</option><option value="5">5</option><option value="0">Disabled</option></select></div>
           <button class="btn-primary js-save" style="margin-top:12px">Save</button>
         </div>
         <div class="settings-card">
           <div class="settings-title">Event Defaults</div><div class="settings-sub">Defaults applied to new events.</div>
-          <div class="toggle-row"><div><div class="toggle-label">Discord RSVP</div><div class="toggle-desc">Require Discord to RSVP</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_discord_rsvp" checked><span class="toggle-track"></span></label></div>
           <div class="toggle-row"><div><div class="toggle-label">Plus-Ones</div><div class="toggle-desc">Allow guests by default</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_plus_ones" checked><span class="toggle-track"></span></label></div>
           <div class="toggle-row"><div><div class="toggle-label">Deposits</div><div class="toggle-desc">Require deposit for RSVP</div></div><label class="toggle"><input type="checkbox" data-setting="toggle_deposits"><span class="toggle-track"></span></label></div>
           <div class="field" style="margin-top:14px"><label class="field-label">Default Group Size</label><select class="field-select" data-setting="default_group_size"><option value="8">8</option><option value="10" selected>10</option><option value="12">12</option><option value="15">15</option><option value="20">20</option></select></div>
