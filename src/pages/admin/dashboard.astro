@@ -283,6 +283,7 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
     <div class="nav-section">
       <div class="nav-section-label">Main</div>
       <button class="nav-item active" data-panel="overview"><span class="nav-item-icon">📊</span><span class="nav-item-text">Overview</span></button>
+      <button class="nav-item" data-panel="members"><span class="nav-item-icon">👥</span><span class="nav-item-text">Members</span>{pendingApproval > 0 ? <span class="nav-item-badge">{pendingApproval}</span> : null}</button>
       <button class="nav-item" data-panel="events"><span class="nav-item-icon">📅</span><span class="nav-item-text">Events</span></button>
       <button class="nav-item" data-panel="suggestions"><span class="nav-item-icon">💡</span><span class="nav-item-text">Suggestions</span></button>
     </div>
@@ -377,6 +378,50 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
     </div>
 
     <!-- ═══ MEMBERS ═══ -->
+    <!-- ═══ MEMBERS ═══ -->
+    <div class="panel" id="panel-members">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">All Members ({members.length})</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select class="field-select" id="member-filter" style="width:auto;padding:6px 10px;font-size:11px">
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="suspended">Suspended</option>
+              <option value="unapproved">Needs Approval</option>
+            </select>
+            <input class="search-input" id="search-members" placeholder="Search members..." />
+            <button class="btn" id="export-csv">Export CSV</button>
+          </div>
+        </div>
+        <div class="bulk-bar" id="bulk-bar">
+          <span class="bulk-count" id="bulk-count">0</span> selected
+          <button class="btn btn-sm" id="bulk-approve">Approve All</button>
+          <button class="btn btn-sm del" id="bulk-suspend">Suspend All</button>
+          <button class="btn btn-sm" id="bulk-cancel" style="margin-left:auto">Cancel</button>
+        </div>
+        {members.length===0?<div class="empty"><div class="empty-icon">👥</div><p>No members yet.</p></div>:(
+          <table id="members-table"><thead><tr><th style="width:30px"><input type="checkbox" id="select-all-members" /></th><th>Name</th><th>Email</th><th>Hood</th><th>Status</th><th>Role</th><th>Events</th><th>No-shows</th><th>Actions</th></tr></thead><tbody>
+            {members.map((m:any)=><tr data-search={`${m.name} ${m.email} ${m.neighborhood}`} data-status={m.suspended?'suspended':m.onboarding_done?(m.approved?'active':'unapproved'):'pending'} data-mid={m.id}>
+              <td><input type="checkbox" class="member-check" value={m.id} /></td>
+              <td class="td-name" style="cursor:pointer" data-action="view-member" data-id={m.id}>{m.name||'--'}</td>
+              <td class="td-muted" style="font-size:11px">{m.email}</td>
+              <td class="td-muted">{m.neighborhood||'--'}</td>
+              <td>{m.suspended?<span class="badge badge-red">Suspended</span>:!m.approved&&m.onboarding_done?<span class="badge badge-accent">Needs Approval</span>:m.onboarding_done?<span class="badge badge-green">Active</span>:<span class="badge badge-muted">Pending</span>}</td>
+              <td><span class={`badge ${m.role==='admin'?'badge-purple':'badge-muted'}`}>{m.role||'member'}</span></td>
+              <td class="td-muted">{m.events_attended||0}</td>
+              <td class="td-muted">{m.no_show_count||0}</td>
+              <td class="td-actions">
+                {!m.approved&&m.onboarding_done&&<button class="btn btn-sm" data-action="approve-member" data-id={m.id}>Approve</button>}
+                {m.suspended?<button class="btn btn-sm" data-action="unsuspend-member" data-id={m.id}>Unsuspend</button>:<button class="btn btn-sm del" data-action="suspend-member" data-id={m.id} data-name={m.name||m.email}>Suspend</button>}
+                <button class="btn btn-sm del" data-action="remove-member" data-id={m.id} data-name={m.name||m.email}>Remove</button>
+              </td>
+            </tr>)}
+          </tbody></table>)}
+      </div>
+    </div>
+
     <!-- ═══ EVENTS ═══ -->
     <div class="panel" id="panel-events">
       <div class="create-form card" id="create-event-form">
@@ -1110,7 +1155,7 @@ function apiPost(b){return fetch('/api/admin/data',{method:'POST',headers:{'Cont
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
 // ============ SIDEBAR + PANELS ============
-var panelTitles={overview:'Overview',events:'Events',suggestions:'Suggestions',copyeditor:'Copy Editor',announcements:'Announcements',spotlights:'Spotlights',reports:'Reports',partners:'Partners',restaurants:'Restaurants',pages:'Pages',plugins:'Plugins',analytics:'Analytics',appearance:'Appearance',settings:'Settings'};
+var panelTitles={overview:'Overview',members:'Members',events:'Events',suggestions:'Suggestions',copyeditor:'Copy Editor',announcements:'Announcements',spotlights:'Spotlights',reports:'Reports',partners:'Partners',restaurants:'Restaurants',pages:'Pages',plugins:'Plugins',analytics:'Analytics',appearance:'Appearance',settings:'Settings'};
 var panelSubs={overview:'Dashboard overview and quick stats',members:'Manage all community members',events:'Create and manage events',suggestions:'Community ideas and feedback',copyeditor:'Edit headlines, subtitles, and copy across every page',announcements:'Broadcast messages',spotlights:'Highlight outstanding members',reports:'Review member reports',partners:'Business partnerships and deals',restaurants:'Denver restaurant database',pages:'Custom page management',plugins:'Code injection and plugins',analytics:'Charts and data insights',appearance:'Per-page colors, typography, layout and branding',settings:'Configuration and toggles'};
 
 function showPanel(id){
