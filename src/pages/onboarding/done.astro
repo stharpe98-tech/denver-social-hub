@@ -6,9 +6,8 @@ let user: any = null;
 const cookie = Astro.cookies.get("dsn_user")?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 
-const firstName = (user?.name || '').split(' ')[0] || 'friend';
+const firstName = (user?.reddit_username || user?.name || 'redditor');
 
-// Get upcoming events count
 const db = getDB();
 let eventCount = 0;
 try {
@@ -21,166 +20,102 @@ try {
 
 <Base title="You're in!">
   <div class="done">
-    <div class="done-hero">
-      <div class="done-hero-bg"></div>
-      <div class="done-hero-content">
-        <div class="done-icon">🏔️</div>
-        <h1 class="done-title">You're in, {firstName}.</h1>
-        <p class="done-sub">Welcome to the crew. Now go find something fun.</p>
+    <div class="done-terminal">
+      <div class="term-bar">
+        <span class="term-dot" style="background:#ff5f57"></span>
+        <span class="term-dot" style="background:#febc2e"></span>
+        <span class="term-dot" style="background:#28c840"></span>
+        <span class="term-title">welcome — /r/events.hub</span>
+      </div>
+      <div class="term-body">
+        <div class="term-line"><span class="tp">$</span> <span class="tc">whoami</span></div>
+        <div class="term-out">u/{firstName}</div>
+        <div class="term-line"><span class="tp">$</span> <span class="tc">status</span></div>
+        <div class="term-out term-success">✓ authenticated. welcome to the hub.</div>
       </div>
     </div>
 
     <div class="done-cards">
       <a href="/events" class="done-card">
-        <div class="done-card-emoji">📅</div>
-        <div class="done-card-text">
+        <span class="dc-icon">#</span>
+        <div class="dc-text">
           <strong>Browse events</strong>
-          <span>{eventCount > 0 ? `${eventCount} events coming up` : 'See what\'s happening'}</span>
+          <span>{eventCount > 0 ? `${eventCount} events live` : 'See what\'s happening'}</span>
         </div>
-        <div class="done-card-arrow">→</div>
+        <span class="dc-arrow">→</span>
       </a>
 
       <a href="/profile" class="done-card">
-        <div class="done-card-emoji">✏️</div>
-        <div class="done-card-text">
-          <strong>Finish your profile</strong>
+        <span class="dc-icon">~</span>
+        <div class="dc-text">
+          <strong>Your profile</strong>
           <span>Add a bio so people know who you are</span>
         </div>
-        <div class="done-card-arrow">→</div>
+        <span class="dc-arrow">→</span>
       </a>
 
       <a href="/recs" class="done-card">
-        <div class="done-card-emoji">⭐</div>
-        <div class="done-card-text">
+        <span class="dc-icon">*</span>
+        <div class="dc-text">
           <strong>Denver Recs</strong>
           <span>Upvote your favorite spots</span>
         </div>
-        <div class="done-card-arrow">→</div>
+        <span class="dc-arrow">→</span>
       </a>
     </div>
 
     <div class="done-tip">
-      <span class="done-tip-icon">💡</span>
-      <span>Pro tip: RSVP to an event and just show up. That's really all there is to it.</span>
+      <span class="done-tip-pre">// pro tip:</span>
+      <span>RSVP to an event and just show up. That's really all there is to it.</span>
     </div>
   </div>
 </Base>
 
 <style is:inline>
-  .done {
-    max-width: 520px;
-    margin: 0 auto;
-    padding: 0 20px 80px;
-  }
+  .done { max-width: 520px; margin: 32px auto 0; padding: 0 20px 80px; }
 
-  .done-hero {
-    position: relative;
-    margin: -20px -20px 0;
-    padding: 56px 32px 48px;
-    border-radius: 0 0 28px 28px;
-    overflow: hidden;
-    text-align: center;
+  .done-terminal {
+    border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; background: var(--surface); margin-bottom: 24px;
   }
-  .done-hero-bg {
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg, #064e3b 0%, #059669 40%, #10B981 70%, #34d399 100%);
-    z-index: 0;
+  .term-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px; background: var(--surface-raised);
+    border-bottom: 1px solid var(--border);
   }
-  .done-hero-content { position: relative; z-index: 1; }
-  .done-icon {
-    font-size: 56px;
-    margin-bottom: 12px;
-    animation: popIn .6s cubic-bezier(.68,-.55,.27,1.55);
-  }
-  @keyframes popIn {
-    0% { transform: scale(0); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-  .done-title {
-    font-family: 'Outfit', var(--heading), sans-serif;
-    font-size: 32px;
-    font-weight: 800;
-    color: #fff;
-    margin-bottom: 8px;
-    animation: fadeUp .5s ease .2s both;
-  }
-  .done-sub {
-    font-size: 15px;
-    color: rgba(255,255,255,0.8);
-    animation: fadeUp .5s ease .35s both;
-  }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  .term-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .term-title { font-family: var(--mono); font-size: 11px; color: var(--text-faint); margin-left: 8px; }
+  .term-body { padding: 20px; }
+  .term-line { font-family: var(--mono); font-size: 13px; margin-bottom: 4px; }
+  .tp { color: var(--accent); font-weight: 700; }
+  .tc { color: var(--text-sec); }
+  .term-out { font-family: var(--mono); font-size: 13px; color: var(--text-faint); margin-bottom: 12px; }
+  .term-success { color: var(--green); }
 
-  /* ── Cards ── */
-  .done-cards {
-    display: flex; flex-direction: column; gap: 10px;
-    margin-top: 28px;
-  }
+  .done-cards { display: flex; flex-direction: column; gap: 8px; }
   .done-card {
     display: flex; align-items: center; gap: 14px;
-    padding: 18px 20px;
-    background: var(--surface, #f9f9f9);
-    border: 2px solid var(--border, #e5e5e5);
-    border-radius: 18px;
-    text-decoration: none;
-    transition: all .25s cubic-bezier(.4,0,.2,1);
-    animation: fadeUp .4s ease both;
+    padding: 16px 18px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px;
+    text-decoration: none; transition: all .25s;
   }
-  .done-card:nth-child(1) { animation-delay: .4s; }
-  .done-card:nth-child(2) { animation-delay: .5s; }
-  .done-card:nth-child(3) { animation-delay: .6s; }
+  .done-card:hover { border-color: var(--border-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  .dc-icon {
+    font-family: var(--mono); font-size: 18px; font-weight: 700;
+    color: var(--accent); width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--accent-dim); border-radius: 8px; flex-shrink: 0;
+  }
+  .dc-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .dc-text strong { font-size: 14px; font-weight: 700; color: var(--text); }
+  .dc-text span { font-size: 12px; color: var(--text-faint); }
+  .dc-arrow { font-family: var(--mono); font-size: 16px; color: var(--text-faint); transition: all .2s; }
+  .done-card:hover .dc-arrow { color: var(--accent); transform: translateX(3px); }
 
-  .done-card:hover {
-    border-color: #c4b5fd;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 14px rgba(124,58,237,0.1);
-  }
-  .done-card-emoji { font-size: 28px; flex-shrink: 0; }
-  .done-card-text {
-    flex: 1;
-    display: flex; flex-direction: column; gap: 2px;
-  }
-  .done-card-text strong {
-    font-family: 'Outfit', var(--heading), sans-serif;
-    font-size: 15px; font-weight: 700;
-    color: var(--text, #1a1a1a);
-  }
-  .done-card-text span {
-    font-size: 13px;
-    color: var(--text-sec, #777);
-  }
-  .done-card-arrow {
-    font-size: 18px;
-    color: var(--text-faint, #ccc);
-    transition: all .2s;
-    flex-shrink: 0;
-  }
-  .done-card:hover .done-card-arrow {
-    color: #7C3AED;
-    transform: translateX(3px);
-  }
-
-  /* ── Tip ── */
   .done-tip {
-    display: flex; align-items: flex-start; gap: 10px;
-    margin-top: 24px;
-    padding: 16px 18px;
-    background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(168,85,247,0.08));
-    border: 1.5px solid rgba(124,58,237,0.15);
-    border-radius: 16px;
-    font-size: 13px;
-    color: var(--text-sec, #666);
-    line-height: 1.6;
-    animation: fadeUp .4s ease .7s both;
+    margin-top: 20px; padding: 14px 16px;
+    background: var(--accent-dim); border: 1px solid rgba(255,69,0,0.15);
+    border-radius: 8px; font-size: 13px; color: var(--text-sec); line-height: 1.6;
   }
-  .done-tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-
-  @media (max-width: 480px) {
-    .done { padding: 0 16px 60px; }
-    .done-hero { padding: 44px 24px 40px; margin: -20px -16px 0; }
-    .done-title { font-size: 26px; }
-  }
+  .done-tip-pre { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 600; display: block; margin-bottom: 4px; }
 </style>

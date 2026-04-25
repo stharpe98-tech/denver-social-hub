@@ -1,42 +1,52 @@
 ---
-const { title = "Denver Social", description = "Real small-group events across the Denver metro." } = Astro.props;
+const { title = "events.hub", description = "Real small-group events across the Denver metro. Powered by Reddit identity." } = Astro.props;
 
 let user: any = null;
 const cookie = Astro.cookies.get("dsn_user")?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 
-const isAdmin = user?.email === "stharpe98@gmail.com";
+const isAdmin = user?.role === 'admin' || user?.email === "stharpe98@gmail.com";
 const currentPath = Astro.url.pathname;
+const redditName = user?.reddit_username || user?.name;
 ---
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content={description} />
-  <title>{title} — Denver Social</title>
+  <title>{title} — /r/events.hub</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
   <nav class="nav">
-    <a href="/" class="nav-logo">Denver <em>Social</em></a>
+    <a href="/" class="nav-logo">/r/<span class="nav-logo-accent">events.hub</span></a>
 
     <div class="nav-links">
-      <a href="/events"   class:list={["nav-link", { active: currentPath.startsWith("/events") && !currentPath.startsWith("/events/new") }]}>Events</a>
-      <a href="/recs"     class:list={["nav-link", { active: currentPath === "/recs" }]}>Recs</a>
-      <a href="/about"    class:list={["nav-link", { active: currentPath.startsWith("/about")    }]}>About</a>
+      <a href="/events"   class:list={["nav-link", { active: currentPath.startsWith("/events") }]}>
+        <span class="nav-link-icon">~</span>browse
+      </a>
+      <a href="/recs"     class:list={["nav-link", { active: currentPath === "/recs" }]}>
+        <span class="nav-link-icon">*</span>recs
+      </a>
+      <a href="/about"    class:list={["nav-link", { active: currentPath.startsWith("/about") }]}>
+        <span class="nav-link-icon">?</span>about
+      </a>
     </div>
 
     <div class="nav-auth">
       {user ? (
         <>
-          <a href="/profile" class="nav-profile">My Profile</a>
-          <a href="/api/logout" class="nav-logout">Sign Out</a>
+          <a href="/profile" class="nav-user">
+            <span class="nav-karma">{user.karma || 0} karma</span>
+            <span class="nav-username">u/{redditName}</span>
+          </a>
+          <a href="/api/logout" class="nav-logout">[logout]</a>
         </>
       ) : (
-        <a href="/login?mode=join" class="nav-cta">Join Free</a>
+        <a href="/login" class="nav-cta">Sign in with Reddit</a>
       )}
     </div>
   </nav>
@@ -46,11 +56,11 @@ const currentPath = Astro.url.pathname;
   <!-- Bottom tab bar for mobile -->
   <div class="mob-nav">
     <div class="mob-nav-inner">
-      <a href="/"        class:list={[{ active: currentPath === "/" }]}><span>🏠</span>Home</a>
-      <a href="/events"  class:list={[{ active: currentPath.startsWith("/events") }]}><span>📅</span>Events</a>
-      <a href="/recs"    class:list={[{ active: currentPath === "/recs" }]}><span>⭐</span>Recs</a>
-      <a href="/about"   class:list={[{ active: currentPath.startsWith("/about") }]}><span>ℹ️</span>About</a>
-      {isAdmin && <a href="/admin" class:list={[{ active: currentPath.startsWith("/admin") }]}><span>⚙️</span>Admin</a>}
+      <a href="/"        class:list={[{ active: currentPath === "/" }]}><span class="mn-icon">~</span>home</a>
+      <a href="/events"  class:list={[{ active: currentPath.startsWith("/events") }]}><span class="mn-icon">#</span>events</a>
+      <a href="/recs"    class:list={[{ active: currentPath === "/recs" }]}><span class="mn-icon">*</span>recs</a>
+      <a href="/about"   class:list={[{ active: currentPath.startsWith("/about") }]}><span class="mn-icon">?</span>about</a>
+      {isAdmin && <a href="/admin" class:list={[{ active: currentPath.startsWith("/admin") }]}><span class="mn-icon">&gt;</span>admin</a>}
     </div>
   </div>
 </body>
@@ -60,41 +70,31 @@ const currentPath = Astro.url.pathname;
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #FFFFFF;
-    --surface: #F8F9FB;
-    --surface-hover: #F0F2F5;
-    --border: #E5E7EB;
-    --border-hover: #D1D5DB;
-    --text: #111827;
-    --text-sec: #6B7280;
-    --text-faint: #9CA3AF;
-    --accent: #7C3AED;
-    --accent-bg: rgba(124,58,237,0.06);
-    --accent2: #3B82F6;
-    --mint: #10B981;
-    --card-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-    --cta-bg: #7C3AED;
-    --cta-text: #FFF;
-    --tag-bg: #EEF2FF;
-    --tag-text: #4338CA;
-    --tag-bg2: #F0FDF4;
-    --tag-text2: #047857;
-    --vote-fill: linear-gradient(90deg, #7C3AED, #3B82F6);
-    --badge-hot-bg: #FEF2F2;
-    --badge-hot-text: #DC2626;
-    --heading: 'Outfit', system-ui, sans-serif;
+    --bg: #0e0e10;
+    --surface: #1a1a1f;
+    --surface-hover: #222228;
+    --surface-raised: #26262c;
+    --border: #2a2a30;
+    --border-hover: #3a3a42;
+    --text: #e4e4e7;
+    --text-sec: #8b8b94;
+    --text-faint: #55555e;
+    --accent: #ff4500;
+    --accent-dim: rgba(255,69,0,0.15);
+    --accent-glow: rgba(255,69,0,0.3);
+    --green: #00d26a;
+    --green-dim: rgba(0,210,106,0.12);
+    --blue: #4a9eff;
+    --blue-dim: rgba(74,158,255,0.12);
+    --yellow: #ffd93d;
+    --yellow-dim: rgba(255,217,61,0.1);
+    --red: #ff4757;
+    --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
     --body: 'Inter', system-ui, sans-serif;
-    --radius: 14px;
-    --radius-lg: 20px;
-    --space-1: 4px;
-    --space-2: 8px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-5: 24px;
-    --space-6: 32px;
-    --space-7: 48px;
-    --space-8: 64px;
-    --space-9: 96px;
+    --heading: 'Inter', system-ui, sans-serif;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px var(--border);
   }
 
   html { font-family: var(--body); background: var(--bg); color: var(--text); }
@@ -102,98 +102,144 @@ const currentPath = Astro.url.pathname;
   a { color: inherit; }
   img { display: block; }
 
-  /* ── Nav (light, top for desktop/tablet) ── */
+  /* ── Nav ── */
   .nav {
-    padding: 0 var(--space-6); height: 56px;
+    padding: 0 24px; height: 52px;
     display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px solid var(--border);
     position: sticky; top: 0; z-index: 100;
-    background: rgba(255,255,255,.92); backdrop-filter: blur(20px) saturate(1.4);
+    background: rgba(14,14,16,.92); backdrop-filter: blur(20px);
   }
   .nav-logo {
-    font-family: var(--heading); font-weight: 800; font-size: 18px;
-    color: var(--text); text-decoration: none; letter-spacing: -0.02em;
+    font-family: var(--mono); font-weight: 700; font-size: 15px;
+    color: var(--text-sec); text-decoration: none; letter-spacing: -0.02em;
   }
-  .nav-logo em { font-style: normal; color: var(--accent); }
+  .nav-logo-accent { color: var(--accent); }
 
   .nav-links {
-    display: flex; gap: var(--space-1); align-items: center;
+    display: flex; gap: 2px; align-items: center;
     position: absolute; left: 50%; transform: translateX(-50%);
   }
   .nav-link {
-    font-family: var(--heading); font-size: 13px; font-weight: 500;
-    text-decoration: none; color: var(--text-sec);
-    padding: 6px 14px; border-radius: 8px; transition: all .2s;
+    font-family: var(--mono); font-size: 13px; font-weight: 500;
+    text-decoration: none; color: var(--text-faint);
+    padding: 6px 14px; border-radius: 6px; transition: all .2s;
+    display: flex; align-items: center; gap: 4px;
   }
-  .nav-link:hover { color: var(--text); background: var(--surface); }
-  .nav-link.active { color: var(--accent); background: var(--accent-bg); }
-  @media (max-width: 900px) { .nav-links { display: none; } .nav { padding: 0 20px; } }
-
-  .nav-auth { display: flex; gap: var(--space-2); align-items: center; }
-  .nav-auth a {
-    font-family: var(--heading); font-size: 12px; font-weight: 600;
-    text-decoration: none; padding: 7px 16px; border-radius: 50px; transition: all .2s;
+  .nav-link-icon {
+    color: var(--text-faint);
+    opacity: .5;
+    font-size: 14px;
   }
-  .nav-profile { color: var(--text); border: 1px solid var(--border); }
-  .nav-profile:hover { border-color: var(--border-hover); background: var(--surface); }
-  .nav-logout { color: var(--text-faint); }
-  .nav-logout:hover { color: #DC2626; }
-  .nav-cta { background: var(--cta-bg); color: var(--cta-text) !important; }
-  .nav-cta:hover { opacity: .9; }
+  .nav-link:hover { color: var(--text-sec); background: var(--surface); }
+  .nav-link.active { color: var(--accent); background: var(--accent-dim); }
+  .nav-link.active .nav-link-icon { color: var(--accent); opacity: .7; }
+  @media (max-width: 900px) { .nav-links { display: none; } .nav { padding: 0 16px; } }
 
-  /* ── Bottom tab bar (mobile only) ── */
+  .nav-auth { display: flex; gap: 8px; align-items: center; }
+  .nav-user {
+    display: flex; align-items: center; gap: 8px;
+    text-decoration: none; padding: 5px 12px; border-radius: 6px;
+    border: 1px solid var(--border); transition: all .2s;
+  }
+  .nav-user:hover { border-color: var(--border-hover); background: var(--surface); }
+  .nav-karma {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    color: var(--accent); background: var(--accent-dim);
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .nav-username {
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    color: var(--text);
+  }
+  .nav-logout {
+    font-family: var(--mono); font-size: 11px; color: var(--text-faint);
+    text-decoration: none; padding: 5px 8px; border-radius: 4px;
+    transition: all .2s;
+  }
+  .nav-logout:hover { color: var(--red); }
+  .nav-cta {
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    background: var(--accent); color: #fff; text-decoration: none;
+    padding: 7px 16px; border-radius: 6px; transition: all .2s;
+  }
+  .nav-cta:hover { opacity: .9; box-shadow: 0 0 12px var(--accent-glow); }
+
+  /* ── Mobile nav ── */
   .mob-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
-    background: rgba(255,255,255,.95); backdrop-filter: blur(24px);
+    background: rgba(14,14,16,.95); backdrop-filter: blur(24px);
     border-top: 1px solid var(--border);
-    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+    padding: 4px 0 max(4px, env(safe-area-inset-bottom));
   }
   .mob-nav-inner {
     display: flex; justify-content: space-around; align-items: center;
-    max-width: 540px; margin: 0 auto; padding: 0 var(--space-1);
+    max-width: 540px; margin: 0 auto;
   }
   .mob-nav a {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
     text-decoration: none; padding: 6px 10px; font-size: 10px;
-    color: var(--text-faint); font-family: var(--heading); font-weight: 600;
-    border-radius: 10px; transition: all .2s;
+    color: var(--text-faint); font-family: var(--mono); font-weight: 500;
+    border-radius: 6px; transition: all .2s;
   }
-  .mob-nav a span { font-size: 20px; }
-  .mob-nav a.active { color: var(--accent); background: var(--accent-bg); }
+  .mn-icon { font-size: 16px; font-weight: 700; line-height: 1.2; }
+  .mob-nav a.active { color: var(--accent); background: var(--accent-dim); }
   @media (min-width: 901px) { .mob-nav { display: none; } body { padding-bottom: 0; } }
 
   /* ── Shared components ── */
   .card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); padding: var(--space-5);
+    border-radius: var(--radius-lg); padding: 20px;
     box-shadow: var(--card-shadow); transition: all .2s;
   }
   .card:hover { border-color: var(--border-hover); }
   .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
-    padding: 11px 24px; border-radius: 50px; font-size: 13px; font-weight: 700;
-    cursor: pointer; font-family: var(--heading); text-decoration: none; border: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: var(--mono); text-decoration: none; border: none;
     transition: all .2s;
   }
-  .btn-primary { background: var(--cta-bg); color: var(--cta-text); }
-  .btn-primary:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.2); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: .9; box-shadow: 0 0 16px var(--accent-glow); }
   .btn-ghost { background: var(--surface); color: var(--text-sec); border: 1px solid var(--border); }
   .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); }
   .input {
-    width: 100%; padding: 11px 16px;
+    width: 100%; padding: 10px 14px;
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 50px; font-size: 13px; color: var(--text); font-family: var(--body);
+    border-radius: 6px; font-size: 13px; color: var(--text); font-family: var(--body);
     transition: border-color .2s; outline: none;
   }
   .input::placeholder { color: var(--text-faint); }
-  .input:focus { border-color: var(--accent); }
+  .input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+
+  /* ── Code-style tags ── */
+  .tag {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center;
+  }
+  .tag-orange { background: var(--accent-dim); color: var(--accent); }
+  .tag-green { background: var(--green-dim); color: var(--green); }
+  .tag-blue { background: var(--blue-dim); color: var(--blue); }
+  .tag-yellow { background: var(--yellow-dim); color: var(--yellow); }
 
   /* ── Footer ── */
   .site-footer {
-    padding: var(--space-6); border-top: 1px solid var(--border); text-align: center;
+    padding: 32px; border-top: 1px solid var(--border); text-align: center;
     margin-bottom: 60px;
   }
-  .footer-brand { font-family: var(--heading); font-weight: 800; font-size: 16px; margin-bottom: var(--space-1); }
-  .footer-brand em { font-style: normal; color: var(--accent); }
+  .footer-brand {
+    font-family: var(--mono); font-weight: 700; font-size: 14px;
+    color: var(--text-sec); margin-bottom: 4px;
+  }
+  .footer-brand span { color: var(--accent); }
   .footer-text { font-size: 11px; color: var(--text-faint); }
+
+  /* ── Scrollbar dark ── */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+  /* ── Selection ── */
+  ::selection { background: var(--accent-dim); color: var(--accent); }
 </style>

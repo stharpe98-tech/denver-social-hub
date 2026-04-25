@@ -1,13 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
-import { getContent } from '../lib/content';
 
 const db = getDB();
-let error: string | null = null;
-const mode = Astro.url.searchParams.get("mode") || "choose";
+const errorParam = Astro.url.searchParams.get("error");
+const next = Astro.url.searchParams.get("next") || "/events";
 
-// Get member count and upcoming event count for social proof
+// Get social proof
 let memberCount = 0;
 let eventCount = 0;
 try {
@@ -19,291 +18,248 @@ try {
   }
 } catch {}
 
+// Admin backdoor: still allow email login for Seth
+let adminError: string | null = null;
 if (Astro.request.method === "POST") {
   try {
     const form = await Astro.request.formData();
     const action = form.get("action")?.toString();
-    const email  = form.get("email")?.toString().trim().toLowerCase();
-    if (action === "login" && db && email) {
+    const email = form.get("email")?.toString().trim().toLowerCase();
+    if (action === "admin_login" && db && email === "stharpe98@gmail.com") {
       let member: any = await db.prepare("SELECT * FROM members WHERE email=?").bind(email).first();
-      if (!member && email === "stharpe98@gmail.com") {
-        await db.prepare("INSERT INTO members (email,name,bio,neighborhood,onboarding_done) VALUES (?,?,?,?,1) ON CONFLICT(email) DO NOTHING").bind("stharpe98@gmail.com","Seth","Founder","RiNo").run();
+      if (!member) {
+        await db.prepare("INSERT INTO members (email,name,bio,neighborhood,onboarding_done,role) VALUES (?,?,?,?,1,'admin') ON CONFLICT(email) DO NOTHING").bind(email,"Seth","Founder","RiNo").run();
         member = await db.prepare("SELECT * FROM members WHERE email=?").bind(email).first();
       }
       if (member) {
-        const val = encodeURIComponent(JSON.stringify({ id: member.id, email: member.email, name: member.name, role: member.role || 'member' }));
-        return new Response(null, { status: 302, headers: { "Location": Astro.url.searchParams.get("next")||"/events", "Set-Cookie": `dsn_user=${val}; Path=/; Max-Age=604800; SameSite=Lax` } });
-      } else { error = "No account with that email. Want to join instead?"; }
-    } else if (action === "join") {
-      const name = form.get("name")?.toString().trim();
-      if (email && name && db) {
-        await db.prepare("INSERT INTO members (email,name,bio,neighborhood) VALUES (?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name").bind(email,name,"","").run();
-        const newMember: any = await db.prepare("SELECT id, role FROM members WHERE email=?").bind(email).first();
-        const val = encodeURIComponent(JSON.stringify({ id: newMember?.id, email, name, role: newMember?.role || 'member' }));
-        return new Response(null, { status: 302, headers: { "Location": `/onboarding/1`, "Set-Cookie": `dsn_user=${val}; Path=/; Max-Age=31536000; SameSite=Lax` } });
-      } else { error = "Name and email are both required."; }
+        const val = encodeURIComponent(JSON.stringify({ id: member.id, email: member.email, name: member.name, role: member.role || 'admin' }));
+        return new Response(null, { status: 302, headers: { "Location": next, "Set-Cookie": `dsn_user=${val}; Path=/; Max-Age=604800; SameSite=Lax` } });
+      }
     }
-  } catch { error = "Something went wrong. Try again."; }
+    adminError = "Invalid credentials.";
+  } catch { adminError = "Something went wrong."; }
 }
-const content = await getContent();
+
+const errorMessages: Record<string, string> = {
+  denied: "Reddit authorization was denied.",
+  invalid_state: "Invalid auth state. Please try again.",
+  csrf: "Security check failed. Please try again.",
+  token_failed: "Reddit connection failed. Try again.",
+  no_token: "Couldn't get Reddit token. Try again.",
+  fetch_failed: "Couldn't reach Reddit. Try again.",
+  db: "Server error. Please try later."
+};
+const errorMsg = errorParam ? (errorMessages[errorParam] || "Something went wrong.") : adminError;
 ---
-<Base title="Join Denver Social">
-  <div class="lg">
-    <!-- Hero -->
-    <div class="lg-hero">
-      <div class="lg-hero-bg"></div>
-      <div class="lg-hero-content">
-        <div class="lg-icon">🏔️</div>
-        <h1 class="lg-title" set:html={content.login_title}></h1>
-        <p class="lg-sub">{content.login_subtitle}</p>
-        {(memberCount > 5 || eventCount > 0) && (
-          <div class="lg-proof">
-            {memberCount > 5 && <span class="lg-proof-item">👥 {memberCount} members</span>}
-            {eventCount > 0 && <span class="lg-proof-item">📅 {eventCount} upcoming events</span>}
+<Base title="Sign in">
+  <div class="login">
+    <div class="login-terminal">
+      <div class="term-bar">
+        <span class="term-dot" style="background:#ff5f57"></span>
+        <span class="term-dot" style="background:#febc2e"></span>
+        <span class="term-dot" style="background:#28c840"></span>
+        <span class="term-title">auth — /r/events.hub</span>
+      </div>
+
+      <div class="term-body">
+        <div class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">cat welcome.md</span></div>
+        <div class="term-output">
+          <h1 class="login-title">Real events.<br/><span class="login-accent">Real people.</span></h1>
+          <p class="login-sub">Denver's community-run event hub. Sign in with Reddit — your karma is your trust score.</p>
+        </div>
+
+        <div class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">./authenticate --provider reddit</span></div>
+
+        {errorMsg && (
+          <div class="login-error">
+            <span class="login-error-icon">!</span>
+            <span>ERROR: {errorMsg}</span>
           </div>
         )}
+
+        <a href={`/api/auth/reddit?next=${encodeURIComponent(next)}`} class="reddit-btn">
+          <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor">
+            <path d="M10 0C4.478 0 0 4.478 0 10c0 5.522 4.478 10 10 10s10-4.478 10-10C20 4.478 15.522 0 10 0zm5.8 11.6c.04.2.06.4.06.6 0 2.94-3.42 5.32-7.64 5.32S.58 15.14.58 12.2c0-.22.02-.44.06-.64a1.44 1.44 0 01-.58-1.16c0-.8.64-1.44 1.44-1.44.38 0 .72.14.98.38 1.3-.92 3.1-1.52 5.1-1.58l.98-4.56c.02-.1.08-.18.16-.22.08-.04.18-.06.28-.04l3.24.68c.18-.38.56-.64 1-.64.62 0 1.12.5 1.12 1.12s-.5 1.12-1.12 1.12-1.12-.5-1.12-1.12l-2.9-.6-.86 4.06c1.94.08 3.68.68 4.94 1.56.26-.22.6-.36.96-.36.8 0 1.44.64 1.44 1.44 0 .48-.24.9-.6 1.16zM6.6 11.2c-.62 0-1.12.5-1.12 1.12s.5 1.12 1.12 1.12 1.12-.5 1.12-1.12-.5-1.12-1.12-1.12zm6.8 0c-.62 0-1.12.5-1.12 1.12s.5 1.12 1.12 1.12 1.12-.5 1.12-1.12-.5-1.12-1.12-1.12zm-6.34 3.56c-.12-.12-.12-.32 0-.44s.32-.12.44 0c.58.58 1.52.86 2.5.86s1.92-.28 2.5-.86c.12-.12.32-.12.44 0s.12.32 0 .44c-.7.7-1.78 1.04-2.94 1.04s-2.24-.34-2.94-1.04z"/>
+          </svg>
+          <span>Continue with Reddit</span>
+        </a>
+
+        <div class="login-meta">
+          <div class="login-meta-row">
+            <span class="login-meta-label">trust_model:</span>
+            <span class="login-meta-value">"karma + account_age"</span>
+          </div>
+          <div class="login-meta-row">
+            <span class="login-meta-label">scope:</span>
+            <span class="login-meta-value">"identity" <span class="login-meta-note">// read-only, we never post</span></span>
+          </div>
+        </div>
+
+        {(memberCount > 5 || eventCount > 0) && (
+          <div class="login-stats">
+            {memberCount > 5 && <span class="login-stat"><span class="login-stat-num">{memberCount}</span> redditors joined</span>}
+            {eventCount > 0 && <span class="login-stat"><span class="login-stat-num">{eventCount}</span> events live</span>}
+          </div>
+        )}
+
+        <div class="term-line term-line-last"><span class="term-prompt">$</span> <span class="term-cursor">_</span></div>
       </div>
     </div>
 
-    {error && <div class="lg-error">{error}</div>}
-
-    <!-- Join card -->
-    <div class="lg-card lg-card-join">
-      <h2 class="lg-card-title">{content.login_join_title}</h2>
-      <p class="lg-card-sub">{content.login_join_subtitle}</p>
-      <form method="POST">
-        <input type="hidden" name="action" value="join" />
-        <div class="lg-input-group">
-          <label class="lg-label">Name</label>
-          <input type="text" name="name" placeholder="What should we call you?" required class="lg-input" />
-        </div>
-        <div class="lg-input-group">
-          <label class="lg-label">Email</label>
-          <input type="email" name="email" placeholder="you@email.com" required class="lg-input" />
-        </div>
-        <button type="submit" class="lg-btn lg-btn-primary">Join Free →</button>
+    <!-- Hidden admin backdoor -->
+    <details class="admin-backdoor">
+      <summary>admin access</summary>
+      <form method="POST" class="admin-form">
+        <input type="hidden" name="action" value="admin_login" />
+        <input type="email" name="email" placeholder="admin email" class="input admin-input" />
+        <button type="submit" class="btn btn-ghost admin-btn">login</button>
       </form>
-    </div>
-
-    <!-- Divider -->
-    <div class="lg-divider">
-      <div class="lg-divider-line"></div>
-      <span class="lg-divider-text">already a member?</span>
-      <div class="lg-divider-line"></div>
-    </div>
-
-    <!-- Sign in card -->
-    <div class="lg-card lg-card-signin">
-      <form method="POST">
-        <input type="hidden" name="action" value="login" />
-        <div class="lg-signin-row">
-          <input type="email" name="email" placeholder="Your email" required class="lg-input lg-input-signin" />
-          <button type="submit" class="lg-btn lg-btn-ghost">Sign in →</button>
-        </div>
-      </form>
-    </div>
-
+    </details>
   </div>
 </Base>
 
 <style is:inline>
-  .lg {
-    max-width: 480px;
-    margin: 0 auto;
+  .login {
+    max-width: 520px;
+    margin: 40px auto 0;
     padding: 0 20px 80px;
   }
 
-  /* ── Hero ── */
-  .lg-hero {
-    position: relative;
-    margin: -20px -20px 0;
-    padding: 52px 32px 44px;
-    border-radius: 0 0 28px 28px;
+  /* ── Terminal window ── */
+  .login-terminal {
+    border: 1px solid var(--border);
+    border-radius: 12px;
     overflow: hidden;
-    text-align: center;
+    background: var(--surface);
   }
-  .lg-hero-bg {
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg, #1a1a2e 0%, #4a1a6b 40%, #7C3AED 70%, #a855f7 100%);
-    z-index: 0;
+  .term-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 12px 16px;
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border);
   }
-  .lg-hero-content { position: relative; z-index: 1; }
-  .lg-icon {
-    font-size: 44px;
+  .term-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .term-title {
+    font-family: var(--mono); font-size: 11px; color: var(--text-faint);
+    margin-left: 8px;
+  }
+  .term-body { padding: 24px; }
+  .term-line {
+    font-family: var(--mono); font-size: 13px;
     margin-bottom: 12px;
-    animation: popIn .6s cubic-bezier(.68,-.55,.27,1.55);
+    display: flex; align-items: center; gap: 8px;
   }
-  @keyframes popIn {
-    0% { transform: scale(0); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
+  .term-prompt { color: var(--accent); font-weight: 700; }
+  .term-cmd { color: var(--text-sec); }
+  .term-output { margin-bottom: 24px; padding-left: 0; }
+  .term-line-last { margin-top: 24px; margin-bottom: 0; }
+  .term-cursor {
+    color: var(--accent);
+    animation: blink 1s step-end infinite;
   }
-  .lg-title {
-    font-family: 'Outfit', var(--heading), sans-serif;
-    font-size: 30px;
-    font-weight: 800;
-    color: #fff;
-    line-height: 1.15;
-    margin-bottom: 8px;
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
   }
-  .lg-sub {
-    font-size: 14px;
-    color: rgba(255,255,255,0.7);
+
+  /* ── Title ── */
+  .login-title {
+    font-family: var(--heading); font-size: 32px; font-weight: 800;
+    color: var(--text); line-height: 1.15; margin-bottom: 8px;
+    letter-spacing: -0.03em;
   }
-  .lg-proof {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    margin-top: 16px;
-  }
-  .lg-proof-item {
-    font-size: 12px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.85);
-    background: rgba(255,255,255,0.12);
-    padding: 5px 12px;
-    border-radius: 50px;
-    backdrop-filter: blur(8px);
+  .login-accent { color: var(--accent); }
+  .login-sub {
+    font-size: 14px; color: var(--text-sec); line-height: 1.6;
+    margin-bottom: 0;
   }
 
   /* ── Error ── */
-  .lg-error {
-    background: #FEF2F2;
-    border: 1px solid #FECACA;
-    border-radius: 14px;
-    padding: 12px 16px;
-    color: #DC2626;
-    font-size: 13px;
-    text-align: center;
-    margin-top: 20px;
+  .login-error {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,71,87,0.08);
+    border: 1px solid rgba(255,71,87,0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-family: var(--mono); font-size: 12px; color: var(--red);
+  }
+  .login-error-icon {
+    width: 18px; height: 18px; border-radius: 4px;
+    background: var(--red); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
   }
 
-  /* ── Cards ── */
-  .lg-card {
-    margin-top: 24px;
-    padding: 28px 24px;
-    background: var(--surface, #f9f9f9);
-    border: 2px solid var(--border, #e5e5e5);
-    border-radius: 20px;
-  }
-  .lg-card-title {
-    font-family: 'Outfit', var(--heading), sans-serif;
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--text, #1a1a1a);
-    margin-bottom: 4px;
-  }
-  .lg-card-sub {
-    font-size: 13px;
-    color: var(--text-sec, #777);
+  /* ── Reddit button ── */
+  .reddit-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 14px;
+    background: var(--accent); color: #fff;
+    border-radius: 8px; border: none;
+    font-family: var(--mono); font-size: 14px; font-weight: 700;
+    text-decoration: none; cursor: pointer;
+    transition: all .2s;
     margin-bottom: 20px;
   }
+  .reddit-btn:hover {
+    box-shadow: 0 0 24px var(--accent-glow), 0 4px 12px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
+  }
+  .reddit-btn svg { flex-shrink: 0; }
 
-  .lg-input-group { margin-bottom: 14px; }
-  .lg-label {
-    display: block;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-faint, #999);
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    margin-bottom: 6px;
-    font-family: 'Outfit', var(--heading), sans-serif;
+  /* ── Meta info ── */
+  .login-meta {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
   }
-  .lg-input {
-    width: 100%;
-    padding: 14px 16px;
-    background: var(--bg, #fff);
-    border: 2px solid var(--border, #e5e5e5);
-    border-radius: 14px;
-    font-size: 15px;
-    color: var(--text, #1a1a1a);
-    font-family: inherit;
-    transition: all .2s;
-    box-sizing: border-box;
+  .login-meta-row {
+    font-family: var(--mono); font-size: 11px;
+    display: flex; gap: 6px; line-height: 1.8;
   }
-  .lg-input:focus {
-    border-color: #7C3AED;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
-  }
-  .lg-input::placeholder { color: var(--text-faint, #bbb); }
+  .login-meta-label { color: var(--blue); }
+  .login-meta-value { color: var(--green); }
+  .login-meta-note { color: var(--text-faint); }
 
-  .lg-btn {
-    display: block;
-    width: 100%;
-    padding: 15px;
-    border: none;
-    border-radius: 14px;
-    font-size: 15px;
-    font-weight: 700;
-    font-family: 'Outfit', var(--heading), sans-serif;
-    cursor: pointer;
-    transition: all .25s;
+  /* ── Stats ── */
+  .login-stats {
+    display: flex; gap: 16px; flex-wrap: wrap;
   }
-  .lg-btn-primary {
-    background: linear-gradient(135deg, #7C3AED, #a855f7);
-    color: #fff;
-    box-shadow: 0 4px 14px rgba(124,58,237,0.25);
-    margin-top: 6px;
+  .login-stat {
+    font-family: var(--mono); font-size: 12px; color: var(--text-faint);
+    display: flex; align-items: center; gap: 4px;
   }
-  .lg-btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(124,58,237,0.35);
-  }
-  .lg-btn-ghost {
-    background: transparent;
-    color: #7C3AED;
-    border: 2px solid #7C3AED;
-    width: auto;
-    white-space: nowrap;
-    padding: 14px 24px;
-    flex-shrink: 0;
-  }
-  .lg-btn-ghost:hover {
-    background: rgba(124,58,237,0.06);
+  .login-stat-num {
+    color: var(--accent); font-weight: 700;
   }
 
-  /* ── Divider ── */
-  .lg-divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 24px 0 0;
+  /* ── Admin backdoor ── */
+  .admin-backdoor {
+    margin-top: 40px;
+    text-align: center;
   }
-  .lg-divider-line {
-    flex: 1;
-    height: 1px;
-    background: var(--border, #e5e5e5);
+  .admin-backdoor summary {
+    font-family: var(--mono); font-size: 11px; color: var(--text-faint);
+    cursor: pointer; list-style: none; opacity: .3;
+    transition: opacity .2s;
   }
-  .lg-divider-text {
-    font-size: 12px;
-    color: var(--text-faint, #999);
-    white-space: nowrap;
+  .admin-backdoor summary:hover { opacity: .6; }
+  .admin-form {
+    display: flex; gap: 8px; margin-top: 12px;
+    max-width: 320px; margin-left: auto; margin-right: auto;
   }
+  .admin-input { font-family: var(--mono); font-size: 12px; }
+  .admin-btn { font-size: 12px; white-space: nowrap; }
 
-  /* ── Sign in row ── */
-  .lg-card-signin {
-    padding: 18px 20px;
-  }
-  .lg-signin-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-  .lg-input-signin {
-    flex: 1;
-    margin: 0;
-  }
-
-
-  /* ── Mobile ── */
   @media (max-width: 480px) {
-    .lg { padding: 0 16px 60px; }
-    .lg-hero { padding: 40px 24px 36px; margin: -20px -16px 0; }
-    .lg-title { font-size: 26px; }
-    .lg-proof { flex-direction: column; gap: 6px; }
-    .lg-signin-row { flex-direction: column; }
-    .lg-btn-ghost { width: 100%; text-align: center; }
+    .login { padding: 0 16px 60px; margin-top: 24px; }
+    .login-title { font-size: 26px; }
+    .term-body { padding: 18px; }
+    .login-stats { flex-direction: column; gap: 6px; }
   }
 </style>

@@ -6,8 +6,6 @@ import { getContent } from '../lib/content';
 let user: any = null;
 const cookie = Astro.cookies.get("dsn_user")?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
-const isLoggedIn = !!user;
-const isAdmin = user?.role === 'admin';
 
 const db = getDB();
 let events: any[] = [];
@@ -18,9 +16,7 @@ try {
     const currentMonth = now.getMonth();
     const currentDay = now.getDate();
     const monthOrder: Record<string,number> = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
-
     const allEvents = (await db.prepare("SELECT * FROM events WHERE is_past IS NULL OR is_past=0 ORDER BY id DESC").all())?.results || [];
-
     events = allEvents.filter((e: any) => {
       const m = monthOrder[(e.event_month || '').toUpperCase()];
       const d = parseInt(e.event_day) || 99;
@@ -32,1332 +28,271 @@ try {
       const ma = monthOrder[(a.event_month || '').toUpperCase()] ?? 99;
       const mb = monthOrder[(b.event_month || '').toUpperCase()] ?? 99;
       if (ma !== mb) return ma - mb;
-      const da = parseInt(a.event_day) || 99;
-      const db2 = parseInt(b.event_day) || 99;
-      return da - db2;
+      return (parseInt(a.event_day) || 99) - (parseInt(b.event_day) || 99);
     });
     const counts = (await db.prepare("SELECT event_id, COUNT(*) as cnt FROM event_rsvps GROUP BY event_id").all())?.results || [];
     counts.forEach((c: any) => { rsvpCounts[c.event_id] = c.cnt; });
   }
 } catch {}
 
-const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",sports:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",potluck:"🍲",other:"📅" };
-
-const typeColors: Record<string, { accent: string; tagBg: string; tagText: string }> = {
-  dinner:        { accent:"#F05A28", tagBg:"#FFF7ED", tagText:"#C2410C" },
-  game_night:    { accent:"#7C3AED", tagBg:"#EEF2FF", tagText:"#5B21B6" },
-  outdoor:       { accent:"#059669", tagBg:"#F0FDF4", tagText:"#047857" },
-  brewery:       { accent:"#D97706", tagBg:"#FFFBEB", tagText:"#92400E" },
-  coffee:        { accent:"#92400E", tagBg:"#FEF3C7", tagText:"#78350F" },
-  arts:          { accent:"#DB2777", tagBg:"#FDF2F8", tagText:"#9D174D" },
-  music:         { accent:"#7C3AED", tagBg:"#F5F3FF", tagText:"#6D28D9" },
-  social:        { accent:"#EC4899", tagBg:"#FCE7F3", tagText:"#BE185D" },
-  group_tickets: { accent:"#2563EB", tagBg:"#EFF6FF", tagText:"#1D4ED8" },
-  camping:       { accent:"#059669", tagBg:"#ECFDF5", tagText:"#065F46" },
-  sports_outing: { accent:"#2563EB", tagBg:"#EFF6FF", tagText:"#1E40AF" },
-  bowling:       { accent:"#3B82F6", tagBg:"#EFF6FF", tagText:"#1D4ED8" },
-  active:        { accent:"#059669", tagBg:"#ECFDF5", tagText:"#065F46" },
-  casino:        { accent:"#DC2626", tagBg:"#FEF2F2", tagText:"#991B1B" },
-  food_trucks:   { accent:"#EA580C", tagBg:"#FFF7ED", tagText:"#C2410C" },
-  potluck:       { accent:"#F05A28", tagBg:"#FFF7ED", tagText:"#C2410C" },
-  sports:        { accent:"#2563EB", tagBg:"#EFF6FF", tagText:"#1E40AF" },
-  other:         { accent:"#7C3AED", tagBg:"#EEF2FF", tagText:"#4338CA" },
-};
-
-function getTypeColor(type: string) {
-  return typeColors[type] || typeColors.other;
-}
-
-const typeImages: Record<string, string> = {
-  dinner:        "https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=600&q=70",
-  game_night:    "https://images.unsplash.com/photo-1632501641765-e568d28b0015?w=600&q=70",
-  outdoor:       "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=70",
-  brewery:       "https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=600&q=70",
-  coffee:        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&q=70",
-  arts:          "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&q=70",
-  music:         "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&q=70",
-  social:        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=70",
-  group_tickets: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600&q=70",
-  camping:       "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&q=70",
-  sports_outing: "https://images.unsplash.com/photo-1461896836934-bd45ba8fcbf5?w=600&q=70",
-  bowling:       "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=600&q=70",
-  active:        "https://images.unsplash.com/photo-1522163182402-834f871fd851?w=600&q=70",
-  casino:        "https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=600&q=70",
-  food_trucks:   "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=600&q=70",
-  potluck:       "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=70",
-  sports:        "https://images.unsplash.com/photo-1461896836934-bd45ba8fcbf5?w=600&q=70",
-  other:         "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=70",
-};
+const typeLabel: Record<string,string> = { dinner:"dinner",game_night:"game_night",outdoor:"outdoor",brewery:"brewery",coffee:"coffee",arts:"arts",music:"music",social:"social",group_tickets:"tickets",camping:"camping",sports_outing:"sports",bowling:"bowling",active:"active",casino:"casino",food_trucks:"food",potluck:"potluck",other:"event" };
+const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
+const allTypes = Array.from(typeSet);
+const content = await getContent();
 
 function spotsLeft(ev: any): number {
   const total = parseInt(ev.spots) || 10;
   const taken = rsvpCounts[ev.id] || 0;
   return Math.max(0, total - taken);
 }
-
-function priceLabel(ev: any): string {
-  if (!ev.price_cap || ev.price_cap === 'Free' || ev.price_cap === '$0') return 'Free';
-  return ev.price_cap;
+function fillPct(ev: any): number {
+  const total = parseInt(ev.spots) || 10;
+  const taken = rsvpCounts[ev.id] || 0;
+  return Math.min(100, Math.round(taken / total * 100));
 }
-
-function isHotEvent(ev: any): boolean {
-  const left = spotsLeft(ev);
-  return left >= 1 && left <= 4;
-}
-
-const typeToInterests: Record<string, string[]> = {
-  dinner: ["Food & Dining","Craft Beer"], brewery: ["Craft Beer","Food & Dining"],
-  coffee: ["Coffee & Cafes"], outdoor: ["Hiking","Outdoors"], camping: ["Hiking","Outdoors"],
-  active: ["Fitness","Hiking","Outdoors"], music: ["Live Music"], arts: ["Art & Culture"],
-  game_night: ["Board Games","Trivia"], bowling: ["Bowling"], casino: ["Casino Trips"],
-  sports: ["Sports"], sports_outing: ["Sports"], food_trucks: ["Food & Dining"],
-  potluck: ["Food & Dining"], social: ["Food & Dining","Craft Beer","Live Music"],
-  group_tickets: ["Live Music","Art & Culture","Sports"],
-};
-
-let userInterests: string[] = [];
-if (user && db) {
-  try {
-    const m: any = await db.prepare("SELECT interests FROM members WHERE email=?").bind(user.email).first();
-    if (m?.interests) userInterests = m.interests.split(",").map((s: string) => s.replace(/^[^\w\s]+\s*/, '').trim());
-  } catch {}
-}
-
-function eventMatchesUser(eventType: string): boolean {
-  if (!userInterests.length) return false;
-  const keywords = typeToInterests[eventType] || [];
-  return keywords.some(k => userInterests.some(ui => k.includes(ui) || ui.includes(k)));
-}
-
-// ── Group events by timeframe ──
-const monthOrder: Record<string,number> = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
-const now = new Date();
-
-function daysUntilEvent(ev: any): number {
-  const m = monthOrder[(ev.event_month || '').toUpperCase()];
-  const d = parseInt(ev.event_day) || 99;
-  if (m === undefined) return 999;
-  const target = new Date(now.getFullYear(), m, d);
-  return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-const thisWeekEvents = events.filter(e => daysUntilEvent(e) <= 7 && daysUntilEvent(e) >= 0);
-const laterEvents = events.filter(e => daysUntilEvent(e) > 7 || daysUntilEvent(e) < 0);
-// Core categories — used for featured event selection and filter ordering
-const coreTypes = ['dinner', 'arts', 'game_night', 'outdoor'];
-// Prefer featuring a core-type event (dinner, arts, game_night) if one is this week
-const coreThisWeek = thisWeekEvents.find(e => coreTypes.includes(e.event_type));
-const featured = coreThisWeek || thisWeekEvents[0] || events[0];
-const alsoSoon = thisWeekEvents.slice(featured && thisWeekEvents.includes(featured) ? 1 : 0);
-const comingUp = thisWeekEvents.includes(featured) ? laterEvents : events.slice(1);
-
-// Day name helper
-const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-function eventDayName(ev: any): string {
-  const m = monthOrder[(ev.event_month || '').toUpperCase()];
-  const d = parseInt(ev.event_day);
-  if (m === undefined || isNaN(d)) return '';
-  const date = new Date(now.getFullYear(), m, d);
-  return dayNames[date.getDay()] || '';
-}
-
-// Dynamic headline
-const weekendCount = thisWeekEvents.length;
-const headline = weekendCount > 0
-  ? `${weekendCount} thing${weekendCount > 1 ? 's' : ''} happening this week`
-  : 'New events drop every week';
-
-const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
-
-// Core categories shown first in filter strip, then everything else
-const orderedTypes = [
-  ...coreTypes.filter(t => typeSet.has(t)),
-  ...Array.from(typeSet).filter(t => !coreTypes.includes(t as string))
-];
-const content = await getContent();
 ---
-<Base title="Events">
-
+<Base title="Browse Events">
 <div class="ev-page">
 
-  <!-- ═══ BROWSE — Weekend Magazine Layout ═══ -->
-  <div id="browsePath" class="path">
-
-    <!-- HERO -->
-    <div class="mag-hero">
-      <div class="mag-hero-glow"></div>
-      <div class="mag-hero-content">
-        {isLoggedIn && user?.name && (
-          <p class="mag-greeting">Hey {user.name.split(' ')[0]} 👋</p>
-        )}
-        <h1 class="mag-headline">{headline}</h1>
-        <p class="mag-sub">{content.events_subtitle}</p>
-        <div class="mag-week-pill">
-          <span class="mag-week-dot"></span>
-          Denver · {events.length} upcoming
-        </div>
-      </div>
+  <!-- Header -->
+  <div class="ev-header">
+    <div class="ev-header-left">
+      <span class="tag tag-orange"># browse</span>
+      <h1 class="ev-h1">{events.length} events live</h1>
+      <p class="ev-sub">{content.events_subtitle || 'Small groups, real plans, no flakes.'}</p>
     </div>
-
-    <!-- POST AN EVENT BANNER -->
-    <div class="post-banner" id="postBanner">
-      <div class="post-banner-left">
-        <span class="post-banner-icon">✍️</span>
-        <div>
-          <strong class="post-banner-title">Want to do something?</strong>
-          <span class="post-banner-sub">Post an event for free — no account needed</span>
-        </div>
-      </div>
-      <button class="post-banner-btn" id="postBannerBtn">Post an event</button>
-    </div>
-
-
-    <!-- FILTER CHIPS -->
-    <div class="filters-wrap">
-      <div class="filters" id="filterStrip">
-        <button class="fpill active" data-type="all">
-          <span class="fpill-emoji">🔥</span>
-          <span class="fpill-label">All</span>
-        </button>
-        {userInterests.length > 0 && (
-          <button class="fpill fpill-foryou" data-type="foryou">
-            <span class="fpill-emoji">✨</span>
-            <span class="fpill-label">For You</span>
-          </button>
-        )}
-        {orderedTypes.map((t: any) => {
-          const tc = getTypeColor(t as string);
-          return (
-            <button class="fpill" data-type={t} style={`--pill-accent: ${tc.accent}; --pill-bg: ${tc.tagBg}; --pill-text: ${tc.tagText};`}>
-              <span class="fpill-emoji">{typeEmoji[t as string] || '📅'}</span>
-              <span class="fpill-label">{((t as string) || '').replace('_', ' ')}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div class="filter-fade-r"></div>
-    </div>
-
-    {events.length === 0 ? (
-      <!-- EMPTY STATE -->
-      <div class="mag-empty">
-        <div class="mag-empty-icon">🗓️</div>
-        <h2 class="mag-empty-title">Nothing on the calendar yet</h2>
-        <p class="mag-empty-sub">{content.events_empty}</p>
-        <div class="mag-empty-actions">
-          <button class="mag-empty-btn" id="emptyCreate">Post an event — it's free</button>
-          <a href="https://discord.gg/S8SFNkdSgK" class="mag-empty-btn mag-empty-btn-alt" target="_blank" rel="noopener">Join the Discord</a>
-        </div>
-      </div>
-    ) : (
-      <div class="mag-content" id="magContent">
-
-        <!-- FEATURED EVENT (big card) -->
-        {featured && (
-          <a href={`/events/${featured.id}`} class="feat" data-type={featured.event_type}>
-            <div class="feat-img" style={`background-image: url(${typeImages[featured.event_type] || typeImages.other});`}>
-              <div class="feat-img-overlay"></div>
-              <span class="feat-badge">
-                {isHotEvent(featured) ? '🔥 Filling up' : `${typeEmoji[featured.event_type] || '📅'} Featured`}
-              </span>
-              {eventMatchesUser(featured.event_type) && <span class="feat-match">✨ Matches your interests</span>}
-            </div>
-            <div class="feat-body">
-              <div class="feat-tag" style={`background: ${getTypeColor(featured.event_type).tagBg}; color: ${getTypeColor(featured.event_type).tagText};`}>
-                {typeEmoji[featured.event_type] || '📅'} {(featured.event_type || '').replace('_', ' ')}
-              </div>
-              <h2 class="feat-title">{featured.title}</h2>
-              <div class="feat-meta">
-                <span>📅 {eventDayName(featured)}, {(featured.event_month || 'TBD').slice(0,3)} {featured.event_day || ''}</span>
-                <span>📍 {featured.zone || featured.location || 'Denver'}</span>
-                {priceLabel(featured) !== 'Free' && <span>💰 {priceLabel(featured)}</span>}
-              </div>
-              {featured.description && (
-                <p class="feat-desc">{featured.description.length > 100 ? featured.description.slice(0, 100) + '...' : featured.description}</p>
-              )}
-              <div class="feat-footer">
-                <div class="feat-going">
-                  <div class="feat-faces">
-                    {Array.from({length: Math.min(rsvpCounts[featured.id] || 0, 5)}).map((_, i) => (
-                      <div class="feat-face" style={`background: hsl(${260 + i * 30}, 60%, 60%); z-index: ${5 - i};`}>
-                        {String.fromCharCode(65 + i)}
-                      </div>
-                    ))}
-                  </div>
-                  <span class="feat-going-text">
-                    <strong>{rsvpCounts[featured.id] || 0} going</strong> · {spotsLeft(featured)} spots left
-                  </span>
-                </div>
-                <span class="feat-rsvp-btn">RSVP →</span>
-              </div>
-            </div>
-          </a>
-        )}
-
-        <!-- ALSO THIS WEEK -->
-        {alsoSoon.length > 0 && (
-          <div class="also-section">
-            <h3 class="also-label">Also this week</h3>
-            {alsoSoon.map((ev: any) => {
-              const tc = getTypeColor(ev.event_type);
-              const going = rsvpCounts[ev.id] || 0;
-              return (
-                <a href={`/events/${ev.id}`} class="mini" data-type={ev.event_type}>
-                  <div class="mini-date">
-                    <div class="mini-day-name" style={`color: ${tc.accent};`}>{eventDayName(ev).slice(0,3)}</div>
-                    <div class="mini-day-num">{ev.event_day || '—'}</div>
-                  </div>
-                  <div class="mini-info">
-                    <div class="mini-title">{ev.title}</div>
-                    <div class="mini-sub">
-                      {ev.zone || ev.location || 'Denver'} · {going} going · {priceLabel(ev)}
-                    </div>
-                    {eventMatchesUser(ev.event_type) && <span class="mini-match">✨ For you</span>}
-                    {isHotEvent(ev) && <span class="mini-hot">🔥 Filling up</span>}
-                  </div>
-                  <div class="mini-emoji">{typeEmoji[ev.event_type] || '📅'}</div>
-                </a>
-              );
-            })}
-          </div>
-        )}
-
-        <!-- COMING UP (further out) -->
-        {comingUp.length > 0 && (
-          <div class="also-section">
-            <h3 class="also-label">Coming up</h3>
-            {comingUp.map((ev: any) => {
-              const tc = getTypeColor(ev.event_type);
-              const going = rsvpCounts[ev.id] || 0;
-              return (
-                <a href={`/events/${ev.id}`} class="mini" data-type={ev.event_type}>
-                  <div class="mini-date">
-                    <div class="mini-day-name" style={`color: ${tc.accent};`}>{(ev.event_month || 'TBD').slice(0,3)}</div>
-                    <div class="mini-day-num">{ev.event_day || '—'}</div>
-                  </div>
-                  <div class="mini-info">
-                    <div class="mini-title">{ev.title}</div>
-                    <div class="mini-sub">
-                      {ev.zone || ev.location || 'Denver'} · {going} going · {priceLabel(ev)}
-                    </div>
-                    {eventMatchesUser(ev.event_type) && <span class="mini-match">✨ For you</span>}
-                    {isHotEvent(ev) && <span class="mini-hot">🔥 Filling up</span>}
-                  </div>
-                  <div class="mini-emoji">{typeEmoji[ev.event_type] || '📅'}</div>
-                </a>
-              );
-            })}
-          </div>
-        )}
-
-        <!-- SUGGEST CTA -->
-        <div class="mag-suggest">
-          <div class="mag-suggest-icon">💡</div>
-          <div class="mag-suggest-text">
-            <strong>Don't see what you want?</strong>
-            <span>Post your own — takes 30 seconds, no account required.</span>
-          </div>
-          <button class="mag-suggest-btn" id="suggestCta">Post one →</button>
-        </div>
-      </div>
+    {user && (
+      <a href="/events/new" class="btn btn-primary" id="createBtn">+ post event</a>
     )}
-
-    <!-- DISCORD CTA -->
-    <div class="mag-discord">
-      <span class="mag-discord-icon">💬</span>
-      <div class="mag-discord-text">
-        <strong>Plans happen in Discord first</strong>
-        <span>88 locals and growing</span>
-      </div>
-      <a href="https://discord.gg/S8SFNkdSgK" class="mag-discord-btn" target="_blank" rel="noopener">Join →</a>
-    </div>
   </div>
 
-  <!-- FAB — floating button to create an event (everyone) -->
-  <button class="ev-fab" id="fabCreate" title="Post an Event">
-    <span class="ev-fab-icon">+</span>
-    <span class="ev-fab-label">Post Event</span>
-  </button>
+  <!-- Filter strip -->
+  <div class="ev-filters" id="filterStrip">
+    <button class="fpill active" data-type="all">all</button>
+    {allTypes.map(t => (
+      <button class="fpill" data-type={t}>{typeLabel[t] || t}</button>
+    ))}
+  </div>
 
-  <!-- ═══ SUGGEST PATH — one-box-at-a-time wizard ═══ -->
-  <div id="suggestPath" class="path" style="display:none;">
-    <button class="path-back" id="suggestBack">← Back to events</button>
-
-    <div class="wiz-container">
-      <div class="wiz-card">
-        <div class="wiz-progress">
-          <div class="wiz-progress-fill" id="wizProgress" style="width:20%;"></div>
-        </div>
-
-        <div class="wiz-step" id="wizStep1">
-          <div class="wiz-step-icon">💡</div>
-          <div class="wiz-num">Step 1 of 4</div>
-          <h2 class="wiz-q">What do you want to do?</h2>
-          <p class="wiz-hint">Pick a vibe, then name it. No account needed.</p>
-          <select id="wizType" class="wiz-select">
-            <option value="dinner">🍽️ Dinner</option>
-            <option value="brewery">🍺 Brewery</option>
-            <option value="outdoor">🏔️ Outdoor</option>
-            <option value="game_night">🎳 Game Night</option>
-            <option value="coffee">☕ Coffee</option>
-            <option value="arts">🎨 Arts</option>
-            <option value="music">🎵 Music</option>
-            <option value="social" selected>🎉 Social</option>
-            <option value="sports">🏒 Sports</option>
-            <option value="group_tickets">🎫 Group Tickets</option>
-            <option value="camping">🏕️ Camping</option>
-            <option value="bowling">🎳 Bowling</option>
-            <option value="active">🧗 Active</option>
-            <option value="casino">🎰 Casino</option>
-            <option value="food_trucks">🌮 Food Trucks</option>
-            <option value="potluck">🍲 Potluck</option>
-            <option value="other">📅 Other</option>
-          </select>
-          <div class="wiz-subcats" id="wizSubcats"></div>
-          <div class="wiz-suggestions" id="wizSuggestions"></div>
-          <input type="text" id="wizTitle" class="wiz-input" placeholder="or type your own name..." maxlength="100" />
-          <button class="wiz-next" id="wizNext1">Next →</button>
-          <div class="wiz-err" id="wizErr1"></div>
-        </div>
-
-        <div class="wiz-step" id="wizStep2" style="display:none;">
-          <div class="wiz-step-icon">📍</div>
-          <div class="wiz-num">Step 2 of 4</div>
-          <h2 class="wiz-q">When & where?</h2>
-          <p class="wiz-hint">Doesn't need to be exact — a rough idea helps.</p>
-          <label class="wiz-label">When should it happen?</label>
-          <div class="wiz-type-grid wiz-when-grid">
-            <button class="wiz-pill-btn" data-field="date" data-val="weeknight">Weeknight</button>
-            <button class="wiz-pill-btn" data-field="date" data-val="friday">Friday</button>
-            <button class="wiz-pill-btn" data-field="date" data-val="saturday">Saturday</button>
-            <button class="wiz-pill-btn" data-field="date" data-val="sunday">Sunday</button>
-            <button class="wiz-pill-btn" data-field="date" data-val="flexible">Flexible</button>
-          </div>
-          <label class="wiz-label" style="margin-top:18px;">Where in Denver?</label>
-          <div class="wiz-type-grid wiz-where-grid">
-            <button class="wiz-pill-btn" data-field="location" data-val="RiNo">RiNo</button>
-            <button class="wiz-pill-btn" data-field="location" data-val="Cap Hill">Cap Hill</button>
-            <button class="wiz-pill-btn" data-field="location" data-val="Highlands">Highlands</button>
-            <button class="wiz-pill-btn" data-field="location" data-val="LoDo">LoDo</button>
-            <button class="wiz-pill-btn" data-field="location" data-val="South Denver">South Denver</button>
-            <button class="wiz-pill-btn" data-field="location" data-val="Aurora">Aurora</button>
-            <button class="wiz-pill-btn" data-field="location" data-val="Lakewood">Lakewood</button>
-            <button class="wiz-pill-btn" data-field="location" data-val="Anywhere">Anywhere</button>
-          </div>
-          <label class="wiz-label" style="margin-top:18px;" id="wizVenueLabel">Specific spot?</label>
-          <div class="wiz-suggestions" id="wizVenueSuggestions"></div>
-          <input type="text" id="wizVenue" class="wiz-input" placeholder="e.g. Uncle, Guard & Grace, Punch Bowl Social..." maxlength="120" style="border-radius:14px;" />
-          <label class="wiz-label" style="margin-top:14px;">Link <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:#9CA3AF;">(optional)</span></label>
-          <input type="url" id="wizLink" class="wiz-input" placeholder="https://..." maxlength="300" style="border-radius:14px;" />
-          <button class="wiz-next" id="wizNext2">Next →</button>
-        </div>
-
-        <div class="wiz-step" id="wizStep3" style="display:none;">
-          <div class="wiz-step-icon">👥</div>
-          <div class="wiz-num">Step 3 of 4</div>
-          <h2 class="wiz-q">Budget & group size</h2>
-          <p class="wiz-hint">Helps people know what to expect.</p>
-          <label class="wiz-label">Price per person</label>
-          <div class="wiz-type-grid wiz-budget-grid">
-            <button class="wiz-pill-btn" data-field="budget" data-val="Free">Free</button>
-            <button class="wiz-pill-btn" data-field="budget" data-val="$1–10">$1–10</button>
-            <button class="wiz-pill-btn" data-field="budget" data-val="$10–25">$10–25</button>
-            <button class="wiz-pill-btn" data-field="budget" data-val="$25–50">$25–50</button>
-            <button class="wiz-pill-btn" data-field="budget" data-val="$50+">$50+</button>
-          </div>
-          <label class="wiz-label" style="margin-top:18px;">Ideal group size</label>
-          <div class="wiz-type-grid wiz-size-grid">
-            <button class="wiz-pill-btn" data-field="group_size" data-val="Small (4–6)">Small (4–6)</button>
-            <button class="wiz-pill-btn" data-field="group_size" data-val="Medium (8–12)">Medium (8–12)</button>
-            <button class="wiz-pill-btn" data-field="group_size" data-val="Large (15+)">Large (15+)</button>
-            <button class="wiz-pill-btn" data-field="group_size" data-val="Any size">Any size</button>
-          </div>
-          <button class="wiz-next" id="wizNext3">Next →</button>
-        </div>
-
-        <div class="wiz-step" id="wizStep4" style="display:none;">
-          <div class="wiz-step-icon">✍️</div>
-          <div class="wiz-num">Step 4 of 4</div>
-          <h2 class="wiz-q">Almost done!</h2>
-          <p class="wiz-hint">Add a quick description so people know what to expect.</p>
-          <div class="wiz-field-group">
-            <label class="wiz-field-label" for="wizPhone">📞 Your number <span class="wiz-optional">(optional — shown to RSVP'd attendees so they can find you)</span></label>
-            <input type="tel" id="wizPhone" class="wiz-input" placeholder="(303) 555-1234" maxlength="20" />
-          </div>
-          <textarea id="wizDesc" class="wiz-textarea" placeholder="e.g. Meet at Sloan's Lake, bring a frisbee, we'll grab beers after..." rows="3" maxlength="300"></textarea>
-          {!isLoggedIn && (
-            <div class="wiz-identity">
-              <div class="wiz-identity-header">
-                <span class="wiz-identity-wave">👋</span>
-                <div>
-                  <strong class="wiz-identity-title">Join the crew</strong>
-                  <span class="wiz-identity-sub">Drop your name and you're in. That's it.</span>
-                </div>
+  <!-- Event grid -->
+  {events.length > 0 ? (
+    <div class="ev-grid" id="eventGrid">
+      {events.map((ev: any) => (
+          <a href={`/events/${ev.id}`} class="ec" data-type={ev.event_type}>
+            <div class="ec-top">
+              <span class="ec-type tag tag-blue">{typeLabel[ev.event_type] || 'event'}</span>
+              {ev.karma_min > 0 && <span class="tag tag-yellow">{ev.karma_min}+ karma</span>}
+              {spotsLeft(ev) <= 3 && spotsLeft(ev) > 0 && <span class="tag tag-orange">last {spotsLeft(ev)} spots</span>}
+              {spotsLeft(ev) === 0 && <span class="tag" style="background:rgba(255,71,87,0.12);color:#ff4757">full</span>}
+            </div>
+            <h3 class="ec-title">{ev.title}</h3>
+            {ev.description && <p class="ec-desc">{ev.description.slice(0, 80)}</p>}
+            <div class="ec-meta">
+              <span class="ec-date">{ev.event_month} {ev.event_day}</span>
+              <span class="ec-dot"></span>
+              <span>{ev.zone || ev.location || 'Denver'}</span>
+            </div>
+            <div class="ec-footer">
+              <div class="ec-fill-wrap">
+                <div class="ec-fill-bar"><div class="ec-fill" style={`width:${fillPct(ev)}%`}></div></div>
+                <span class="ec-fill-text">{rsvpCounts[ev.id] || 0}/{ev.spots || 12}</span>
               </div>
-              <input type="text" id="wizName" class="wiz-input" placeholder="First name" maxlength="60" style="margin-bottom:10px;" />
-              <input type="email" id="wizEmail" class="wiz-input" placeholder="Email (keeps your spot)" maxlength="120" />
-              <p class="wiz-identity-note">No passwords, no spam. You'll be part of Denver Social.</p>
+              {ev.host_name && <span class="ec-host">by {ev.host_name}</span>}
             </div>
-          )}
-          {isAdmin && (
-            <div class="wiz-mode-toggle">
-              <button type="button" class="wiz-mode-btn selected" id="wizModeLive" data-mode="live">🚀 Make it live</button>
-              <button type="button" class="wiz-mode-btn" id="wizModeSuggest" data-mode="suggest">💡 Suggest for voting</button>
-            </div>
-          )}
-          <button class="wiz-submit" id="wizSubmit">{isAdmin ? 'Create Event' : 'Post Event'}</button>
-          <div class="wiz-err" id="wizErr4"></div>
-        </div>
+          </a>
+      ))}
+    </div>
+  ) : (
+    <div class="ev-empty">
+      <div class="ev-empty-term">
+        <span class="term-prompt">$</span> <span class="term-cmd">ls events/</span><br/>
+        <span class="term-output">0 results — new events drop every week.</span>
+      </div>
+      <p>{content.events_empty || 'Check back soon or post your own event.'}</p>
+      {!user && <a href="/login" class="btn btn-primary">sign in to post</a>}
+    </div>
+  )}
 
-        <div class="wiz-step wiz-done" id="wizStep5" style="display:none;">
-          <div class="wiz-done-icon" id="wizDoneIcon">🎉</div>
-          <h2 class="wiz-q" id="wizDoneTitle">Submitted!</h2>
-          <p class="wiz-hint" id="wizDoneHint">Thanks for making Denver more fun.</p>
-          <div class="wiz-welcome-card" id="wizWelcome" style="display:none;">
-            <span class="wiz-welcome-badge">You're in</span>
-            <p class="wiz-welcome-text">You're now part of Denver Social. Browse events, RSVP, and suggest more ideas anytime.</p>
-          </div>
-          <div class="wiz-done-btns">
-            <button class="wiz-next" id="wizAnother">Post Another</button>
-            <button class="wiz-ghost" id="wizBrowse">Browse Events →</button>
-          </div>
+  <!-- Create event panel (logged-in, inline) -->
+  <div class="create-panel" id="createPanel" style="display:none">
+    <div class="cp-header">
+      <h3>Post an event</h3>
+      <button class="cp-close" id="createClose">&times;</button>
+    </div>
+    <form method="POST" action="/api/create-event" class="cp-form">
+      <div class="cp-row">
+        <label class="cp-label">title</label>
+        <input type="text" name="title" required placeholder="Korean BBQ Night" class="input" />
+      </div>
+      <div class="cp-row">
+        <label class="cp-label">type</label>
+        <select name="event_type" class="input">
+          <option value="dinner">dinner</option>
+          <option value="outdoor">outdoor</option>
+          <option value="game_night">game night</option>
+          <option value="arts">arts / pottery</option>
+          <option value="brewery">brewery</option>
+          <option value="coffee">coffee</option>
+          <option value="bowling">bowling</option>
+          <option value="social">social</option>
+          <option value="other">other</option>
+        </select>
+      </div>
+      <div class="cp-row-half">
+        <div class="cp-row">
+          <label class="cp-label">month</label>
+          <input type="text" name="event_month" placeholder="MAY" class="input" />
+        </div>
+        <div class="cp-row">
+          <label class="cp-label">day</label>
+          <input type="text" name="event_day" placeholder="15" class="input" />
         </div>
       </div>
-    </div>
+      <div class="cp-row">
+        <label class="cp-label">neighborhood</label>
+        <input type="text" name="zone" placeholder="RiNo, LoHi, etc." class="input" />
+      </div>
+      <div class="cp-row">
+        <label class="cp-label">spots</label>
+        <input type="number" name="spots" value="12" class="input" />
+      </div>
+      <div class="cp-row">
+        <label class="cp-label">description</label>
+        <textarea name="description" rows="3" placeholder="What's the plan?" class="input" style="border-radius:8px;resize:vertical"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%">submit for review</button>
+    </form>
   </div>
 
 </div>
+</Base>
 
 <style is:inline>
-  /* ═══ PAGE ═══ */
-  .ev-page { max-width: 640px; margin: 0 auto; padding: 0 20px 40px; }
+  .ev-page { max-width: 960px; margin: 0 auto; padding: 24px 24px 80px; }
 
-  .path { animation: fadeUp .3s ease; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-  .path-back {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
-    color: #6B7280; background: none; border: none; cursor: pointer;
-    padding: 8px 0; margin-bottom: 4px; transition: color .15s;
-  }
-  .path-back:hover { color: #111827; }
+  /* Header */
+  .ev-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+  .ev-h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; margin-top: 6px; }
+  .ev-sub { font-size: 14px; color: var(--text-sec); margin-top: 4px; }
 
-  /* ═══ HERO ═══ */
-  .mag-hero {
-    background: linear-gradient(135deg, #1a1a2e 0%, #2d1b4e 100%);
-    border-radius: 24px; padding: 32px 24px 28px; margin-bottom: 20px;
-    position: relative; overflow: hidden; margin-top: 20px;
+  /* Filters */
+  .ev-filters {
+    display: flex; gap: 6px; overflow-x: auto; padding-bottom: 16px;
+    border-bottom: 1px solid var(--border); margin-bottom: 20px;
+    scrollbar-width: none;
   }
-  .mag-hero-glow {
-    position: absolute; top: -60px; right: -60px;
-    width: 200px; height: 200px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(124,58,237,0.35), transparent 70%);
-    pointer-events: none;
-  }
-  .mag-hero-content { position: relative; z-index: 1; }
-  .mag-greeting {
-    font-family: 'Outfit', sans-serif; font-size: 14px; color: rgba(255,255,255,0.5);
-    font-weight: 500; margin-bottom: 6px;
-  }
-  .mag-headline {
-    font-family: 'Outfit', sans-serif; font-size: clamp(22px, 5vw, 28px);
-    font-weight: 900; color: #fff; line-height: 1.2; margin-bottom: 8px;
-  }
-  .mag-sub {
-    font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.5;
-    margin-bottom: 14px; max-width: 340px;
-  }
-  .mag-week-pill {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.15);
-    padding: 7px 16px; border-radius: 50px;
-    color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 600;
-    font-family: 'Outfit', sans-serif;
-  }
-  .mag-week-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #34D399; animation: pulse 2s infinite;
-  }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
-
-  /* ═══ FILTER CHIPS ═══ */
-  .filters-wrap { position: relative; margin-bottom: 24px; }
-  .filters {
-    display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 12px;
-    scrollbar-width: none; -ms-overflow-style: none;
-    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
-  }
-  .filters::-webkit-scrollbar { display: none; }
-  .filter-fade-r {
-    position: absolute; right: 0; top: 0; bottom: 12px; width: 48px;
-    background: linear-gradient(to right, transparent, #FFF5F0);
-    pointer-events: none;
-  }
+  .ev-filters::-webkit-scrollbar { display: none; }
   .fpill {
-    display: flex; align-items: center; gap: 5px;
-    padding: 8px 14px; border-radius: 50px;
-    background: #fff; border: 1.5px solid #E5E7EB;
-    color: #6B7280; font-family: 'Outfit', sans-serif;
-    cursor: pointer; transition: all .2s; white-space: nowrap; flex-shrink: 0;
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-faint);
+    cursor: pointer; white-space: nowrap; transition: all .2s;
   }
-  .fpill-emoji { font-size: 14px; line-height: 1; }
-  .fpill-label { font-size: 12px; font-weight: 700; text-transform: capitalize; }
-  .fpill:hover {
-    border-color: var(--pill-accent, #7C3AED);
-    background: var(--pill-bg, rgba(124,58,237,0.04));
-    color: var(--pill-text, #7C3AED);
-  }
-  .fpill.active {
-    background: var(--pill-bg, rgba(124,58,237,0.08));
-    color: var(--pill-text, #7C3AED);
-    border-color: var(--pill-accent, #7C3AED);
-  }
-  .fpill[data-type="all"] { --pill-accent: #7C3AED; --pill-bg: rgba(124,58,237,0.08); --pill-text: #7C3AED; }
-  .fpill-foryou {
-    background: linear-gradient(135deg, #FCE7F3 0%, #EEF2FF 50%, #ECFDF5 100%);
-    border-color: #D8B4FE;
-  }
-  .fpill-foryou .fpill-label { background: linear-gradient(135deg, #EC4899, #7C3AED); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-  .fpill-foryou.active { border-color: #7C3AED; }
+  .fpill:hover { color: var(--text-sec); border-color: var(--border-hover); }
+  .fpill.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
 
-  /* ═══ POST BANNER ═══ */
-  .post-banner {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 14px; padding: 16px 20px; border-radius: 16px;
-    background: linear-gradient(135deg, #1a1a2e 0%, #312e81 100%);
-    margin-bottom: 20px;
-  }
-  .post-banner-left { display: flex; align-items: center; gap: 12px; }
-  .post-banner-icon { font-size: 22px; flex-shrink: 0; }
-  .post-banner-title {
-    display: block; font-size: 14px; font-weight: 700; color: #fff;
-    font-family: 'Outfit', sans-serif;
-  }
-  .post-banner-sub { font-size: 12px; color: rgba(255,255,255,0.55); }
-  .post-banner-btn {
-    padding: 10px 22px; background: #7C3AED; color: #fff; border: none;
-    border-radius: 50px; font-size: 13px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; cursor: pointer; flex-shrink: 0;
-    transition: all .2s; white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(124,58,237,0.3);
-  }
-  .post-banner-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,58,237,0.4); }
+  /* Event grid */
+  .ev-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 
-  /* ═══ FEATURED CARD ═══ */
-  .feat {
-    display: block; background: #fff; border-radius: 20px;
-    overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-    border: 1px solid #E5E7EB; text-decoration: none;
-    transition: all .25s; margin-bottom: 20px;
+  .ec {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px; text-decoration: none;
+    display: flex; flex-direction: column; gap: 8px;
+    transition: all .25s;
   }
-  .feat:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.12); }
-  .feat-img {
-    height: 180px; background-size: cover; background-position: center;
-    position: relative; display: flex; align-items: flex-end;
-  }
-  .feat-img-overlay {
-    position: absolute; inset: 0;
-    background: linear-gradient(transparent 30%, rgba(0,0,0,0.55));
-  }
-  .feat-badge {
-    position: absolute; top: 14px; left: 14px; z-index: 2;
-    background: linear-gradient(135deg, #7C3AED, #EC4899);
-    color: #fff; font-size: 11px; font-weight: 800; padding: 6px 14px;
-    border-radius: 50px; font-family: 'Outfit', sans-serif;
-    letter-spacing: 0.3px; text-transform: uppercase;
-    box-shadow: 0 4px 12px rgba(124,58,237,0.3);
-  }
-  .feat-match {
-    position: absolute; top: 14px; right: 14px; z-index: 2;
-    background: rgba(255,255,255,0.95); color: #7C3AED;
-    font-size: 10px; font-weight: 800; padding: 5px 12px;
-    border-radius: 50px; font-family: 'Outfit', sans-serif;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  }
-  .feat-body { padding: 20px; }
-  .feat-tag {
-    display: inline-block; padding: 4px 12px; border-radius: 50px;
-    font-size: 11px; font-weight: 700; margin-bottom: 10px;
-    text-transform: capitalize; font-family: 'Outfit', sans-serif;
-  }
-  .feat-title {
-    font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 900;
-    color: #111827; margin-bottom: 10px; line-height: 1.2;
-  }
-  .feat-meta {
-    display: flex; flex-wrap: wrap; gap: 12px; color: #6B7280;
-    font-size: 13px; margin-bottom: 12px;
-  }
-  .feat-meta span { display: flex; align-items: center; gap: 4px; }
-  .feat-desc { font-size: 13px; color: #6B7280; line-height: 1.6; margin-bottom: 16px; }
-  .feat-footer {
-    display: flex; justify-content: space-between; align-items: center;
-    padding-top: 16px; border-top: 1px solid #F3F4F6;
-  }
-  .feat-going { display: flex; align-items: center; gap: 10px; }
-  .feat-faces { display: flex; }
-  .feat-face {
-    width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff;
-    margin-left: -8px; display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700; color: #fff; position: relative;
-  }
-  .feat-face:first-child { margin-left: 0; }
-  .feat-going-text { font-size: 12px; color: #6B7280; }
-  .feat-going-text strong { color: #10B981; }
-  .feat-rsvp-btn {
-    background: #7C3AED; color: #fff; padding: 10px 22px;
-    border-radius: 50px; font-size: 13px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; transition: all .2s;
-    box-shadow: 0 4px 12px rgba(124,58,237,0.2);
-  }
-  .feat:hover .feat-rsvp-btn { box-shadow: 0 6px 20px rgba(124,58,237,0.35); }
+  .ec:hover { border-color: var(--border-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .ec[data-hidden="true"] { display: none; }
 
-  /* ═══ ALSO THIS WEEK / COMING UP ═══ */
-  .also-section { margin-bottom: 24px; }
-  .also-label {
-    font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800;
-    color: #111827; margin-bottom: 12px;
+  .ec-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .ec-title { font-weight: 700; font-size: 16px; color: var(--text); line-height: 1.3; }
+  .ec-desc { font-size: 13px; color: var(--text-sec); line-height: 1.5; }
+  .ec-meta {
+    font-family: var(--mono); font-size: 12px; color: var(--text-faint);
+    display: flex; align-items: center; gap: 6px;
   }
-  .mini {
-    display: flex; gap: 14px; padding: 16px; background: #fff;
-    border-radius: 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    border: 1px solid #F3F4F6; align-items: center; text-decoration: none;
-    transition: all .2s;
-  }
-  .mini:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); border-color: #E5E7EB; }
-  .mini-date {
-    min-width: 52px; text-align: center; padding: 8px 4px;
-    background: #F9FAFB; border-radius: 12px; flex-shrink: 0;
-  }
-  .mini-day-name {
-    font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.5px;
-  }
-  .mini-day-num {
-    font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 900;
-    color: #111827; line-height: 1.1;
-  }
-  .mini-info { flex: 1; min-width: 0; }
-  .mini-title {
-    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
-    color: #111827; margin-bottom: 3px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .mini-sub { font-size: 12px; color: #9CA3AF; }
-  .mini-match {
-    font-size: 10px; font-weight: 700; color: #7C3AED;
-    background: #F3EEFF; padding: 2px 8px; border-radius: 50px;
-    display: inline-block; margin-top: 4px;
-  }
-  .mini-hot {
-    font-size: 10px; font-weight: 700; color: #DC2626;
-    background: #FEF2F2; padding: 2px 8px; border-radius: 50px;
-    display: inline-block; margin-top: 4px;
-  }
-  .mini-emoji { font-size: 24px; flex-shrink: 0; }
+  .ec-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-faint); }
+  .ec-date { color: var(--text-sec); }
 
-  /* ═══ SUGGEST CTA ═══ */
-  .mag-suggest {
-    display: flex; align-items: center; gap: 14px;
-    padding: 18px 20px; border-radius: 16px;
-    background: linear-gradient(135deg, #F3EEFF 0%, #FDF2F8 100%);
-    border: 1px solid #E9D5FF; margin-bottom: 20px;
-  }
-  .mag-suggest-icon { font-size: 24px; flex-shrink: 0; }
-  .mag-suggest-text { flex: 1; }
-  .mag-suggest-text strong { display: block; font-size: 13px; color: #1a1a2e; font-family: 'Outfit', sans-serif; }
-  .mag-suggest-text span { font-size: 12px; color: #6B7280; }
-  .mag-suggest-btn {
-    padding: 8px 18px; background: #7C3AED; color: #fff; border: none;
-    border-radius: 50px; font-size: 12px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; cursor: pointer; flex-shrink: 0;
-    text-decoration: none; transition: all .2s;
-  }
-  .mag-suggest-btn:hover { opacity: .9; }
+  .ec-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 6px; }
+  .ec-fill-wrap { display: flex; align-items: center; gap: 8px; }
+  .ec-fill-bar { width: 56px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+  .ec-fill { height: 100%; border-radius: 2px; background: var(--green); transition: width .3s; }
+  .ec-fill-text { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+  .ec-host { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
 
-  /* ═══ DISCORD CTA ═══ */
-  .mag-discord {
-    display: flex; align-items: center; gap: 14px;
-    padding: 18px 22px; border-radius: 16px;
-    background: rgba(124,58,237,0.04); border: 1px solid rgba(124,58,237,0.1);
-    margin-bottom: 20px;
+  /* Empty state */
+  .ev-empty { text-align: center; padding: 48px 24px; }
+  .ev-empty-term {
+    display: inline-block; text-align: left;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px;
+    font-family: var(--mono); font-size: 13px;
+    margin-bottom: 16px;
   }
-  .mag-discord-icon { font-size: 24px; flex-shrink: 0; }
-  .mag-discord-text { flex: 1; }
-  .mag-discord-text strong { display: block; font-size: 13px; color: #111827; }
-  .mag-discord-text span { font-size: 11px; color: #6B7280; }
-  .mag-discord-btn {
-    padding: 8px 18px; background: #7C3AED; color: #fff;
-    border-radius: 50px; font-size: 12px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; flex-shrink: 0; text-decoration: none;
-  }
+  .term-prompt { color: var(--accent); font-weight: 700; }
+  .term-cmd { color: var(--text); }
+  .term-output { color: var(--text-faint); }
+  .ev-empty p { color: var(--text-sec); font-size: 14px; margin-bottom: 16px; }
 
-  /* ═══ EMPTY STATE ═══ */
-  .mag-empty {
-    text-align: center; padding: 48px 24px;
-    background: #fff; border: 2px dashed #E5E7EB; border-radius: 20px;
-    margin-bottom: 24px;
+  /* Create panel */
+  .create-panel {
+    position: fixed; bottom: 80px; right: 24px; z-index: 1000;
+    width: 380px; max-height: 80vh; overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    padding: 20px;
   }
-  .mag-empty-icon { font-size: 40px; margin-bottom: 12px; }
-  .mag-empty-title { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800; color: #111827; margin-bottom: 6px; }
-  .mag-empty-sub { font-size: 13px; color: #6B7280; margin-bottom: 20px; line-height: 1.5; max-width: 320px; margin-left: auto; margin-right: auto; }
-  .mag-empty-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .mag-empty-btn {
-    padding: 12px 24px; background: #1a1a2e; color: #fff; border: none;
-    border-radius: 50px; font-size: 13px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; cursor: pointer; text-decoration: none;
+  .cp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cp-header h3 { font-family: var(--mono); font-size: 15px; font-weight: 700; }
+  .cp-close {
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-faint); font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
-  .mag-empty-btn-alt { background: #fff; color: #6B7280; border: 1.5px solid #E5E7EB; }
+  .cp-close:hover { color: var(--text); }
+  .cp-form { display: flex; flex-direction: column; gap: 12px; }
+  .cp-label { font-family: var(--mono); font-size: 11px; color: var(--text-faint); font-weight: 600; display: block; margin-bottom: 4px; }
+  .cp-row-half { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-  /* ═══ FAB ═══ */
-  .ev-fab {
-    position: fixed; bottom: 90px; right: 24px; z-index: 50;
-    display: flex; align-items: center; gap: 8px;
-    padding: 14px 22px; border-radius: 50px;
-    background: linear-gradient(135deg, #7C3AED, #EC4899);
-    color: #fff; border: none; cursor: pointer;
-    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
-    box-shadow: 0 6px 24px rgba(124,58,237,0.35), 0 2px 8px rgba(0,0,0,0.1);
-    transition: all .25s ease;
-  }
-  .ev-fab:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 10px 32px rgba(124,58,237,0.4); }
-  .ev-fab:active { transform: translateY(0) scale(0.98); }
-  .ev-fab-icon { font-size: 20px; font-weight: 300; line-height: 1; }
-  .ev-fab-label { letter-spacing: 0.02em; }
-
-  /* ═══ WIZARD ═══ */
-  .wiz-container { max-width: 520px; margin: 32px auto 0; }
-  .wiz-card {
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 24px;
-    padding: 0; overflow: hidden;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
-  }
-  .wiz-progress { height: 5px; background: #F3F4F6; width: 100%; }
-  .wiz-progress-fill {
-    height: 100%; background: linear-gradient(90deg, #7C3AED, #3B82F6);
-    border-radius: 0 3px 3px 0; transition: width .4s ease;
-  }
-  .wiz-step { padding: 32px 32px 28px; animation: fadeUp .3s ease; }
-  .wiz-step-icon { font-size: 36px; margin-bottom: 12px; }
-  .wiz-num {
-    font-size: 11px; font-weight: 700; color: #7C3AED; font-family: 'Outfit', sans-serif;
-    margin-bottom: 6px; text-transform: uppercase; letter-spacing: .08em;
-    background: rgba(124,58,237,0.06); display: inline-block; padding: 4px 12px;
-    border-radius: 50px;
-  }
-  .wiz-q { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800; color: #111827; margin-bottom: 6px; }
-  .wiz-hint { font-size: 13px; color: #6B7280; margin-bottom: 20px; }
-  .wiz-select {
-    width: 100%; padding: 14px 20px; background: #F8F9FB; border: 2px solid #E5E7EB;
-    border-radius: 14px; font-size: 15px; color: #111827; font-family: 'Inter', sans-serif;
-    outline: none; transition: border-color .2s; cursor: pointer;
-    appearance: none; -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236B7280' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 16px center; background-size: 16px;
-  }
-  .wiz-select:focus { border-color: #7C3AED; background-color: #fff; }
-  .wiz-suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
-  .wiz-sug-chip {
-    padding: 9px 16px; background: #F8F9FB; border: 1.5px solid #E5E7EB;
-    border-radius: 50px; font-size: 13px; font-weight: 600; color: #374151;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
-  }
-  .wiz-sug-chip:hover { border-color: #7C3AED; color: #7C3AED; background: rgba(124,58,237,0.04); }
-  .wiz-sug-chip.selected { border-color: #7C3AED; background: rgba(124,58,237,0.08); color: #7C3AED; }
-  .wiz-subcats { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
-  .wiz-subcat-label {
-    width: 100%; font-size: 11px; font-weight: 700; color: #9CA3AF;
-    font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px;
-  }
-  .wiz-subcat {
-    padding: 7px 14px; background: #F8F9FB; border: 1.5px solid #E5E7EB;
-    border-radius: 50px; font-size: 12px; font-weight: 600; color: #6B7280;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s;
-  }
-  .wiz-subcat:hover { border-color: #D1D5DB; color: #374151; }
-  .wiz-subcat.selected { border-color: #3B82F6; background: rgba(59,130,246,0.06); color: #2563EB; }
-  .wiz-sug-other { border-style: dashed; color: #9CA3AF; }
-  .wiz-sug-other:hover { border-color: #7C3AED; color: #7C3AED; border-style: dashed; }
-  .wiz-sug-other.selected { border-style: dashed; }
-  .wiz-input {
-    width: 100%; padding: 16px 20px; background: #F8F9FB; border: 2px solid #E5E7EB;
-    border-radius: 14px; font-size: 16px; color: #111827; font-family: 'Inter', sans-serif;
-    outline: none; transition: border-color .2s;
-  }
-  .wiz-input:focus { border-color: #7C3AED; background: #fff; }
-  .wiz-input::placeholder { color: #D1D5DB; }
-  .wiz-field-group { margin-bottom: 14px; }
-  .wiz-field-label {
-    display: block; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
-    color: #374151; margin-bottom: 6px;
-  }
-  .wiz-optional { font-weight: 400; color: #9CA3AF; font-size: 11px; }
-  .wiz-textarea {
-    width: 100%; padding: 16px 20px; background: #F8F9FB; border: 2px solid #E5E7EB;
-    border-radius: 14px; font-size: 15px; color: #111827; font-family: 'Inter', sans-serif;
-    outline: none; resize: vertical; transition: border-color .2s;
-  }
-  .wiz-textarea:focus { border-color: #7C3AED; background: #fff; }
-  .wiz-textarea::placeholder { color: #D1D5DB; }
-  .wiz-next, .wiz-submit {
-    margin-top: 18px; padding: 14px 32px; background: #7C3AED; color: #fff;
-    border: none; border-radius: 50px; font-size: 15px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .2s; width: 100%;
-  }
-  .wiz-next:hover, .wiz-submit:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(124,58,237,0.25); }
-  .wiz-next:disabled, .wiz-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
-  .wiz-ghost {
-    margin-top: 10px; padding: 14px 32px; background: #F8F9FB; color: #6B7280;
-    border: 1px solid #E5E7EB; border-radius: 50px; font-size: 15px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .2s; width: 100%;
-  }
-  .wiz-ghost:hover { color: #111827; border-color: #D1D5DB; }
-  .wiz-err { font-size: 12px; font-weight: 600; color: #DC2626; margin-top: 8px; min-height: 18px; font-family: 'Outfit', sans-serif; }
-  .wiz-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
-  .wiz-label {
-    display: block; font-size: 12px; font-weight: 700; color: #6B7280;
-    font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px;
-  }
-  .wiz-pill-btn {
-    padding: 11px 16px; background: #F8F9FB; border: 2px solid #E5E7EB;
-    border-radius: 50px; font-size: 13px; font-weight: 600; color: #374151;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s; text-align: center;
-  }
-  .wiz-pill-btn:hover { border-color: #D1D5DB; background: #fff; }
-  .wiz-pill-btn.selected { border-color: #7C3AED; background: rgba(124,58,237,0.06); color: #7C3AED; }
-  .wiz-when-grid, .wiz-budget-grid, .wiz-size-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
-  .wiz-where-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
-  .wiz-mode-toggle { display: flex; gap: 8px; margin: 16px 0 4px; }
-  .wiz-mode-btn {
-    flex: 1; padding: 12px 10px; border-radius: 12px;
-    background: #F8F9FB; border: 2px solid #E5E7EB;
-    font-size: 13px; font-weight: 700; color: #6B7280;
-    font-family: 'Outfit', sans-serif; cursor: pointer; transition: all .15s; text-align: center;
-  }
-  .wiz-mode-btn:hover { border-color: #D1D5DB; color: #374151; }
-  .wiz-mode-btn.selected[data-mode="live"] { border-color: #10B981; background: rgba(16,185,129,0.06); color: #059669; }
-  .wiz-mode-btn.selected[data-mode="suggest"] { border-color: #7C3AED; background: rgba(124,58,237,0.06); color: #7C3AED; }
-  /* Identity section */
-  .wiz-identity {
-    margin-top: 20px; padding: 20px; border-radius: 16px;
-    background: linear-gradient(135deg, #F3EEFF 0%, #FCE7F3 100%);
-    border: 1px solid #E9D5FF;
-  }
-  .wiz-identity-header {
-    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
-  }
-  .wiz-identity-wave { font-size: 28px; }
-  .wiz-identity-title {
-    display: block; font-family: 'Outfit', sans-serif; font-size: 15px;
-    font-weight: 800; color: #1a1a2e;
-  }
-  .wiz-identity-sub { font-size: 12px; color: #6B7280; }
-  .wiz-identity .wiz-input {
-    background: #fff; border-color: #E9D5FF;
-  }
-  .wiz-identity .wiz-input:focus { border-color: #7C3AED; }
-  .wiz-identity-note {
-    font-size: 11px; color: #9CA3AF; margin-top: 10px;
-    text-align: center; font-style: italic;
-  }
-
-  /* Welcome card on done screen */
-  .wiz-welcome-card {
-    margin: 16px 0; padding: 18px 20px; border-radius: 16px;
-    background: linear-gradient(135deg, #ECFDF5 0%, #F3EEFF 100%);
-    border: 1px solid #A7F3D0; text-align: left;
-  }
-  .wiz-welcome-badge {
-    display: inline-block; padding: 4px 12px; border-radius: 50px;
-    background: #10B981; color: #fff; font-size: 11px; font-weight: 800;
-    font-family: 'Outfit', sans-serif; text-transform: uppercase;
-    letter-spacing: 0.5px; margin-bottom: 8px;
-  }
-  .wiz-welcome-text { font-size: 13px; color: #374151; line-height: 1.5; }
-
-  .wiz-done { text-align: center; padding: 32px 32px 28px; }
-  .wiz-done-icon { font-size: 52px; margin-bottom: 12px; }
-  .wiz-done-btns { display: flex; flex-direction: column; gap: 0; }
-
-  /* ═══ RESPONSIVE ═══ */
-  @media (max-width: 768px) {
-    .ev-page { padding: 0 16px 40px; }
-    .mag-hero { padding: 24px 20px 22px; border-radius: 20px; }
-    .feat-img { height: 150px; }
-    .feat-body { padding: 16px; }
-    .feat-title { font-size: 19px; }
-    .feat-meta { font-size: 12px; gap: 8px; }
-    .ev-fab { bottom: 80px; right: 16px; padding: 12px 18px; font-size: 13px; }
-    .wiz-step { padding: 24px 20px 22px; }
+  @media (max-width: 640px) {
+    .ev-grid { grid-template-columns: 1fr; }
+    .ev-header { flex-direction: column; gap: 12px; }
+    .create-panel { left: 12px; right: 12px; width: auto; bottom: 72px; }
   }
 </style>
 
-<script is:inline define:vars={{ isLoggedIn, isAdmin }}>
-(function() {
-  var browsePath = document.getElementById('browsePath');
-  var suggestPath = document.getElementById('suggestPath');
-  var fab = document.getElementById('fabCreate');
-
-  function showView(view) {
-    browsePath.style.display = 'none';
-    suggestPath.style.display = 'none';
-    if (fab) fab.style.display = view === 'browse' ? '' : 'none';
-    if (view === 'browse') browsePath.style.display = '';
-    if (view === 'suggest') suggestPath.style.display = '';
-    window.scrollTo(0, 0);
-  }
-
-  if (fab) fab.addEventListener('click', function() { showView('suggest'); });
-  document.getElementById('suggestBack').addEventListener('click', function() { showView('browse'); resetWizard(); });
-
-  // Suggest CTA button
-  var suggestCta = document.getElementById('suggestCta');
-  if (suggestCta) suggestCta.addEventListener('click', function() { showView('suggest'); });
-  var emptyCreate = document.getElementById('emptyCreate');
-  if (emptyCreate) emptyCreate.addEventListener('click', function() { showView('suggest'); });
-  var postBannerBtn = document.getElementById('postBannerBtn');
-  if (postBannerBtn) postBannerBtn.addEventListener('click', function() { showView('suggest'); });
-
-  // ── Filter pills ──
-  document.querySelectorAll('.fpill').forEach(function(pill) {
-    pill.addEventListener('click', function() {
-      document.querySelectorAll('.fpill').forEach(function(p) { p.classList.remove('active'); });
-      this.classList.add('active');
-      var type = this.getAttribute('data-type');
-
-      // Filter featured card
-      var featCard = document.querySelector('.feat');
-      if (featCard) {
-        if (type === 'all') { featCard.style.display = ''; }
-        else if (type === 'foryou') { featCard.style.display = featCard.querySelector('.feat-match') ? '' : 'none'; }
-        else { featCard.style.display = featCard.getAttribute('data-type') === type ? '' : 'none'; }
-      }
-
-      // Filter mini cards
-      document.querySelectorAll('.mini').forEach(function(card) {
-        if (type === 'all') { card.style.display = ''; }
-        else if (type === 'foryou') { card.style.display = card.querySelector('.mini-match') ? '' : 'none'; }
-        else { card.style.display = card.getAttribute('data-type') === type ? '' : 'none'; }
-      });
-    });
-  });
-
-  // ── Wizard ──
-  var TOTAL_STEPS = 4;
-  var wizMode = isAdmin ? 'live' : 'suggest';
-  var wizData = { title: '', type: 'social', subcat: '', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '', contact_phone: '' };
-
-  var subcategories = {
-    dinner:        ['Mexican', 'Italian', 'Sushi', 'Ramen', 'BBQ', 'Thai', 'Indian', 'Korean', 'Brunch', 'Steakhouse'],
-    outdoor:       ['Hiking', 'Biking', 'Kayaking', 'Trail Run', 'Park Hangout', 'Fishing'],
-    music:         ['Jazz', 'Rock', 'Hip-Hop', 'EDM', 'Country', 'Indie', 'Open Mic'],
-    sports:        ['Basketball', 'Football', 'Soccer', 'Volleyball', 'Softball', 'Hockey'],
-    active:        ['Rock Climbing', 'Yoga', 'Ice Skating', 'Skiing', 'Kickboxing', 'Swimming'],
-    arts:          ['Gallery', 'Museum', 'Paint Night', 'Pottery', 'Theater', 'Film'],
-    game_night:    ['Board Games', 'Trivia', 'Escape Room', 'Video Games', 'Poker'],
-    group_tickets: ['Rockies', 'Nuggets', 'Avs', 'Rapids', 'Comedy', 'Concert', 'Theater'],
-    potluck:       ['Mexican', 'Italian', 'BBQ', 'Asian', 'Dessert Only', 'Brunch'],
-    camping:       ['Car Camping', 'Backpacking', 'Glamping', 'RV']
-  };
-
-  function renderSubcats(type) {
-    var container = document.getElementById('wizSubcats');
-    var items = subcategories[type];
-    container.innerHTML = '';
-    if (!items || items.length === 0) return;
-    var lbl = document.createElement('div');
-    lbl.className = 'wiz-subcat-label';
-    lbl.textContent = 'Narrow it down:';
-    container.appendChild(lbl);
-    items.forEach(function(cat) {
-      var pill = document.createElement('button');
-      pill.type = 'button';
-      pill.className = 'wiz-subcat';
-      pill.textContent = cat;
-      pill.addEventListener('click', function() {
-        container.querySelectorAll('.wiz-subcat').forEach(function(p) { p.classList.remove('selected'); });
-        pill.classList.add('selected');
-        wizData.subcat = cat;
-      });
-      container.appendChild(pill);
-    });
-  }
-
-  var suggestions = {
-    dinner:        ['Taco Tuesday', 'Ramen Night', 'Sushi Hangout', 'Pizza Party', 'BBQ Cookout'],
-    brewery:       ['Brewery Crawl', 'Taproom Hangout', 'Craft Beer Night', 'New Brewery Tour'],
-    outdoor:       ['Group Hike', 'Park Hangout', 'Bike Ride', 'Sunrise Hike', 'Trail Run'],
-    game_night:    ['Board Game Night', 'Trivia Night', 'Card Games', 'Video Game Tourney'],
-    coffee:        ['Coffee & Chat', 'Café Hop', 'Morning Meetup', 'Latte Walk'],
-    arts:          ['Gallery Walk', 'Paint Night', 'Pottery Class', 'Art Museum Trip'],
-    music:         ['Live Music Night', 'Concert Outing', 'Open Mic', 'Jazz Night'],
-    social:        ['Happy Hour', 'Karaoke Night', 'Rooftop Hangout', 'New Friends Mixer'],
-    sports:        ['Pickup Basketball', 'Flag Football', 'Volleyball', 'Soccer Match'],
-    group_tickets: ['Comedy Show', 'Rockies Game', 'Nuggets Game', 'Avs Game', 'Rapids Match'],
-    camping:       ['Weekend Camping', 'Overnight Trip', 'Car Camping', 'Backpacking'],
-    bowling:       ['Bowling Night', 'Cosmic Bowling', 'Bowling + Beers'],
-    active:        ['Rock Climbing', 'Yoga in the Park', 'Kayaking', 'Ice Skating'],
-    casino:        ['Casino Night', 'Poker Night', 'Blackhawk Trip'],
-    food_trucks:   ['Food Truck Rally', 'Street Eats Tour', 'Food Truck Friday'],
-    potluck:       ['Potluck Dinner', 'Dish Swap', 'Themed Potluck', 'Cook-Off'],
-    other:         ['Hangout', 'Meetup', 'Get-Together', 'Group Outing']
-  };
-
-  var venueSuggestions = {
-    dinner:        ['Guard & Grace', 'Uncle', 'Tavernetta', 'El Five', 'Hop Alley', 'Safta'],
-    brewery:       ['Ratio Beerworks', 'Great Divide', 'Odell Brewing', 'Cerebral Brewing', 'Our Mutual Friend'],
-    outdoor:       ['Red Rocks', 'Sloan\'s Lake', 'Wash Park', 'Chatfield', 'Bear Creek Trail', 'South Table Mountain'],
-    game_night:    ['Board Game Republic', 'Grandma\'s House', 'Punch Bowl Social', 'Dave & Buster\'s'],
-    coffee:        ['Crema', 'Huckleberry', 'Thump Coffee', 'Little Owl', 'Novo Coffee'],
-    arts:          ['Denver Art Museum', 'Meow Wolf', 'RINO Art District', 'Artwork Network'],
-    music:         ['Red Rocks', 'Dazzle', 'Globe Hall', 'Cervantes', 'Mission Ballroom'],
-    social:        ['Punch Bowl Social', 'Topgolf', 'ViewHouse', 'Finn\'s Manor', 'Lustre Pearl'],
-    sports:        ['City Park', 'Sloans Lake', 'Ruby Hill', 'Coors Field area'],
-    group_tickets: ['Ball Arena', 'Coors Field', 'Empower Field', 'Dick\'s Sporting Goods Park'],
-    camping:       ['Mueller State Park', 'Golden Gate Canyon', 'Chatfield', 'Cherry Creek State Park'],
-    bowling:       ['Lucky Strike', 'Elitch Lanes', 'AMF', 'Bowlero'],
-    active:        ['Movement RiNo', 'Earth Treks', 'Confluence Kayaks', 'Denver Bouldering Club'],
-    casino:        ['Ameristar (Blackhawk)', 'Monarch (Blackhawk)', 'Johnny Z\'s (Central City)', 'The Lodge (Blackhawk)'],
-    food_trucks:   ['Civic Center Eats', 'Stanley Marketplace', 'Union Station', 'RiNo Food Truck Park'],
-    potluck:       ['Someone\'s place', 'Community center', 'Park pavilion'],
-    other:         []
-  };
-
-  var venueLabels = {
-    dinner: 'Which restaurant?', brewery: 'Which brewery?', casino: 'Which casino?',
-    coffee: 'Which café?', music: 'Which venue?', bowling: 'Which alley?',
-    arts: 'Which gallery/museum?', active: 'Which gym/spot?'
-  };
-
-  function renderSuggestions(type) {
-    var container = document.getElementById('wizSuggestions');
-    var items = suggestions[type] || suggestions.other;
-    container.innerHTML = '';
-    items.forEach(function(name) {
-      var chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'wiz-sug-chip';
-      chip.textContent = name;
-      chip.addEventListener('click', function() {
-        container.querySelectorAll('.wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
-        chip.classList.add('selected');
-        document.getElementById('wizTitle').value = name;
-      });
-      container.appendChild(chip);
-    });
-    var other = document.createElement('button');
-    other.type = 'button';
-    other.className = 'wiz-sug-chip wiz-sug-other';
-    other.textContent = '✏️ Other';
-    other.addEventListener('click', function() {
-      container.querySelectorAll('.wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
-      other.classList.add('selected');
-      document.getElementById('wizTitle').value = '';
-      document.getElementById('wizTitle').focus();
-    });
-    container.appendChild(other);
-  }
-
-  function renderVenueSuggestions(type) {
-    var container = document.getElementById('wizVenueSuggestions');
-    var items = venueSuggestions[type] || [];
-    var label = document.getElementById('wizVenueLabel');
-    label.textContent = venueLabels[type] || 'Specific spot?';
-    container.innerHTML = '';
-    items.forEach(function(name) {
-      var chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'wiz-sug-chip';
-      chip.textContent = name;
-      chip.addEventListener('click', function() {
-        container.querySelectorAll('.wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
-        chip.classList.add('selected');
-        document.getElementById('wizVenue').value = name;
-      });
-      container.appendChild(chip);
-    });
-    var other = document.createElement('button');
-    other.type = 'button';
-    other.className = 'wiz-sug-chip wiz-sug-other';
-    other.textContent = '✏️ Other';
-    other.addEventListener('click', function() {
-      container.querySelectorAll('.wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
-      other.classList.add('selected');
-      document.getElementById('wizVenue').value = '';
-      document.getElementById('wizVenue').focus();
-    });
-    container.appendChild(other);
-  }
-
-  function showStep(n) {
-    for (var i = 1; i <= 5; i++) {
-      var el = document.getElementById('wizStep' + i);
-      if (el) el.style.display = (i === n) ? '' : 'none';
-    }
-    var pct = n >= 5 ? 100 : Math.round((n / TOTAL_STEPS) * 100);
-    document.getElementById('wizProgress').style.width = pct + '%';
-  }
-
-  function resetWizard() {
-    wizData = { title: '', type: 'social', subcat: '', suggested_date: '', location: '', venue: '', link: '', budget: '', group_size: '', description: '', contact_phone: '' };
-    wizMode = isAdmin ? 'live' : 'suggest';
-    document.getElementById('wizTitle').value = '';
-    document.getElementById('wizType').value = 'social';
-    document.getElementById('wizDesc').value = '';
-    document.getElementById('wizVenue').value = '';
-    document.getElementById('wizLink').value = '';
-    var phoneResetEl = document.getElementById('wizPhone');
-    if (phoneResetEl) phoneResetEl.value = '';
-    var nameEl = document.getElementById('wizName');
-    var emailEl = document.getElementById('wizEmail');
-    if (nameEl) nameEl.value = '';
-    if (emailEl) emailEl.value = '';
-    document.querySelectorAll('.wiz-pill-btn, .wiz-sug-chip, .wiz-subcat').forEach(function(b) { b.classList.remove('selected'); });
-    document.querySelectorAll('.wiz-err').forEach(function(e) { e.textContent = ''; });
-    var welcomeCard = document.getElementById('wizWelcome');
-    if (welcomeCard) welcomeCard.style.display = 'none';
-    if (isAdmin) {
-      var ml = document.getElementById('wizModeLive');
-      var ms = document.getElementById('wizModeSuggest');
-      if (ml) ml.classList.add('selected');
-      if (ms) ms.classList.remove('selected');
-      document.getElementById('wizSubmit').textContent = 'Create Event';
-    }
-    renderSubcats('social');
-    renderSuggestions('social');
-    renderVenueSuggestions('social');
-    showStep(1);
-  }
-
-  renderSubcats('social');
-  renderSuggestions('social');
-  renderVenueSuggestions('social');
-
-  document.getElementById('wizType').addEventListener('change', function() {
-    wizData.type = this.value;
-    wizData.subcat = '';
-    document.getElementById('wizTitle').value = '';
-    renderSubcats(this.value);
-    renderSuggestions(this.value);
-    renderVenueSuggestions(this.value);
-  });
-
-  document.getElementById('wizTitle').addEventListener('input', function() {
-    document.querySelectorAll('#wizSuggestions .wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
-  });
-  document.getElementById('wizVenue').addEventListener('input', function() {
-    document.querySelectorAll('#wizVenueSuggestions .wiz-sug-chip').forEach(function(c) { c.classList.remove('selected'); });
-  });
-
-  document.getElementById('wizNext1').addEventListener('click', function() {
-    var val = document.getElementById('wizTitle').value.trim();
-    if (!val) { document.getElementById('wizErr1').textContent = 'Pick a suggestion or type a name.'; return; }
-    wizData.title = val;
-    wizData.type = document.getElementById('wizType').value;
-    document.getElementById('wizErr1').textContent = '';
-    renderVenueSuggestions(wizData.type);
-    showStep(2);
-  });
-
-  document.getElementById('wizTitle').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('wizNext1').click(); }
-  });
-
-  document.querySelectorAll('.wiz-pill-btn').forEach(function(btn) {
+<script is:inline>
+  // Filter logic
+  var filterBtns = document.querySelectorAll('.fpill');
+  var cards = document.querySelectorAll('.ec');
+  filterBtns.forEach(function(btn) {
     btn.addEventListener('click', function() {
-      var field = btn.getAttribute('data-field');
-      document.querySelectorAll('.wiz-pill-btn[data-field="' + field + '"]').forEach(function(b) { b.classList.remove('selected'); });
-      btn.classList.add('selected');
-      wizData[field] = btn.getAttribute('data-val');
-    });
-  });
-
-  document.getElementById('wizNext2').addEventListener('click', function() {
-    wizData.venue = document.getElementById('wizVenue').value.trim();
-    wizData.link = document.getElementById('wizLink').value.trim();
-    showStep(3);
-  });
-
-  document.getElementById('wizNext3').addEventListener('click', function() { showStep(4); });
-
-  if (isAdmin) {
-    document.querySelectorAll('.wiz-mode-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.wiz-mode-btn').forEach(function(b) { b.classList.remove('selected'); });
-        btn.classList.add('selected');
-        wizMode = btn.getAttribute('data-mode');
-        document.getElementById('wizSubmit').textContent = wizMode === 'live' ? 'Create Event' : 'Submit Suggestion';
+      filterBtns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var type = btn.getAttribute('data-type');
+      cards.forEach(function(card) {
+        if (type === 'all' || card.getAttribute('data-type') === type) {
+          card.removeAttribute('data-hidden');
+          card.style.display = '';
+        } else {
+          card.setAttribute('data-hidden', 'true');
+          card.style.display = 'none';
+        }
       });
     });
-  }
-
-  document.getElementById('wizSubmit').addEventListener('click', function() {
-    var btn = this;
-    wizData.description = document.getElementById('wizDesc').value.trim();
-    var phoneEl = document.getElementById('wizPhone');
-    if (phoneEl) wizData.contact_phone = phoneEl.value.trim();
-
-    // Gather guest identity fields if present
-    var nameEl = document.getElementById('wizName');
-    var emailEl = document.getElementById('wizEmail');
-    if (nameEl && emailEl && !isLoggedIn) {
-      var gn = nameEl.value.trim();
-      var ge = emailEl.value.trim();
-      if (!gn) { document.getElementById('wizErr4').textContent = 'Drop your name so people know who you are.'; return; }
-      if (!ge || ge.indexOf('@') < 1) { document.getElementById('wizErr4').textContent = 'We need a real email to keep things legit.'; return; }
-      wizData.guest_name = gn;
-      wizData.guest_email = ge;
-    }
-
-    btn.disabled = true;
-    btn.textContent = wizMode === 'live' ? 'Creating...' : 'Posting...';
-    document.getElementById('wizErr4').textContent = '';
-
-    var endpoint = wizMode === 'live' ? '/api/create-event' : '/api/suggest';
-
-    fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(wizData)
-    }).then(function(r) { return r.json(); }).then(function(data) {
-      btn.disabled = false;
-      btn.textContent = wizMode === 'live' ? 'Create Event' : 'Post Event';
-      if (data.ok) {
-        var doneTitle = document.getElementById('wizDoneTitle');
-        var doneHint = document.getElementById('wizDoneHint');
-        var doneIcon = document.getElementById('wizDoneIcon');
-        var welcomeCard = document.getElementById('wizWelcome');
-
-        if (wizMode === 'live') {
-          doneIcon.textContent = '🚀';
-          doneTitle.textContent = 'Event Created!';
-          doneHint.textContent = 'Your event is live — people can RSVP now.';
-        } else if (data.isNewMember) {
-          // New member — welcome moment
-          doneIcon.textContent = '🤝';
-          doneTitle.textContent = 'Welcome to Denver Social, ' + (data.memberName || '').split(' ')[0] + '!';
-          doneHint.textContent = 'Your event idea is posted. The community will check it out.';
-          if (welcomeCard) welcomeCard.style.display = '';
-        } else {
-          doneIcon.textContent = '🎉';
-          doneTitle.textContent = 'Posted!';
-          doneHint.textContent = 'The community will vote on your idea. Thanks for making Denver more fun.';
-        }
-        showStep(5);
-      } else {
-        document.getElementById('wizErr4').textContent = data.error || 'Something went wrong.';
-      }
-    }).catch(function() {
-      btn.disabled = false;
-      btn.textContent = wizMode === 'live' ? 'Create Event' : 'Post Event';
-      document.getElementById('wizErr4').textContent = 'Network error. Try again.';
-    });
   });
 
-  document.getElementById('wizAnother').addEventListener('click', function() { resetWizard(); });
-  document.getElementById('wizBrowse').addEventListener('click', function() { showView('browse'); resetWizard(); });
-})();
+  // Create panel toggle
+  var createBtn = document.getElementById('createBtn');
+  var createPanel = document.getElementById('createPanel');
+  var createClose = document.getElementById('createClose');
+  if (createBtn && createPanel) {
+    createBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      createPanel.style.display = createPanel.style.display === 'none' ? 'block' : 'none';
+    });
+  }
+  if (createClose && createPanel) {
+    createClose.addEventListener('click', function() { createPanel.style.display = 'none'; });
+  }
 </script>
-
-</Base>

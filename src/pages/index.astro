@@ -10,7 +10,6 @@ let eventCount = 0;
 
 try {
   if (db) {
-    // Get upcoming events sorted by date
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentDay = now.getDate();
@@ -19,7 +18,7 @@ try {
     upcomingEvents = allEvts.filter((e: any) => {
       const m = monthOrder[(e.event_month || '').toUpperCase()];
       const d = parseInt(e.event_day) || 99;
-      if (m === undefined) return false; // hide TBD from homepage
+      if (m === undefined) return false;
       if (m < currentMonth) return false;
       if (m === currentMonth && d < currentDay) return false;
       return true;
@@ -28,10 +27,10 @@ try {
       const mb = monthOrder[(b.event_month || '').toUpperCase()] ?? 99;
       if (ma !== mb) return ma - mb;
       return (parseInt(a.event_day) || 99) - (parseInt(b.event_day) || 99);
-    }).slice(0, 3);
+    }).slice(0, 4);
     const mc = await db.prepare("SELECT COUNT(*) as cnt FROM members").first();
-    memberCount = Math.max(mc?.cnt || 0, 88); // At least show Discord community size
-    const ec = await db.prepare("SELECT COUNT(*) as cnt FROM events").first();
+    memberCount = mc?.cnt || 0;
+    const ec = await db.prepare("SELECT COUNT(*) as cnt FROM events WHERE is_past IS NULL OR is_past=0").first();
     eventCount = ec?.cnt || 0;
     suggestions = (await db.prepare("SELECT * FROM event_suggestions ORDER BY votes DESC LIMIT 4").all())?.results || [];
   }
@@ -40,29 +39,10 @@ try {
 let user: any = null;
 const cookie = Astro.cookies.get("dsn_user")?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
-const isAdmin = user?.email === "stharpe98@gmail.com";
+const isAdmin = user?.role === 'admin' || user?.email === "stharpe98@gmail.com";
+const redditName = user?.reddit_username || user?.name;
 
-const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",other:"📅" };
-
-const categories = [
-  { emoji:"🍽️", label:"Dinners",        sub:"Small tables, long nights", type:"dinner",       tint:"#F05A28" },
-  { emoji:"🏔️", label:"Outdoors",       sub:"Hikes, sunrise, trails",    type:"outdoor",      tint:"#10B981" },
-  { emoji:"🎲", label:"Game nights",    sub:"Board games + trivia",      type:"game_night",   tint:"#7C3AED" },
-  { emoji:"🍺", label:"Brewery crawls", sub:"Denver's best taprooms",    type:"brewery",      tint:"#F59E0B" },
-  { emoji:"🎨", label:"Arts + pottery", sub:"Get your hands dirty",      type:"arts",         tint:"#EC4899" },
-  { emoji:"🎳", label:"Bowling",        sub:"Strikes + gutters",         type:"bowling",      tint:"#3B82F6" },
-  { emoji:"☕", label:"Coffee meets",   sub:"Low-key + local",           type:"coffee",       tint:"#10B981" },
-  { emoji:"🎉", label:"Just social",    sub:"Turn-up, turn-out",         type:"social",       tint:"#EC4899" },
-];
-
-const activities = [
-  { emoji:"🍽️", title:"Dinner hangs", desc:"Small tables, real conversation. Friends by dessert.", img:"https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=600&q=70" },
-  { emoji:"🏔️", title:"Outdoor adventures", desc:"Hikes, sunrise treks, park days across Colorado.", img:"https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=70" },
-  { emoji:"🏺", title:"Pottery nights", desc:"Get your hands dirty. No skill needed.", img:"https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&q=70" },
-  { emoji:"🎲", title:"Game evenings", desc:"Board games, trivia, zero experience required.", img:"https://images.unsplash.com/photo-1632501641765-e568d28b0015?w=600&q=70" },
-  { emoji:"🧶", title:"Fiber arts", desc:"Knitting, crochet — bring your project or start one.", img:"https://images.unsplash.com/photo-1582738411706-bfc8e691d1c2?w=600&q=70" },
-  { emoji:"🎳", title:"Bowling nights", desc:"Strikes, gutters, and a whole lot of laughing.", img:"https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?w=600&q=70" },
-];
+const typeLabel: Record<string,string> = { dinner:"dinner",game_night:"game_night",outdoor:"outdoor",brewery:"brewery",coffee:"coffee",arts:"arts",music:"music",social:"social",group_tickets:"tickets",camping:"camping",sports_outing:"sports",bowling:"bowling",active:"active",casino:"casino",food_trucks:"food",other:"event" };
 const content = await getContent();
 ---
 <!DOCTYPE html>
@@ -70,89 +50,114 @@ const content = await getContent();
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Denver Social — Meet your people. Explore your city.</title>
-  <meta name="description" content="Denver Social is a free community where members vote on what happens next. Small-group hangouts, dinners, hikes, game nights." />
+  <title>/r/events.hub — Denver's Reddit Event Hub</title>
+  <meta name="description" content="Real small-group events in Denver. Sign in with Reddit. Your karma is your trust score." />
   <link rel="icon" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
 
-<!-- ═══ NAV — light, sticky top ═══ -->
+<!-- NAV -->
 <nav class="nav">
-  <a href="/" class="nav-logo">Denver <em>Social</em></a>
+  <a href="/" class="nav-logo">/r/<span class="nav-accent">events.hub</span></a>
   <div class="nav-links">
-    <a href="/events">Events</a>
-    <a href="/recs">Recs</a>
-    <a href="/about">About</a>
+    <a href="/events"><span class="nl-icon">~</span>browse</a>
+    <a href="/recs"><span class="nl-icon">*</span>recs</a>
+    <a href="/about"><span class="nl-icon">?</span>about</a>
   </div>
   <div class="nav-auth">
-    {user
-      ? <a href="/profile" class="nav-btn-profile">My Profile</a>
-      : <a href="/login?mode=join" class="nav-btn-cta">Join Free</a>
-    }
+    {user ? (
+      <>
+        <a href="/profile" class="nav-user">
+          <span class="nav-karma">{user.karma || 0} karma</span>
+          <span class="nav-uname">u/{redditName}</span>
+        </a>
+        <a href="/api/logout" class="nav-out">[logout]</a>
+      </>
+    ) : (
+      <a href="/login" class="nav-cta">Sign in with Reddit</a>
+    )}
   </div>
 </nav>
 
 
-<!-- ═══ HERO ═══ -->
+<!-- HERO -->
 <section class="hero">
-  <div class="hero-badge"><span class="hero-dot"></span> {memberCount}+ locals and growing</div>
-  <h1 set:html={content.home_title}></h1>
-  <p class="hero-sub">{content.home_subtitle}</p>
-  <div class="hero-ctas">
-    <a href="/login?mode=join" class="btn-cta">Join for free</a>
-    <a href="#vote" class="btn-sec">See what's next</a>
+  <div class="hero-terminal">
+    <div class="hero-line"><span class="hl-prompt">$</span> <span class="hl-cmd">grep</span> <span class="hl-flag">--city</span> <span class="hl-str">"denver"</span> <span class="hl-flag">--type</span> <span class="hl-str">"real_events"</span></div>
+    <div class="hero-output">
+      <span class="ho-found">Found <strong>{eventCount || 12}</strong> events matching criteria</span>
+    </div>
   </div>
 
-  <!-- Mini event cards -->
-  {upcomingEvents.length > 0 && (
-    <div class="hero-cards">
-      {upcomingEvents.map((ev: any) => (
-        <a href={`/events/${ev.id}`} class="hc">
-          <div class="hc-top">
-            <span class="hc-emoji">{typeEmoji[ev.event_type] || '📅'}</span>
-            <span class="hc-going">{ev.spots} spots</span>
-          </div>
-          <div class="hc-title">{ev.title}</div>
-          <div class="hc-meta">{ev.event_month} {ev.event_day} · {ev.zone || ev.location}</div>
-        </a>
-      ))}
-    </div>
-  )}
+  <h1 class="hero-title">Real events.<br/><span class="hero-accent">Real people.</span></h1>
+  <p class="hero-sub">Denver's community-run event hub. Sign in with Reddit — your karma is your trust score. No algorithms. Just locals showing up.</p>
+
+  <div class="hero-stats">
+    <div class="hs"><span class="hs-num">{memberCount || 88}</span><span class="hs-label">redditors</span></div>
+    <div class="hs-dot"></div>
+    <div class="hs"><span class="hs-num">{eventCount || 12}</span><span class="hs-label">events</span></div>
+    <div class="hs-dot"></div>
+    <div class="hs"><span class="hs-num">6-12</span><span class="hs-label">per group</span></div>
+  </div>
+
+  <div class="hero-ctas">
+    {user ? (
+      <a href="/events" class="btn-primary">browse events</a>
+    ) : (
+      <a href="/login" class="btn-primary">
+        <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><path d="M10 0C4.478 0 0 4.478 0 10c0 5.522 4.478 10 10 10s10-4.478 10-10C20 4.478 15.522 0 10 0zm5.8 11.6c.04.2.06.4.06.6 0 2.94-3.42 5.32-7.64 5.32S.58 15.14.58 12.2c0-.22.02-.44.06-.64a1.44 1.44 0 01-.58-1.16c0-.8.64-1.44 1.44-1.44.38 0 .72.14.98.38 1.3-.92 3.1-1.52 5.1-1.58l.98-4.56c.02-.1.08-.18.16-.22.08-.04.18-.06.28-.04l3.24.68c.18-.38.56-.64 1-.64.62 0 1.12.5 1.12 1.12s-.5 1.12-1.12 1.12-1.12-.5-1.12-1.12l-2.9-.6-.86 4.06c1.94.08 3.68.68 4.94 1.56.26-.22.6-.36.96-.36.8 0 1.44.64 1.44 1.44 0 .48-.24.9-.6 1.16z"/></svg>
+        sign in with reddit
+      </a>
+    )}
+    <a href="#events" class="btn-ghost">see what's next</a>
+  </div>
 </section>
 
 
-<!-- ═══ CATEGORY SCROLLER ═══ -->
-<section class="categories" aria-label="Browse by category">
-  <div class="categories-scroll">
-    {categories.map((c) => (
-      <a href={`/events?type=${c.type}`} class="cat-pill" style={`--tint:${c.tint}`}>
-        <span class="cat-emoji">{c.emoji}</span>
-        <span class="cat-text">
-          <strong>{c.label}</strong>
-          <small>{c.sub}</small>
-        </span>
+<!-- UPCOMING EVENTS -->
+{upcomingEvents.length > 0 && (
+<section class="section" id="events">
+  <div class="sec-head">
+    <span class="sec-tag tag tag-orange"># upcoming</span>
+    <h2 class="sec-title">live events</h2>
+  </div>
+  <div class="event-grid">
+    {upcomingEvents.map((ev: any) => (
+      <a href={`/events/${ev.id}`} class="ev-card">
+        <div class="ev-top">
+          <span class="ev-type tag tag-blue">{typeLabel[ev.event_type] || 'event'}</span>
+          <span class="ev-fill-wrap">
+            <span class="ev-fill-bar"><span class="ev-fill" style={`width:${Math.min(100, Math.round((ev.rsvp_count || 0) / (ev.spots || 12) * 100))}%`}></span></span>
+            <span class="ev-fill-text">{ev.rsvp_count || 0}/{ev.spots}</span>
+          </span>
+        </div>
+        <h3 class="ev-title">{ev.title}</h3>
+        <div class="ev-meta">
+          <span>{ev.event_month} {ev.event_day}</span>
+          <span class="ev-meta-dot"></span>
+          <span>{ev.zone || ev.location || 'Denver'}</span>
+        </div>
+        {ev.karma_min > 0 && <span class="ev-karma tag tag-yellow">requires {ev.karma_min}+ karma</span>}
       </a>
     ))}
   </div>
+  <div style="text-align:center;margin-top:24px">
+    <a href="/events" class="btn-ghost">all events →</a>
+  </div>
 </section>
+)}
 
 
-<!-- ═══ STATS STRIP ═══ -->
-<div class="stats-strip">
-  <div class="ss-item"><div class="ss-num">{memberCount}+</div><div class="ss-label">Members</div></div>
-  <div class="ss-item"><div class="ss-num">{eventCount || '12'}</div><div class="ss-label">Events</div></div>
-  <div class="ss-item"><div class="ss-num">{suggestions.length || '4'}</div><div class="ss-label">Voted On</div></div>
-</div>
-
-
-<!-- ═══ COMMUNITY VOTING ═══ -->
+<!-- COMMUNITY VOTES -->
 <section class="section" id="vote">
-  <div class="sec-eyebrow">Community Votes</div>
-  <h2 class="sec-title">{content.home_how_title}</h2>
-  <p class="sec-sub">{content.home_how_subtitle}</p>
+  <div class="sec-head">
+    <span class="sec-tag tag tag-green"># voting</span>
+    <h2 class="sec-title">what's next</h2>
+    <p class="sec-sub">Community suggests. Community votes. Top picks become real events.</p>
+  </div>
 
   {suggestions.length > 0 ? (
     <div class="vote-list">
@@ -171,67 +176,41 @@ const content = await getContent();
     </div>
   ) : (
     <div class="vote-list">
-      <div class="vi"><div class="vi-rank">1</div><div class="vi-info"><div class="vi-title">🍕 Korean BBQ Night</div><div class="vi-desc">Cook-your-own meat, Federal Blvd</div></div><div class="vi-bar"><div class="vi-fill" style="width:82%"></div></div><div class="vi-count">41</div><button class="vi-up">▲</button></div>
-      <div class="vi"><div class="vi-rank">2</div><div class="vi-info"><div class="vi-title">🧘 Red Rocks Sunrise Yoga</div><div class="vi-desc">Early morning yoga + coffee after</div></div><div class="vi-bar"><div class="vi-fill" style="width:68%"></div></div><div class="vi-count">34</div><button class="vi-up">▲</button></div>
-      <div class="vi"><div class="vi-rank">3</div><div class="vi-info"><div class="vi-title">🎮 Board Game Tournament</div><div class="vi-desc">Catan bracket at Tabletop Tap</div></div><div class="vi-bar"><div class="vi-fill" style="width:55%"></div></div><div class="vi-count">27</div><button class="vi-up">▲</button></div>
-      <div class="vi"><div class="vi-rank">4</div><div class="vi-info"><div class="vi-title">🏔️ Tubing on Clear Creek</div><div class="vi-desc">Lazy river in Golden, carpool</div></div><div class="vi-bar"><div class="vi-fill" style="width:45%"></div></div><div class="vi-count">22</div><button class="vi-up">▲</button></div>
+      <div class="vi"><div class="vi-rank">1</div><div class="vi-info"><div class="vi-title">Korean BBQ Night</div><div class="vi-desc">Cook-your-own meat, Federal Blvd</div></div><div class="vi-bar"><div class="vi-fill" style="width:82%"></div></div><div class="vi-count">41</div><button class="vi-up">▲</button></div>
+      <div class="vi"><div class="vi-rank">2</div><div class="vi-info"><div class="vi-title">Red Rocks Sunrise Yoga</div><div class="vi-desc">Early morning yoga + coffee after</div></div><div class="vi-bar"><div class="vi-fill" style="width:68%"></div></div><div class="vi-count">34</div><button class="vi-up">▲</button></div>
+      <div class="vi"><div class="vi-rank">3</div><div class="vi-info"><div class="vi-title">Board Game Tournament</div><div class="vi-desc">Catan bracket at Tabletop Tap</div></div><div class="vi-bar"><div class="vi-fill" style="width:55%"></div></div><div class="vi-count">27</div><button class="vi-up">▲</button></div>
     </div>
   )}
-
-  {!user && (
-    <p class="vote-cta-text">
-      <a href="/login?mode=join">Join free</a> to vote and suggest events.
-    </p>
-  )}
 </section>
 
 
-<!-- ═══ ACTIVITY CARDS ═══ -->
-<section class="section">
-  <div class="sec-eyebrow">What we do</div>
-  <h2 class="sec-title">{content.home_types_title}</h2>
-  <p class="sec-sub">{content.home_types_subtitle}</p>
-  <div class="activity-grid">
-    {activities.map((a) => (
-      <div class="activity-card fade-up">
-        <img src={a.img} alt={a.title} class="activity-img" loading="lazy" />
-        <div class="activity-overlay"></div>
-        <div class="activity-content">
-          <span class="activity-emoji">{a.emoji}</span>
-          <h3 class="activity-title">{a.title}</h3>
-          <p class="activity-desc">{a.desc}</p>
-        </div>
-      </div>
-    ))}
-  </div>
-</section>
-
-
-<!-- ═══ HOW IT WORKS ═══ -->
+<!-- HOW IT WORKS -->
 <section class="how-section">
   <div class="how-inner">
-    <div class="sec-eyebrow">How it works</div>
-    <h2 class="sec-title">Three steps, that's it.</h2>
+    <div class="sec-head">
+      <span class="sec-tag tag tag-orange"># readme</span>
+      <h2 class="sec-title">how it works</h2>
+    </div>
     <div class="steps">
       <div class="step">
-        <div class="step-num">1</div>
+        <div class="step-num">01</div>
         <div class="step-body">
-          <h3>Join free</h3>
-          <p>60 seconds — name, email, done. No credit card.</p>
+          <h3>authenticate</h3>
+          <p>Sign in with Reddit. We read your karma and account age — that's it. We never post.</p>
         </div>
       </div>
       <div class="step">
-        <div class="step-num">2</div>
+        <div class="step-num">02</div>
         <div class="step-body">
-          <h3>Vote on what's next</h3>
-          <p>Suggest ideas or upvote others. Top picks become real events.</p>
+          <h3>browse + rsvp</h3>
+          <p>Find an event. Some require minimum karma — keeps things legit. RSVP to lock your spot.</p>
         </div>
       </div>
       <div class="step">
-        <div class="step-num">3</div>
+        <div class="step-num">03</div>
         <div class="step-body">
-          <h3>Show up</h3>
-          <p>Small group, real people. No icebreakers, we promise.</p>
+          <h3>show up</h3>
+          <p>QR check-in at the door. Show up reliably = build your trust score. Flake = lose it.</p>
         </div>
       </div>
     </div>
@@ -239,433 +218,365 @@ const content = await getContent();
 </section>
 
 
-<!-- ═══ UPCOMING EVENTS ═══ -->
-{upcomingEvents.length > 0 && (
-  <section class="section">
-    <div class="sec-eyebrow">Coming up</div>
-    <h2 class="sec-title">Happening in Denver</h2>
-    <div class="events-preview">
-      {upcomingEvents.map((ev: any) => (
-        <a href={`/events/${ev.id}`} class="ep-card">
-          <div class="ep-date">
-            <span class="ep-month">{(ev.event_month || 'TBD').slice(0, 3)}</span>
-            <span class="ep-day">{ev.event_day || '—'}</span>
-          </div>
-          <div class="ep-info">
-            <div class="ep-type">
-              <span>{typeEmoji[ev.event_type] || '📅'}</span>
-              <span class="ep-type-label">{(ev.event_type || '').replace('_', ' ')}</span>
-            </div>
-            <h3 class="ep-title">{ev.title}</h3>
-            <p class="ep-meta">{ev.zone || ev.location} · up to {ev.spots} people</p>
-          </div>
-          <span class="ep-arrow">→</span>
-        </a>
-      ))}
-    </div>
-    <div style="text-align:center;margin-top:24px">
-      <a href="/events" class="btn-sec">All events →</a>
-    </div>
-  </section>
-)}
-
-
-<!-- ═══ TRUST / SOCIAL PROOF ═══ -->
+<!-- TRUST -->
 <section class="section">
+  <div class="sec-head">
+    <span class="sec-tag tag tag-green"># trust</span>
+    <h2 class="sec-title">the karma gate</h2>
+    <p class="sec-sub">Reddit identity as the trust layer. No burner accounts. No strangers.</p>
+  </div>
   <div class="trust-grid">
-    <div class="trust-quote">
-      <div class="tq-mark">"</div>
-      <p>I moved to Denver knowing nobody. Three dinners later, I had a group text with 8 new friends.</p>
-      <footer>
-        <div class="tq-avatar">S</div>
-        <div>
-          <strong>Sarah M.</strong>
-          <span>Member since Jan 2026</span>
-        </div>
-      </footer>
+    <div class="trust-card">
+      <div class="tc-icon" style="color:var(--accent)">⬆</div>
+      <h4>Karma = Trust</h4>
+      <p>Events can require minimum karma to RSVP. Higher karma = access to more events.</p>
     </div>
-    <div class="trust-facts">
-      <h3>How we roll.</h3>
-      <div class="tf-list">
-        <div class="tf-item"><div class="tf-check">✓</div><span>Open to everyone — no application</span></div>
-        <div class="tf-item"><div class="tf-check">✓</div><span>Small groups only — 6 to 12 people</span></div>
-        <div class="tf-item"><div class="tf-check">🛡️</div><span>Make someone uncomfortable and you're out — <a href="/conduct" style="color:#7C3AED;font-weight:600">safety details</a></span></div>
-        <div class="tf-item"><div class="tf-check">✓</div><span>Locations hidden until you RSVP</span></div>
-      </div>
+    <div class="trust-card">
+      <div class="tc-icon" style="color:var(--green)">✓</div>
+      <h4>Reliability Badge</h4>
+      <p>Check in via QR. Show up consistently and earn a badge that unlocks priority RSVPs.</p>
+    </div>
+    <div class="trust-card">
+      <div class="tc-icon" style="color:var(--blue)">🔒</div>
+      <h4>Address Hidden</h4>
+      <p>Event locations are revealed only to confirmed RSVPs who meet the karma gate.</p>
+    </div>
+    <div class="trust-card">
+      <div class="tc-icon" style="color:var(--yellow)">⏳</div>
+      <h4>Account Age</h4>
+      <p>Some events require accounts older than 30 days. No throwaway signups.</p>
     </div>
   </div>
 </section>
 
 
-<!-- ═══ DISCORD CTA ═══ -->
-<section class="discord-section fade-up">
-  <div class="discord-inner">
-    <div class="discord-icon">💬</div>
-    <div class="discord-text">
-      <h3><strong>88</strong> locals in the Discord</h3>
-      <p>That's where plans actually happen — polls, last-minute hangs, figuring out what's next.</p>
-    </div>
-    <a href="https://discord.gg/S8SFNkdSgK" class="discord-btn" target="_blank" rel="noopener">Join the Discord →</a>
-  </div>
-</section>
-
-
-<!-- ═══ FINAL CTA ═══ -->
+<!-- FINAL CTA -->
 <section class="final-cta">
-  <h2>Your people are out <em>there.</em></h2>
-  <p>No cost to join. Takes 60 seconds.</p>
-  <a href="/login?mode=join" class="btn-cta">Join Free →</a>
+  <div class="fc-terminal">
+    <span class="fc-prompt">$</span> <span class="fc-cmd">./join</span> <span class="fc-flag">--city</span> <span class="fc-str">"denver"</span>
+  </div>
+  <h2>Your people are already here.</h2>
+  <p>Sign in with Reddit. Takes 10 seconds.</p>
+  {user ? (
+    <a href="/events" class="btn-primary">browse events →</a>
+  ) : (
+    <a href="/login" class="btn-primary">
+      <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><path d="M10 0C4.478 0 0 4.478 0 10c0 5.522 4.478 10 10 10s10-4.478 10-10C20 4.478 15.522 0 10 0zm5.8 11.6c.04.2.06.4.06.6 0 2.94-3.42 5.32-7.64 5.32S.58 15.14.58 12.2c0-.22.02-.44.06-.64a1.44 1.44 0 01-.58-1.16c0-.8.64-1.44 1.44-1.44.38 0 .72.14.98.38 1.3-.92 3.1-1.52 5.1-1.58l.98-4.56c.02-.1.08-.18.16-.22.08-.04.18-.06.28-.04l3.24.68c.18-.38.56-.64 1-.64.62 0 1.12.5 1.12 1.12s-.5 1.12-1.12 1.12-1.12-.5-1.12-1.12l-2.9-.6-.86 4.06c1.94.08 3.68.68 4.94 1.56.26-.22.6-.36.96-.36.8 0 1.44.64 1.44 1.44 0 .48-.24.9-.6 1.16z"/></svg>
+      sign in with reddit →
+    </a>
+  )}
 </section>
 
 
-<!-- ═══ FOOTER ═══ -->
+<!-- FOOTER -->
 <footer class="footer">
   <div class="footer-inner">
     <div class="footer-brand">
-      <span class="footer-logo">Denver <em>Social</em></span>
-      <p>Real connections, real city.</p>
+      <span class="footer-logo">/r/<span>events.hub</span></span>
+      <p>Denver's Reddit event hub</p>
     </div>
     <div class="footer-links">
-      <a href="/events">Events</a>
-      <a href="/recs">Recs</a>
-      <a href="/about">About</a>
-      <a href="/conduct">Safety & Conduct</a>
-    </div>
-    <div class="footer-links">
-      <a href="https://discord.gg/S8SFNkdSgK" target="_blank" rel="noopener">Discord</a>
-      <a href="/login?mode=join">Join Free</a>
+      <a href="/events">events</a>
+      <a href="/recs">recs</a>
+      <a href="/about">about</a>
+      <a href="/conduct">conduct</a>
     </div>
   </div>
 </footer>
 
 
-<!-- ═══ BOTTOM TAB BAR (mobile) ═══ -->
+<!-- MOBILE NAV -->
 <div class="mob-nav">
   <div class="mob-nav-inner">
-    <a href="/" class="active"><span>🏠</span>Home</a>
-    <a href="/events"><span>📅</span>Events</a>
-    <a href="/recs"><span>⭐</span>Recs</a>
-    <a href="/about"><span>ℹ️</span>About</a>
-    {isAdmin && <a href="/admin"><span>⚙️</span>Admin</a>}
+    <a href="/" class="active"><span class="mn-icon">~</span>home</a>
+    <a href="/events"><span class="mn-icon">#</span>events</a>
+    <a href="/recs"><span class="mn-icon">*</span>recs</a>
+    <a href="/about"><span class="mn-icon">?</span>about</a>
+    {isAdmin && <a href="/admin"><span class="mn-icon">&gt;</span>admin</a>}
   </div>
 </div>
 
 
 <style is:inline>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { font-family: 'Inter', system-ui, sans-serif; background: #FFFFFF; color: #111827; scroll-behavior: smooth; }
+  :root {
+    --bg: #0e0e10;
+    --surface: #1a1a1f;
+    --surface-hover: #222228;
+    --surface-raised: #26262c;
+    --border: #2a2a30;
+    --border-hover: #3a3a42;
+    --text: #e4e4e7;
+    --text-sec: #8b8b94;
+    --text-faint: #55555e;
+    --accent: #ff4500;
+    --accent-dim: rgba(255,69,0,0.15);
+    --accent-glow: rgba(255,69,0,0.3);
+    --green: #00d26a;
+    --green-dim: rgba(0,210,106,0.12);
+    --blue: #4a9eff;
+    --blue-dim: rgba(74,158,255,0.12);
+    --yellow: #ffd93d;
+    --yellow-dim: rgba(255,217,61,0.1);
+    --red: #ff4757;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --body: 'Inter', system-ui, sans-serif;
+  }
+  html { font-family: var(--body); background: var(--bg); color: var(--text); scroll-behavior: smooth; }
   body { min-height: 100vh; overflow-x: hidden; }
   a { color: inherit; text-decoration: none; }
   img { display: block; }
+  ::selection { background: var(--accent-dim); color: var(--accent); }
 
-  /* ─── NAV ─── */
+  /* Tags */
+  .tag { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; }
+  .tag-orange { background: var(--accent-dim); color: var(--accent); }
+  .tag-green { background: var(--green-dim); color: var(--green); }
+  .tag-blue { background: var(--blue-dim); color: var(--blue); }
+  .tag-yellow { background: var(--yellow-dim); color: var(--yellow); }
+
+  /* Buttons */
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; border-radius: 8px;
+    font-family: var(--mono); font-size: 13px; font-weight: 700;
+    background: var(--accent); color: #fff;
+    transition: all .2s;
+  }
+  .btn-primary:hover { box-shadow: 0 0 24px var(--accent-glow); transform: translateY(-1px); }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; border-radius: 8px;
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    background: var(--surface); color: var(--text-sec);
+    border: 1px solid var(--border); transition: all .2s;
+  }
+  .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); }
+
+  /* NAV */
   .nav {
     position: sticky; top: 0; z-index: 200;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 32px; height: 56px;
-    background: rgba(255,255,255,.92); backdrop-filter: blur(20px);
-    border-bottom: 1px solid #E5E7EB;
+    padding: 0 24px; height: 52px;
+    background: rgba(14,14,16,.92); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
   }
-  .nav-logo { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px; color: #111827; letter-spacing: -0.02em; }
-  .nav-logo em { font-style: normal; color: #7C3AED; }
-  .nav-links { display: flex; gap: 24px; position: absolute; left: 50%; transform: translateX(-50%); }
-  .nav-links a { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; color: #6B7280; transition: color .2s; }
-  .nav-links a:hover { color: #111827; }
-  .nav-auth { display: flex; gap: 8px; }
-  .nav-btn-profile { font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; padding: 7px 16px; border-radius: 50px; color: #111827; border: 1px solid #E5E7EB; transition: all .2s; }
-  .nav-btn-profile:hover { border-color: #D1D5DB; background: #F8F9FB; }
-  .nav-btn-cta { font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700; padding: 7px 18px; border-radius: 50px; background: #7C3AED; color: #fff; transition: all .2s; }
-  .nav-btn-cta:hover { opacity: .9; }
+  .nav-logo { font-family: var(--mono); font-weight: 700; font-size: 15px; color: var(--text-sec); }
+  .nav-accent { color: var(--accent); }
+  .nav-links { display: flex; gap: 2px; position: absolute; left: 50%; transform: translateX(-50%); }
+  .nav-links a { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text-faint); padding: 6px 14px; border-radius: 6px; transition: all .2s; display: flex; align-items: center; gap: 4px; }
+  .nl-icon { opacity: .5; font-size: 14px; }
+  .nav-links a:hover { color: var(--text-sec); background: var(--surface); }
+  .nav-auth { display: flex; gap: 8px; align-items: center; }
+  .nav-user { display: flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); transition: all .2s; }
+  .nav-user:hover { border-color: var(--border-hover); background: var(--surface); }
+  .nav-karma { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-dim); padding: 2px 6px; border-radius: 4px; }
+  .nav-uname { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text); }
+  .nav-out { font-family: var(--mono); font-size: 11px; color: var(--text-faint); padding: 5px 8px; border-radius: 4px; transition: all .2s; }
+  .nav-out:hover { color: var(--red); }
+  .nav-cta { font-family: var(--mono); font-size: 12px; font-weight: 600; background: var(--accent); color: #fff; padding: 7px 16px; border-radius: 6px; transition: all .2s; }
+  .nav-cta:hover { box-shadow: 0 0 12px var(--accent-glow); }
 
-  /* ─── HERO ─── */
+  /* HERO */
   .hero {
-    padding: 56px 32px 48px; text-align: center; position: relative; overflow: hidden;
-    background: linear-gradient(135deg, #F8F9FB, #EEF2FF, #F0FDF4);
+    padding: 60px 32px 48px; text-align: center; position: relative;
+    border-bottom: 1px solid var(--border);
   }
   .hero::before {
-    content: ''; position: absolute; top: -50%; right: -30%; width: 500px; height: 500px;
-    border-radius: 50%; background: radial-gradient(circle, rgba(124,58,237,0.06), transparent 70%);
-    pointer-events: none;
+    content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, var(--accent-dim), transparent 70%);
+    pointer-events: none; opacity: .4;
   }
-  .hero-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 16px; border-radius: 50px;
-    background: rgba(124,58,237,0.06); font-size: 12px; font-weight: 600; color: #7C3AED;
-    margin-bottom: 20px;
+  .hero-terminal {
+    display: inline-block;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 20px;
+    margin-bottom: 28px; text-align: left;
   }
-  .hero-dot { width: 7px; height: 7px; border-radius: 50%; background: #10B981; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.4; transform:scale(1.5); } }
-  .hero h1 {
-    font-family: 'Outfit', sans-serif; font-size: clamp(32px, 5vw, 52px);
-    font-weight: 900; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 14px; color: #111827;
-  }
-  .hero h1 em { font-style: normal; color: #7C3AED; }
-  .hero-sub { font-size: 15px; color: #6B7280; max-width: 460px; margin: 0 auto 28px; line-height: 1.6; }
-  .hero-ctas { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .btn-cta {
-    display: inline-block; padding: 12px 28px; border-radius: 50px;
-    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
-    background: #7C3AED; color: #fff; transition: all .2s;
-    box-shadow: 0 2px 12px rgba(124,58,237,0.2);
-  }
-  .btn-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,58,237,0.3); }
-  .btn-sec {
-    display: inline-block; padding: 12px 28px; border-radius: 50px;
-    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
-    background: #fff; color: #111827; border: 1px solid #E5E7EB; transition: all .2s;
-  }
-  .btn-sec:hover { border-color: #D1D5DB; background: #F8F9FB; }
+  .hero-line { font-family: var(--mono); font-size: 13px; margin-bottom: 6px; }
+  .hl-prompt { color: var(--accent); font-weight: 700; }
+  .hl-cmd { color: var(--text); }
+  .hl-flag { color: var(--blue); }
+  .hl-str { color: var(--green); }
+  .hero-output { font-family: var(--mono); font-size: 12px; }
+  .ho-found { color: var(--text-sec); }
+  .ho-found strong { color: var(--accent); }
 
-  /* Hero mini cards */
-  .hero-cards { display: flex; gap: 14px; justify-content: center; margin-top: 40px; flex-wrap: wrap; padding: 0 16px; }
-  .hc {
-    width: 220px; background: #fff; border: 1px solid #E5E7EB; border-radius: 16px;
-    padding: 16px; text-align: left; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    transition: all .2s;
+  .hero-title {
+    font-family: var(--body); font-size: clamp(36px, 5vw, 56px);
+    font-weight: 800; line-height: 1.05; letter-spacing: -0.04em;
+    margin-bottom: 14px; position: relative;
   }
-  .hc:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-color: #D1D5DB; }
-  .hc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-  .hc-emoji { font-size: 22px; }
-  .hc-going { font-size: 10px; font-weight: 700; color: #10B981; }
-  .hc-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px; margin-bottom: 3px; color: #111827; }
-  .hc-meta { font-size: 10px; color: #9CA3AF; }
+  .hero-accent { color: var(--accent); }
+  .hero-sub {
+    font-size: 15px; color: var(--text-sec); max-width: 500px;
+    margin: 0 auto 24px; line-height: 1.7;
+  }
+  .hero-stats {
+    display: flex; align-items: center; justify-content: center; gap: 20px;
+    margin-bottom: 28px;
+  }
+  .hs { text-align: center; }
+  .hs-num { font-family: var(--mono); font-weight: 700; font-size: 22px; color: var(--text); display: block; }
+  .hs-label { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+  .hs-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--border); }
+  .hero-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
-  /* ─── CATEGORY SCROLLER ─── */
-  .categories {
-    border-bottom: 1px solid #E5E7EB;
-    padding: 16px 0;
-  }
-  .categories-scroll {
-    display: flex; gap: 10px; overflow-x: auto; padding: 0 32px;
-    scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .categories-scroll::-webkit-scrollbar { display: none; }
-  .cat-pill {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 16px; border-radius: 14px;
-    background: #F8F9FB; border: 1px solid #E5E7EB;
-    flex-shrink: 0; scroll-snap-align: start;
-    transition: all .2s; cursor: pointer;
-  }
-  .cat-pill:hover { border-color: var(--tint); background: color-mix(in srgb, var(--tint) 6%, #fff); }
-  .cat-emoji { font-size: 24px; }
-  .cat-text { display: flex; flex-direction: column; }
-  .cat-text strong { font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700; color: #111827; }
-  .cat-text small { font-size: 10px; color: #9CA3AF; }
-
-  /* ─── STATS STRIP ─── */
-  .stats-strip { display: flex; justify-content: center; gap: 48px; padding: 28px 32px; border-bottom: 1px solid #E5E7EB; }
-  .ss-item { text-align: center; }
-  .ss-num { font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 28px; color: #7C3AED; }
-  .ss-label { font-size: 10px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: .06em; }
-
-  /* ─── SECTIONS ─── */
+  /* SECTIONS */
   .section { padding: 56px 32px; max-width: 900px; margin: 0 auto; }
-  .sec-eyebrow {
-    display: inline-flex; padding: 4px 12px; border-radius: 50px;
-    background: #F0FDF4; color: #047857; font-size: 10px; font-weight: 700;
-    letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px;
-  }
-  .sec-title { font-family: 'Outfit', sans-serif; font-size: clamp(24px, 3.5vw, 32px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; color: #111827; }
-  .sec-sub { font-size: 13px; color: #6B7280; margin-bottom: 24px; }
+  .sec-head { margin-bottom: 24px; }
+  .sec-tag { margin-bottom: 8px; }
+  .sec-title { font-family: var(--body); font-size: 28px; font-weight: 800; letter-spacing: -0.03em; color: var(--text); }
+  .sec-sub { font-size: 14px; color: var(--text-sec); margin-top: 6px; line-height: 1.6; }
 
-  /* ─── VOTE LIST ─── */
-  .vote-list { display: flex; flex-direction: column; gap: 10px; }
+  /* EVENT GRID */
+  .event-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .ev-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px; transition: all .25s;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .ev-card:hover { border-color: var(--border-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .ev-top { display: flex; align-items: center; justify-content: space-between; }
+  .ev-fill-wrap { display: flex; align-items: center; gap: 6px; }
+  .ev-fill-bar { width: 48px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+  .ev-fill { height: 100%; border-radius: 2px; background: var(--green); }
+  .ev-fill-text { font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
+  .ev-title { font-weight: 700; font-size: 15px; color: var(--text); }
+  .ev-meta { font-family: var(--mono); font-size: 12px; color: var(--text-faint); display: flex; align-items: center; gap: 6px; }
+  .ev-meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-faint); }
+  .ev-karma { margin-top: 2px; }
+
+  /* VOTE LIST */
+  .vote-list { display: flex; flex-direction: column; gap: 8px; }
   .vi {
-    display: flex; align-items: center; gap: 14px;
-    padding: 14px 18px; background: #F8F9FB; border: 1px solid #E5E7EB;
-    border-radius: 14px; transition: all .2s; cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; transition: all .2s;
   }
-  .vi:hover { border-color: #D1D5DB; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
-  .vi-rank { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px; color: #9CA3AF; min-width: 24px; text-align: center; }
+  .vi:hover { border-color: var(--border-hover); }
+  .vi-rank { font-family: var(--mono); font-weight: 700; font-size: 16px; color: var(--text-faint); min-width: 20px; text-align: center; }
   .vi-info { flex: 1; }
-  .vi-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px; color: #111827; margin-bottom: 1px; }
-  .vi-desc { font-size: 11px; color: #6B7280; }
-  .vi-bar { width: 100px; height: 5px; border-radius: 50px; background: #E5E7EB; overflow: hidden; }
-  .vi-fill { height: 100%; border-radius: 50px; background: linear-gradient(90deg, #7C3AED, #3B82F6); }
-  .vi-count { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 16px; color: #7C3AED; min-width: 32px; text-align: right; }
+  .vi-title { font-weight: 600; font-size: 14px; color: var(--text); }
+  .vi-desc { font-size: 12px; color: var(--text-sec); margin-top: 2px; }
+  .vi-bar { width: 80px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+  .vi-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent), var(--yellow)); }
+  .vi-count { font-family: var(--mono); font-weight: 700; font-size: 15px; color: var(--accent); min-width: 28px; text-align: right; }
   .vi-up {
-    width: 30px; height: 30px; border-radius: 10px; background: rgba(124,58,237,0.06);
-    border: 1px solid transparent; color: #7C3AED; font-size: 13px;
+    width: 28px; height: 28px; border-radius: 6px; background: var(--accent-dim);
+    border: 1px solid transparent; color: var(--accent); font-size: 12px;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
-    transition: all .15s; flex-shrink: 0;
+    transition: all .15s; flex-shrink: 0; font-family: var(--mono);
   }
-  .vi-up:hover { background: #7C3AED; color: #fff; transform: scale(1.08); }
-  .vote-cta-text { margin-top: 16px; font-size: 13px; color: #6B7280; text-align: center; }
-  .vote-cta-text a { color: #7C3AED; font-weight: 600; }
+  .vi-up:hover { background: var(--accent); color: #fff; }
 
-  /* ─── ACTIVITY CARDS ─── */
-  .activity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  .activity-card { position: relative; border-radius: 18px; overflow: hidden; height: 220px; display: flex; }
-  .activity-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  .activity-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.8) 0%, rgba(0,0,0,.2) 50%, rgba(0,0,0,.1) 100%); }
-  .activity-content { position: relative; z-index: 2; margin-top: auto; padding: 20px; }
-  .activity-emoji { font-size: 22px; display: block; margin-bottom: 8px; }
-  .activity-title { font-family: 'Outfit', sans-serif; font-size: 16px; color: #fff; font-weight: 700; margin-bottom: 4px; }
-  .activity-desc { font-size: 12px; color: rgba(255,255,255,.65); line-height: 1.5; }
-
-  /* ─── HOW IT WORKS ─── */
-  .how-section { padding: 56px 0; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; background: #F8F9FB; }
+  /* HOW IT WORKS */
+  .how-section {
+    padding: 56px 0; border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border); background: var(--surface);
+  }
   .how-inner { max-width: 900px; margin: 0 auto; padding: 0 32px; }
-  .steps { display: flex; gap: 24px; margin-top: 24px; }
-  .step { flex: 1; display: flex; align-items: flex-start; gap: 14px; }
+  .steps { display: flex; gap: 20px; margin-top: 0; }
+  .step {
+    flex: 1; display: flex; flex-direction: column; gap: 10px;
+    padding: 20px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px;
+  }
   .step-num {
-    width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px;
-    background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.12);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800; color: #7C3AED;
+    font-family: var(--mono); font-size: 24px; font-weight: 700;
+    color: var(--accent); opacity: .4;
   }
-  .step-body h3 { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px; }
-  .step-body p { font-size: 12px; color: #6B7280; line-height: 1.6; }
+  .step-body h3 { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .step-body p { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
 
-  /* ─── EVENTS PREVIEW ─── */
-  .events-preview { display: flex; flex-direction: column; gap: 10px; }
-  .ep-card {
-    display: flex; align-items: center; gap: 14px;
-    padding: 16px 18px; border-radius: 14px;
-    background: #F8F9FB; border: 1px solid #E5E7EB;
-    transition: all .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  /* TRUST GRID */
+  .trust-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .trust-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px;
   }
-  .ep-card:hover { border-color: #D1D5DB; transform: translateX(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-  .ep-date { text-align: center; min-width: 48px; padding: 6px 10px; background: rgba(124,58,237,0.06); border-radius: 10px; }
-  .ep-month { display: block; font-size: 9px; font-weight: 700; color: #7C3AED; text-transform: uppercase; }
-  .ep-day { display: block; font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 900; color: #111827; line-height: 1.1; }
-  .ep-info { flex: 1; }
-  .ep-type { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; }
-  .ep-type-label { font-size: 11px; color: #7C3AED; font-weight: 600; text-transform: capitalize; }
-  .ep-title { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 2px; }
-  .ep-meta { font-size: 11px; color: #9CA3AF; }
-  .ep-arrow { font-size: 16px; color: #9CA3AF; flex-shrink: 0; transition: color .2s; }
-  .ep-card:hover .ep-arrow { color: #7C3AED; }
+  .tc-icon { font-size: 20px; margin-bottom: 10px; display: block; }
+  .trust-card h4 { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .trust-card p { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
 
-  /* ─── TRUST ─── */
-  .trust-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  .trust-quote {
-    background: linear-gradient(135deg, rgba(16,185,129,0.04), rgba(124,58,237,0.04));
-    border: 1px solid rgba(16,185,129,0.12); border-radius: 20px; padding: 32px;
-  }
-  .tq-mark { font-family: 'Outfit', sans-serif; font-size: 60px; color: rgba(16,185,129,0.2); line-height: 0.5; margin-bottom: 16px; display: block; font-weight: 900; }
-  .trust-quote p { font-family: 'Outfit', sans-serif; font-size: 18px; color: #111827; line-height: 1.5; margin-bottom: 20px; font-weight: 500; }
-  .trust-quote footer { display: flex; align-items: center; gap: 10px; }
-  .tq-avatar {
-    width: 34px; height: 34px; border-radius: 50%; background: rgba(16,185,129,0.1);
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 13px; color: #10B981;
-  }
-  .trust-quote footer strong { display: block; font-size: 12px; color: #111827; }
-  .trust-quote footer span { font-size: 10px; color: #9CA3AF; }
-  .trust-facts { background: #F8F9FB; border: 1px solid #E5E7EB; border-radius: 20px; padding: 32px; }
-  .trust-facts h3 { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 20px; }
-  .tf-list { display: flex; flex-direction: column; gap: 12px; }
-  .tf-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #6B7280; line-height: 1.5; }
-  .tf-check {
-    width: 22px; height: 22px; flex-shrink: 0; background: rgba(16,185,129,0.08);
-    border-radius: 6px; display: flex; align-items: center; justify-content: center;
-    color: #10B981; font-size: 11px; font-weight: 700;
-  }
-
-  /* ─── DISCORD ─── */
-  .discord-section {
-    margin: 0 32px; border-radius: 20px; overflow: hidden;
-    background: linear-gradient(135deg, #5865F2 0%, #4752c4 100%);
-    position: relative;
-  }
-  .discord-section::before {
-    content: ''; position: absolute; inset: 0;
-    background: radial-gradient(circle at 80% 20%, rgba(255,255,255,.12), transparent 50%);
-  }
-  .discord-inner {
-    position: relative; z-index: 2;
-    max-width: 900px; margin: 0 auto;
-    padding: 36px 40px; display: flex; align-items: center; gap: 24px;
-  }
-  .discord-icon { font-size: 36px; flex-shrink: 0; }
-  .discord-text { flex: 1; }
-  .discord-text h3 { font-size: 18px; color: #fff; margin-bottom: 4px; }
-  .discord-text h3 strong { font-family: 'Outfit', sans-serif; font-size: 24px; }
-  .discord-text p { font-size: 13px; color: rgba(255,255,255,.65); line-height: 1.5; }
-  .discord-btn {
-    padding: 12px 28px; background: #fff; color: #5865F2;
-    border-radius: 50px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
-    flex-shrink: 0; transition: transform .2s, box-shadow .2s;
-  }
-  .discord-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
-
-  /* ─── FINAL CTA ─── */
+  /* FINAL CTA */
   .final-cta {
     padding: 64px 32px; text-align: center;
-    background: linear-gradient(135deg, #F8F9FB, #EEF2FF);
-    border-top: 1px solid #E5E7EB;
+    border-top: 1px solid var(--border);
+    position: relative;
   }
+  .final-cta::before {
+    content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 400px; height: 200px;
+    background: radial-gradient(ellipse, var(--accent-dim), transparent 70%);
+    pointer-events: none; opacity: .3;
+  }
+  .fc-terminal {
+    font-family: var(--mono); font-size: 14px; margin-bottom: 20px;
+    display: inline-block; padding: 8px 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  }
+  .fc-prompt { color: var(--accent); font-weight: 700; }
+  .fc-cmd { color: var(--text); }
+  .fc-flag { color: var(--blue); }
+  .fc-str { color: var(--green); }
   .final-cta h2 {
-    font-family: 'Outfit', sans-serif; font-size: clamp(28px, 4vw, 40px);
-    font-weight: 900; color: #111827; margin-bottom: 8px; letter-spacing: -0.02em;
+    font-size: 32px; font-weight: 800; letter-spacing: -0.03em;
+    margin-bottom: 8px; position: relative;
   }
-  .final-cta h2 em { font-style: normal; color: #7C3AED; }
-  .final-cta p { font-size: 14px; color: #6B7280; margin-bottom: 24px; }
+  .final-cta p { font-size: 14px; color: var(--text-sec); margin-bottom: 24px; }
 
-  /* ─── FOOTER ─── */
-  .footer { border-top: 1px solid #E5E7EB; padding: 40px 32px; }
+  /* FOOTER */
+  .footer { border-top: 1px solid var(--border); padding: 32px; }
   .footer-inner { max-width: 900px; margin: 0 auto; display: flex; gap: 48px; align-items: flex-start; }
   .footer-brand { flex: 1; }
-  .footer-logo { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px; color: #111827; display: block; margin-bottom: 4px; }
-  .footer-logo em { font-style: normal; color: #7C3AED; }
-  .footer-brand p { font-size: 12px; color: #9CA3AF; }
+  .footer-logo { font-family: var(--mono); font-weight: 700; font-size: 14px; color: var(--text-sec); display: block; margin-bottom: 4px; }
+  .footer-logo span { color: var(--accent); }
+  .footer-brand p { font-size: 12px; color: var(--text-faint); }
   .footer-links { display: flex; flex-direction: column; gap: 8px; }
-  .footer-links a { font-size: 13px; color: #6B7280; transition: color .2s; }
-  .footer-links a:hover { color: #111827; }
+  .footer-links a { font-family: var(--mono); font-size: 12px; color: var(--text-faint); transition: color .2s; }
+  .footer-links a:hover { color: var(--text); }
 
-  /* ─── MOBILE BOTTOM TAB BAR ─── */
+  /* MOBILE NAV */
   .mob-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
-    background: rgba(255,255,255,.95); backdrop-filter: blur(24px);
-    border-top: 1px solid #E5E7EB;
-    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+    background: rgba(14,14,16,.95); backdrop-filter: blur(24px);
+    border-top: 1px solid var(--border);
+    padding: 4px 0 max(4px, env(safe-area-inset-bottom));
   }
-  .mob-nav-inner {
-    display: flex; justify-content: space-around; align-items: center;
-    max-width: 540px; margin: 0 auto; padding: 0 4px;
-  }
+  .mob-nav-inner { display: flex; justify-content: space-around; align-items: center; max-width: 540px; margin: 0 auto; }
   .mob-nav a {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    padding: 6px 10px; font-size: 10px; color: #9CA3AF;
-    font-family: 'Outfit', sans-serif; font-weight: 600; border-radius: 10px; transition: all .2s;
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 6px 10px; font-size: 10px; color: var(--text-faint);
+    font-family: var(--mono); font-weight: 500; border-radius: 6px; transition: all .2s;
   }
-  .mob-nav a span { font-size: 20px; }
-  .mob-nav a.active { color: #7C3AED; background: rgba(124,58,237,0.06); }
+  .mn-icon { font-size: 16px; font-weight: 700; line-height: 1.2; }
+  .mob-nav a.active { color: var(--accent); background: var(--accent-dim); }
 
-  /* ─── RESPONSIVE ─── */
+  /* RESPONSIVE */
   @media (min-width: 901px) { .mob-nav { display: none; } body { padding-bottom: 0; } }
-  @media (max-width: 900px) { .nav-links { display: none; } .nav { padding: 14px 20px; } }
+  @media (max-width: 900px) { .nav-links { display: none; } .nav { padding: 0 16px; } }
   @media (max-width: 768px) {
     body { padding-bottom: 72px; }
-    .hero { padding: 40px 20px 32px; }
-    .hero-cards { flex-direction: column; align-items: center; }
-    .activity-grid { grid-template-columns: 1fr 1fr; }
-    .activity-card { height: 180px; }
-    .steps { flex-direction: column; gap: 16px; }
+    .hero { padding: 40px 20px 36px; }
+    .hero-stats { gap: 12px; }
+    .hs-num { font-size: 18px; }
+    .event-grid { grid-template-columns: 1fr; }
+    .steps { flex-direction: column; }
     .trust-grid { grid-template-columns: 1fr; }
     .section { padding: 40px 20px; }
     .how-inner { padding: 0 20px; }
-    .stats-strip { gap: 24px; padding: 20px 16px; }
-    .discord-section { margin: 0 20px; }
-    .discord-inner { flex-direction: column; text-align: center; padding: 28px 20px; }
     .footer-inner { flex-direction: column; gap: 20px; }
-    .footer { padding: 28px 20px; }
-  }
-  @media (max-width: 480px) {
-    .hc { width: 100%; }
-    .activity-grid { grid-template-columns: 1fr; }
-    .activity-card { height: 160px; }
+    .footer { padding: 24px 20px; }
   }
 
-  /* ─── ANIMATIONS ─── */
-  .fade-up { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1); }
-  .fade-up.in { opacity: 1; transform: translateY(0); }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 </style>
-
 
 <script is:inline>
   // Vote buttons
@@ -677,23 +588,12 @@ const content = await getContent();
       c.textContent = parseInt(c.textContent) + 1;
       var w = parseInt(f.style.width) || 0;
       f.style.width = Math.min(100, w + 2) + '%';
-      this.style.background = '#7C3AED';
+      this.style.background = 'var(--accent)';
       this.style.color = '#fff';
       this.textContent = '✓';
       this.disabled = true;
     });
   });
-
-  // Fade-up on scroll
-  var fadeEls = document.querySelectorAll('.fade-up');
-  if (fadeEls.length && 'IntersectionObserver' in window) {
-    var obs = new IntersectionObserver(function(entries) {
-      entries.forEach(function(e) {
-        if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); }
-      });
-    }, { threshold: 0.12 });
-    fadeEls.forEach(function(el) { obs.observe(el); });
-  }
 </script>
 
 </body>

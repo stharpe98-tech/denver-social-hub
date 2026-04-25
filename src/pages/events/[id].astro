@@ -10,937 +10,485 @@ if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 
 let event: any = null;
 let rsvps: any[] = [];
+let waitlist: any[] = [];
+let comments: any[] = [];
+let bringItems: any[] = [];
 let myRsvp = false;
+let myWaitlist = false;
 
 try {
   if (db && id) {
     event = await db.prepare("SELECT * FROM events WHERE id=?").bind(id).first();
-    const r = await db.prepare("SELECT r.member_email as email,r.member_name as name,m.neighborhood FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=?").bind(id).all();
+    const r = await db.prepare("SELECT r.*, m.reddit_username, m.karma, m.reliability_score, m.check_in_count FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL ORDER BY r.created_at").bind(id).all();
     rsvps = r?.results || [];
-    if (user) myRsvp = rsvps.some((r:any) => r.email===user.email);
+    const w = await db.prepare("SELECT r.*, m.reddit_username, m.karma FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NOT NULL ORDER BY r.waitlist_position").bind(id).all();
+    waitlist = w?.results || [];
+    const c = await db.prepare("SELECT * FROM comments WHERE event_id=? ORDER BY created_at ASC").bind(id).all();
+    comments = c?.results || [];
+    const bi = await db.prepare("SELECT * FROM bring_items WHERE event_id=? ORDER BY id ASC").bind(id).all();
+    bringItems = bi?.results || [];
+    if (user) {
+      myRsvp = rsvps.some((r:any) => r.member_email === user.email);
+      myWaitlist = waitlist.some((w:any) => w.member_email === user.email);
+    }
   }
-} catch {}
+} catch (err) { console.error('Event detail error:', err); }
 
 if (!event) return Astro.redirect("/events");
 
-const typeEmoji: Record<string,string> = { dinner:"🍽️",game_night:"🎳",outdoor:"🏔️",brewery:"🍺",coffee:"☕",arts:"🎨",music:"🎵",social:"🎉",group_tickets:"🎫",camping:"🏕️",sports_outing:"🏒",sports:"🏒",bowling:"🎳",active:"🧗",casino:"🎰",food_trucks:"🌮",potluck:"🍲",other:"📅" };
+const typeLabel: Record<string,string> = { dinner:"dinner",game_night:"game_night",outdoor:"outdoor",brewery:"brewery",coffee:"coffee",arts:"arts",music:"music",social:"social",other:"event" };
+const spotsLeft = Math.max(0, (parseInt(event.spots) || 12) - rsvps.length);
+const isFull = spotsLeft === 0;
+const fillPct = Math.min(100, Math.round(rsvps.length / (parseInt(event.spots) || 12) * 100));
 
-// Per-type theme colors: [accent, light bg tint, tag bg, tag text]
-const typeThemes: Record<string, { accent: string; grad1: string; grad2: string; tagBg: string; tagText: string }> = {
-  dinner:        { accent:"#F05A28", grad1:"#FFF7ED", grad2:"#FEF2F2", tagBg:"#FFF7ED", tagText:"#C2410C" },
-  game_night:    { accent:"#7C3AED", grad1:"#F5F3FF", grad2:"#EEF2FF", tagBg:"#EEF2FF", tagText:"#5B21B6" },
-  outdoor:       { accent:"#059669", grad1:"#ECFDF5", grad2:"#F0FDF4", tagBg:"#F0FDF4", tagText:"#047857" },
-  brewery:       { accent:"#D97706", grad1:"#FFFBEB", grad2:"#FEF3C7", tagBg:"#FFFBEB", tagText:"#92400E" },
-  coffee:        { accent:"#92400E", grad1:"#FFFBEB", grad2:"#FEF9EE", tagBg:"#FEF3C7", tagText:"#78350F" },
-  arts:          { accent:"#DB2777", grad1:"#FDF2F8", grad2:"#FCE7F3", tagBg:"#FDF2F8", tagText:"#9D174D" },
-  music:         { accent:"#7C3AED", grad1:"#F5F3FF", grad2:"#FDF2F8", tagBg:"#F5F3FF", tagText:"#6D28D9" },
-  social:        { accent:"#EC4899", grad1:"#FDF2F8", grad2:"#FFF1F2", tagBg:"#FCE7F3", tagText:"#BE185D" },
-  group_tickets: { accent:"#2563EB", grad1:"#EFF6FF", grad2:"#EEF2FF", tagBg:"#EFF6FF", tagText:"#1D4ED8" },
-  camping:       { accent:"#059669", grad1:"#ECFDF5", grad2:"#F0FDF4", tagBg:"#ECFDF5", tagText:"#065F46" },
-  sports_outing: { accent:"#2563EB", grad1:"#EFF6FF", grad2:"#DBEAFE", tagBg:"#EFF6FF", tagText:"#1E40AF" },
-  bowling:       { accent:"#3B82F6", grad1:"#EFF6FF", grad2:"#E0F2FE", tagBg:"#EFF6FF", tagText:"#1D4ED8" },
-  active:        { accent:"#059669", grad1:"#ECFDF5", grad2:"#D1FAE5", tagBg:"#ECFDF5", tagText:"#065F46" },
-  casino:        { accent:"#DC2626", grad1:"#FEF2F2", grad2:"#FFFBEB", tagBg:"#FEF2F2", tagText:"#991B1B" },
-  food_trucks:   { accent:"#EA580C", grad1:"#FFF7ED", grad2:"#FFFBEB", tagBg:"#FFF7ED", tagText:"#C2410C" },
-  potluck:       { accent:"#F05A28", grad1:"#FFF7ED", grad2:"#FEF2F2", tagBg:"#FFF7ED", tagText:"#C2410C" },
-  sports:        { accent:"#2563EB", grad1:"#EFF6FF", grad2:"#DBEAFE", tagBg:"#EFF6FF", tagText:"#1E40AF" },
-  other:         { accent:"#7C3AED", grad1:"#F8F9FB", grad2:"#EEF2FF", tagBg:"#EEF2FF", tagText:"#4338CA" },
-};
+// Karma gate check
+const userKarma = user?.karma || 0;
+const userAccountAge = user?.reddit_account_created ? Math.floor((Date.now() - new Date(user.reddit_account_created).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+const meetsKarmaGate = (!event.karma_min || userKarma >= event.karma_min) && (!event.account_age_min || userAccountAge >= event.account_age_min);
+const showLocation = myRsvp && meetsKarmaGate;
 
-const theme = typeThemes[event.event_type] || typeThemes.other;
-
-const typeImages: Record<string, string> = {
-  dinner:        "https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=900&q=75",
-  game_night:    "https://images.unsplash.com/photo-1632501641765-e568d28b0015?w=900&q=75",
-  outdoor:       "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=75",
-  brewery:       "https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=900&q=75",
-  coffee:        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=900&q=75",
-  arts:          "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=900&q=75",
-  music:         "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=900&q=75",
-  social:        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=900&q=75",
-  group_tickets: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=900&q=75",
-  camping:       "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=900&q=75",
-  sports_outing: "https://images.unsplash.com/photo-1461896836934-bd45ba8fcbf5?w=900&q=75",
-  bowling:       "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=900&q=75",
-  active:        "https://images.unsplash.com/photo-1522163182402-834f871fd851?w=900&q=75",
-  casino:        "https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=900&q=75",
-  food_trucks:   "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=900&q=75",
-  potluck:       "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=900&q=75",
-  sports:        "https://images.unsplash.com/photo-1461896836934-bd45ba8fcbf5?w=900&q=75",
-  other:         "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=900&q=75",
-};
-const heroImage = typeImages[event.event_type] || typeImages.other;
-
-// ── Google Maps link ──
-const venueOrLocation = event.location || event.zone || '';
-const mapsQuery = venueOrLocation ? encodeURIComponent(venueOrLocation + (venueOrLocation.toLowerCase().includes('denver') || venueOrLocation.toLowerCase().includes('co') ? '' : ', Denver, CO')) : '';
-const googleMapsUrl = mapsQuery ? `https://www.google.com/maps/search/?api=1&query=${mapsQuery}` : '';
-
-// Zone-level maps link (for non-RSVP'd users who only see the zone)
-const zoneQuery = event.zone ? encodeURIComponent(event.zone + ', Denver, CO') : '';
-const zoneMapsUrl = zoneQuery ? `https://www.google.com/maps/search/?api=1&query=${zoneQuery}` : '';
-
-// Budget display logic
-const hasBudget = event.price_cap && event.price_cap !== '' && event.price_cap !== 'Free' && event.price_cap !== '$0';
-
-const spotsLeft = Math.max(0, (parseInt(event.spots) || 10) - rsvps.length);
-const avatarColors = ["#7C3AED","#3B82F6","#10B981","#F59E0B","#EC4899","#EF4444","#6366F1"];
-
-// ── Calendar link generation ──
-const monthMap: Record<string, string> = {
-  January:"01", February:"02", March:"03", April:"04", May:"05", June:"06",
-  July:"07", August:"08", September:"09", October:"10", November:"11", December:"12",
-  JAN:"01", FEB:"02", MAR:"03", APR:"04", MAY:"05", JUN:"06",
-  JUL:"07", AUG:"08", SEP:"09", OCT:"10", NOV:"11", DEC:"12",
-  Jan:"01", Feb:"02", Mar:"03", Apr:"04", May:"05", Jun:"06",
-  Jul:"07", Aug:"08", Sep:"09", Oct:"10", Nov:"11", Dec:"12"
-};
-function buildCalendarDate(month: string, day: string, time?: string): { start: string; end: string } | null {
-  const mo = monthMap[month];
-  if (!mo || !day) return null;
-  const d = day.padStart(2, '0');
-  const year = new Date().getFullYear();
-  if (time) {
-    // Try to parse time like "7:00 PM", "7pm", "19:00"
-    let h = 18, m = 0;
-    const match = time.match(/(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
-    if (match) {
-      h = parseInt(match[1]);
-      m = parseInt(match[2] || '0');
-      if (match[3]?.toLowerCase() === 'pm' && h < 12) h += 12;
-      if (match[3]?.toLowerCase() === 'am' && h === 12) h = 0;
-    }
-    const startStr = `${year}${mo}${d}T${String(h).padStart(2,'0')}${String(m).padStart(2,'0')}00`;
-    const endH = h + 2; // Default 2-hour duration
-    const endStr = `${year}${mo}${d}T${String(endH).padStart(2,'0')}${String(m).padStart(2,'0')}00`;
-    return { start: startStr, end: endStr };
+// Build threaded comments
+const rootComments = comments.filter((c: any) => !c.parent_id);
+const childMap: Record<string, any[]> = {};
+comments.forEach((c: any) => {
+  if (c.parent_id) {
+    if (!childMap[c.parent_id]) childMap[c.parent_id] = [];
+    childMap[c.parent_id].push(c);
   }
-  // All-day event
-  return { start: `${year}${mo}${d}`, end: `${year}${mo}${String(parseInt(d)+1).padStart(2,'0')}` };
-}
+});
 
-const calDates = buildCalendarDate(event.event_month || '', event.event_day || '');
+// Calendar link
+const monthMap: Record<string,string> = {JAN:"01",FEB:"02",MAR:"03",APR:"04",MAY:"05",JUN:"06",JUL:"07",AUG:"08",SEP:"09",OCT:"10",NOV:"11",DEC:"12"};
+const mo = monthMap[(event.event_month||'').toUpperCase()];
+const d = (event.event_day||'').padStart(2,'0');
+const yr = new Date().getFullYear();
 let googleCalUrl = '';
-let icsData = '';
-if (calDates) {
-  const loc = encodeURIComponent(event.location || event.zone || 'Denver, CO');
-  const title = encodeURIComponent(event.title || 'Denver Social Event');
-  const desc = encodeURIComponent((event.description || 'Denver Social community event') + '\n\nRSVP: https://denver-social-hub.stharpe98.workers.dev/events/' + id);
-  const hasTime = calDates.start.includes('T');
-  const dates = hasTime ? `${calDates.start}/${calDates.end}` : `${calDates.start}/${calDates.end}`;
-  googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${desc}&location=${loc}`;
-
-  // Build .ics content
-  const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  icsData = [
-    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Denver Social//EN',
-    'BEGIN:VEVENT',
-    `DTSTART:${calDates.start}`, `DTEND:${calDates.end}`,
-    `SUMMARY:${event.title}`, `LOCATION:${event.location || event.zone || 'Denver, CO'}`,
-    `DESCRIPTION:${(event.description || 'Denver Social community event').replace(/\n/g, '\\n')}`,
-    `DTSTAMP:${now}`, `UID:dsn-event-${id}@denversocialhub.com`,
-    'END:VEVENT', 'END:VCALENDAR'
-  ].join('\n');
-}
-
-// ── Host info ──
-let host: any = null;
-if (db && event.host_id) {
-  try {
-    host = await db.prepare("SELECT id, name, neighborhood, bio, joined_at, events_attended, suggestions_submitted FROM members WHERE id = ?").bind(event.host_id).first();
-  } catch {}
-}
-const isHost = user && host && user.id === host.id;
-const isAdmin = user?.role === 'admin';
-
-// ── Host updates (logistics notes) ──
-let eventUpdates: any[] = [];
-if (db) {
-  try {
-    const updResult = await db.prepare("SELECT id, author_name, message, created_at FROM event_updates WHERE event_id = ? ORDER BY created_at DESC LIMIT 10").bind(id).all();
-    eventUpdates = updResult?.results || [];
-  } catch {}
-}
-
-// Check if event is in the past (for photo gallery)
-const isPastEvent = !!event.is_past;
-
-// Load photos for past events
-let eventPhotos: any[] = [];
-if (db && isPastEvent) {
-  try {
-    const photoResult = await db.prepare("SELECT id, email, name, photo_url, caption, created_at FROM event_photos WHERE event_id=? ORDER BY created_at DESC").bind(id).all();
-    eventPhotos = photoResult?.results || [];
-  } catch {}
+if (mo && d !== '00') {
+  const start = `${yr}${mo}${d}`;
+  const end = `${yr}${mo}${String(parseInt(d)+1).padStart(2,'0')}`;
+  googleCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(event.title)}&dates=${start}/${end}&location=${encodeURIComponent(event.location||event.zone||'Denver')}&details=${encodeURIComponent('Denver events.hub — '+event.description)}`;
 }
 ---
 <Base title={event.title}>
-
-<!-- Tinted full-page background wash -->
-<div class="det-bg-wash" style={`background: linear-gradient(170deg, ${theme.grad1} 0%, ${theme.grad2} 35%, #F8F9FB 65%, #FFFFFF 100%);`}></div>
-
-<div class="det-page" style={`--ev-accent: ${theme.accent}; --ev-accent-shadow: ${theme.accent}33;`}>
-  <a href="/events" class="det-back">← Back to events</a>
-
-  <!-- Big photo hero card -->
-  <div class="det-hero-card">
-    <div class="det-hero-img" style={`background-image: url(${heroImage});`}>
-      <div class="det-hero-overlay"></div>
-      <div class="det-hero-tag" style={`color: ${theme.tagText};`}>{typeEmoji[event.event_type] || '📅'} {(event.event_type || 'event').replace('_', ' ')}</div>
-      <div class="det-hero-spots">{rsvps.length} of {event.spots} going</div>
-      <div class="det-hero-bottom">
-        <h1 class="det-hero-title">{event.title}</h1>
-        <p class="det-hero-meta">
-          {(event.event_month || 'TBD').slice(0, 3)} {event.event_day || ''} · {myRsvp ? (event.location || event.zone || 'Denver') : (event.zone || 'Denver')}
-        </p>
+<div class="det">
+  <!-- LEFT COLUMN -->
+  <div class="det-left">
+    <!-- Event header -->
+    <div class="det-header">
+      <div class="det-breadcrumb">
+        <a href="/events">&larr; events</a>
+        <span class="det-bc-sep">/</span>
+        <span>{typeLabel[event.event_type] || 'event'}</span>
+      </div>
+      <h1 class="det-title">{event.title}</h1>
+      <div class="det-tags">
+        <span class="tag tag-blue">{typeLabel[event.event_type] || 'event'}</span>
+        {event.karma_min > 0 && <span class="tag tag-yellow">requires {event.karma_min}+ karma</span>}
+        {event.account_age_min > 0 && <span class="tag tag-yellow">{event.account_age_min}d+ account</span>}
       </div>
     </div>
 
-    <div class="det-hero-body">
-      <!-- Info grid -->
-      <div class="det-info-grid">
-        <div class="det-info-item">
-          <div class="det-info-label">When</div>
-          <div class="det-info-value">{(event.event_month || 'TBD').slice(0, 3)} {event.event_day || 'TBD'}{event.event_time ? ` · ${event.event_time}` : ''}</div>
-        </div>
-        <div class="det-info-item">
-          <div class="det-info-label">Where</div>
-          {myRsvp ? (
-            <div class="det-info-value">
-              {event.location || event.zone || 'Denver'}
-              {googleMapsUrl && <a href={googleMapsUrl} target="_blank" rel="noopener" class="det-maps-link">📍 Map</a>}
-            </div>
-          ) : (
-            <div class="det-info-value">
-              {event.zone || 'Denver'}
-              {zoneMapsUrl && <a href={zoneMapsUrl} target="_blank" rel="noopener" class="det-maps-link">📍 Area</a>}
-              <span class="det-info-rsvp-hint">RSVP for exact spot</span>
-            </div>
-          )}
-        </div>
-        {hasBudget ? (
-          <div class="det-info-item">
-            <div class="det-info-label">Price</div>
-            <div class="det-info-value">{event.price_cap}</div>
-          </div>
-        ) : (
-          <div class="det-info-item">
-            <div class="det-info-label">Price</div>
-            <div class="det-info-value" style="color: #059669;">Free</div>
-          </div>
-        )}
-        <div class="det-info-item">
-          <div class="det-info-label">Group Size</div>
-          <div class="det-info-value">{event.spots} people max</div>
-        </div>
+    <!-- Info grid -->
+    <div class="det-info">
+      <div class="di-row">
+        <span class="di-label">when</span>
+        <span class="di-value">{event.event_month} {event.event_day}{event.end_date ? ` — ${event.end_date}` : ''}</span>
       </div>
-
-      <!-- Point of Contact — RSVP-gated -->
-      {myRsvp && event.contact_phone ? (
-        <div class="det-contact-bar">
-          <span class="det-contact-icon">📞</span>
-          <div>
-            <div class="det-contact-label">Point of contact</div>
-            <a href={`tel:${event.contact_phone}`} class="det-contact-phone">{event.contact_phone}</a>
-            <span class="det-contact-hint">Call or text if you can't find the group</span>
-          </div>
-        </div>
-      ) : !myRsvp && (
-        <div class="det-contact-bar locked">
-          <span class="det-contact-icon">📞</span>
-          <div>
-            <div class="det-contact-label">Point of contact</div>
-            <span class="det-contact-hint">RSVP to see host's number</span>
-          </div>
+      <div class="di-row">
+        <span class="di-label">where</span>
+        <span class="di-value">
+          {showLocation && event.location ? event.location : (event.zone || 'Denver')}
+          {!showLocation && event.location && <span class="di-locked"> (RSVP to reveal address)</span>}
+        </span>
+      </div>
+      <div class="di-row">
+        <span class="di-label">spots</span>
+        <span class="di-value">
+          <span class="di-fill-bar"><span class="di-fill" style={`width:${fillPct}%`}></span></span>
+          {rsvps.length}/{event.spots || 12}
+          {spotsLeft <= 3 && spotsLeft > 0 && <span class="di-hot">({spotsLeft} left!)</span>}
+          {isFull && <span class="di-full">(full — join waitlist)</span>}
+        </span>
+      </div>
+      {event.price_cap && event.price_cap !== 'Free' && event.price_cap !== '$0' && (
+        <div class="di-row">
+          <span class="di-label">cost</span>
+          <span class="di-value">{event.price_cap}</span>
         </div>
       )}
-
-      {event.description && <p class="det-desc">{event.description}</p>}
-
-      <!-- Add to Calendar (only rendered for logged-in users, shown after RSVP) -->
-      {user && calDates && (
-        <div class="det-cal-row" id="cal-row" style={myRsvp ? '' : 'display:none'}>
-          <a href={googleCalUrl} target="_blank" rel="noopener" class="det-cal-btn">
-            <span class="det-cal-icon">📅</span> Add to Google Calendar
-          </a>
-          <button class="det-cal-btn det-cal-ics" data-ics={icsData}>
-            <span class="det-cal-icon">🗓️</span> Download .ics
-          </button>
+      {event.host_name && (
+        <div class="di-row">
+          <span class="di-label">host</span>
+          <span class="di-value">{event.host_name}{event.contact_phone && myRsvp ? ` · ${event.contact_phone}` : ''}</span>
         </div>
       )}
     </div>
+
+    {event.description && (
+      <div class="det-desc">
+        <h3 class="det-sec-title">// description</h3>
+        <p>{event.description}</p>
+      </div>
+    )}
+
+    <!-- Karma gate warning -->
+    {user && !meetsKarmaGate && (
+      <div class="det-gate">
+        <span class="det-gate-icon">🔒</span>
+        <div>
+          <strong>Karma gate active</strong>
+          <p>This event requires {event.karma_min ? `${event.karma_min}+ karma` : ''}{event.karma_min && event.account_age_min ? ' and ' : ''}{event.account_age_min ? `${event.account_age_min}+ day old account` : ''}. Your karma: {userKarma}.</p>
+        </div>
+      </div>
+    )}
+
+    <!-- RSVP / Waitlist actions -->
+    <div class="det-actions">
+      {!user ? (
+        <a href={`/login?next=/events/${id}`} class="btn btn-primary">sign in to rsvp</a>
+      ) : myRsvp ? (
+        <div class="det-confirmed">
+          <span class="det-confirmed-icon">✓</span>
+          <span>You're in!</span>
+          {googleCalUrl && <a href={googleCalUrl} target="_blank" rel="noopener" class="det-cal-link">+ add to calendar</a>}
+        </div>
+      ) : myWaitlist ? (
+        <div class="det-waitlisted">
+          <span>You're on the waitlist</span>
+          <span class="det-wl-pos">Position #{waitlist.findIndex((w:any) => w.member_email === user.email) + 1}</span>
+        </div>
+      ) : !meetsKarmaGate ? (
+        <button class="btn btn-ghost" disabled>karma gate: locked</button>
+      ) : isFull ? (
+        <form method="POST" action="/api/rsvp" style="display:inline">
+          <input type="hidden" name="event_id" value={id} />
+          <input type="hidden" name="action" value="waitlist" />
+          <button type="submit" class="btn btn-ghost">join waitlist ({waitlist.length} ahead)</button>
+        </form>
+      ) : (
+        <form method="POST" action="/api/rsvp" style="display:inline">
+          <input type="hidden" name="event_id" value={id} />
+          <input type="hidden" name="action" value="rsvp" />
+          <button type="submit" class="btn btn-primary">rsvp — claim your spot</button>
+        </form>
+      )}
+    </div>
+
+    <!-- Bring a Thing -->
+    {bringItems.length > 0 && (
+      <div class="det-bring">
+        <h3 class="det-sec-title">// bring a thing</h3>
+        <div class="bring-list">
+          {bringItems.map((item: any) => (
+            <div class:list={["bring-item", { claimed: !!item.claimed_by_user_id }]}>
+              <span class="bring-check">{item.claimed_by_user_id ? '✓' : '○'}</span>
+              <span class="bring-name">{item.item_name}</span>
+              {item.claimed_by_name && <span class="bring-who">{item.claimed_by_name}</span>}
+              {!item.claimed_by_user_id && user && myRsvp && (
+                <form method="POST" action="/api/bring-claim" style="display:inline">
+                  <input type="hidden" name="item_id" value={item.id} />
+                  <input type="hidden" name="event_id" value={id} />
+                  <button type="submit" class="bring-claim-btn">claim</button>
+                </form>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
   </div>
 
-  <!-- Host info -->
-  {host && (
-    <div class="det-host-card">
-      <div class="det-host-left">
-        <div class="det-host-av" style={`background: ${theme.accent}`}>{(host.name || '?')[0]}</div>
-        <div class="det-host-info">
-          <div class="det-host-label">Hosted by</div>
-          <div class="det-host-name">{host.name}</div>
-          {host.neighborhood && <div class="det-host-hood">📍 {host.neighborhood}</div>}
-        </div>
-      </div>
-      <div class="det-host-right">
-        {myRsvp && host && !isHost ? (
-          <button class="det-host-msg-btn" id="msgHostBtn" data-host-name={host.name}>💬 Message Host</button>
-        ) : !myRsvp && !isHost ? (
-          <span class="det-host-rsvp-note">RSVP to contact host</span>
-        ) : null}
-      </div>
+  <!-- RIGHT COLUMN -->
+  <div class="det-right">
+    <!-- Tabs -->
+    <div class="det-tabs">
+      <button class="det-tab active" data-tab="guests">guests ({rsvps.length})</button>
+      <button class="det-tab" data-tab="thread">thread ({comments.length})</button>
+      {waitlist.length > 0 && <button class="det-tab" data-tab="waitlist">waitlist ({waitlist.length})</button>}
     </div>
-  )}
 
-  <!-- Host message modal (hidden) -->
-  {myRsvp && host && !isHost && (
-    <div class="det-msg-overlay" id="msgOverlay" style="display:none">
-      <div class="det-msg-modal">
-        <div class="det-msg-header">
-          <strong>Message {host.name}</strong>
-          <button class="det-msg-close" id="msgClose">✕</button>
-        </div>
-        <p class="det-msg-note">Your message and email will be shared with the host so they can reply.</p>
-        <textarea class="det-msg-input" id="msgText" placeholder="Hey! Quick question about the event..." maxlength="500" rows="4"></textarea>
-        <button class="det-msg-send" id="msgSend" data-event-id={id} data-host-id={host.id} style={`background: ${theme.accent}`}>Send Message</button>
-      </div>
-    </div>
-  )}
-
-  <!-- Host updates / logistics -->
-  {(eventUpdates.length > 0 || isHost || isAdmin) && (
-    <div class="det-updates-card">
-      <div class="det-updates-header">
-        <div class="det-updates-title">📋 Host Updates</div>
-        {eventUpdates.length === 0 && <span class="det-updates-badge">New</span>}
-      </div>
-      {(isHost || isAdmin) && (
-        <div class="det-update-form">
-          <textarea class="det-update-input" id="updateText" placeholder="Post a logistics note — parking info, what to bring, meeting spot..." maxlength="500" rows="2"></textarea>
-          <button class="det-update-post" id="postUpdateBtn" data-event-id={id} style={`background: ${theme.accent}`}>Post Update</button>
-        </div>
-      )}
-      {eventUpdates.length > 0 ? (
-        <div class="det-updates-list" id="updatesList">
-          {eventUpdates.map((u: any) => (
-            <div class="det-update-item">
-              <div class="det-update-meta">
-                <strong>{u.author_name}</strong>
-                <span class="det-update-time">{new Date(u.created_at + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+    <!-- Guests panel -->
+    <div class="det-panel" id="panel-guests">
+      {rsvps.length > 0 ? (
+        <div class="guest-list">
+          {rsvps.map((r: any) => (
+            <div class="guest">
+              <div class="guest-avatar">{(r.reddit_username || r.member_name || '?')[0].toUpperCase()}</div>
+              <div class="guest-info">
+                <span class="guest-name">{r.reddit_username ? `u/${r.reddit_username}` : r.member_name}</span>
+                {r.karma > 0 && <span class="guest-karma">{r.karma} karma</span>}
               </div>
-              <p class="det-update-msg">{u.message}</p>
+              {r.reliability_score > 0.7 && <span class="tag tag-green" style="font-size:10px">reliable</span>}
+              {r.checked_in && <span class="tag tag-blue" style="font-size:10px">checked in</span>}
             </div>
           ))}
         </div>
       ) : (
-        <p class="det-updates-empty">No updates yet. The host will post logistics info here.</p>
+        <p class="det-empty">No RSVPs yet. Be the first!</p>
       )}
     </div>
-  )}
 
-  <!-- RSVP bar -->
-  <div class="det-rsvp-bar">
-    <div class="det-rsvp-left">
-      <div class="det-rsvp-filled"><strong>{rsvps.length} of {event.spots}</strong> spots filled</div>
-      <div class="det-rsvp-track"><div class="det-rsvp-fill" style={`width: ${Math.round((rsvps.length / (parseInt(event.spots) || 10)) * 100)}%; background: linear-gradient(90deg, ${theme.accent}, ${theme.accent}CC);`}></div></div>
-      {spotsLeft <= 4 && spotsLeft > 0 && <div class="det-urgent">🔥 Only {spotsLeft} left — don't sleep on this</div>}
+    <!-- Thread panel (megathread) -->
+    <div class="det-panel" id="panel-thread" style="display:none">
+      {user && (
+        <form method="POST" action="/api/comments" class="thread-form">
+          <input type="hidden" name="event_id" value={id} />
+          <textarea name="body" rows="2" placeholder="Ask a question or leave a comment..." class="input" style="border-radius:8px;resize:vertical;font-size:13px"></textarea>
+          <button type="submit" class="btn btn-primary" style="font-size:12px;padding:8px 16px">post</button>
+        </form>
+      )}
+      {rootComments.length > 0 ? (
+        <div class="thread-list">
+          {rootComments.map((c: any) => (
+            <div class="thread-comment">
+              <div class="tc-header">
+                <span class="tc-author">{c.author_name || `user_${c.user_id}`}</span>
+                {c.author_karma > 0 && <span class="tc-karma">{c.author_karma} karma</span>}
+                <span class="tc-time">{new Date(c.created_at).toLocaleDateString()}</span>
+              </div>
+              <p class="tc-body">{c.body}</p>
+              <div class="tc-actions">
+                <span class="tc-votes">
+                  <button class="tc-vote-btn" data-id={c.id} data-dir="up">▲</button>
+                  <span class="tc-score">{(c.upvotes||0) - (c.downvotes||0)}</span>
+                  <button class="tc-vote-btn" data-id={c.id} data-dir="down">▼</button>
+                </span>
+                <button class="tc-reply-btn" data-parent={c.id}>reply</button>
+              </div>
+              {childMap[c.id] && childMap[c.id].map((reply: any) => (
+                <div class="thread-reply">
+                  <div class="tc-header">
+                    <span class="tc-author">{reply.author_name || `user_${reply.user_id}`}</span>
+                    <span class="tc-time">{new Date(reply.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <p class="tc-body">{reply.body}</p>
+                  <div class="tc-actions">
+                    <span class="tc-votes">
+                      <button class="tc-vote-btn">▲</button>
+                      <span class="tc-score">{(reply.upvotes||0) - (reply.downvotes||0)}</span>
+                      <button class="tc-vote-btn">▼</button>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p class="det-empty">No comments yet. Start the conversation!</p>
+      )}
     </div>
-    {user ? (
-      <button id="rsvp-btn" class={`det-rsvp-btn ${myRsvp ? 'rsvped' : ''}`} style={myRsvp ? '' : `background: ${theme.accent};`} data-event-id={id} data-rsvped={myRsvp ? 'true' : 'false'} data-accent={theme.accent} data-spots={event.spots || '10'}>
-        {myRsvp ? "✓ You're In — Cancel RSVP" : "I'm In"}
-      </button>
-    ) : (
-      <a href={`/login?next=/events/${id}`} class="det-rsvp-btn" style={`background: ${theme.accent};`}>Sign in to RSVP</a>
-    )}
-  </div>
 
-  <!-- Attendees — pill style -->
-  <div class="det-att-card">
-    <div class="det-att-title">Who's going ({rsvps.length})</div>
-    {rsvps.length > 0 ? (
-      <div class="det-att-grid">
-        {rsvps.map((r: any, i: number) => (
-          <div class="det-att-pill">
-            <div class="det-att-av" style={`background:${avatarColors[i % avatarColors.length]}`}>{(r.name || '?')[0]}</div>
-            <span class="det-att-name">{r.name}</span>
-            {r.neighborhood && <span class="det-att-hood">· {r.neighborhood}</span>}
-          </div>
-        ))}
-      </div>
-    ) : (
-      <div class="det-att-empty">No one's RSVP'd yet. Be the person who starts the wave.</div>
-    )}
-  </div>
-
-  <!-- Post-event Photos -->
-  {isPastEvent && (
-    <div class="det-photos-card">
-      <div class="det-photos-header">
-        <div class="det-photos-title">📸 Event Photos</div>
-        {user && myRsvp && (
-          <label class="det-photo-upload-btn">
-            <input type="file" accept="image/*" id="photo-upload" style="display:none" data-event-id={id} />
-            + Add Photo
-          </label>
-        )}
-      </div>
-      {eventPhotos.length > 0 ? (
-        <div class="det-photos-grid">
-          {eventPhotos.map((p: any) => (
-            <div class="det-photo-item">
-              <img src={p.photo_url} alt={p.caption || 'Event photo'} loading="lazy" />
-              <div class="det-photo-meta">
-                <span class="det-photo-name">{p.name}</span>
-                {p.caption && <span class="det-photo-caption">{p.caption}</span>}
+    <!-- Waitlist panel -->
+    <div class="det-panel" id="panel-waitlist" style="display:none">
+      {waitlist.length > 0 ? (
+        <div class="guest-list">
+          {waitlist.map((w: any, i: number) => (
+            <div class="guest">
+              <div class="guest-pos">#{i + 1}</div>
+              <div class="guest-info">
+                <span class="guest-name">{w.reddit_username ? `u/${w.reddit_username}` : w.member_name}</span>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div class="det-photos-empty">
-          {user && myRsvp
-            ? "No photos yet — be the first to share a moment!"
-            : "No photos yet. Attendees can upload photos after the event."}
-        </div>
+        <p class="det-empty">Waitlist is empty.</p>
       )}
     </div>
-  )}
-
-  <!-- Discord CTA -->
-  <div class="det-discord">
-    <span class="det-discord-icon">💬</span>
-    <div class="det-discord-text">
-      <strong>Plans happen in Discord first</strong>
-      <span>Chat about this event, coordinate rides, or just hang</span>
-    </div>
-    <a href={event.discord_link || "https://discord.gg/S8SFNkdSgK"} class="det-discord-btn" target="_blank" rel="noopener">Join →</a>
   </div>
 </div>
+</Base>
 
 <style is:inline>
-  /* ── Tinted background wash ── */
-  .det-bg-wash {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    z-index: -1;
+  .det {
+    max-width: 1100px; margin: 0 auto; padding: 24px;
+    display: grid; grid-template-columns: 1fr 380px; gap: 24px;
   }
 
-  /* ── Page container ── */
-  .det-page { max-width: 620px; margin: 0 auto; padding: 24px 20px 48px; position: relative; z-index: 1; }
+  /* LEFT */
+  .det-left { display: flex; flex-direction: column; gap: 20px; }
+  .det-breadcrumb {
+    font-family: var(--mono); font-size: 12px; color: var(--text-faint);
+    display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+  }
+  .det-breadcrumb a { color: var(--text-sec); text-decoration: none; }
+  .det-breadcrumb a:hover { color: var(--accent); }
+  .det-bc-sep { opacity: .4; }
+  .det-title { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 10px; }
+  .det-tags { display: flex; gap: 6px; flex-wrap: wrap; }
 
-  .det-back {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
-    color: #6B7280; margin-bottom: 16px; transition: color .2s;
-    text-decoration: none;
+  /* Info grid */
+  .det-info {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
   }
-  .det-back:hover { color: var(--ev-accent, #7C3AED); }
+  .di-row { display: flex; align-items: center; gap: 12px; }
+  .di-label {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    color: var(--text-faint); min-width: 56px; text-align: right;
+  }
+  .di-value { font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .di-locked { font-family: var(--mono); font-size: 11px; color: var(--yellow); }
+  .di-fill-bar { width: 64px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; display: inline-block; }
+  .di-fill { height: 100%; border-radius: 2px; background: var(--green); display: block; }
+  .di-hot { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 600; }
+  .di-full { font-family: var(--mono); font-size: 11px; color: var(--red); }
 
-  /* ── Hero card with big photo ── */
-  .det-hero-card {
-    border-radius: 24px; overflow: hidden; background: #fff;
-    border: 1px solid #E5E7EB;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    margin-bottom: 16px;
-  }
-  .det-hero-img {
-    position: relative; height: 280px;
-    background-size: cover; background-position: center;
-  }
-  .det-hero-overlay {
-    position: absolute; inset: 0;
-    background: linear-gradient(to bottom, rgba(0,0,0,0) 35%, rgba(0,0,0,0.6) 100%);
-  }
-  .det-hero-tag {
-    position: absolute; top: 16px; left: 16px;
-    padding: 6px 14px; border-radius: 10px;
-    font-size: 12px; font-weight: 700; font-family: 'Outfit', sans-serif;
-    background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-    display: flex; align-items: center; gap: 5px;
-    text-transform: capitalize;
-  }
-  .det-hero-spots {
-    position: absolute; top: 16px; right: 16px;
-    padding: 6px 12px; border-radius: 8px;
-    font-size: 11px; font-weight: 700; font-family: 'Outfit', sans-serif;
-    background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-    color: #111827;
-  }
-  .det-hero-bottom {
-    position: absolute; bottom: 20px; left: 20px; right: 20px;
-  }
-  .det-hero-title {
-    font-family: 'Outfit', sans-serif; font-size: clamp(24px, 5vw, 30px);
-    font-weight: 900; color: #fff; line-height: 1.15; margin-bottom: 6px;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  }
-  .det-hero-meta { font-size: 13px; color: rgba(255,255,255,0.85); }
+  /* Description */
+  .det-desc { }
+  .det-sec-title { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text-faint); margin-bottom: 8px; }
+  .det-desc p { font-size: 14px; color: var(--text-sec); line-height: 1.7; }
 
-  .det-hero-body { padding: 20px 24px 24px; }
+  /* Karma gate */
+  .det-gate {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 16px; background: var(--yellow-dim);
+    border: 1px solid rgba(255,217,61,0.2); border-radius: 8px;
+  }
+  .det-gate-icon { font-size: 20px; flex-shrink: 0; }
+  .det-gate strong { font-family: var(--mono); font-size: 13px; color: var(--yellow); display: block; margin-bottom: 4px; }
+  .det-gate p { font-size: 12px; color: var(--text-sec); }
 
-  /* ── Info grid ── */
-  .det-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-  .det-info-item {
-    background: #F8F9FB; border: 1px solid #E5E7EB; border-radius: 14px;
-    padding: 14px 16px;
+  /* Actions */
+  .det-actions { }
+  .det-confirmed {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px; background: var(--green-dim);
+    border: 1px solid rgba(0,210,106,0.2); border-radius: 8px;
+    font-family: var(--mono); font-size: 14px; color: var(--green); font-weight: 700;
   }
-  .det-info-label { font-size: 10px; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
-  .det-info-value { font-size: 14px; font-weight: 600; font-family: 'Outfit', sans-serif; color: #111827; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-  .det-maps-link {
-    display: inline-flex; align-items: center; gap: 2px;
-    font-size: 11px; font-weight: 700; color: var(--ev-accent, #7C3AED);
-    text-decoration: none; padding: 2px 8px; border-radius: 6px;
-    background: rgba(124,58,237,0.06); transition: all .15s;
+  .det-confirmed-icon { font-size: 18px; }
+  .det-cal-link { font-size: 12px; color: var(--blue); margin-left: auto; }
+  .det-waitlisted {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; background: var(--yellow-dim);
+    border: 1px solid rgba(255,217,61,0.2); border-radius: 8px;
+    font-family: var(--mono); font-size: 13px; color: var(--yellow);
   }
-  .det-maps-link:hover { background: rgba(124,58,237,0.12); }
-  .det-info-rsvp-hint { font-size: 10px; color: #9CA3AF; font-weight: 500; display: block; width: 100%; }
+  .det-wl-pos { font-weight: 700; }
 
-  .det-desc { font-size: 15px; line-height: 1.8; color: #374151; margin: 0; }
+  /* Bring a Thing */
+  .det-bring { }
+  .bring-list { display: flex; flex-direction: column; gap: 6px; }
+  .bring-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; font-size: 13px;
+  }
+  .bring-item.claimed { opacity: .6; }
+  .bring-check { font-family: var(--mono); font-size: 14px; color: var(--text-faint); }
+  .bring-item.claimed .bring-check { color: var(--green); }
+  .bring-name { flex: 1; color: var(--text); }
+  .bring-who { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+  .bring-claim-btn {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 4px 10px; border-radius: 4px; border: 1px solid var(--accent);
+    background: var(--accent-dim); color: var(--accent); cursor: pointer;
+    transition: all .2s;
+  }
+  .bring-claim-btn:hover { background: var(--accent); color: #fff; }
 
-  /* ─── CONTACT BAR ─── */
-  .det-contact-bar {
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 18px; border-radius: 12px; margin-bottom: 16px;
-    background: rgba(16,185,129,0.04); border: 1px solid rgba(16,185,129,0.15);
+  /* RIGHT COLUMN */
+  .det-right {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; position: sticky; top: 68px;
+    max-height: calc(100vh - 84px); display: flex; flex-direction: column;
   }
-  .det-contact-bar.locked {
-    background: #F8F9FB; border-color: #E5E7EB;
-  }
-  .det-contact-icon { font-size: 20px; flex-shrink: 0; }
-  .det-contact-label { font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
-  .det-contact-phone {
-    font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: #111827;
-    text-decoration: none; margin-right: 8px;
-  }
-  .det-contact-phone:hover { color: #7C3AED; }
-  .det-contact-hint { font-size: 11px; color: #9CA3AF; }
 
-  /* ── RSVP bar ── */
-  .det-rsvp-bar {
-    display: flex; align-items: center; gap: 16px;
-    padding: 18px 20px; border-radius: 20px;
-    background: #fff; border: 1px solid #E5E7EB;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    margin-bottom: 16px;
+  /* Tabs */
+  .det-tabs {
+    display: flex; border-bottom: 1px solid var(--border);
   }
-  .det-rsvp-left { flex: 1; }
-  .det-rsvp-filled { font-size: 13px; font-weight: 600; color: #6B7280; margin-bottom: 8px; }
-  .det-rsvp-filled strong { color: #111827; }
-  .det-rsvp-track { height: 6px; background: #E5E7EB; border-radius: 3px; overflow: hidden; }
-  .det-rsvp-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
+  .det-tab {
+    flex: 1; padding: 12px; text-align: center;
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    color: var(--text-faint); background: none; border: none;
+    cursor: pointer; transition: all .2s;
+    border-bottom: 2px solid transparent;
+  }
+  .det-tab:hover { color: var(--text-sec); }
+  .det-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--accent-dim); }
 
-  .det-rsvp-btn {
-    padding: 14px 32px; border-radius: 14px;
-    font-size: 15px; font-weight: 700; font-family: 'Outfit', sans-serif;
-    border: none; cursor: pointer; text-align: center; text-decoration: none;
-    background: #7C3AED; color: #fff; transition: all .2s; flex-shrink: 0;
-    display: inline-flex; align-items: center; justify-content: center;
-  }
-  .det-rsvp-btn:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 20px var(--ev-accent-shadow, rgba(124,58,237,0.2)); }
-  .det-rsvp-btn.rsvped { background: rgba(220,38,38,0.08); color: #DC2626; padding: 14px 20px; }
-  .det-rsvp-btn.rsvped:hover { background: rgba(220,38,38,0.14); }
+  /* Panels */
+  .det-panel { padding: 16px; overflow-y: auto; flex: 1; }
+  .det-empty { font-size: 13px; color: var(--text-faint); text-align: center; padding: 24px 0; }
 
-  .det-urgent { font-size: 11px; font-weight: 600; color: #DC2626; margin-top: 6px; }
-
-  /* ── Attendees — pill grid ── */
-  .det-att-card {
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 20px;
-    padding: 18px 20px; margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  /* Guest list */
+  .guest-list { display: flex; flex-direction: column; gap: 6px; }
+  .guest {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 6px;
+    transition: background .2s;
   }
-  .det-att-title { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 14px; }
-  .det-att-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-  .det-att-pill {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 14px 6px 6px; border-radius: 50px;
-    background: #F8F9FB; border: 1px solid #E5E7EB;
-    font-size: 13px; transition: border-color .15s;
-  }
-  .det-att-pill:hover { border-color: #D1D5DB; }
-  .det-att-av {
-    width: 28px; height: 28px; border-radius: 50%;
+  .guest:hover { background: var(--surface-hover); }
+  .guest-avatar {
+    width: 32px; height: 32px; border-radius: 6px;
+    background: var(--accent-dim); color: var(--accent);
     display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;
+    font-family: var(--mono); font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
   }
-  .det-att-name { font-weight: 600; font-family: 'Outfit', sans-serif; color: #111827; }
-  .det-att-hood { font-size: 11px; color: #9CA3AF; }
-  .det-att-empty { padding: 20px 0; text-align: center; color: #9CA3AF; font-size: 13px; line-height: 1.6; }
+  .guest-pos {
+    font-family: var(--mono); font-size: 12px; color: var(--text-faint);
+    min-width: 28px; text-align: center;
+  }
+  .guest-info { flex: 1; display: flex; flex-direction: column; }
+  .guest-name { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); }
+  .guest-karma { font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
 
-  /* ── Add to Calendar ── */
-  .det-cal-row {
-    display: flex; gap: 8px; margin-top: 16px;
+  /* Thread */
+  .thread-form { display: flex; gap: 8px; margin-bottom: 16px; align-items: flex-end; }
+  .thread-form textarea { flex: 1; }
+  .thread-list { display: flex; flex-direction: column; gap: 12px; }
+  .thread-comment {
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
   }
-  .det-cal-btn {
-    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    padding: 10px 14px; border-radius: 12px;
-    background: #F8F9FB; border: 1px solid #E5E7EB;
-    font-size: 12px; font-weight: 600; font-family: 'Outfit', sans-serif;
-    color: #374151; cursor: pointer; transition: all .15s;
-    text-decoration: none;
+  .tc-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .tc-author { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); }
+  .tc-karma { font-family: var(--mono); font-size: 10px; color: var(--accent); background: var(--accent-dim); padding: 1px 5px; border-radius: 3px; }
+  .tc-time { font-family: var(--mono); font-size: 10px; color: var(--text-faint); margin-left: auto; }
+  .tc-body { font-size: 13px; color: var(--text-sec); line-height: 1.6; margin-bottom: 6px; }
+  .tc-actions { display: flex; align-items: center; gap: 12px; }
+  .tc-votes { display: flex; align-items: center; gap: 4px; }
+  .tc-vote-btn {
+    width: 20px; height: 20px; border-radius: 4px; border: none;
+    background: transparent; color: var(--text-faint); font-size: 10px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); transition: all .15s;
   }
-  .det-cal-btn:hover { border-color: var(--ev-accent, #7C3AED); color: var(--ev-accent, #7C3AED); background: #fff; }
-  .det-cal-icon { font-size: 14px; }
-
-  /* ── Post-event Photos ── */
-  .det-photos-card {
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 20px;
-    padding: 18px 20px; margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  .tc-vote-btn:hover { color: var(--accent); background: var(--accent-dim); }
+  .tc-score { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text-sec); min-width: 16px; text-align: center; }
+  .tc-reply-btn {
+    font-family: var(--mono); font-size: 11px; color: var(--text-faint);
+    background: none; border: none; cursor: pointer;
+    transition: color .2s;
   }
-  .det-photos-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 14px;
-  }
-  .det-photos-title {
-    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827;
-  }
-  .det-photo-upload-btn {
-    padding: 6px 14px; border-radius: 50px;
-    background: var(--ev-accent, #7C3AED); color: #fff;
-    font-size: 11px; font-weight: 700; font-family: 'Outfit', sans-serif;
-    cursor: pointer; transition: opacity .2s;
-  }
-  .det-photo-upload-btn:hover { opacity: 0.9; }
-  .det-photos-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
-  }
-  .det-photo-item {
-    border-radius: 12px; overflow: hidden;
-    border: 1px solid #E5E7EB; background: #F8F9FB;
-  }
-  .det-photo-item img {
-    width: 100%; height: 120px; object-fit: cover;
-  }
-  .det-photo-meta { padding: 8px 10px; }
-  .det-photo-name {
-    display: block; font-size: 11px; font-weight: 600;
-    font-family: 'Outfit', sans-serif; color: #111827;
-  }
-  .det-photo-caption { font-size: 10px; color: #9CA3AF; }
-  .det-photos-empty {
-    padding: 20px 0; text-align: center; color: #9CA3AF;
-    font-size: 13px; line-height: 1.6;
+  .tc-reply-btn:hover { color: var(--accent); }
+  .thread-reply {
+    margin-left: 24px; padding-left: 12px;
+    border-left: 2px solid var(--border);
+    margin-top: 8px;
   }
 
-  /* ── Discord CTA ── */
-  .det-discord {
-    display: flex; align-items: center; gap: 14px;
-    padding: 18px 22px; border-radius: 16px;
-    background: #fff; border: 1px solid #E5E7EB;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  }
-  .det-discord-icon { font-size: 24px; flex-shrink: 0; }
-  .det-discord-text { flex: 1; }
-  .det-discord-text strong { display: block; font-size: 13px; color: #111827; font-family: 'Outfit', sans-serif; }
-  .det-discord-text span { font-size: 12px; color: #6B7280; }
-  .det-discord-btn {
-    padding: 8px 18px; background: #7C3AED; color: #fff;
-    border-radius: 50px; font-size: 12px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; flex-shrink: 0; text-decoration: none;
-    transition: opacity .2s;
-  }
-  .det-discord-btn:hover { opacity: 0.9; }
-
-  /* ── Host card ── */
-  .det-host-card {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 16px 20px; border-radius: 20px;
-    background: #fff; border: 1px solid #E5E7EB;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    margin-bottom: 16px;
-  }
-  .det-host-left { display: flex; align-items: center; gap: 12px; }
-  .det-host-av {
-    width: 44px; height: 44px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0;
-  }
-  .det-host-info { display: flex; flex-direction: column; gap: 1px; }
-  .det-host-label { font-size: 10px; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-  .det-host-name { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #111827; }
-  .det-host-hood { font-size: 11px; color: #6B7280; }
-  .det-host-msg-btn {
-    padding: 8px 16px; border-radius: 50px;
-    background: #F8F9FB; border: 1px solid #E5E7EB;
-    font-size: 12px; font-weight: 600; font-family: 'Outfit', sans-serif;
-    color: #374151; cursor: pointer; transition: all .15s; white-space: nowrap;
-  }
-  .det-host-msg-btn:hover { border-color: var(--ev-accent); color: var(--ev-accent); }
-  .det-host-rsvp-note { font-size: 11px; color: #9CA3AF; font-style: italic; white-space: nowrap; }
-
-  /* ── Message host modal ── */
-  .det-msg-overlay {
-    position: fixed; inset: 0; z-index: 1000;
-    background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
-    display: flex; align-items: center; justify-content: center;
-    padding: 20px;
-  }
-  .det-msg-modal {
-    background: #fff; border-radius: 20px; padding: 24px;
-    width: 100%; max-width: 420px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-  }
-  .det-msg-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 8px;
-  }
-  .det-msg-header strong { font-family: 'Outfit', sans-serif; font-size: 16px; color: #111827; }
-  .det-msg-close {
-    width: 28px; height: 28px; border-radius: 50%;
-    border: none; background: #F3F4F6; cursor: pointer;
-    font-size: 14px; color: #6B7280; display: flex; align-items: center; justify-content: center;
-  }
-  .det-msg-note { font-size: 12px; color: #9CA3AF; margin-bottom: 12px; line-height: 1.5; }
-  .det-msg-input {
-    width: 100%; padding: 12px 14px; border-radius: 12px;
-    border: 1px solid #E5E7EB; font-size: 14px;
-    font-family: 'Inter', system-ui, sans-serif;
-    resize: vertical; min-height: 80px; margin-bottom: 12px;
-    box-sizing: border-box;
-  }
-  .det-msg-input:focus { outline: none; border-color: var(--ev-accent); box-shadow: 0 0 0 3px var(--ev-accent-shadow); }
-  .det-msg-send {
-    width: 100%; padding: 12px; border-radius: 12px;
-    border: none; color: #fff; font-size: 14px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; cursor: pointer;
-    transition: opacity .2s;
-  }
-  .det-msg-send:hover { opacity: 0.92; }
-
-  /* ── Host updates ── */
-  .det-updates-card {
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 20px;
-    padding: 18px 20px; margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  }
-  .det-updates-header {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
-  }
-  .det-updates-title { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; }
-  .det-updates-badge {
-    padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;
-    background: #ECFDF5; color: #059669; text-transform: uppercase;
-  }
-  .det-update-form { margin-bottom: 14px; }
-  .det-update-input {
-    width: 100%; padding: 10px 12px; border-radius: 12px;
-    border: 1px solid #E5E7EB; font-size: 13px;
-    font-family: 'Inter', system-ui, sans-serif;
-    resize: none; margin-bottom: 8px; box-sizing: border-box;
-  }
-  .det-update-input:focus { outline: none; border-color: var(--ev-accent); box-shadow: 0 0 0 3px var(--ev-accent-shadow); }
-  .det-update-post {
-    padding: 8px 18px; border-radius: 10px;
-    border: none; color: #fff; font-size: 12px; font-weight: 700;
-    font-family: 'Outfit', sans-serif; cursor: pointer;
-    transition: opacity .2s;
-  }
-  .det-update-post:hover { opacity: 0.92; }
-  .det-updates-list { display: flex; flex-direction: column; gap: 10px; }
-  .det-update-item {
-    padding: 12px 14px; border-radius: 12px;
-    background: #F8F9FB; border: 1px solid #F3F4F6;
-  }
-  .det-update-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  .det-update-meta strong { font-family: 'Outfit', sans-serif; font-size: 12px; color: #111827; }
-  .det-update-time { font-size: 10px; color: #9CA3AF; }
-  .det-update-msg { font-size: 13px; color: #374151; line-height: 1.6; margin: 0; }
-  .det-updates-empty { font-size: 12px; color: #9CA3AF; margin: 0; }
-
+  /* RESPONSIVE */
   @media (max-width: 768px) {
-    .det-page { padding: 20px 16px 48px; }
-    .det-hero-img { height: 220px; }
-    .det-hero-body { padding: 16px 18px 20px; }
-    .det-info-grid { grid-template-columns: 1fr; gap: 8px; }
-    .det-rsvp-bar { flex-direction: column; gap: 12px; }
-    .det-rsvp-btn { width: 100%; padding: 14px; }
-    .det-rsvp-btn.rsvped { padding: 14px; }
-    .det-host-card { flex-direction: column; align-items: flex-start; gap: 10px; }
-    .det-host-right { width: 100%; }
-    .det-host-msg-btn { width: 100%; text-align: center; }
+    .det { grid-template-columns: 1fr; padding: 16px; }
+    .det-right { position: static; max-height: none; }
+    .det-title { font-size: 22px; }
   }
 </style>
 
 <script is:inline>
-  (function() {
-    var btn = document.getElementById('rsvp-btn');
-    if (!btn) return;
-    var eventId = btn.getAttribute('data-event-id');
-    var rsvped = btn.getAttribute('data-rsvped') === 'true';
-    var accent = btn.getAttribute('data-accent');
-    var spots = parseInt(btn.getAttribute('data-spots') || '10');
-
-    btn.addEventListener('click', async function() {
-      btn.textContent = 'Loading...';
-      try {
-        var r = await fetch('/api/rsvp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event_id: eventId }) });
-        if (r.status === 401) { location.href = '/login?next=' + location.pathname; return; }
-        var d = await r.json();
-        if (d.error) { btn.textContent = d.message || 'Error'; return; }
-        rsvped = d.rsvped;
-        btn.className = 'det-rsvp-btn' + (rsvped ? ' rsvped' : '');
-        btn.textContent = rsvped ? "✓ You're In — Cancel RSVP" : "I'm In";
-        btn.style.background = rsvped ? '' : accent;
-        btn.setAttribute('data-rsvped', rsvped ? 'true' : 'false');
-        // Update the count display
-        var filled = document.querySelector('.det-rsvp-filled');
-        if (filled && typeof d.count === 'number') {
-          filled.innerHTML = '<strong>' + d.count + ' of ' + spots + '</strong> spots filled';
-        }
-        var fill = document.querySelector('.det-rsvp-fill');
-        if (fill && typeof d.count === 'number') {
-          fill.style.width = Math.round((d.count / spots) * 100) + '%';
-        }
-        var heroSpots = document.querySelector('.det-hero-spots');
-        if (heroSpots && typeof d.count === 'number') {
-          heroSpots.textContent = d.count + ' of ' + spots + ' going';
-        }
-        // Toggle calendar row
-        var calRow = document.getElementById('cal-row');
-        if (calRow) calRow.style.display = rsvped ? '' : 'none';
-      } catch { btn.textContent = 'Error — try again'; }
+  // Tab switching
+  document.querySelectorAll('.det-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.det-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.det-panel').forEach(function(p) { p.style.display = 'none'; });
+      tab.classList.add('active');
+      var panelId = 'panel-' + tab.getAttribute('data-tab');
+      var panel = document.getElementById(panelId);
+      if (panel) panel.style.display = 'block';
     });
-  })();
-
-  // .ics download
-  var icsBtn = document.querySelector('.det-cal-ics');
-  if (icsBtn) {
-    icsBtn.addEventListener('click', function() {
-      var data = icsBtn.getAttribute('data-ics');
-      if (!data) return;
-      var blob = new Blob([data], { type: 'text/calendar;charset=utf-8' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'denver-social-event.ics';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    });
-  }
-
-  // ── Message Host modal ──
-  var msgBtn = document.getElementById('msgHostBtn');
-  var msgOverlay = document.getElementById('msgOverlay');
-  var msgClose = document.getElementById('msgClose');
-  var msgSend = document.getElementById('msgSend');
-
-  if (msgBtn && msgOverlay) {
-    msgBtn.addEventListener('click', function() { msgOverlay.style.display = ''; });
-    msgClose && msgClose.addEventListener('click', function() { msgOverlay.style.display = 'none'; });
-    msgOverlay.addEventListener('click', function(e) { if (e.target === msgOverlay) msgOverlay.style.display = 'none'; });
-  }
-
-  if (msgSend) {
-    msgSend.addEventListener('click', async function() {
-      var text = document.getElementById('msgText');
-      if (!text || !text.value.trim()) { alert('Please type a message'); return; }
-      msgSend.textContent = 'Sending...';
-      msgSend.disabled = true;
-      try {
-        var r = await fetch('/api/contact-host', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event_id: msgSend.getAttribute('data-event-id'),
-            host_id: msgSend.getAttribute('data-host-id'),
-            message: text.value.trim()
-          })
-        });
-        var d = await r.json();
-        if (d.ok) {
-          text.value = '';
-          msgSend.textContent = '✓ Sent!';
-          setTimeout(function() {
-            msgOverlay.style.display = 'none';
-            msgSend.textContent = 'Send Message';
-            msgSend.disabled = false;
-          }, 1500);
-        } else {
-          alert(d.error || 'Failed to send');
-          msgSend.textContent = 'Send Message';
-          msgSend.disabled = false;
-        }
-      } catch {
-        alert('Failed to send — try again');
-        msgSend.textContent = 'Send Message';
-        msgSend.disabled = false;
-      }
-    });
-  }
-
-  // ── Post host update ──
-  var postUpdateBtn = document.getElementById('postUpdateBtn');
-  if (postUpdateBtn) {
-    postUpdateBtn.addEventListener('click', async function() {
-      var input = document.getElementById('updateText');
-      if (!input || !input.value.trim()) { alert('Write something first'); return; }
-      postUpdateBtn.textContent = 'Posting...';
-      postUpdateBtn.disabled = true;
-      try {
-        var r = await fetch('/api/event-updates', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event_id: postUpdateBtn.getAttribute('data-event-id'),
-            message: input.value.trim()
-          })
-        });
-        var d = await r.json();
-        if (d.ok) {
-          // Add the update to the list visually
-          var list = document.getElementById('updatesList');
-          var emptyMsg = document.querySelector('.det-updates-empty');
-          if (emptyMsg) emptyMsg.remove();
-          if (!list) {
-            // Create the list container
-            var card = document.querySelector('.det-updates-card');
-            list = document.createElement('div');
-            list.className = 'det-updates-list';
-            list.id = 'updatesList';
-            card.appendChild(list);
-          }
-          var item = document.createElement('div');
-          item.className = 'det-update-item';
-          var now = new Date();
-          item.innerHTML = '<div class="det-update-meta"><strong>You</strong><span class="det-update-time">Just now</span></div><p class="det-update-msg">' + input.value.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
-          list.insertBefore(item, list.firstChild);
-          input.value = '';
-        } else {
-          alert(d.error || 'Failed to post');
-        }
-      } catch {
-        alert('Failed to post — try again');
-      }
-      postUpdateBtn.textContent = 'Post Update';
-      postUpdateBtn.disabled = false;
-    });
-  }
-
-  // Photo upload
-  var photoInput = document.getElementById('photo-upload');
-  if (photoInput) {
-    photoInput.addEventListener('change', async function() {
-      var file = this.files[0];
-      if (!file) return;
-      if (file.size > 5 * 1024 * 1024) { alert('Photo must be under 5MB'); return; }
-      var evId = this.getAttribute('data-event-id');
-      var reader = new FileReader();
-      reader.onload = async function() {
-        try {
-          var r = await fetch('/api/upload-photo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event_id: evId, photo: reader.result })
-          });
-          var d = await r.json();
-          if (d.ok) { location.reload(); }
-          else { alert(d.error || 'Upload failed'); }
-        } catch { alert('Upload failed — try again'); }
-      };
-      reader.readAsDataURL(file);
-    });
-  }
+  });
 </script>
-
-</Base>
