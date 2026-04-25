@@ -289,6 +289,7 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
     </div>
     <div class="nav-section">
       <div class="nav-section-label">Content</div>
+      <button class="nav-item" data-panel="copyeditor"><span class="nav-item-icon">✏️</span><span class="nav-item-text">Copy Editor</span></button>
       <button class="nav-item" data-panel="announcements"><span class="nav-item-icon">📢</span><span class="nav-item-text">Announcements</span></button>
       <button class="nav-item" data-panel="spotlights"><span class="nav-item-icon">🌟</span><span class="nav-item-text">Spotlights</span></button>
       <button class="nav-item" data-panel="reports"><span class="nav-item-icon">🛡️</span><span class="nav-item-text">Reports</span></button>
@@ -1090,6 +1091,60 @@ input:checked+.toggle-track::after{transform:translateX(16px)}
     </div>
 
     <!-- ═══ SETTINGS ═══ -->
+    <div class="panel" id="panel-copyeditor">
+      <div class="settings-grid" style="grid-template-columns:1fr">
+        <div class="settings-card" id="ce-loading"><div class="empty"><div class="empty-icon">✏️</div><div class="empty-title">Loading page copy...</div></div></div>
+        <div id="ce-content" style="display:none">
+          <div class="settings-card">
+            <div class="settings-title">🏠 Homepage</div><div class="settings-sub">Hero and section headings on the landing page.</div>
+            <div class="field"><label class="field-label">Hero Title <span style="color:var(--text-faint);font-weight:400">(HTML ok)</span></label><input class="field-input ce-field" data-key="home_title" /></div>
+            <div class="field"><label class="field-label">Hero Subtitle</label><textarea class="field-input ce-field" data-key="home_subtitle" rows="2" style="resize:vertical"></textarea></div>
+            <div class="field"><label class="field-label">"How it works" Title</label><input class="field-input ce-field" data-key="home_how_title" /></div>
+            <div class="field"><label class="field-label">"How it works" Subtitle</label><input class="field-input ce-field" data-key="home_how_subtitle" /></div>
+            <div class="field"><label class="field-label">"What we do" Title</label><input class="field-input ce-field" data-key="home_types_title" /></div>
+            <div class="field"><label class="field-label">"What we do" Subtitle</label><input class="field-input ce-field" data-key="home_types_subtitle" /></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">📅 Events Page</div><div class="settings-sub">Hero subtitle and empty state text.</div>
+            <div class="field"><label class="field-label">Events Subtitle</label><input class="field-input ce-field" data-key="events_subtitle" /></div>
+            <div class="field"><label class="field-label">Empty State Text</label><textarea class="field-input ce-field" data-key="events_empty" rows="2" style="resize:vertical"></textarea></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">🔐 Login / Join Page</div><div class="settings-sub">Hero and join card copy.</div>
+            <div class="field"><label class="field-label">Hero Title <span style="color:var(--text-faint);font-weight:400">(HTML ok)</span></label><input class="field-input ce-field" data-key="login_title" /></div>
+            <div class="field"><label class="field-label">Hero Subtitle</label><input class="field-input ce-field" data-key="login_subtitle" /></div>
+            <div class="field"><label class="field-label">Join Card Title</label><input class="field-input ce-field" data-key="login_join_title" /></div>
+            <div class="field"><label class="field-label">Join Card Subtitle</label><input class="field-input ce-field" data-key="login_join_subtitle" /></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">⭐ Recs Page</div><div class="settings-sub">Recommendations page hero.</div>
+            <div class="field"><label class="field-label">Title</label><input class="field-input ce-field" data-key="recs_title" /></div>
+            <div class="field"><label class="field-label">Subtitle</label><input class="field-input ce-field" data-key="recs_subtitle" /></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">👥 Members Page</div><div class="settings-sub">Members directory header.</div>
+            <div class="field"><label class="field-label">Title</label><input class="field-input ce-field" data-key="members_title" /></div>
+            <div class="field"><label class="field-label">Subtitle</label><input class="field-input ce-field" data-key="members_subtitle" /></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">ℹ️ About Page</div><div class="settings-sub">About page hero.</div>
+            <div class="field"><label class="field-label">Title <span style="color:var(--text-faint);font-weight:400">(HTML ok)</span></label><input class="field-input ce-field" data-key="about_title" /></div>
+            <div class="field"><label class="field-label">Subtitle</label><textarea class="field-input ce-field" data-key="about_subtitle" rows="3" style="resize:vertical"></textarea></div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-title">🤝 Code of Conduct</div><div class="settings-sub">Conduct page hero.</div>
+            <div class="field"><label class="field-label">Title <span style="color:var(--text-faint);font-weight:400">(HTML ok)</span></label><input class="field-input ce-field" data-key="conduct_title" /></div>
+            <div class="field"><label class="field-label">Subtitle</label><textarea class="field-input ce-field" data-key="conduct_subtitle" rows="2" style="resize:vertical"></textarea></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <button class="btn-primary" id="ce-save" style="flex:1;padding:14px">💾 Save All Copy</button>
+            <button class="btn" id="ce-reset" style="padding:14px">Reset to Defaults</button>
+          </div>
+          <div id="ce-msg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px;text-align:center"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="panel" id="panel-settings">
       <div class="settings-grid">
         <div class="settings-card">
@@ -1219,8 +1274,8 @@ function apiPost(b){return fetch('/api/admin/data',{method:'POST',headers:{'Cont
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
 // ============ SIDEBAR + PANELS ============
-var panelTitles={overview:'Overview',members:'Members',events:'Events',suggestions:'Suggestions',announcements:'Announcements',spotlights:'Spotlights',reports:'Reports',partners:'Partners',restaurants:'Restaurants',pages:'Pages',plugins:'Plugins',analytics:'Analytics',appearance:'Appearance',settings:'Settings'};
-var panelSubs={overview:'Dashboard overview and quick stats',members:'Manage all community members',events:'Create and manage events',suggestions:'Community ideas and feedback',announcements:'Broadcast messages',spotlights:'Highlight outstanding members',reports:'Review member reports',partners:'Business partnerships and deals',restaurants:'Denver restaurant database',pages:'Custom page management',plugins:'Code injection and plugins',analytics:'Charts and data insights',appearance:'Per-page colors, typography, layout and branding',settings:'Configuration and toggles'};
+var panelTitles={overview:'Overview',members:'Members',events:'Events',suggestions:'Suggestions',copyeditor:'Copy Editor',announcements:'Announcements',spotlights:'Spotlights',reports:'Reports',partners:'Partners',restaurants:'Restaurants',pages:'Pages',plugins:'Plugins',analytics:'Analytics',appearance:'Appearance',settings:'Settings'};
+var panelSubs={overview:'Dashboard overview and quick stats',members:'Manage all community members',events:'Create and manage events',suggestions:'Community ideas and feedback',copyeditor:'Edit headlines, subtitles, and copy across every page',announcements:'Broadcast messages',spotlights:'Highlight outstanding members',reports:'Review member reports',partners:'Business partnerships and deals',restaurants:'Denver restaurant database',pages:'Custom page management',plugins:'Code injection and plugins',analytics:'Charts and data insights',appearance:'Per-page colors, typography, layout and branding',settings:'Configuration and toggles'};
 
 function showPanel(id){
   $$('.panel').forEach(function(p){p.classList.remove('active')});
@@ -1242,6 +1297,7 @@ function showPanel(id){
     if(id==='plugins')loadPlugins();
     if(id==='analytics')loadAnalytics();
     if(id==='settings'||id==='appearance')loadSettings();
+    if(id==='copyeditor')loadCopyEditor();
   }
 }
 
@@ -1883,6 +1939,80 @@ $('#export-all-data').addEventListener('click',function(){
   a.download='dsn-data-'+new Date().toISOString().slice(0,10)+'.json';
   a.click();
   toast('Data exported');
+});
+
+// ============ COPY EDITOR ============
+function loadCopyEditor(){
+  fetch('/api/admin/content').then(function(r){return r.json()}).then(function(data){
+    if(data.error)return;
+    $$('.ce-field').forEach(function(f){
+      var k=f.getAttribute('data-key');
+      if(data[k]!==undefined){f.value=data[k];}
+    });
+    $('#ce-loading').style.display='none';
+    $('#ce-content').style.display='block';
+  }).catch(function(){
+    $('#ce-loading').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load content</div></div>';
+  });
+}
+
+$('#ce-save').addEventListener('click',function(){
+  var btn=this;
+  var payload={};
+  $$('.ce-field').forEach(function(f){
+    payload[f.getAttribute('data-key')]=f.value;
+  });
+  btn.disabled=true;btn.textContent='Saving...';
+  fetch('/api/admin/content',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  }).then(function(r){return r.json()}).then(function(data){
+    btn.disabled=false;btn.textContent='💾 Save All Copy';
+    var msg=$('#ce-msg');
+    if(data.success){
+      msg.style.display='block';msg.style.background='rgba(52,211,153,0.1)';msg.style.color='var(--green)';msg.style.border='1px solid rgba(52,211,153,0.2)';
+      msg.textContent='✓ Copy saved! Changes will appear on page reload.';
+      setTimeout(function(){msg.style.display='none'},4000);
+    } else {
+      msg.style.display='block';msg.style.background='rgba(239,68,68,0.1)';msg.style.color='var(--red)';msg.style.border='1px solid rgba(239,68,68,0.2)';
+      msg.textContent='Error: '+(data.error||'Unknown error');
+    }
+  }).catch(function(){
+    btn.disabled=false;btn.textContent='💾 Save All Copy';
+    toast('Network error');
+  });
+});
+
+$('#ce-reset').addEventListener('click',function(){
+  if(!confirm('Reset all copy to defaults? This cannot be undone.'))return;
+  var defaults={
+    home_title:'Meet your people.<br/><em>Explore your city.</em>',
+    home_subtitle:'Denver Social is a free community where members vote on what happens next. No algorithm. Just locals showing up.',
+    home_how_title:'How it works',
+    home_how_subtitle:'Members suggest ideas. The community votes. Top picks become real events.',
+    home_types_title:'What we do',
+    home_types_subtitle:'No experience needed for any of these. Seriously.',
+    events_subtitle:'Dinners, game nights, pottery, hikes — small groups, real plans, no flakes.',
+    events_empty:'Dinners, pottery nights, game nights, hikes — new events drop every week. Post one or join the Discord so you don\'t miss out.',
+    login_title:'Find your people<br/>in Denver.',
+    login_subtitle:'Dinners, pottery, game nights, hikes — small groups, real plans.',
+    login_join_title:'Join the crew',
+    login_join_subtitle:'Free forever. Takes 30 seconds.',
+    recs_title:'Denver Recs',
+    recs_subtitle:'Community-sourced spots. Upvote your favorites — they feed into our events.',
+    members_title:'The Crew',
+    members_subtitle:'Real people. Real plans. No flakes.',
+    about_title:'Look — making friends after college is <em>weird.</em>',
+    about_subtitle:'We\'re just a group of people in Denver who got tired of doom-scrolling on the couch every weekend. So we started doing stuff together. Dinners, hikes, bowling, whatever.',
+    conduct_title:'Just be <em>cool.</em>',
+    conduct_subtitle:'That\'s the whole thing. Everyone\'s here to have a good time. Be yourself, be kind, and don\'t make it weird for anyone else.'
+  };
+  $$('.ce-field').forEach(function(f){
+    var k=f.getAttribute('data-key');
+    if(defaults[k]!==undefined)f.value=defaults[k];
+  });
+  toast('Defaults restored. Click Save to apply.');
 });
 
 // ============ KEYBOARD SHORTCUTS ============

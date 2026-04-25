@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
+import { getContent } from '../lib/content';
 
 const db = getDB();
 let error: string | null = null;
@@ -44,6 +45,7 @@ if (Astro.request.method === "POST") {
     }
   } catch { error = "Something went wrong. Try again."; }
 }
+const content = await getContent();
 ---
 <Base title="Join Denver Social">
   <div class="lg">
@@ -52,8 +54,8 @@ if (Astro.request.method === "POST") {
       <div class="lg-hero-bg"></div>
       <div class="lg-hero-content">
         <div class="lg-icon">🏔️</div>
-        <h1 class="lg-title">Find your people<br/>in Denver.</h1>
-        <p class="lg-sub">Dinners, pottery, game nights, hikes — small groups, real plans.</p>
+        <h1 class="lg-title" set:html={content.login_title}></h1>
+        <p class="lg-sub">{content.login_subtitle}</p>
         {(memberCount > 5 || eventCount > 0) && (
           <div class="lg-proof">
             {memberCount > 5 && <span class="lg-proof-item">👥 {memberCount} members</span>}
@@ -67,8 +69,8 @@ if (Astro.request.method === "POST") {
 
     <!-- Join card -->
     <div class="lg-card lg-card-join">
-      <h2 class="lg-card-title">Join the crew</h2>
-      <p class="lg-card-sub">Free forever. Takes 30 seconds.</p>
+      <h2 class="lg-card-title">{content.login_join_title}</h2>
+      <p class="lg-card-sub">{content.login_join_subtitle}</p>
       <form method="POST">
         <input type="hidden" name="action" value="join" />
         <div class="lg-input-group">

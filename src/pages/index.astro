@@ -1,5 +1,6 @@
 ---
 import { getDB } from '../lib/db';
+import { getContent } from '../lib/content';
 
 const db = getDB();
 let upcomingEvents: any[] = [];
@@ -62,6 +63,7 @@ const activities = [
   { emoji:"🧶", title:"Fiber arts", desc:"Knitting, crochet — bring your project or start one.", img:"https://images.unsplash.com/photo-1582738411706-bfc8e691d1c2?w=600&q=70" },
   { emoji:"🎳", title:"Bowling nights", desc:"Strikes, gutters, and a whole lot of laughing.", img:"https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?w=600&q=70" },
 ];
+const content = await getContent();
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -97,8 +99,8 @@ const activities = [
 <!-- ═══ HERO ═══ -->
 <section class="hero">
   <div class="hero-badge"><span class="hero-dot"></span> {memberCount}+ locals and growing</div>
-  <h1>Meet your people.<br/><em>Explore your city.</em></h1>
-  <p class="hero-sub">Denver Social is a free community where members vote on what happens next. No algorithm. Just locals showing up.</p>
+  <h1 set:html={content.home_title}></h1>
+  <p class="hero-sub">{content.home_subtitle}</p>
   <div class="hero-ctas">
     <a href="/login?mode=join" class="btn-cta">Join for free</a>
     <a href="#vote" class="btn-sec">See what's next</a>
@@ -149,8 +151,8 @@ const activities = [
 <!-- ═══ COMMUNITY VOTING ═══ -->
 <section class="section" id="vote">
   <div class="sec-eyebrow">Community Votes</div>
-  <h2 class="sec-title">What should we do next?</h2>
-  <p class="sec-sub">Members suggest ideas. The community votes. Top picks become real events.</p>
+  <h2 class="sec-title">{content.home_how_title}</h2>
+  <p class="sec-sub">{content.home_how_subtitle}</p>
 
   {suggestions.length > 0 ? (
     <div class="vote-list">
@@ -187,8 +189,8 @@ const activities = [
 <!-- ═══ ACTIVITY CARDS ═══ -->
 <section class="section">
   <div class="sec-eyebrow">What we do</div>
-  <h2 class="sec-title">Pick your thing. Show up.</h2>
-  <p class="sec-sub">No experience needed for any of these. Seriously.</p>
+  <h2 class="sec-title">{content.home_types_title}</h2>
+  <p class="sec-sub">{content.home_types_subtitle}</p>
   <div class="activity-grid">
     {activities.map((a) => (
       <div class="activity-card fade-up">

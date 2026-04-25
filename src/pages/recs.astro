@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
+import { getContent } from '../lib/content';
 
 let user: any = null;
 const cookie = Astro.cookies.get("dsn_user")?.value;
@@ -41,6 +42,7 @@ const catLabel: Record<string,string> = {
 };
 
 const categories = ['all', ...Object.keys(catLabel)];
+const content = await getContent();
 ---
 <Base title="Recs — Denver Social">
   <div class="rc">
@@ -49,8 +51,8 @@ const categories = ['all', ...Object.keys(catLabel)];
       <div class="rc-hero-bg"></div>
       <div class="rc-hero-content">
         <div class="rc-icon">⭐</div>
-        <h1 class="rc-title">Denver Recs</h1>
-        <p class="rc-sub">Community-sourced spots. Upvote your favorites — they feed into our events.</p>
+        <h1 class="rc-title">{content.recs_title}</h1>
+        <p class="rc-sub">{content.recs_subtitle}</p>
         <div class="rc-stat">{recs.length} recs from the crew</div>
       </div>
     </div>

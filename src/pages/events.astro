@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
+import { getContent } from '../lib/content';
 
 let user: any = null;
 const cookie = Astro.cookies.get("dsn_user")?.value;
@@ -173,6 +174,7 @@ const orderedTypes = [
   ...coreTypes.filter(t => typeSet.has(t)),
   ...Array.from(typeSet).filter(t => !coreTypes.includes(t as string))
 ];
+const content = await getContent();
 ---
 <Base title="Events">
 
@@ -189,7 +191,7 @@ const orderedTypes = [
           <p class="mag-greeting">Hey {user.name.split(' ')[0]} 👋</p>
         )}
         <h1 class="mag-headline">{headline}</h1>
-        <p class="mag-sub">Dinners, game nights, pottery, hikes — small groups, real plans, no flakes.</p>
+        <p class="mag-sub">{content.events_subtitle}</p>
         <div class="mag-week-pill">
           <span class="mag-week-dot"></span>
           Denver · {events.length} upcoming
@@ -241,7 +243,7 @@ const orderedTypes = [
       <div class="mag-empty">
         <div class="mag-empty-icon">🗓️</div>
         <h2 class="mag-empty-title">Nothing on the calendar yet</h2>
-        <p class="mag-empty-sub">Dinners, pottery nights, game nights, hikes — new events drop every week. Post one or join the Discord so you don't miss out.</p>
+        <p class="mag-empty-sub">{content.events_empty}</p>
         <div class="mag-empty-actions">
           <button class="mag-empty-btn" id="emptyCreate">Post an event — it's free</button>
           <a href="https://discord.gg/S8SFNkdSgK" class="mag-empty-btn mag-empty-btn-alt" target="_blank" rel="noopener">Join the Discord</a>

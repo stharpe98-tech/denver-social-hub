@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
 import { getLevel } from '../lib/levels';
+import { getContent } from '../lib/content';
 
 const db = getDB();
 let members: any[] = [];
@@ -45,6 +46,7 @@ const faqs = [
   { q:"I'm neurodivergent / have social anxiety — will I fit in?", a:"Yes. You can be quiet, leave early, skip the small talk, or ask a million questions — all fine. A lot of us are awkward. That's kind of the point. More on our safety page at /conduct." },
   { q:"I live in the suburbs — is this just a downtown thing?", a:"Nope. We've got members in Lakewood, Aurora, Golden, Arvada, Littleton — all over. Events happen across the metro. We try to mix up locations so it's not always the same neighborhood." },
 ];
+const content = await getContent();
 ---
 <Base title="About">
 
@@ -53,8 +55,8 @@ const faqs = [
   <!-- HERO -->
   <section class="about-hero">
     <div class="about-hero-tag">About Denver Social</div>
-    <h1 class="about-hero-h1">Look — making friends after college is <em>weird.</em></h1>
-    <p class="about-hero-sub">We're just a group of people in Denver who got tired of doom-scrolling on the couch every weekend. So we started doing stuff together. Dinners, hikes, bowling, whatever. We don't bite. ...okay, we might. But in a fun way.</p>
+    <h1 class="about-hero-h1" set:html={content.about_title}></h1>
+    <p class="about-hero-sub">{content.about_subtitle}</p>
   </section>
 
   <!-- STATS -->
