@@ -1,0 +1,581 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDB } from '../lib/db';
+
+let user: any = null;
+const cookie = Astro.cookies.get("dsn_user")?.value;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+const isLoggedIn = !!user;
+
+const db = getDB();
+let recs: any[] = [];
+let userVotes: Set<number> = new Set();
+
+try {
+  if (db) {
+    recs = (await db.prepare("SELECT * FROM recommendations ORDER BY votes DESC, created_at DESC").all())?.results || [];
+    if (isLoggedIn) {
+      const votes = (await db.prepare("SELECT rec_id FROM recommendation_votes WHERE email=?").bind(user.email).all())?.results || [];
+      votes.forEach((v: any) => userVotes.add(v.rec_id));
+    }
+  }
+} catch {}
+
+const catEmoji: Record<string,string> = {
+  restaurant: "🍽️",
+  studio: "🎨",
+  cafe: "☕",
+  bar: "🍺",
+  gym: "🧗",
+  activity: "🎯",
+  other: "📍"
+};
+const catLabel: Record<string,string> = {
+  restaurant: "Restaurants",
+  studio: "Studios & Art",
+  cafe: "Cafés",
+  bar: "Bars & Breweries",
+  gym: "Fitness & Climbing",
+  activity: "Activities",
+  other: "Other"
+};
+
+const categories = ['all', ...Object.keys(catLabel)];
+---
+<Base title="Recs — Denver Social">
+  <div class="rc">
+    <!-- Hero -->
+    <div class="rc-hero">
+      <div class="rc-hero-bg"></div>
+      <div class="rc-hero-content">
+        <div class="rc-icon">⭐</div>
+        <h1 class="rc-title">Denver Recs</h1>
+        <p class="rc-sub">Community-sourced spots. Upvote your favorites — they feed into our events.</p>
+        <div class="rc-stat">{recs.length} recs from the crew</div>
+      </div>
+    </div>
+
+    <!-- Filter chips -->
+    <div class="rc-filters" id="rcFilters">
+      {categories.map(cat => (
+        <button class:list={["rc-chip", { active: cat === 'all' }]} data-cat={cat}>
+          {cat === 'all' ? '✨ All' : `${catEmoji[cat] || '📍'} ${catLabel[cat] || cat}`}
+        </button>
+      ))}
+    </div>
+
+    <!-- Add rec button (logged in only) -->
+    {isLoggedIn && (
+      <button class="rc-add-btn" id="rcAddBtn">+ Add a Rec</button>
+    )}
+
+    <!-- Add form (hidden by default) -->
+    {isLoggedIn && (
+      <div class="rc-form-wrap" id="rcForm" style="display:none;">
+        <div class="rc-form-card">
+          <h3 class="rc-form-title">Share a spot</h3>
+          <div class="rc-field">
+            <label class="rc-label">Name *</label>
+            <input type="text" id="recName" placeholder="e.g. Guard and Grace" class="rc-input" maxlength="100" />
+          </div>
+          <div class="rc-field">
+            <label class="rc-label">Category</label>
+            <select id="recCategory" class="rc-input">
+              <option value="restaurant">🍽️ Restaurant</option>
+              <option value="studio">🎨 Studio / Art</option>
+              <option value="cafe">☕ Café</option>
+              <option value="bar">🍺 Bar / Brewery</option>
+              <option value="gym">🧗 Fitness / Climbing</option>
+              <option value="activity">🎯 Activity</option>
+              <option value="other">📍 Other</option>
+            </select>
+          </div>
+          <div class="rc-field">
+            <label class="rc-label">Cuisine / Type</label>
+            <input type="text" id="recCuisine" placeholder="e.g. Italian, Bouldering, Board Games" class="rc-input" maxlength="60" />
+          </div>
+          <div class="rc-field">
+            <label class="rc-label">Neighborhood</label>
+            <input type="text" id="recHood" placeholder="e.g. RiNo, LoHi, Cap Hill" class="rc-input" maxlength="60" />
+          </div>
+          <div class="rc-field">
+            <label class="rc-label">Quick note</label>
+            <input type="text" id="recNote" placeholder="Why you love it" class="rc-input" maxlength="160" />
+          </div>
+          <div class="rc-form-actions">
+            <button class="rc-btn-submit" id="rcSubmit">Submit Rec</button>
+            <button class="rc-btn-cancel" id="rcCancel">Cancel</button>
+          </div>
+          <div id="rcFormMsg" class="rc-form-msg" style="display:none;"></div>
+        </div>
+      </div>
+    )}
+
+    <!-- Recs list -->
+    <div class="rc-list" id="rcList">
+      {recs.map((r: any) => {
+        const voted = userVotes.has(r.id);
+        return (
+          <div class="rc-card" data-cat={r.category} data-id={r.id}>
+            <div class="rc-card-left">
+              <button
+                class:list={["rc-vote-btn", { voted }]}
+                data-id={r.id}
+                disabled={!isLoggedIn}
+                title={isLoggedIn ? (voted ? "Remove upvote" : "Upvote this") : "Sign in to vote"}
+              >
+                <span class="rc-arrow">▲</span>
+                <span class="rc-vote-count">{r.votes || 0}</span>
+              </button>
+            </div>
+            <div class="rc-card-right">
+              <div class="rc-card-header">
+                <span class="rc-card-emoji">{catEmoji[r.category] || '📍'}</span>
+                <h3 class="rc-card-name">{r.name}</h3>
+              </div>
+              <div class="rc-card-meta">
+                {r.cuisine && <span class="rc-tag">{r.cuisine}</span>}
+                {r.neighborhood && <span class="rc-tag rc-tag-hood">{r.neighborhood}</span>}
+              </div>
+              {r.note && <p class="rc-card-note">{r.note}</p>}
+              <div class="rc-card-by">by {r.submitted_by_name}</div>
+            </div>
+          </div>
+        );
+      })}
+      {recs.length === 0 && (
+        <div class="rc-empty">No recs yet — be the first to share a spot!</div>
+      )}
+    </div>
+
+    {!isLoggedIn && (
+      <div class="rc-cta">
+        <a href="/login?mode=join&next=/recs" class="rc-cta-btn">Join to add & vote on recs →</a>
+      </div>
+    )}
+  </div>
+</Base>
+
+<style is:inline>
+  .rc {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 20px 100px;
+  }
+
+  /* ── Hero ── */
+  .rc-hero {
+    position: relative;
+    margin: -20px -20px 0;
+    padding: 48px 28px 40px;
+    border-radius: 0 0 28px 28px;
+    overflow: hidden;
+    text-align: center;
+  }
+  .rc-hero-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #4a1a6b 40%, #7C3AED 70%, #a855f7 100%);
+    z-index: 0;
+  }
+  .rc-hero-content { position: relative; z-index: 1; }
+  .rc-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+    animation: rcPop .6s cubic-bezier(.68,-.55,.27,1.55);
+  }
+  @keyframes rcPop {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .rc-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .rc-sub {
+    font-size: 14px;
+    color: rgba(255,255,255,.7);
+    max-width: 340px;
+    margin: 0 auto;
+  }
+  .rc-stat {
+    margin-top: 14px;
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,.85);
+    background: rgba(255,255,255,.12);
+    padding: 5px 14px;
+    border-radius: 50px;
+    backdrop-filter: blur(8px);
+  }
+
+  /* ── Filter chips ── */
+  .rc-filters {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 20px 0 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .rc-filters::-webkit-scrollbar { display: none; }
+  .rc-chip {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 2px solid var(--border, #e5e5e5);
+    background: var(--surface, #f9f9f9);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    color: var(--text-sec, #666);
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .rc-chip:hover { border-color: #7C3AED; color: #7C3AED; }
+  .rc-chip.active {
+    background: linear-gradient(135deg, #7C3AED, #a855f7);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  /* ── Add button ── */
+  .rc-add-btn {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px;
+    border: 2px dashed #7C3AED;
+    border-radius: 16px;
+    background: rgba(124,58,237,.04);
+    color: #7C3AED;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .rc-add-btn:hover { background: rgba(124,58,237,.1); }
+
+  /* ── Add form ── */
+  .rc-form-wrap { margin-top: 16px; }
+  .rc-form-card {
+    background: var(--surface, #f9f9f9);
+    border: 2px solid var(--border, #e5e5e5);
+    border-radius: 20px;
+    padding: 24px;
+  }
+  .rc-form-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text, #1a1a1a);
+    margin-bottom: 16px;
+  }
+  .rc-field { margin-bottom: 12px; }
+  .rc-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-faint, #999);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 5px;
+    font-family: 'Outfit', sans-serif;
+  }
+  .rc-input {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--bg, #fff);
+    border: 2px solid var(--border, #e5e5e5);
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--text, #1a1a1a);
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color .2s;
+  }
+  .rc-input:focus { border-color: #7C3AED; outline: none; box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+  .rc-input::placeholder { color: var(--text-faint, #bbb); }
+  select.rc-input { cursor: pointer; }
+  .rc-form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .rc-btn-submit {
+    flex: 1;
+    padding: 13px;
+    background: linear-gradient(135deg, #7C3AED, #a855f7);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .rc-btn-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(124,58,237,.25); }
+  .rc-btn-cancel {
+    padding: 13px 20px;
+    background: transparent;
+    color: var(--text-sec, #666);
+    border: 2px solid var(--border, #e5e5e5);
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+  }
+  .rc-form-msg {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    text-align: center;
+  }
+  .rc-form-msg.success { background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0; }
+  .rc-form-msg.error { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+
+  /* ── Rec cards ── */
+  .rc-list { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .rc-card {
+    display: flex;
+    gap: 14px;
+    padding: 18px;
+    background: var(--surface, #f9f9f9);
+    border: 2px solid var(--border, #e5e5e5);
+    border-radius: 18px;
+    transition: all .2s;
+  }
+  .rc-card:hover { border-color: #d4d4d4; }
+  .rc-card.hidden { display: none; }
+
+  /* Vote button */
+  .rc-card-left { display: flex; align-items: flex-start; }
+  .rc-vote-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 2px solid var(--border, #e5e5e5);
+    border-radius: 12px;
+    background: var(--bg, #fff);
+    cursor: pointer;
+    transition: all .2s;
+    min-width: 44px;
+  }
+  .rc-vote-btn:not(:disabled):hover { border-color: #7C3AED; }
+  .rc-vote-btn.voted {
+    border-color: #7C3AED;
+    background: rgba(124,58,237,.06);
+  }
+  .rc-vote-btn:disabled { opacity: .5; cursor: default; }
+  .rc-arrow {
+    font-size: 14px;
+    color: var(--text-faint, #999);
+    line-height: 1;
+  }
+  .rc-vote-btn.voted .rc-arrow { color: #7C3AED; }
+  .rc-vote-count {
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    color: var(--text, #1a1a1a);
+  }
+  .rc-vote-btn.voted .rc-vote-count { color: #7C3AED; }
+
+  /* Card content */
+  .rc-card-right { flex: 1; min-width: 0; }
+  .rc-card-header { display: flex; align-items: center; gap: 8px; }
+  .rc-card-emoji { font-size: 20px; }
+  .rc-card-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text, #1a1a1a);
+    line-height: 1.2;
+  }
+  .rc-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .rc-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 50px;
+    background: #EEF2FF;
+    color: #5B21B6;
+  }
+  .rc-tag-hood {
+    background: #F0FDF4;
+    color: #047857;
+  }
+  .rc-card-note {
+    font-size: 13px;
+    color: var(--text-sec, #666);
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+  .rc-card-by {
+    font-size: 11px;
+    color: var(--text-faint, #999);
+    margin-top: 6px;
+  }
+
+  /* ── Empty state ── */
+  .rc-empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-faint, #999);
+    font-size: 15px;
+  }
+
+  /* ── CTA for logged out ── */
+  .rc-cta {
+    margin-top: 24px;
+    text-align: center;
+  }
+  .rc-cta-btn {
+    display: inline-block;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #7C3AED, #a855f7);
+    color: #fff;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    text-decoration: none;
+    transition: all .25s;
+    box-shadow: 0 4px 14px rgba(124,58,237,.25);
+  }
+  .rc-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,58,237,.35); }
+
+  /* ── Mobile ── */
+  @media (max-width: 480px) {
+    .rc { padding: 0 16px 100px; }
+    .rc-hero { margin: -20px -16px 0; padding: 40px 20px 32px; }
+    .rc-title { font-size: 24px; }
+    .rc-card { padding: 14px; gap: 10px; }
+    .rc-card-name { font-size: 15px; }
+  }
+</style>
+
+<script is:inline>
+  // ── Filter chips ──
+  document.querySelectorAll('.rc-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.rc-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const cat = chip.getAttribute('data-cat');
+      document.querySelectorAll('.rc-card').forEach(card => {
+        if (cat === 'all' || card.getAttribute('data-cat') === cat) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    });
+  });
+
+  // ── Toggle add form ──
+  const addBtn = document.getElementById('rcAddBtn');
+  const formWrap = document.getElementById('rcForm');
+  const cancelBtn = document.getElementById('rcCancel');
+  if (addBtn && formWrap) {
+    addBtn.addEventListener('click', () => {
+      formWrap.style.display = formWrap.style.display === 'none' ? 'block' : 'none';
+      addBtn.style.display = formWrap.style.display === 'none' ? 'block' : 'none';
+    });
+  }
+  if (cancelBtn && formWrap && addBtn) {
+    cancelBtn.addEventListener('click', () => {
+      formWrap.style.display = 'none';
+      addBtn.style.display = 'block';
+    });
+  }
+
+  // ── Submit rec ──
+  const submitBtn = document.getElementById('rcSubmit');
+  if (submitBtn) {
+    submitBtn.addEventListener('click', async () => {
+      const name = document.getElementById('recName').value.trim();
+      const category = document.getElementById('recCategory').value;
+      const cuisine = document.getElementById('recCuisine').value.trim();
+      const neighborhood = document.getElementById('recHood').value.trim();
+      const note = document.getElementById('recNote').value.trim();
+      const msg = document.getElementById('rcFormMsg');
+
+      if (!name) {
+        msg.textContent = 'Name is required';
+        msg.className = 'rc-form-msg error';
+        msg.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      try {
+        const res = await fetch('/api/recs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, category, cuisine, neighborhood, note })
+        });
+        const data = await res.json();
+        if (data.success) {
+          msg.textContent = 'Rec added! Refreshing...';
+          msg.className = 'rc-form-msg success';
+          msg.style.display = 'block';
+          setTimeout(() => location.reload(), 800);
+        } else {
+          msg.textContent = data.error || 'Something went wrong';
+          msg.className = 'rc-form-msg error';
+          msg.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Rec';
+        }
+      } catch {
+        msg.textContent = 'Network error. Try again.';
+        msg.className = 'rc-form-msg error';
+        msg.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Rec';
+      }
+    });
+  }
+
+  // ── Vote ──
+  document.querySelectorAll('.rc-vote-btn:not(:disabled)').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const recId = btn.getAttribute('data-id');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/recs-vote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rec_id: parseInt(recId) })
+        });
+        const data = await res.json();
+        if (data.success) {
+          btn.querySelector('.rc-vote-count').textContent = data.votes;
+          if (data.voted) {
+            btn.classList.add('voted');
+          } else {
+            btn.classList.remove('voted');
+          }
+        }
+      } catch {}
+      btn.disabled = false;
+    });
+  });
+</script>
