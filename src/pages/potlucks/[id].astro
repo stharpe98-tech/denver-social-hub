@@ -235,6 +235,11 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
           <input type="text" id="f-name" class="pl-input" placeholder="First name works"/>
           <div class="err" id="e-name" style="font-size:12px;color:#dc2626;margin-top:5px;display:none">We need your name!</div>
         </div>
+        <div class="pl-field">
+          <label>Email address <span class="opt">(optional — for confirmation &amp; reminders)</span></label>
+          <input type="email" id="f-email" class="pl-input" placeholder="you@example.com"/>
+          <div style="font-size:12px;color:#a09890;margin-top:5px;">We'll send you a confirmation and a reminder the day before. No spam, ever.</div>
+        </div>
 
         <div class="pl-field">
           <label>How many people are you bringing? <span class="opt">(including yourself)</span></label>
