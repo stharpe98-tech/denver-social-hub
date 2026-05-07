@@ -83,23 +83,23 @@ const redditName = user?.reddit_username || user?.name;
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #111113;
-    --surface: #1c1c20;
-    --surface-hover: #242428;
-    --border: #2e2e34;
-    --border-hover: #3e3e46;
-    --text: #f0eff4;
-    --text-sec: #9898a6;
-    --text-faint: #5a5a6a;
+    --bg: #f7f5f2;
+    --surface: #ffffff;
+    --surface-hover: #f0ede8;
+    --border: #e4ddd4;
+    --border-hover: #cec5b8;
+    --text: #1c1917;
+    --text-sec: #57524c;
+    --text-faint: #a09890;
     --accent: #f77f00;
-    --accent-dim: rgba(247,127,0,0.12);
-    --accent-glow: rgba(247,127,0,0.25);
-    --green: #22c55e;
-    --green-dim: rgba(34,197,94,0.12);
-    --red: #f87171;
-    --red-dim: rgba(248,113,113,0.12);
-    --yellow: #fbbf24;
-    --yellow-dim: rgba(251,191,36,0.12);
+    --accent-dim: rgba(247,127,0,0.10);
+    --accent-glow: rgba(247,127,0,0.22);
+    --green: #16a34a;
+    --green-dim: rgba(22,163,74,0.10);
+    --red: #dc2626;
+    --red-dim: rgba(220,38,38,0.10);
+    --yellow: #d97706;
+    --yellow-dim: rgba(217,119,6,0.10);
     --font: 'Inter', system-ui, sans-serif;
     --font-display: 'Playfair Display', Georgia, serif;
     --radius: 10px;
@@ -116,7 +116,7 @@ const redditName = user?.reddit_username || user?.name;
   /* ── Site Header ── */
   .site-header {
     position: sticky; top: 0; z-index: 200;
-    background: rgba(17,17,19,0.92); backdrop-filter: blur(20px);
+    background: rgba(247,245,242,0.94); backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
     height: 56px; display: flex; align-items: center;
   }
@@ -162,7 +162,7 @@ const redditName = user?.reddit_username || user?.name;
   /* ── Mobile bottom nav ── */
   .mob-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-    background: rgba(17,17,19,0.96); backdrop-filter: blur(24px);
+    background: rgba(247,245,242,0.97); backdrop-filter: blur(24px);
     border-top: 1px solid var(--border);
     display: flex; justify-content: space-around; align-items: center;
     padding: 6px 0 max(6px, env(safe-area-inset-bottom));
@@ -236,3 +236,4 @@ const redditName = user?.reddit_username || user?.name;
   .site-footer-brand span { color: var(--accent); }
   .site-footer-text { font-size: 12px; color: var(--text-faint); }
 </style>
+
