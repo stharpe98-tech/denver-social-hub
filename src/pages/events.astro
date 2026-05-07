@@ -57,12 +57,12 @@ function fillPct(ev: any): number {
   <!-- Header -->
   <div class="ev-header">
     <div class="ev-header-left">
-      <span class="tag tag-orange"># browse</span>
+      <span class="tag tag-orange">Events</span>
       <h1 class="ev-h1">{events.length} events live</h1>
       <p class="ev-sub">{content.events_subtitle || 'Small groups, real plans, no flakes.'}</p>
     </div>
     {user && (
-      <a href="/events/new" class="btn btn-primary" id="createBtn">+ post event</a>
+      <a href="/events/new" class="btn btn-primary" id="createBtn">Post an event</a>
     )}
   </div>
 
@@ -83,7 +83,7 @@ function fillPct(ev: any): number {
               <span class="ec-type tag tag-blue">{typeLabel[ev.event_type] || 'event'}</span>
               {ev.karma_min > 0 && <span class="tag tag-yellow">{ev.karma_min}+ karma</span>}
               {spotsLeft(ev) <= 3 && spotsLeft(ev) > 0 && <span class="tag tag-orange">last {spotsLeft(ev)} spots</span>}
-              {spotsLeft(ev) === 0 && <span class="tag" style="background:rgba(255,71,87,0.12);color:#ff4757">full</span>}
+              {spotsLeft(ev) === 0 && <span class="tag" style="background:rgba(255,71,87,0.12);color:#ff4757">Full</span>}
             </div>
             <h3 class="ec-title">{ev.title}</h3>
             {ev.description && <p class="ec-desc">{ev.description.slice(0, 80)}</p>}
@@ -105,8 +105,8 @@ function fillPct(ev: any): number {
   ) : (
     <div class="ev-empty">
       <div class="ev-empty-term">
-        <span class="term-prompt">$</span> <span class="term-cmd">ls events/</span><br/>
-        <span class="term-output">0 results — new events drop every week.</span>
+        <span class="term-prompt">$</span> <span class="term-cmd">What's happening</span><br/>
+        <span class="term-output">No events right now — check back soon.</span>
       </div>
       <p>{content.events_empty || 'Check back soon or post your own event.'}</p>
       {!user && <a href="/login" class="btn btn-primary">sign in to post</a>}
@@ -160,7 +160,7 @@ function fillPct(ev: any): number {
         <label class="cp-label">description</label>
         <textarea name="description" rows="3" placeholder="What's the plan?" class="input" style="border-radius:8px;resize:vertical"></textarea>
       </div>
-      <button type="submit" class="btn btn-primary" style="width:100%">submit for review</button>
+      <button type="submit" class="btn btn-primary" style="width:100%">Submit for review</button>
     </form>
   </div>
 
@@ -296,3 +296,4 @@ function fillPct(ev: any): number {
     createClose.addEventListener('click', function() { createPanel.style.display = 'none'; });
   }
 </script>
+
