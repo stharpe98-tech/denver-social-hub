@@ -272,18 +272,33 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
         <div class="pl-field">
           <label>Can you help out? <span class="opt">(optional)</span></label>
           <div class="pl-checks">
-            <div class="pl-check-item" data-extra="utensils">
+            <div class="pl-check-item" data-extra="plates">
               <div class="pl-check-box"></div>
-              <div class="pl-check-txt">I'll bring serving spoons and tongs<span class="pl-check-sub">Super helpful for a potluck</span></div>
+              <div class="pl-check-txt">I'll bring plates, napkins &amp; cups<span class="pl-check-sub">Easy to forget, always needed</span></div>
             </div>
-            <div class="pl-check-item" data-extra="earlyArrive">
+            <div class="pl-check-item" data-extra="cooler">
               <div class="pl-check-box"></div>
-              <div class="pl-check-txt">I can show up 30 min early to help set up</div>
+              <div class="pl-check-txt">I'll bring a cooler with drinks or ice</div>
             </div>
             <div class="pl-check-item" data-extra="seating">
               <div class="pl-check-box"></div>
-              <div class="pl-check-txt">I'll bring chairs or a blanket<span class="pl-check-sub">It's open grass at Cheeseman</span></div>
+              <div class="pl-check-txt">I'll bring chairs or a blanket<span class="pl-check-sub">Open grass at Cheeseman</span></div>
             </div>
+            <div class="pl-check-item" data-extra="cleanup">
+              <div class="pl-check-box"></div>
+              <div class="pl-check-txt">I can help clean up at the end</div>
+            </div>
+          </div>
+
+          <!-- Donate instead -->
+          <div style="margin-top:16px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:14px 16px;">
+            <div style="font-size:14px;font-weight:600;color:#15803d;margin-bottom:4px;">Rather donate and let us handle it?</div>
+            <div style="font-size:13px;color:#57524c;margin-bottom:12px;">Totally fine — we'll cover your dish with the donation.</div>
+            <a href="https://venmo.com/u/beekeepseth" target="_blank" rel="noopener"
+              style="display:flex;align-items:center;gap:10px;background:#3d95ce;color:#fff;padding:11px 16px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:600;">
+              <span style="font-size:20px;">💙</span>
+              Pay via Venmo — @beekeepseth
+            </a>
           </div>
         </div>
 
@@ -345,7 +360,7 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
     // State
     var rsvp = '';
     var guestCount = 1;
-    var extras = { utensils: false, earlyArrive: false, seating: false };
+    var extras = { plates: false, cooler: false, seating: false, cleanup: false };
     var selectedDish = '';
     var selectedCat = '';
 
@@ -462,8 +477,8 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
         dish: rsvp === 'yes' ? selectedDish : '',
         dishCategory: rsvp === 'yes' ? selectedCat : '',
         dietary: dietary,
-        utensils: extras.utensils,
-        earlyArrive: extras.earlyArrive,
+        utensils: extras.plates,
+        earlyArrive: extras.cooler,
         seating: extras.seating
       };
 
