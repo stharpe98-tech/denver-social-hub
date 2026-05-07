@@ -1,0 +1,129 @@
+---
+import { getDB } from '../../lib/db';
+const db = getDB();
+let links: any[] = [];
+try {
+  if (db) {
+    const { results } = await db.prepare(`SELECT * FROM short_links ORDER BY created_at DESC`).all();
+    links = results ?? [];
+  }
+} catch(e) {}
+const host = Astro.url.host;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Short Links · Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style is:global>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0e0e10;color:#e4e4e7;font-family:'Inter',sans-serif;min-height:100vh;padding-bottom:40px}
+    .hero{background:#0e0e10;border-bottom:1px solid #2a2a30;padding:28px 24px}
+    .hi{max-width:700px;margin:0 auto}
+    .back{color:#55555e;font-size:13px;text-decoration:none;margin-bottom:10px;display:inline-flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace}
+    .hero h1{font-size:22px;font-weight:700;color:#e4e4e7;margin-bottom:4px}
+    .hero p{font-size:13px;color:#55555e}
+    .page{max-width:700px;margin:0 auto;padding:24px 16px}
+    .create-card{background:#1a1a1f;border:1px solid #2a2a30;border-radius:12px;padding:20px;margin-bottom:28px}
+    .create-title{font-size:13px;font-weight:600;color:#8b8b94;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr 2fr auto;gap:10px;align-items:end}
+    @media(max-width:600px){.form-row{grid-template-columns:1fr 1fr;gap:8px}}
+    .field label{display:block;font-size:11px;color:#55555e;margin-bottom:5px;font-family:'JetBrains Mono',monospace}
+    .field input{width:100%;padding:9px 12px;background:#0e0e10;border:1px solid #2a2a30;border-radius:7px;color:#e4e4e7;font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color 0.15s}
+    .field input:focus{border-color:#ff4500}
+    .field input::placeholder{color:#55555e}
+    .create-btn{padding:9px 18px;border-radius:7px;border:none;background:#ff4500;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;height:38px}
+    .sec-label{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#55555e;margin-bottom:12px}
+    .link-row{background:#1a1a1f;border:1px solid #2a2a30;border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+    .link-short{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#ff4500;min-width:100px}
+    .link-dest{font-size:13px;color:#8b8b94;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .link-label{font-size:12px;color:#55555e;min-width:80px}
+    .link-clicks{font-family:'JetBrains Mono',monospace;font-size:12px;color:#55555e;min-width:48px;text-align:right}
+    .copy-btn{padding:5px 10px;border-radius:6px;border:1px solid #2a2a30;background:transparent;color:#8b8b94;font-size:11px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all 0.12s;white-space:nowrap}
+    .copy-btn:hover,.copy-btn.copied{border-color:#ff4500;color:#ff4500}
+    .del-btn{padding:5px 10px;border-radius:6px;border:1px solid #2a2a30;background:transparent;color:#55555e;font-size:11px;cursor:pointer;transition:all 0.12s}
+    .del-btn:hover{border-color:#ff4757;color:#ff4757}
+    .empty{text-align:center;padding:40px;color:#55555e;font-style:italic;font-size:13px}
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1f;border:1px solid #2a2a30;color:#e4e4e7;padding:10px 20px;border-radius:8px;font-size:13px;display:none;z-index:999;font-family:'JetBrains Mono',monospace}
+    @media(max-width:600px){.link-label,.link-clicks{display:none}.link-row{flex-wrap:wrap}}
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="hi">
+      <a href="/admin/dashboard" class="back">← Admin</a>
+      <h1>🔗 Short Links</h1>
+      <p>denversocialhub.com/go/[slug] → anywhere</p>
+    </div>
+  </div>
+  <div class="page">
+    <div class="create-card">
+      <div class="create-title">Create new link</div>
+      <div class="form-row">
+        <div class="field"><label>Slug</label><input type="text" id="new-slug" placeholder="potluck"/></div>
+        <div class="field"><label>Label</label><input type="text" id="new-label" placeholder="Summer Potluck"/></div>
+        <div class="field"><label>Destination URL</label><input type="text" id="new-url" placeholder="https://… or /potlucks/1"/></div>
+        <button class="create-btn" id="create-btn">Create</button>
+      </div>
+    </div>
+
+    <div class="sec-label">All links ({links.length})</div>
+
+    {links.length === 0
+      ? <div class="empty">No links yet</div>
+      : links.map((l: any) => (
+        <div class="link-row" id={`row-${l.id}`}>
+          <div class="link-short">/go/{l.slug}</div>
+          <div class="link-dest" title={l.url}>{l.url}</div>
+          <div class="link-label">{l.label}</div>
+          <div class="link-clicks">{l.clicks} clicks</div>
+          <button class="copy-btn" data-url={`https://${host}/go/${l.slug}`}>copy</button>
+          <button class="del-btn" data-id={l.id}>del</button>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="toast" id="toast">Copied!</div>
+
+  <script is:inline>
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg || 'Done';
+      t.style.display = 'block';
+      setTimeout(function() { t.style.display = 'none'; }, 2000);
+    }
+
+    document.getElementById('create-btn').addEventListener('click', async function() {
+      var slug = document.getElementById('new-slug').value.trim();
+      var url = document.getElementById('new-url').value.trim();
+      var label = document.getElementById('new-label').value.trim();
+      if (!slug || !url) { showToast('Slug and URL required'); return; }
+      var res = await fetch('/api/short-links', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'create',slug,url,label}) });
+      var data = await res.json();
+      if (data.ok) { showToast('Link created ✓'); setTimeout(function(){ location.reload(); }, 800); }
+      else showToast('Error: slug may already exist');
+    });
+
+    document.querySelectorAll('.copy-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        navigator.clipboard.writeText(btn.dataset.url);
+        btn.textContent = 'copied!';
+        btn.classList.add('copied');
+        showToast('Copied to clipboard ✓');
+        setTimeout(function(){ btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+
+    document.querySelectorAll('.del-btn').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Delete this link?')) return;
+        var res = await fetch('/api/short-links', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'delete',id:parseInt(btn.dataset.id)}) });
+        var data = await res.json();
+        if (data.ok) { document.getElementById('row-' + btn.dataset.id).remove(); showToast('Deleted'); }
+      });
+    });
+  </script>
+</body>
+</html>
