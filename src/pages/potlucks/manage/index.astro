@@ -88,6 +88,17 @@ try {
     </div>
 
     <div class="ms">
+      <div class="ms-label">📧 Email Confirmations (Resend)</div>
+      <div class="settings-card">
+        <div class="cf-field" style="margin-bottom:10px"><label>Resend API Key</label><input type="text" id="resend-key" class="cf-input" placeholder="re_xxxxxxxxxxxxxxx" value=""/></div>
+        <div class="cf-field" style="margin-bottom:10px"><label>Your Site URL</label><input type="text" id="site-url" class="cf-input" placeholder="https://denversocialhub.com" value=""/></div>
+        <div class="cf-field" style="margin-bottom:12px"><label>From Email</label><input type="text" id="from-email" class="cf-input" placeholder="Denver Social &lt;noreply@denversocialhub.com&gt;" value=""/></div>
+        <button class="save-btn" id="save-email-cfg">Save</button>
+        <div class="settings-hint" style="margin-top:8px">Get a free API key at resend.com. Sends confirmation + reminder emails automatically when people sign up.</div>
+      </div>
+    </div>
+
+    <div class="ms">
       <div class="ms-label">⏳ Pending ({pending.length})</div>
       {pending.length === 0
         ? <div class="empty">No pending submissions</div>
@@ -180,6 +191,25 @@ try {
     document.getElementById('toggle-create').addEventListener('click', function() {
       var f = document.getElementById('create-form');
       f.style.display = f.style.display === 'block' ? 'none' : 'block';
+    });
+
+    // Load existing email config
+    fetch('/api/potlucks?type=config').then(function(r){ return r.json(); }).then(function(cfg){
+      if (cfg.resend_api_key) document.getElementById('resend-key').value = cfg.resend_api_key;
+      if (cfg.site_url) document.getElementById('site-url').value = cfg.site_url;
+      if (cfg.from_email) document.getElementById('from-email').value = cfg.from_email;
+    }).catch(function(){});
+
+    document.getElementById('save-email-cfg').addEventListener('click', async function() {
+      var key = document.getElementById('resend-key').value.trim();
+      var url = document.getElementById('site-url').value.trim();
+      var from = document.getElementById('from-email').value.trim();
+      await Promise.all([
+        fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'set_config',key:'resend_api_key',value:key}) }),
+        fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'set_config',key:'site_url',value:url}) }),
+        fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'set_config',key:'from_email',value:from}) }),
+      ]);
+      showToast('Email settings saved ✓');
     });
 
     document.getElementById('create-submit').addEventListener('click', async function() {
