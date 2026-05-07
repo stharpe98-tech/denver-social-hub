@@ -4,9 +4,21 @@ import { buildConfirmationEmail } from '../../lib/email';
 
 function generateToken(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let token = '';
-  for (let i = 0; i < 32; i++) token += chars[Math.floor(Math.random() * chars.length)];
-  return token;
+  let t = '';
+  for (let i = 0; i < 32; i++) t += chars[Math.floor(Math.random() * chars.length)];
+  return t;
+}
+
+async function verifyTurnstile(token: string, secret: string, ip: string): Promise<boolean> {
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret, response: token, remoteip: ip }),
+    });
+    const data = await res.json() as { success: boolean };
+    return data.success;
+  } catch { return false; }
 }
 
 export const GET: APIRoute = async ({ url }) => {
@@ -25,14 +37,32 @@ export const GET: APIRoute = async ({ url }) => {
   });
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   const db = getDB();
   if (!db) return new Response(JSON.stringify({ ok: false }), { status: 500 });
   try {
     const b = await request.json() as Record<string, any>;
+
+    // Honeypot check — bots fill hidden fields, humans don't
+    if (b._gotcha && b._gotcha.length > 0) {
+      return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Turnstile verification
+    const cfgRows = await db.prepare(`SELECT key, value FROM config`).all();
+    const cfg: Record<string,string> = {};
+    (cfgRows.results ?? []).forEach((r: any) => { cfg[r.key] = r.value; });
+
+    if (cfg.turnstile_secret_key && b._turnstile) {
+      const valid = await verifyTurnstile(b._turnstile, cfg.turnstile_secret_key, clientAddress || '');
+      if (!valid) {
+        return new Response(JSON.stringify({ ok: false, error: 'bot_detected' }), { status: 403 });
+      }
+    }
+
     const potluckId = parseInt(b.potluckId ?? '1');
 
-    // Validate slot
+    // Slot validation
     if (b.dish && b.rsvp === 'yes') {
       const slot = await db.prepare(`
         SELECT s.max_claims, COUNT(r.id) as claimed
@@ -55,38 +85,23 @@ export const POST: APIRoute = async ({ request }) => {
       parseInt(b.guestCount??'1'), b.dish??'', b.dishCategory??'', b.dietary??'',
       b.utensils?1:0, b.earlyArrive?1:0, b.seating?1:0, cancelToken).run();
 
-    // Get config + potluck details
-    const [potluck, cfgRows] = await Promise.all([
-      db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(potluckId).first() as any,
-      db.prepare(`SELECT key, value FROM config WHERE key IN ('resend_api_key','site_url','from_email')`).all(),
-    ]);
-    const cfg: Record<string,string> = {};
-    (cfgRows.results ?? []).forEach((r: any) => { cfg[r.key] = r.value; });
-
+    const potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(potluckId).first() as any;
     const siteUrl = cfg.site_url || 'https://denversocialhub.com';
     const editUrl = `${siteUrl}/potlucks/edit?token=${cancelToken}`;
-    const cancelUrl = `${siteUrl}/potlucks/cancel?token=${cancelToken}`;
+    const cancelUrl = `${siteUrl}/potlucks/edit?token=${cancelToken}&action=cancel`;
 
-    // Send confirmation email via Resend
+    // Send confirmation email
     if (b.email && cfg.resend_api_key) {
       const html = buildConfirmationEmail({
-        name: b.name ?? '',
-        eventTitle: potluck?.title ?? '',
-        eventDate: potluck?.date_label ?? '',
-        eventTime: potluck?.time_label ?? '',
-        eventLocation: potluck?.location ?? '',
-        eventLocationDetail: potluck?.location_detail ?? '',
-        dish: b.dish ?? '',
-        guests: parseInt(b.guestCount ?? '1'),
-        editUrl,
-        cancelUrl,
+        name: b.name ?? '', eventTitle: potluck?.title ?? '',
+        eventDate: potluck?.date_label ?? '', eventTime: potluck?.time_label ?? '',
+        eventLocation: potluck?.location ?? '', eventLocationDetail: potluck?.location_detail ?? '',
+        dish: b.dish ?? '', guests: parseInt(b.guestCount ?? '1'),
+        editUrl, cancelUrl,
       });
       fetch('https://api.resend.com/emails', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${cfg.resend_api_key}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Authorization': `Bearer ${cfg.resend_api_key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           from: cfg.from_email || 'Denver Social <noreply@denversocialhub.com>',
           to: [b.email],
@@ -96,19 +111,15 @@ export const POST: APIRoute = async ({ request }) => {
       }).catch(() => {});
     }
 
-    // Fire Zapier webhook
-    const zapCfg = await db.prepare(`SELECT value FROM config WHERE key='webhook_url'`).first() as any;
-    if (zapCfg?.value?.startsWith('http')) {
-      fetch(zapCfg.value, {
+    // Zapier webhook
+    if (cfg.webhook_url?.startsWith('http')) {
+      fetch(cfg.webhook_url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          timestamp: new Date().toISOString(),
-          potluck: potluck?.title ?? '', date: potluck?.date_label ?? '',
+          timestamp: new Date().toISOString(), potluck: potluck?.title ?? '',
           name: b.name, email: b.email, platforms: b.platforms,
           rsvp: b.rsvp, guests: b.guestCount, dish: b.dish,
-          category: b.dishCategory, dietary: b.dietary,
-          utensils: b.utensils?'Yes':'No', early_arrive: b.earlyArrive?'Yes':'No', seating: b.seating?'Yes':'No',
           edit_url: editUrl, cancel_url: cancelUrl,
         }),
       }).catch(() => {});
