@@ -1,5 +1,5 @@
 ---
-const { title = "events.hub", description = "Real small-group events across the Denver metro. Powered by Reddit identity." } = Astro.props;
+const { title = "Denver Social", description = "Real small-group events across Denver. Show up, meet people." } = Astro.props;
 
 let user: any = null;
 const cookie = Astro.cookies.get("dsn_user")?.value;
@@ -14,59 +14,68 @@ const redditName = user?.reddit_username || user?.name;
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content={description} />
-  <title>{title} — /r/events.hub</title>
+  <title>{title} · Denver Social</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <nav class="nav">
-    <a href="/" class="nav-logo">/r/<span class="nav-logo-accent">events.hub</span></a>
 
-    <div class="nav-links">
-      <a href="/events"   class:list={["nav-link", { active: currentPath.startsWith("/events") }]}>
-        <span class="nav-link-icon">~</span>browse
+  <!-- Top nav -->
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a href="/" class="site-logo">
+        <span class="site-logo-icon">🏔</span>
+        <span class="site-logo-text">Denver Social</span>
       </a>
-      <a href="/recs"     class:list={["nav-link", { active: currentPath === "/recs" }]}>
-        <span class="nav-link-icon">*</span>recs
-      </a>
-      <a href="/potlucks" class:list={["nav-link", { active: currentPath.startsWith("/potlucks") }]}>
-        <span class="nav-link-icon">🍽</span>potlucks
-      </a>
-      <a href="/about"    class:list={["nav-link", { active: currentPath.startsWith("/about") }]}>
-        <span class="nav-link-icon">?</span>about
-      </a>
-    </div>
 
-    <div class="nav-auth">
-      {user ? (
-        <>
-          <a href="/profile" class="nav-user">
-            <span class="nav-karma">{user.karma || 0} karma</span>
-            <span class="nav-username">u/{redditName}</span>
-          </a>
-          <a href="/api/logout" class="nav-logout">[logout]</a>
-        </>
-      ) : (
-        <a href="/login" class="nav-cta">Sign in with Reddit</a>
-      )}
+      <nav class="site-nav">
+        <a href="/events"   class:list={["site-nav-link", { active: currentPath.startsWith("/events") }]}>Events</a>
+        <a href="/potlucks" class:list={["site-nav-link", { active: currentPath.startsWith("/potlucks") }]}>Potlucks</a>
+        <a href="/recs"     class:list={["site-nav-link", { active: currentPath === "/recs" }]}>Recs</a>
+        <a href="/about"    class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
+      </nav>
+
+      <div class="site-auth">
+        {user ? (
+          <>
+            <a href="/profile" class="site-user">
+              <span class="site-user-name">u/{redditName}</span>
+              <span class="site-user-karma">{user.karma || 0} karma</span>
+            </a>
+            <a href="/api/logout" class="site-logout">Sign out</a>
+          </>
+        ) : (
+          <a href="/login" class="site-cta">Sign in with Reddit</a>
+        )}
+      </div>
     </div>
-  </nav>
+  </header>
 
   <slot />
 
-  <!-- Bottom tab bar for mobile -->
-  <div class="mob-nav">
-    <div class="mob-nav-inner">
-      <a href="/"        class:list={[{ active: currentPath === "/" }]}><span class="mn-icon">~</span>home</a>
-      <a href="/events"  class:list={[{ active: currentPath.startsWith("/events") }]}><span class="mn-icon">#</span>events</a>
-      <a href="/potlucks" class:list={[{ active: currentPath.startsWith("/potlucks") }]}><span class="mn-icon">🍽</span>potlucks</a>
-      <a href="/recs"    class:list={[{ active: currentPath === "/recs" }]}><span class="mn-icon">*</span>recs</a>
-      <a href="/about"   class:list={[{ active: currentPath.startsWith("/about") }]}><span class="mn-icon">?</span>about</a>
-      {isAdmin && <a href="/admin" class:list={[{ active: currentPath.startsWith("/admin") }]}><span class="mn-icon">&gt;</span>admin</a>}
-    </div>
-  </div>
+  <!-- Mobile bottom nav -->
+  <nav class="mob-nav">
+    <a href="/"        class:list={["mob-link", { active: currentPath === "/" }]}>
+      <span class="mob-icon">🏠</span><span class="mob-label">Home</span>
+    </a>
+    <a href="/events"  class:list={["mob-link", { active: currentPath.startsWith("/events") }]}>
+      <span class="mob-icon">📅</span><span class="mob-label">Events</span>
+    </a>
+    <a href="/potlucks" class:list={["mob-link", { active: currentPath.startsWith("/potlucks") }]}>
+      <span class="mob-icon">🍽</span><span class="mob-label">Potlucks</span>
+    </a>
+    <a href="/recs"    class:list={["mob-link", { active: currentPath === "/recs" }]}>
+      <span class="mob-icon">⭐</span><span class="mob-label">Recs</span>
+    </a>
+    {isAdmin && (
+      <a href="/admin/dashboard" class:list={["mob-link", { active: currentPath.startsWith("/admin") }]}>
+        <span class="mob-icon">⚙</span><span class="mob-label">Admin</span>
+      </a>
+    )}
+  </nav>
+
 </body>
 </html>
 
@@ -74,177 +83,156 @@ const redditName = user?.reddit_username || user?.name;
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #0e0e10;
-    --surface: #1a1a1f;
-    --surface-hover: #222228;
-    --surface-raised: #26262c;
-    --border: #2a2a30;
-    --border-hover: #3a3a42;
-    --text: #e4e4e7;
-    --text-sec: #8b8b94;
-    --text-faint: #55555e;
-    --accent: #ff4500;
-    --accent-dim: rgba(255,69,0,0.15);
-    --accent-glow: rgba(255,69,0,0.3);
-    --green: #00d26a;
-    --green-dim: rgba(0,210,106,0.12);
-    --blue: #4a9eff;
-    --blue-dim: rgba(74,158,255,0.12);
-    --yellow: #ffd93d;
-    --yellow-dim: rgba(255,217,61,0.1);
-    --red: #ff4757;
-    --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
-    --body: 'Inter', system-ui, sans-serif;
-    --heading: 'Inter', system-ui, sans-serif;
-    --radius: 8px;
-    --radius-lg: 12px;
-    --card-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px var(--border);
+    --bg: #111113;
+    --surface: #1c1c20;
+    --surface-hover: #242428;
+    --border: #2e2e34;
+    --border-hover: #3e3e46;
+    --text: #f0eff4;
+    --text-sec: #9898a6;
+    --text-faint: #5a5a6a;
+    --accent: #f77f00;
+    --accent-dim: rgba(247,127,0,0.12);
+    --accent-glow: rgba(247,127,0,0.25);
+    --green: #22c55e;
+    --green-dim: rgba(34,197,94,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --yellow: #fbbf24;
+    --yellow-dim: rgba(251,191,36,0.12);
+    --font: 'Inter', system-ui, sans-serif;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
   }
 
-  html { font-family: var(--body); background: var(--bg); color: var(--text); }
-  body { min-height: 100vh; padding-bottom: 80px; -webkit-font-smoothing: antialiased; }
-  a { color: inherit; }
-  img { display: block; }
+  html { font-family: var(--font); background: var(--bg); color: var(--text); scroll-behavior: smooth; }
+  body { min-height: 100vh; padding-bottom: 72px; -webkit-font-smoothing: antialiased; -webkit-overflow-scrolling: touch; }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+  button { font-family: var(--font); }
 
-  /* ── Nav ── */
-  .nav {
-    padding: 0 24px; height: 52px;
-    display: flex; justify-content: space-between; align-items: center;
+  /* ── Site Header ── */
+  .site-header {
+    position: sticky; top: 0; z-index: 200;
+    background: rgba(17,17,19,0.92); backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(14,14,16,.92); backdrop-filter: blur(20px);
+    height: 56px; display: flex; align-items: center;
   }
-  .nav-logo {
-    font-family: var(--mono); font-weight: 700; font-size: 15px;
-    color: var(--text-sec); text-decoration: none; letter-spacing: -0.02em;
+  .site-header-inner {
+    width: 100%; max-width: 1100px; margin: 0 auto;
+    padding: 0 20px; display: flex; align-items: center; gap: 16px;
   }
-  .nav-logo-accent { color: var(--accent); }
 
-  .nav-links {
-    display: flex; gap: 2px; align-items: center;
-    position: absolute; left: 50%; transform: translateX(-50%);
-  }
-  .nav-link {
-    font-family: var(--mono); font-size: 13px; font-weight: 500;
-    text-decoration: none; color: var(--text-faint);
-    padding: 6px 14px; border-radius: 6px; transition: all .2s;
-    display: flex; align-items: center; gap: 4px;
-  }
-  .nav-link-icon {
-    color: var(--text-faint);
-    opacity: .5;
-    font-size: 14px;
-  }
-  .nav-link:hover { color: var(--text-sec); background: var(--surface); }
-  .nav-link.active { color: var(--accent); background: var(--accent-dim); }
-  .nav-link.active .nav-link-icon { color: var(--accent); opacity: .7; }
-  @media (max-width: 900px) { .nav-links { display: none; } .nav { padding: 0 16px; } }
+  .site-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; flex-shrink: 0; }
+  .site-logo-icon { font-size: 22px; }
+  .site-logo-text { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
 
-  .nav-auth { display: flex; gap: 8px; align-items: center; }
-  .nav-user {
-    display: flex; align-items: center; gap: 8px;
-    text-decoration: none; padding: 5px 12px; border-radius: 6px;
-    border: 1px solid var(--border); transition: all .2s;
+  .site-nav { display: flex; gap: 4px; align-items: center; margin-left: 8px; }
+  .site-nav-link {
+    font-size: 14px; font-weight: 500; color: var(--text-faint);
+    padding: 6px 12px; border-radius: var(--radius);
+    transition: all 0.15s; text-decoration: none;
   }
-  .nav-user:hover { border-color: var(--border-hover); background: var(--surface); }
-  .nav-karma {
-    font-family: var(--mono); font-size: 11px; font-weight: 600;
-    color: var(--accent); background: var(--accent-dim);
-    padding: 2px 6px; border-radius: 4px;
-  }
-  .nav-username {
-    font-family: var(--mono); font-size: 12px; font-weight: 600;
-    color: var(--text);
-  }
-  .nav-logout {
-    font-family: var(--mono); font-size: 11px; color: var(--text-faint);
-    text-decoration: none; padding: 5px 8px; border-radius: 4px;
-    transition: all .2s;
-  }
-  .nav-logout:hover { color: var(--red); }
-  .nav-cta {
-    font-family: var(--mono); font-size: 12px; font-weight: 600;
-    background: var(--accent); color: #fff; text-decoration: none;
-    padding: 7px 16px; border-radius: 6px; transition: all .2s;
-  }
-  .nav-cta:hover { opacity: .9; box-shadow: 0 0 12px var(--accent-glow); }
+  .site-nav-link:hover { color: var(--text-sec); background: var(--surface); }
+  .site-nav-link.active { color: var(--accent); background: var(--accent-dim); }
+  @media(max-width: 700px) { .site-nav { display: none; } }
 
-  /* ── Mobile nav ── */
+  .site-auth { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+  .site-user { display: flex; flex-direction: column; align-items: flex-end; text-decoration: none; padding: 6px 10px; border-radius: var(--radius); transition: background 0.15s; }
+  .site-user:hover { background: var(--surface); }
+  .site-user-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .site-user-karma { font-size: 11px; color: var(--accent); font-weight: 500; }
+  .site-logout { font-size: 12px; color: var(--text-faint); padding: 6px 10px; border-radius: var(--radius); transition: color 0.15s; }
+  .site-logout:hover { color: var(--red); }
+  .site-cta {
+    font-size: 13px; font-weight: 600;
+    background: var(--accent); color: #fff;
+    padding: 8px 16px; border-radius: var(--radius);
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .site-cta:hover { opacity: 0.88; }
+  @media(max-width: 500px) {
+    .site-user-karma { display: none; }
+    .site-cta { font-size: 12px; padding: 7px 12px; }
+  }
+
+  /* ── Mobile bottom nav ── */
   .mob-nav {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
-    background: rgba(14,14,16,.95); backdrop-filter: blur(24px);
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: rgba(17,17,19,0.96); backdrop-filter: blur(24px);
     border-top: 1px solid var(--border);
-    padding: 4px 0 max(4px, env(safe-area-inset-bottom));
-  }
-  .mob-nav-inner {
     display: flex; justify-content: space-around; align-items: center;
-    max-width: 540px; margin: 0 auto;
+    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+    height: 56px;
   }
-  .mob-nav a {
-    display: flex; flex-direction: column; align-items: center; gap: 1px;
-    text-decoration: none; padding: 6px 10px; font-size: 10px;
-    color: var(--text-faint); font-family: var(--mono); font-weight: 500;
-    border-radius: 6px; transition: all .2s;
+  .mob-link {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    text-decoration: none; padding: 4px 10px;
+    color: var(--text-faint); transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    min-width: 48px;
   }
-  .mn-icon { font-size: 16px; font-weight: 700; line-height: 1.2; }
-  .mob-nav a.active { color: var(--accent); background: var(--accent-dim); }
-  @media (min-width: 901px) { .mob-nav { display: none; } body { padding-bottom: 0; } }
+  .mob-link.active { color: var(--accent); }
+  .mob-icon { font-size: 22px; line-height: 1; }
+  .mob-label { font-size: 10px; font-weight: 500; }
+  @media(min-width: 901px) { .mob-nav { display: none; } body { padding-bottom: 0; } }
 
   /* ── Shared components ── */
   .card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius-lg); padding: 20px;
-    box-shadow: var(--card-shadow); transition: all .2s;
+    transition: border-color 0.15s;
   }
   .card:hover { border-color: var(--border-hover); }
+
   .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600;
-    cursor: pointer; font-family: var(--mono); text-decoration: none; border: none;
-    transition: all .2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 20px; border-radius: var(--radius); font-size: 14px; font-weight: 600;
+    cursor: pointer; text-decoration: none; border: none; transition: all 0.15s;
+    font-family: var(--font); -webkit-tap-highlight-color: transparent;
   }
   .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { opacity: .9; box-shadow: 0 0 16px var(--accent-glow); }
+  .btn-primary:hover { opacity: 0.9; box-shadow: 0 4px 16px var(--accent-glow); }
   .btn-ghost { background: var(--surface); color: var(--text-sec); border: 1px solid var(--border); }
   .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); }
+
   .input {
-    width: 100%; padding: 10px 14px;
+    width: 100%; padding: 11px 14px;
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 6px; font-size: 13px; color: var(--text); font-family: var(--body);
-    transition: border-color .2s; outline: none;
+    border-radius: var(--radius); font-size: 14px; color: var(--text);
+    font-family: var(--font); outline: none; transition: border-color 0.15s;
+    -webkit-appearance: none; appearance: none;
   }
   .input::placeholder { color: var(--text-faint); }
-  .input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+  .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 
-  /* ── Code-style tags ── */
+  /* Tags */
   .tag {
-    font-family: var(--mono); font-size: 11px; font-weight: 600;
-    padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center;
+    font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 6px;
+    display: inline-flex; align-items: center;
   }
   .tag-orange { background: var(--accent-dim); color: var(--accent); }
-  .tag-green { background: var(--green-dim); color: var(--green); }
-  .tag-blue { background: var(--blue-dim); color: var(--blue); }
+  .tag-green  { background: var(--green-dim);  color: var(--green);  }
+  .tag-red    { background: var(--red-dim);    color: var(--red);    }
   .tag-yellow { background: var(--yellow-dim); color: var(--yellow); }
 
-  /* ── Footer ── */
-  .site-footer {
-    padding: 32px; border-top: 1px solid var(--border); text-align: center;
-    margin-bottom: 60px;
-  }
-  .footer-brand {
-    font-family: var(--mono); font-weight: 700; font-size: 14px;
-    color: var(--text-sec); margin-bottom: 4px;
-  }
-  .footer-brand span { color: var(--accent); }
-  .footer-text { font-size: 11px; color: var(--text-faint); }
-
-  /* ── Scrollbar dark ── */
-  ::-webkit-scrollbar { width: 8px; }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
-
-  /* ── Selection ── */
   ::selection { background: var(--accent-dim); color: var(--accent); }
-</style>
 
+  /* Footer */
+  .site-footer {
+    padding: 32px 20px; border-top: 1px solid var(--border);
+    text-align: center; margin-bottom: 72px;
+  }
+  .site-footer-brand { font-size: 14px; font-weight: 700; color: var(--text-sec); margin-bottom: 4px; }
+  .site-footer-brand span { color: var(--accent); }
+  .site-footer-text { font-size: 12px; color: var(--text-faint); }
+</style>
