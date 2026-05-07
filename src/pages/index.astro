@@ -50,8 +50,8 @@ const content = await getContent();
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>/r/events.hub — Denver's Reddit Event Hub</title>
-  <meta name="description" content="Real small-group events in Denver. Sign in with Reddit. Your karma is your trust score." />
+  <title>Denver Social — Real events, real people</title>
+  <meta name="description" content="Real small-group events across Denver. Show up, meet people." />
   <link rel="icon" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -61,11 +61,11 @@ const content = await getContent();
 
 <!-- NAV -->
 <nav class="nav">
-  <a href="/" class="nav-logo">/r/<span class="nav-accent">events.hub</span></a>
+  <a href="/" class="nav-logo">🏔 Denver Social</a>
   <div class="nav-links">
-    <a href="/events"><span class="nl-icon">~</span>browse</a>
-    <a href="/recs"><span class="nl-icon">*</span>recs</a>
-    <a href="/about"><span class="nl-icon">?</span>about</a>
+    <a href="/events">Events</a>
+    <a href="/recs">Recs</a>
+    <a href="/about">About</a>
   </div>
   <div class="nav-auth">
     {user ? (
@@ -74,7 +74,7 @@ const content = await getContent();
           <span class="nav-karma">{user.karma || 0} karma</span>
           <span class="nav-uname">u/{redditName}</span>
         </a>
-        <a href="/api/logout" class="nav-out">[logout]</a>
+        <a href="/api/logout" class="nav-out">Sign out</a>
       </>
     ) : (
       <a href="/login" class="nav-cta">Sign in with Reddit</a>
@@ -85,34 +85,29 @@ const content = await getContent();
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-terminal">
-    <div class="hero-line"><span class="hl-prompt">$</span> <span class="hl-cmd">grep</span> <span class="hl-flag">--city</span> <span class="hl-str">"denver"</span> <span class="hl-flag">--type</span> <span class="hl-str">"real_events"</span></div>
-    <div class="hero-output">
-      <span class="ho-found">Found <strong>{eventCount || 12}</strong> events matching criteria</span>
-    </div>
-  </div>
+  
 
   <h1 class="hero-title">Real events.<br/><span class="hero-accent">Real people.</span></h1>
-  <p class="hero-sub">Denver's community-run event hub. Sign in with Reddit — your karma is your trust score. No algorithms. Just locals showing up.</p>
+  <p class="hero-sub">Small-group events across Denver. No algorithms, no awkward networking events. Just locals getting together.</p>
 
   <div class="hero-stats">
-    <div class="hs"><span class="hs-num">{memberCount || 88}</span><span class="hs-label">redditors</span></div>
+    <div class="hs"><span class="hs-num">{memberCount || 88}</span><span class="hs-label">locals</span></div>
     <div class="hs-dot"></div>
     <div class="hs"><span class="hs-num">{eventCount || 12}</span><span class="hs-label">events</span></div>
     <div class="hs-dot"></div>
-    <div class="hs"><span class="hs-num">6-12</span><span class="hs-label">per group</span></div>
+    <div class="hs"><span class="hs-num">6-12</span><span class="hs-label">people per event</span></div>
   </div>
 
   <div class="hero-ctas">
     {user ? (
-      <a href="/events" class="btn-primary">browse events</a>
+      <a href="/events" class="btn-primary">Browse events</a>
     ) : (
       <a href="/login" class="btn-primary">
         <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><path d="M10 0C4.478 0 0 4.478 0 10c0 5.522 4.478 10 10 10s10-4.478 10-10C20 4.478 15.522 0 10 0zm5.8 11.6c.04.2.06.4.06.6 0 2.94-3.42 5.32-7.64 5.32S.58 15.14.58 12.2c0-.22.02-.44.06-.64a1.44 1.44 0 01-.58-1.16c0-.8.64-1.44 1.44-1.44.38 0 .72.14.98.38 1.3-.92 3.1-1.52 5.1-1.58l.98-4.56c.02-.1.08-.18.16-.22.08-.04.18-.06.28-.04l3.24.68c.18-.38.56-.64 1-.64.62 0 1.12.5 1.12 1.12s-.5 1.12-1.12 1.12-1.12-.5-1.12-1.12l-2.9-.6-.86 4.06c1.94.08 3.68.68 4.94 1.56.26-.22.6-.36.96-.36.8 0 1.44.64 1.44 1.44 0 .48-.24.9-.6 1.16z"/></svg>
-        sign in with reddit
+        Sign in with Reddit
       </a>
     )}
-    <a href="#events" class="btn-ghost">see what's next</a>
+    <a href="#events" class="btn-ghost">See what's coming up</a>
   </div>
 </section>
 
@@ -121,8 +116,8 @@ const content = await getContent();
 {upcomingEvents.length > 0 && (
 <section class="section" id="events">
   <div class="sec-head">
-    <span class="sec-tag tag tag-orange"># upcoming</span>
-    <h2 class="sec-title">live events</h2>
+    <span class="sec-tag tag tag-orange">Upcoming</span>
+    <h2 class="sec-title">Events</h2>
   </div>
   <div class="event-grid">
     {upcomingEvents.map((ev: any) => (
@@ -140,7 +135,7 @@ const content = await getContent();
           <span class="ev-meta-dot"></span>
           <span>{ev.zone || ev.location || 'Denver'}</span>
         </div>
-        {ev.karma_min > 0 && <span class="ev-karma tag tag-yellow">requires {ev.karma_min}+ karma</span>}
+        {ev.karma_min > 0 && <span class="ev-karma tag tag-yellow">requires {ev.karma_min}Join the community</span>}
       </a>
     ))}
   </div>
@@ -154,7 +149,7 @@ const content = await getContent();
 <!-- COMMUNITY VOTES -->
 <section class="section" id="vote">
   <div class="sec-head">
-    <span class="sec-tag tag tag-green"># voting</span>
+    <span class="sec-tag tag tag-green">What people want</span>
     <h2 class="sec-title">what's next</h2>
     <p class="sec-sub">Community suggests. Community votes. Top picks become real events.</p>
   </div>
@@ -258,11 +253,11 @@ const content = await getContent();
   <h2>Your people are already here.</h2>
   <p>Sign in with Reddit. Takes 10 seconds.</p>
   {user ? (
-    <a href="/events" class="btn-primary">browse events →</a>
+    <a href="/events" class="btn-primary">Browse events →</a>
   ) : (
     <a href="/login" class="btn-primary">
       <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><path d="M10 0C4.478 0 0 4.478 0 10c0 5.522 4.478 10 10 10s10-4.478 10-10C20 4.478 15.522 0 10 0zm5.8 11.6c.04.2.06.4.06.6 0 2.94-3.42 5.32-7.64 5.32S.58 15.14.58 12.2c0-.22.02-.44.06-.64a1.44 1.44 0 01-.58-1.16c0-.8.64-1.44 1.44-1.44.38 0 .72.14.98.38 1.3-.92 3.1-1.52 5.1-1.58l.98-4.56c.02-.1.08-.18.16-.22.08-.04.18-.06.28-.04l3.24.68c.18-.38.56-.64 1-.64.62 0 1.12.5 1.12 1.12s-.5 1.12-1.12 1.12-1.12-.5-1.12-1.12l-2.9-.6-.86 4.06c1.94.08 3.68.68 4.94 1.56.26-.22.6-.36.96-.36.8 0 1.44.64 1.44 1.44 0 .48-.24.9-.6 1.16z"/></svg>
-      sign in with reddit →
+      Sign in with Reddit →
     </a>
   )}
 </section>
@@ -598,3 +593,5 @@ const content = await getContent();
 
 </body>
 </html>
+
+
