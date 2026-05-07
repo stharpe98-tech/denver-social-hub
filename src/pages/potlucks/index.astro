@@ -1,0 +1,176 @@
+---
+import { getDB } from '../../lib/db';
+const db = getDB();
+let potlucks: any[] = [];
+try {
+  if (db) {
+    const { results } = await db.prepare(`
+      SELECT p.*,
+        COUNT(DISTINCT CASE WHEN r.rsvp='yes' THEN r.id END) as attendee_count,
+        COUNT(DISTINCT CASE WHEN r.rsvp='yes' AND r.dish != '' THEN LOWER(r.dish) END) as dish_count
+      FROM potlucks p
+      LEFT JOIN potluck_rsvp r ON r.potluck_id = p.id
+      GROUP BY p.id ORDER BY p.id DESC
+    `).all();
+    potlucks = results ?? [];
+  }
+} catch(e) { console.error(e); }
+const upcoming = potlucks.filter((p:any) => p.status === 'upcoming');
+const past = potlucks.filter((p:any) => p.status !== 'upcoming');
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Potlucks · Denver Social Community</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0f0f0f;color:#f0ebe3;font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:80px}
+    .hero{background:linear-gradient(160deg,#1a0a00,#2d1200,#1a0a00);border-bottom:1px solid #2a1a08;padding:40px 24px 32px;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,#f77f0022,transparent 70%);pointer-events:none}
+    .hero-inner{max-width:640px;margin:0 auto;position:relative;z-index:1}
+    .hero h1{font-family:'Playfair Display',serif;font-size:clamp(28px,6vw,42px);color:#fff;margin-bottom:6px}
+    .hero p{font-size:14px;color:#c4956a;font-style:italic}
+    .hero-actions{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}
+    .btn{padding:9px 20px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s}
+    .btn-primary{background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;border:none;box-shadow:0 4px 16px rgba(247,127,0,0.25)}
+    .btn-ghost{background:transparent;color:#c4956a;border:1.5px solid #2a1a08}
+    .page{max-width:640px;margin:0 auto;padding:28px 16px}
+    .section-label{font-size:10px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:#6b5040;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+    .section-label::after{content:'';flex:1;height:1px;background:#1a1a0a}
+    .event-card{background:#1a1108;border:1px solid #2a1a08;border-radius:16px;padding:20px;margin-bottom:12px;text-decoration:none;display:block;transition:border-color 0.15s}
+    .event-card:hover{border-color:#f77f00}
+    .event-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+    .event-title{font-family:'Playfair Display',serif;font-size:20px;color:#fff;margin-bottom:4px}
+    .event-meta{font-size:13px;color:#6b5040;line-height:1.6}
+    .status-badge{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600}
+    .status-upcoming{background:rgba(247,127,0,0.15);border:1px solid rgba(247,127,0,0.3);color:#f5c842}
+    .status-past{background:#1a1a1a;border:1px solid #2a2a2a;color:#4a3020}
+    .event-stats{display:flex;gap:16px}
+    .stat{display:flex;align-items:center;gap:5px;font-size:13px;color:#6b5040}
+    .stat strong{color:#c4956a}
+    .empty{text-align:center;padding:40px 24px;color:#4a3020;font-style:italic;font-size:14px}
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#0f0f0f;border-top:1px solid #1a1a1a;display:flex;justify-content:space-around;padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:100}
+    .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;color:#4a3020;font-size:10px;font-weight:500;padding:4px 12px}
+    .nav-item.active,.nav-item:hover{color:#f77f00}
+    .nav-icon{font-size:20px}
+    /* Create modal */
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:flex-end;justify-content:center}
+    .modal-bg.open{display:flex}
+    .modal{background:#1a1108;border:1px solid #2a1a08;border-radius:20px 20px 0 0;padding:28px 24px 40px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto}
+    .modal h3{font-family:'Playfair Display',serif;font-size:22px;color:#fff;margin-bottom:20px}
+    .field{margin-bottom:16px}
+    .field label{display:block;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:#6b5040;margin-bottom:6px}
+    input[type=text],textarea,select{width:100%;padding:11px 13px;background:#0f0f0f;border:1.5px solid #2a1a08;border-radius:9px;color:#f0ebe3;font-family:'DM Sans',sans-serif;font-size:14px;outline:none}
+    input:focus,textarea:focus,select:focus{border-color:#f77f00}
+    textarea{resize:vertical;min-height:68px}
+    .modal-actions{display:flex;gap:10px;margin-top:20px}
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="hero-inner">
+      <h1>🍽 Potlucks</h1>
+      <p>Community food events — bring a dish, meet people, eat well</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" onclick="document.getElementById('create-modal').classList.add('open')">＋ New Potluck</button>
+        <a href="/potlucks/manage" class="btn btn-ghost">⚙ Manage Sign-ups</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="page">
+    {upcoming.length > 0 && (
+      <div>
+        <div class="section-label">Upcoming</div>
+        {upcoming.map((p: any) => (
+          <a href={`/potlucks/${p.id}`} class="event-card">
+            <div class="event-card-top">
+              <div>
+                <div class="event-title">{p.title}</div>
+                <div class="event-meta">
+                  {p.date_label && <span>📅 {p.date_label}</span>}
+                  {p.time_label && <span> · {p.time_label}</span>}<br/>
+                  {p.location && <span>📍 {p.location}</span>}
+                  {p.location_detail && <span> · {p.location_detail}</span>}
+                </div>
+              </div>
+              <span class="status-badge status-upcoming">Upcoming</span>
+            </div>
+            <div class="event-stats">
+              <div class="stat">👥 <strong>{p.attendee_count || 0}</strong> signed up</div>
+              <div class="stat">🍽 <strong>{p.dish_count || 0}</strong> dishes claimed</div>
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+
+    {past.length > 0 && (
+      <div style="margin-top: 32px">
+        <div class="section-label">Past Events</div>
+        {past.map((p: any) => (
+          <a href={`/potlucks/${p.id}`} class="event-card">
+            <div class="event-card-top">
+              <div>
+                <div class="event-title" style="color:#6b5040">{p.title}</div>
+                <div class="event-meta">{p.date_label} · {p.location}</div>
+              </div>
+              <span class="status-badge status-past">Past</span>
+            </div>
+            <div class="event-stats">
+              <div class="stat">👥 <strong>{p.attendee_count || 0}</strong> attended</div>
+              <div class="stat">🍽 <strong>{p.dish_count || 0}</strong> dishes</div>
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+
+    {potlucks.length === 0 && <div class="empty">No potlucks yet — create the first one!</div>}
+  </div>
+
+  <!-- Create modal -->
+  <div class="modal-bg" id="create-modal" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal">
+      <h3>New Potluck</h3>
+      <div class="field"><label>Title</label><input type="text" id="m-title" placeholder="Summer Kickoff Potluck"/></div>
+      <div class="field"><label>Description</label><textarea id="m-desc" placeholder="What's this one about?"></textarea></div>
+      <div class="field"><label>Date</label><input type="text" id="m-date" placeholder="May 30th"/></div>
+      <div class="field"><label>Time</label><input type="text" id="m-time" placeholder="12pm–4pm"/></div>
+      <div class="field"><label>Location</label><input type="text" id="m-loc" placeholder="Cheeseman Park"/></div>
+      <div class="field"><label>Location detail</label><input type="text" id="m-locdetail" placeholder="West side between 9th & 10th Ave"/></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="createPotluck()">Create</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('create-modal').classList.remove('open')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/" class="nav-item"><span class="nav-icon">🏠</span>Home</a>
+    <a href="/events" class="nav-item"><span class="nav-icon">📅</span>Events</a>
+    <a href="/potlucks" class="nav-item active"><span class="nav-icon">🍽</span>Potlucks</a>
+    <a href="/recs" class="nav-item"><span class="nav-icon">⭐</span>Recs</a>
+  </nav>
+
+  <script>
+    async function createPotluck() {
+      const body = {
+        action: 'create',
+        title: document.getElementById('m-title').value,
+        description: document.getElementById('m-desc').value,
+        date_label: document.getElementById('m-date').value,
+        time_label: document.getElementById('m-time').value,
+        location: document.getElementById('m-loc').value,
+        location_detail: document.getElementById('m-locdetail').value,
+        status: 'upcoming'
+      };
+      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.ok) window.location.href = `/potlucks/${data.id}`;
+    }
+  </script>
+</body>
+</html>
