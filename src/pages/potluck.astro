@@ -1,0 +1,342 @@
+---
+import { getDB } from '../lib/db';
+const db = getDB();
+
+let initialDishes: {dish: string, count: number}[] = [];
+try {
+  if (db) {
+    const { results } = await db.prepare(`
+      SELECT LOWER(dish) as dish, COUNT(*) as count
+      FROM potluck_rsvp
+      WHERE dish IS NOT NULL AND dish != '' AND rsvp = 'yes'
+      GROUP BY LOWER(dish)
+    `).all();
+    initialDishes = (results ?? []) as any;
+  }
+} catch {}
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Summer Kickoff Potluck · May 30th · Denver Social Community</title>
+  <meta name="description" content="Come hang, eat food, meet people. Cheeseman Park, May 30th 12–4pm. Bring a dish if you can — just show up if you can't." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f0f0f; color: #f0ebe3; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+    .hero { background: linear-gradient(160deg,#1a0a00 0%,#2d1200 50%,#1a0a00 100%); border-bottom: 1px solid #2a1a08; padding: 48px 24px 40px; text-align: center; position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%,#f77f0022 0%,transparent 70%); pointer-events: none; }
+    .sun { font-size: 56px; display: block; margin-bottom: 16px; filter: drop-shadow(0 0 24px #f9c74f88); }
+    .hero-title { font-family: 'Playfair Display',serif; font-size: clamp(32px,7vw,52px); font-weight: 700; color: #fff; line-height: 1.1; margin-bottom: 8px; }
+    .hero-sub { font-style: italic; font-size: 16px; color: #c4956a; margin-bottom: 20px; }
+    .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .badge { background: rgba(247,127,0,0.15); border: 1px solid rgba(247,127,0,0.3); color: #f5c842; font-size: 12px; font-weight: 500; padding: 5px 14px; border-radius: 100px; }
+    .page { max-width: 580px; margin: 0 auto; padding: 32px 16px 80px; }
+    .vibe { text-align: center; padding: 36px 0 28px; }
+    .vibe-hed { font-family: 'Playfair Display',serif; font-size: clamp(26px,5vw,36px); color: #f77f00; line-height: 1.15; margin-bottom: 14px; }
+    .vibe-body { font-size: 15px; color: #b09070; line-height: 1.85; }
+    .vibe-body em { color: #f5c842; font-style: italic; }
+    .inclusive { background: #1a1108; border: 1px solid #3d2808; border-radius: 16px; padding: 20px 24px; margin-bottom: 28px; text-align: center; }
+    .inclusive p { font-size: 15px; color: #f5c842; line-height: 1.7; font-style: italic; }
+    .inclusive strong { color: #fff; font-style: normal; font-size: 16px; }
+    .bring { margin-bottom: 36px; }
+    .bring-label { font-size: 10px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: #6b5040; text-align: center; margin-bottom: 12px; }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .pill { background: #1e1208; border: 1px solid #3d2808; color: #c4956a; font-size: 13px; padding: 5px 14px; border-radius: 100px; }
+    .pill.soft { border-style: dashed; color: #6b5040; font-style: italic; }
+    .divider { height: 1px; background: linear-gradient(90deg,transparent,#2a1a08,transparent); margin: 8px 0 32px; }
+    .dish-status { background: #1a1108; border: 1px solid #2a1a08; border-radius: 14px; overflow: hidden; margin-bottom: 24px; }
+    .dish-status-head { background: #221508; padding: 9px 16px; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #c4956a; }
+    .dish-list { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; align-items: center; }
+    .dish-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 500; }
+    .dish-chip.one { background: #0d2e1a; color: #4ade80; border: 1px solid #166534; }
+    .dish-chip.full { background: #2e0d0d; color: #f87171; border: 1px solid #7f1d1d; }
+    .chip-count { font-size: 10px; font-weight: 700; opacity: 0.7; }
+    .dish-empty { font-size: 13px; color: #4a3020; font-style: italic; }
+    .form-head { text-align: center; margin-bottom: 24px; }
+    .form-head h2 { font-family: 'Playfair Display',serif; font-size: 24px; color: #fff; margin-bottom: 4px; }
+    .form-head p { font-size: 13px; color: #6b5040; font-style: italic; }
+    .field { margin-bottom: 18px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #6b5040; margin-bottom: 7px; }
+    .field label .req { color: #f77f00; }
+    input[type=text], textarea, select { width: 100%; padding: 12px 14px; background: #1a1108; border: 1.5px solid #2a1a08; border-radius: 10px; color: #f0ebe3; font-family: 'DM Sans',sans-serif; font-size: 14px; outline: none; transition: border-color 0.15s; appearance: none; -webkit-appearance: none; }
+    input:focus, textarea:focus, select:focus { border-color: #f77f00; }
+    textarea { resize: vertical; min-height: 68px; }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c4956a' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    input::placeholder, textarea::placeholder { color: #4a3020; }
+    .err-msg { font-size: 12px; color: #f87171; margin-top: 4px; }
+    .rsvp-row { display: flex; gap: 10px; }
+    .rsvp-btn { flex: 1; padding: 12px; border-radius: 10px; border: 1.5px solid #2a1a08; background: #1a1108; font-family: 'DM Sans',sans-serif; font-size: 14px; font-weight: 600; color: #6b5040; cursor: pointer; transition: all 0.15s; }
+    .rsvp-btn.yes.active { border-color: #16a34a; background: #0d2e1a; color: #4ade80; }
+    .rsvp-btn.no.active { border-color: #7f1d1d; background: #2e0d0d; color: #f87171; }
+    .guest-row { display: flex; align-items: center; gap: 12px; }
+    .g-btn { width: 40px; height: 40px; border-radius: 8px; border: 1.5px solid #2a1a08; background: #1a1108; font-size: 18px; font-weight: 600; color: #c4956a; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .g-count { flex: 1; text-align: center; font-size: 20px; font-weight: 600; color: #fff; }
+    .g-label { font-size: 13px; color: #4a3020; white-space: nowrap; }
+    .checks { display: flex; flex-direction: column; gap: 10px; }
+    .check-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; border: 1.5px solid #2a1a08; background: #1a1108; cursor: pointer; user-select: none; transition: border-color 0.12s; }
+    .check-item.active { border-color: #f77f00; }
+    .check-box { width: 20px; height: 20px; border-radius: 5px; border: 2px solid #2a1a08; background: transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; transition: all 0.12s; }
+    .check-item.active .check-box { background: #f77f00; border-color: #f77f00; color: #000; }
+    .check-label { font-size: 13.5px; color: #b09070; line-height: 1.4; }
+    .check-sub { display: block; font-size: 11.5px; color: #4a3020; margin-top: 1px; }
+    .dish-feedback { margin-top: 8px; padding: 9px 13px; border-radius: 9px; font-size: 12.5px; line-height: 1.5; }
+    .dish-feedback.ok { background: #0d2e1a; border: 1px solid #166534; color: #4ade80; }
+    .dish-feedback.warn { background: #2e2000; border: 1px solid #78350f; color: #fcd34d; }
+    .dish-feedback.block { background: #2e0d0d; border: 1px solid #7f1d1d; color: #f87171; }
+    .submit-btn { width: 100%; padding: 16px; margin-top: 8px; border-radius: 12px; border: none; background: linear-gradient(135deg,#c2410c,#f77f00); color: #fff; font-family: 'DM Sans',sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 20px rgba(247,127,0,0.25); transition: all 0.18s; }
+    .submit-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(247,127,0,0.35); }
+    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; transform: none; }
+    .result { text-align: center; padding: 48px 24px; }
+    .result-emoji { font-size: 60px; display: block; margin-bottom: 16px; }
+    .result-title { font-family: 'Playfair Display',serif; font-size: 28px; color: #fff; margin-bottom: 8px; }
+    .result-sub { font-size: 14px; color: #6b5040; line-height: 1.7; max-width: 320px; margin: 0 auto 20px; }
+    .result-detail { background: #1a1108; border: 1px solid #2a1a08; border-radius: 12px; padding: 14px 18px; font-size: 13px; color: #c4956a; text-align: left; line-height: 1.9; }
+    .result-btn { margin-top: 20px; padding: 10px 28px; border-radius: 100px; border: 1.5px solid #2a1a08; background: transparent; color: #c4956a; cursor: pointer; font-family: 'DM Sans',sans-serif; font-size: 14px; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #0f0f0f; border-top: 1px solid #1a1a1a; display: flex; justify-content: space-around; padding: 8px 0 max(8px,env(safe-area-inset-bottom)); z-index: 100; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; color: #4a3020; font-size: 10px; font-weight: 500; padding: 4px 12px; }
+    .nav-item:hover { color: #f77f00; }
+    .nav-icon { font-size: 20px; }
+    .hidden { display: none !important; }
+    .sec-label { font-family: 'Playfair Display',serif; font-size: 13px; font-style: italic; color: #c4956a; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px dashed #2a1a08; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <span class="sun">🌞</span>
+    <div class="hero-title">Summer Kickoff<br/>Potluck</div>
+    <div class="hero-sub">bring a dish, bring a friend, or just show up</div>
+    <div class="badges">
+      <span class="badge">📅 May 30th · 12pm–4pm</span>
+      <span class="badge">📍 Cheeseman Park</span>
+      <span class="badge">🎟 Free · Always</span>
+    </div>
+  </div>
+  <div class="page">
+    <div class="vibe">
+      <div class="vibe-hed">Come hang.<br/>Eat food.<br/>Meet people.</div>
+      <p class="vibe-body">Bring something if you can.<br/>Bring a friend if you want.<br/><em>Solo is totally fine —<br/>that's literally how half of us met.</em></p>
+    </div>
+    <div class="inclusive">
+      <p><strong>Can't bring food? Still come.</strong><br/>Seriously. There's always too much anyway.<br/>Nobody's gonna notice and nobody cares.</p>
+    </div>
+    <div class="bring">
+      <div class="bring-label">Ideas for what to bring</div>
+      <div class="pills">
+        <span class="pill">🥗 Salad</span>
+        <span class="pill">🥪 Sandwiches</span>
+        <span class="pill">🍰 Dessert</span>
+        <span class="pill">🥤 Drinks</span>
+        <span class="pill">🥖 Bread &amp; dips</span>
+        <span class="pill soft">or just yourself 🤷</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div id="form-wrap">
+      <div class="form-head">
+        <h2>Sign up</h2>
+        <p>30 seconds — helps us not end up with five pasta salads</p>
+      </div>
+      <div class="dish-status">
+        <div class="dish-status-head">🍽 Dishes already claimed</div>
+        <div class="dish-list" id="dish-list">
+          {initialDishes.length === 0
+            ? <span class="dish-empty">Nothing yet — be the first!</span>
+            : initialDishes.map(d => (
+                <span class={`dish-chip ${d.count >= 2 ? 'full' : 'one'}`}>
+                  {d.dish} <span class="chip-count">({d.count}/2)</span>
+                </span>
+              ))
+          }
+        </div>
+      </div>
+      <div class="sec-label">About you</div>
+      <div class="field">
+        <label>Name <span class="req">*</span></label>
+        <input type="text" id="f-name" placeholder="First name is fine" />
+        <div class="err-msg hidden" id="e-name">Name is required</div>
+      </div>
+      <div class="field">
+        <label>Where do you know us from?</label>
+        <div class="checks" id="platform-checks">
+          <div class="check-item" data-val="Discord"><div class="check-box"></div><div class="check-label">🎮 Discord<span class="check-sub">Denver Social Community</span></div></div>
+          <div class="check-item" data-val="Facebook"><div class="check-box"></div><div class="check-label">📘 Facebook<span class="check-sub">Facebook group or event</span></div></div>
+          <div class="check-item" data-val="Reddit"><div class="check-box"></div><div class="check-label">🤙 Reddit<span class="check-sub">r/Denver or r/DenverMeets</span></div></div>
+          <div class="check-item" data-val="Other"><div class="check-box"></div><div class="check-label">👋 Other / friend of a friend</div></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Username or name on that platform</label>
+        <input type="text" id="f-handle" placeholder="Discord tag, Facebook name, Reddit handle…" />
+      </div>
+      <div class="divider"></div>
+      <div class="sec-label">Are you coming?</div>
+      <div class="field">
+        <label>RSVP <span class="req">*</span></label>
+        <div class="rsvp-row">
+          <button type="button" class="rsvp-btn yes" id="rsvp-yes" onclick="setRsvp('yes')">✅ Yes, I'm in!</button>
+          <button type="button" class="rsvp-btn no" id="rsvp-no" onclick="setRsvp('no')">❌ Can't make it</button>
+        </div>
+        <div class="err-msg hidden" id="e-rsvp">Let us know if you're coming</div>
+      </div>
+      <div id="attending-fields" class="hidden">
+        <div class="field">
+          <label>How many people total? <span class="req">*</span></label>
+          <div class="guest-row">
+            <button type="button" class="g-btn" onclick="changeGuests(-1)">−</button>
+            <div class="g-count" id="guest-count">1</div>
+            <button type="button" class="g-btn" onclick="changeGuests(1)">+</button>
+            <div class="g-label" id="guest-label">just me</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="sec-label">What are you bringing?</div>
+        <div class="field">
+          <label>Dish name <span class="req">*</span></label>
+          <input type="text" id="f-dish" placeholder="e.g. Pasta salad, brownies, lemonade…" oninput="checkDish(this.value)" />
+          <div id="dish-feedback"></div>
+          <div class="err-msg hidden" id="e-dish"></div>
+        </div>
+        <div class="field">
+          <label>Category <span class="req">*</span></label>
+          <select id="f-category">
+            <option value="">Pick one…</option>
+            <option>🥗 Appetizer / Snack</option>
+            <option>🍗 Main Dish</option>
+            <option>🥘 Side Dish</option>
+            <option>🍰 Dessert</option>
+            <option>🥤 Drinks</option>
+            <option>🎉 Surprise me</option>
+          </select>
+          <div class="err-msg hidden" id="e-category">Pick a category</div>
+        </div>
+        <div class="field">
+          <label>Dietary notes / allergens</label>
+          <textarea id="f-dietary" placeholder="Gluten-free, nut allergy, vegan… Leave blank if none."></textarea>
+        </div>
+        <div class="divider"></div>
+        <div class="sec-label">A few more things…</div>
+        <div class="checks">
+          <div class="check-item" data-extra="utensils"><div class="check-box"></div><div class="check-label">🥄 I'll bring serving utensils<span class="check-sub">Spoons, tongs, forks</span></div></div>
+          <div class="check-item" data-extra="earlyArrive"><div class="check-box"></div><div class="check-label">⏰ I can arrive early to help set up<span class="check-sub">~30 min before the group</span></div></div>
+          <div class="check-item" data-extra="seating"><div class="check-box"></div><div class="check-label">🪑 I'll bring chairs or blankets<span class="check-sub">Open grass — super helpful!</span></div></div>
+        </div>
+      </div>
+      <button class="submit-btn" id="submit-btn" onclick="submitForm()">🌞 Count me in!</button>
+    </div>
+    <div id="success-wrap" class="result hidden">
+      <span class="result-emoji">🎉</span>
+      <div class="result-title" id="success-title">You're in!</div>
+      <p class="result-sub">See you at Cheeseman on May 30th. West side between 9th &amp; 10th Ave.</p>
+      <div class="result-detail" id="success-detail"></div>
+      <button class="result-btn" onclick="resetForm()">Submit another response</button>
+    </div>
+    <div id="error-wrap" class="result hidden">
+      <span class="result-emoji">😬</span>
+      <div class="result-title">Something went wrong</div>
+      <p class="result-sub">Couldn't save your response. Try again in a sec.</p>
+      <button class="result-btn" onclick="showForm()">← Try again</button>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <a href="/" class="nav-item"><span class="nav-icon">🏠</span>Home</a>
+    <a href="/events" class="nav-item"><span class="nav-icon">📅</span>Events</a>
+    <a href="/potluck" class="nav-item" style="color:#f77f00"><span class="nav-icon">🌞</span>Potluck</a>
+    <a href="/recs" class="nav-item"><span class="nav-icon">⭐</span>Recs</a>
+  </nav>
+  <script define:vars={{ initialDishes }}>
+    const MAX = 2;
+    let rsvp = '';
+    let guestCount = 1;
+    let platforms = [];
+    let extras = { utensils: false, earlyArrive: false, seating: false };
+    let dishes = initialDishes;
+    let dishBlocked = false;
+    fetch('/api/potluck').then(r => r.json()).then(d => { dishes = d; renderDishList(); }).catch(() => {});
+    function renderDishList() {
+      const el = document.getElementById('dish-list');
+      if (!dishes.length) { el.innerHTML = '<span class="dish-empty">Nothing yet — be the first!</span>'; return; }
+      el.innerHTML = dishes.map(d => `<span class="dish-chip ${d.count >= MAX ? 'full' : 'one'}">${d.dish} <span class="chip-count">(${d.count}/${MAX})</span></span>`).join('');
+    }
+    function setRsvp(val) {
+      rsvp = val;
+      document.getElementById('rsvp-yes').classList.toggle('active', val === 'yes');
+      document.getElementById('rsvp-no').classList.toggle('active', val === 'no');
+      document.getElementById('attending-fields').classList.toggle('hidden', val !== 'yes');
+      document.getElementById('e-rsvp').classList.add('hidden');
+      document.getElementById('submit-btn').textContent = val === 'no' ? "😢 Submit (we'll miss you)" : '🌞 Count me in!';
+    }
+    function changeGuests(delta) {
+      guestCount = Math.max(1, Math.min(10, guestCount + delta));
+      document.getElementById('guest-count').textContent = guestCount;
+      document.getElementById('guest-label').textContent = guestCount === 1 ? 'just me' : 'people total';
+    }
+    function checkDish(val) {
+      const key = val.trim().toLowerCase();
+      const fb = document.getElementById('dish-feedback');
+      document.getElementById('e-dish').classList.add('hidden');
+      if (key.length < 2) { fb.innerHTML = ''; dishBlocked = false; updateBtn(); return; }
+      const match = dishes.find(d => d.dish === key);
+      const count = match ? match.count : 0;
+      if (count >= MAX) { fb.innerHTML = `<div class="dish-feedback block">🚫 "${val.trim()}" is already claimed twice — pick something different!</div>`; dishBlocked = true; }
+      else if (count === 1) { fb.innerHTML = `<div class="dish-feedback warn">⚠️ Someone else is also bringing this. 1 slot left — maybe pick something else?</div>`; dishBlocked = false; }
+      else { fb.innerHTML = `<div class="dish-feedback ok">✅ Nobody's bringing this yet — it's all yours!</div>`; dishBlocked = false; }
+      updateBtn();
+    }
+    function updateBtn() { document.getElementById('submit-btn').disabled = dishBlocked; }
+    document.querySelectorAll('#platform-checks .check-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const val = el.dataset.val; const idx = platforms.indexOf(val);
+        if (idx === -1) platforms.push(val); else platforms.splice(idx, 1);
+        el.classList.toggle('active', platforms.includes(val));
+        el.querySelector('.check-box').textContent = platforms.includes(val) ? '✓' : '';
+      });
+    });
+    document.querySelectorAll('[data-extra]').forEach(el => {
+      el.addEventListener('click', () => {
+        const key = el.dataset.extra; extras[key] = !extras[key];
+        el.classList.toggle('active', extras[key]);
+        el.querySelector('.check-box').textContent = extras[key] ? '✓' : '';
+      });
+    });
+    function validate() {
+      let ok = true;
+      if (!document.getElementById('f-name').value.trim()) { document.getElementById('e-name').classList.remove('hidden'); ok = false; } else document.getElementById('e-name').classList.add('hidden');
+      if (!rsvp) { document.getElementById('e-rsvp').classList.remove('hidden'); ok = false; } else document.getElementById('e-rsvp').classList.add('hidden');
+      if (rsvp === 'yes') {
+        const dish = document.getElementById('f-dish').value.trim();
+        const cat = document.getElementById('f-category').value;
+        if (!dish || dishBlocked) { const em = document.getElementById('e-dish'); em.textContent = dishBlocked ? `"${dish}" is already claimed twice!` : 'Please bring something!'; em.classList.remove('hidden'); ok = false; } else document.getElementById('e-dish').classList.add('hidden');
+        if (!cat) { document.getElementById('e-category').classList.remove('hidden'); ok = false; } else document.getElementById('e-category').classList.add('hidden');
+      }
+      return ok;
+    }
+    async function submitForm() {
+      if (!validate()) return;
+      const btn = document.getElementById('submit-btn'); btn.disabled = true; btn.textContent = 'Saving…';
+      const payload = { name: document.getElementById('f-name').value.trim(), handle: document.getElementById('f-handle').value.trim(), platforms: platforms.join(', '), rsvp, guestCount: String(guestCount), dish: rsvp === 'yes' ? document.getElementById('f-dish').value.trim() : '', dishCategory: rsvp === 'yes' ? document.getElementById('f-category').value : '', dietary: rsvp === 'yes' ? document.getElementById('f-dietary').value.trim() : '', ...extras };
+      try {
+        const res = await fetch('/api/potluck', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (data.ok) showSuccess(payload); else showError();
+      } catch { showError(); }
+    }
+    function showSuccess(p) {
+      document.getElementById('form-wrap').classList.add('hidden');
+      document.getElementById('error-wrap').classList.add('hidden');
+      document.getElementById('success-wrap').classList.remove('hidden');
+      document.getElementById('success-title').textContent = `You're in, ${p.name.split(' ')[0]}!`;
+      let detail = '';
+      if (p.rsvp === 'yes' && p.dish) { detail += `🍽 <strong>Dish:</strong> ${p.dish} · ${p.dishCategory}<br/>`; detail += `👥 <strong>Headcount:</strong> ${p.guestCount} ${parseInt(p.guestCount)===1?'person':'people'}<br/>`; if (p.utensils) detail += '🥄 Bringing serving utensils<br/>'; if (p.earlyArrive) detail += '⏰ Arriving early<br/>'; if (p.seating) detail += '🪑 Bringing chairs / blankets'; }
+      document.getElementById('success-detail').innerHTML = detail || (p.rsvp === 'no' ? "We'll miss you! See you at the next one 🤙" : '');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function showError() { document.getElementById('form-wrap').classList.add('hidden'); document.getElementById('success-wrap').classList.add('hidden'); document.getElementById('error-wrap').classList.remove('hidden'); }
+    function showForm() { document.getElementById('form-wrap').classList.remove('hidden'); document.getElementById('error-wrap').classList.add('hidden'); }
+    function resetForm() { location.reload(); }
+  </script>
+</body>
+</html>
