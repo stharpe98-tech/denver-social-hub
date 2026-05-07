@@ -35,189 +35,186 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>{potluck.title} · Sign Up</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
-  <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0f0f0f;color:#f0ebe3;font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:80px}
+  <style is:global>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #0f0f0f; color: #f0ebe3; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+    body { padding-bottom: 80px; overflow-y: scroll; -webkit-overflow-scrolling: touch; }
 
-    .hero{background:linear-gradient(160deg,#1a0a00,#2d1200,#1a0a00);border-bottom:1px solid #2a1a08;padding:36px 24px 28px;position:relative;overflow:hidden}
-    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,#f77f0022,transparent 70%);pointer-events:none}
-    .hi{max-width:560px;margin:0 auto;position:relative;z-index:1}
-    .back{color:#6b5040;font-size:13px;text-decoration:none;margin-bottom:12px;display:inline-flex;align-items:center;gap:4px}
-    .hero h1{font-family:'Playfair Display',serif;font-size:clamp(24px,5vw,34px);color:#fff;margin-bottom:8px}
-    .hero-meta{font-size:13px;color:#c4956a;line-height:1.9}
-    .hero-stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-    .stat-pill{background:rgba(247,127,0,0.12);border:1px solid rgba(247,127,0,0.2);border-radius:100px;padding:4px 12px;font-size:12px;color:#f5c842;font-weight:500}
+    .pl-hero { background: linear-gradient(160deg,#1a0a00,#2d1200,#1a0a00); border-bottom: 1px solid #2a1a08; padding: 36px 24px 28px; position: relative; overflow: hidden; }
+    .pl-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%,#f77f0022,transparent 70%); pointer-events: none; }
+    .pl-hi { max-width: 560px; margin: 0 auto; position: relative; z-index: 1; }
+    .pl-back { color: #6b5040; font-size: 13px; text-decoration: none; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 4px; }
+    .pl-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(24px,5vw,34px); color: #fff; margin-bottom: 8px; }
+    .pl-meta { font-size: 13px; color: #c4956a; line-height: 1.9; }
+    .pl-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .pl-pill { background: rgba(247,127,0,0.12); border: 1px solid rgba(247,127,0,0.2); border-radius: 100px; padding: 4px 12px; font-size: 12px; color: #f5c842; font-weight: 500; }
 
-    .page{max-width:560px;margin:0 auto;padding:28px 16px}
+    .pl-page { max-width: 560px; margin: 0 auto; padding: 28px 16px; }
 
-    /* Tabs */
-    .tabs{display:flex;border-bottom:1px solid #2a1a08;margin-bottom:28px}
-    .tab{padding:10px 18px;font-size:14px;font-weight:500;color:#4a3020;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;font-family:'DM Sans',sans-serif;background:none;border-left:none;border-right:none;border-top:none}
-    .tab.active{color:#f77f00;border-bottom-color:#f77f00}
-    .panel{display:none}.panel.active{display:block}
+    .pl-tabs { display: flex; border-bottom: 1px solid #2a1a08; margin-bottom: 28px; }
+    .pl-tab { flex: 1; padding: 12px; font-size: 14px; font-weight: 600; color: #4a3020; cursor: pointer; border: none; border-bottom: 2px solid transparent; background: none; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+    .pl-tab.active { color: #f77f00; border-bottom-color: #f77f00; }
 
-    /* Nudge */
-    .nudge{background:#1a1108;border:1px solid #3d2808;border-radius:14px;padding:14px 18px;margin-bottom:28px;font-size:14px;color:#f5c842;font-style:italic;text-align:center;line-height:1.6}
-    .nudge strong{color:#fff;font-style:normal}
+    .pl-panel { display: none; }
+    .pl-panel.active { display: block; }
 
-    /* RSVP */
-    .q{font-size:18px;font-weight:600;color:#fff;margin-bottom:14px}
-    .rsvp-row{display:flex;gap:10px;margin-bottom:28px}
-    .rsvp-btn{flex:1;padding:14px;border-radius:12px;border:2px solid #2a1a08;background:#1a1108;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:#4a3020;cursor:pointer;transition:all 0.15s}
-    .rsvp-btn.yes.active{border-color:#16a34a;background:#0d2e1a;color:#4ade80}
-    .rsvp-btn.no.active{border-color:#7f1d1d;background:#2e0d0d;color:#f87171}
+    .pl-nudge { background: #1a1108; border: 1px solid #3d2808; border-radius: 14px; padding: 14px 18px; margin-bottom: 28px; font-size: 14px; color: #f5c842; font-style: italic; text-align: center; line-height: 1.6; }
+    .pl-nudge strong { color: #fff; font-style: normal; }
 
-    /* Slot picker */
-    .cat-head{font-size:12px;font-weight:600;color:#6b5040;letter-spacing:0.5px;margin:20px 0 10px;display:flex;align-items:center;gap:8px}
-    .cat-head::after{content:'';flex:1;height:1px;background:#1a1108}
-    .slots-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    @media(max-width:380px){.slots-grid{grid-template-columns:1fr}}
-    .slot-card{background:#1a1108;border:2px solid #2a1a08;border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.15s;user-select:none}
-    .slot-card:hover:not(.full){border-color:#f77f0066}
-    .slot-card.selected{border-color:#f77f00;background:#200f00}
-    .slot-card.full{opacity:0.35;cursor:not-allowed}
-    .slot-name{font-size:14px;font-weight:500;color:#f0ebe3;margin-bottom:8px;line-height:1.3}
-    .slot-bar-wrap{height:3px;background:#2a1a08;border-radius:2px;overflow:hidden;margin-bottom:6px}
-    .slot-bar{height:100%;border-radius:2px;background:linear-gradient(90deg,#c2410c,#f77f00)}
-    .slot-footer{display:flex;justify-content:space-between;align-items:center}
-    .slot-left{font-size:11px;font-weight:500}
-    .slot-left.open{color:#4ade80}
-    .slot-left.one{color:#fcd34d}
-    .slot-left.none{color:#f87171}
-    .slot-check{width:18px;height:18px;border-radius:50%;background:#f77f00;display:none;align-items:center;justify-content:center;font-size:11px;color:#000;font-weight:800}
-    .slot-card.selected .slot-check{display:flex}
+    .pl-q { font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 14px; }
+    .pl-sub { font-size: 13px; color: #6b5040; margin-bottom: 16px; margin-top: -8px; }
 
-    /* Selected confirmation */
-    .picked-bar{background:#200f00;border:1.5px solid #f77f00;border-radius:10px;padding:10px 14px;margin:16px 0 24px;display:none;justify-content:space-between;align-items:center}
-    .picked-bar.show{display:flex}
-    .picked-text{font-size:14px;color:#f5c842;font-weight:500}
-    .picked-clear{background:none;border:none;color:#4a3020;cursor:pointer;font-size:16px;padding:2px 4px}
+    .pl-rsvp-row { display: flex; gap: 10px; margin-bottom: 28px; }
+    .pl-rsvp-btn { flex: 1; padding: 14px; border-radius: 12px; border: 2px solid #2a1a08; background: #1a1108; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; color: #4a3020; cursor: pointer; transition: all 0.15s; }
+    .pl-rsvp-btn.yes.active { border-color: #16a34a; background: #0d2e1a; color: #4ade80; }
+    .pl-rsvp-btn.no.active { border-color: #7f1d1d; background: #2e0d0d; color: #f87171; }
 
-    /* Form fields */
-    .field{margin-bottom:20px}
-    .field label{display:block;font-size:15px;font-weight:600;color:#f0ebe3;margin-bottom:8px}
-    .field label .opt{font-size:12px;font-weight:400;color:#4a3020;margin-left:4px}
-    input[type=text],textarea,select{width:100%;padding:12px 14px;background:#1a1108;border:1.5px solid #2a1a08;border-radius:10px;color:#f0ebe3;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:border-color 0.15s;-webkit-appearance:none;appearance:none}
-    input:focus,textarea:focus,select:focus{border-color:#f77f00}
-    input::placeholder,textarea::placeholder{color:#4a3020}
-    select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c4956a' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px}
-    textarea{resize:vertical;min-height:72px}
-    .err-msg{font-size:12px;color:#f87171;margin-top:5px}
+    .pl-cat-head { font-size: 12px; font-weight: 600; color: #6b5040; letter-spacing: 0.5px; margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
+    .pl-cat-head::after { content: ''; flex: 1; height: 1px; background: #1a1108; }
 
-    /* Guest count */
-    .guest-row{display:flex;align-items:center;gap:14px}
-    .g-btn{width:44px;height:44px;border-radius:10px;border:1.5px solid #2a1a08;background:#1a1108;font-size:22px;font-weight:600;color:#c4956a;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color 0.12s}
-    .g-btn:hover{border-color:#f77f00}
-    .g-count{flex:1;text-align:center;font-size:24px;font-weight:700;color:#fff}
-    .g-note{font-size:13px;color:#4a3020}
+    .pl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    @media(max-width:380px) { .pl-grid { grid-template-columns: 1fr; } }
 
-    /* Checkboxes */
-    .checks{display:flex;flex-direction:column;gap:10px}
-    .check-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:1.5px solid #2a1a08;background:#1a1108;cursor:pointer;user-select:none;transition:border-color 0.12s}
-    .check-item.active{border-color:#f77f00;background:#200f00}
-    .check-box{width:22px;height:22px;border-radius:6px;border:2px solid #2a1a08;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;transition:all 0.12s}
-    .check-item.active .check-box{background:#f77f00;border-color:#f77f00;color:#000;font-weight:700}
-    .check-txt{font-size:14px;color:#b09070;line-height:1.4}
-    .check-sub{display:block;font-size:12px;color:#4a3020;margin-top:2px}
+    .pl-slot { background: #1a1108; border: 2px solid #2a1a08; border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: all 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .pl-slot:hover:not(.full) { border-color: #f77f0066; }
+    .pl-slot.selected { border-color: #f77f00; background: #200f00; }
+    .pl-slot.full { opacity: 0.35; cursor: not-allowed; }
+    .pl-slot-name { font-size: 14px; font-weight: 500; color: #f0ebe3; margin-bottom: 8px; line-height: 1.3; }
+    .pl-slot.full .pl-slot-name { color: #4a3020; }
+    .pl-bar-wrap { height: 3px; background: #2a1a08; border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+    .pl-bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg,#c2410c,#f77f00); }
+    .pl-slot-foot { display: flex; justify-content: space-between; align-items: center; }
+    .pl-left { font-size: 11px; font-weight: 500; }
+    .pl-left.open { color: #4ade80; }
+    .pl-left.one { color: #fcd34d; }
+    .pl-left.none { color: #f87171; }
+    .pl-check { width: 18px; height: 18px; border-radius: 50%; background: #f77f00; display: none; align-items: center; justify-content: center; font-size: 11px; color: #000; font-weight: 800; }
+    .pl-slot.selected .pl-check { display: flex; }
 
-    /* Divider */
-    .div{height:1px;background:linear-gradient(90deg,transparent,#2a1a08,transparent);margin:24px 0}
+    .pl-picked { background: #200f00; border: 1.5px solid #f77f00; border-radius: 10px; padding: 10px 14px; margin: 16px 0 24px; display: none; justify-content: space-between; align-items: center; }
+    .pl-picked.show { display: flex; }
+    .pl-picked-text { font-size: 14px; color: #f5c842; font-weight: 500; }
+    .pl-picked-clear { background: none; border: none; color: #4a3020; cursor: pointer; font-size: 20px; padding: 0 4px; line-height: 1; }
 
-    /* Submit */
-    .submit-btn{width:100%;padding:16px;margin-top:4px;border-radius:12px;border:none;background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(247,127,0,0.25);transition:all 0.18s}
-    .submit-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 24px rgba(247,127,0,0.35)}
-    .submit-btn:disabled{opacity:0.4;cursor:not-allowed;box-shadow:none;transform:none}
+    .pl-div { height: 1px; background: linear-gradient(90deg,transparent,#2a1a08,transparent); margin: 24px 0; }
 
-    /* Result screens */
-    .result{text-align:center;padding:48px 16px}
-    .result-emoji{font-size:60px;display:block;margin-bottom:16px}
-    .result-title{font-family:'Playfair Display',serif;font-size:26px;color:#fff;margin-bottom:8px}
-    .result-sub{font-size:14px;color:#6b5040;line-height:1.7;margin-bottom:20px}
-    .result-card{background:#1a1108;border:1px solid #2a1a08;border-radius:12px;padding:16px 18px;font-size:14px;color:#c4956a;text-align:left;line-height:2}
-    .result-btn{margin-top:20px;padding:10px 28px;border-radius:100px;border:1.5px solid #2a1a08;background:transparent;color:#c4956a;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px}
+    .pl-field { margin-bottom: 20px; }
+    .pl-field label { display: block; font-size: 15px; font-weight: 600; color: #f0ebe3; margin-bottom: 8px; }
+    .pl-field label .opt { font-size: 12px; font-weight: 400; color: #4a3020; margin-left: 4px; }
+    .pl-field .err { font-size: 12px; color: #f87171; margin-top: 5px; display: none; }
 
-    /* Sheet */
-    .sheet-table{width:100%;border-collapse:collapse}
-    .sheet-table th{text-align:left;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#4a3020;padding:8px 10px;border-bottom:1px solid #2a1a08}
-    .sheet-table td{padding:11px 10px;border-bottom:1px solid #1a1108;font-size:14px;color:#b09070}
-    .sheet-table td:first-child{color:#f0ebe3;font-weight:500}
-    .empty{text-align:center;padding:40px;color:#4a3020;font-style:italic;font-size:14px}
+    .pl-input { width: 100%; padding: 12px 14px; background: #1a1108; border: 1.5px solid #2a1a08; border-radius: 10px; color: #f0ebe3; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; transition: border-color 0.15s; -webkit-appearance: none; appearance: none; }
+    .pl-input:focus { border-color: #f77f00; }
+    .pl-input::placeholder { color: #4a3020; }
+    .pl-select { width: 100%; padding: 12px 40px 12px 14px; background: #1a1108 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c4956a' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 14px center; border: 1.5px solid #2a1a08; border-radius: 10px; color: #f0ebe3; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; -webkit-appearance: none; appearance: none; }
+    .pl-select:focus { border-color: #f77f00; }
+    .pl-textarea { width: 100%; padding: 12px 14px; background: #1a1108; border: 1.5px solid #2a1a08; border-radius: 10px; color: #f0ebe3; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; resize: vertical; min-height: 72px; }
+    .pl-textarea:focus { border-color: #f77f00; }
+    .pl-textarea::placeholder { color: #4a3020; }
 
-    .hidden{display:none!important}
-    .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#0f0f0f;border-top:1px solid #1a1a1a;display:flex;justify-content:space-around;padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:100}
-    .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;color:#4a3020;font-size:10px;font-weight:500;padding:4px 12px}
-    .nav-item.active,.nav-item:hover{color:#f77f00}
-    .nav-icon{font-size:20px}
+    .pl-guest-row { display: flex; align-items: center; gap: 14px; }
+    .pl-g-btn { width: 44px; height: 44px; border-radius: 10px; border: 1.5px solid #2a1a08; background: #1a1108; font-size: 22px; font-weight: 600; color: #c4956a; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+    .pl-g-count { flex: 1; text-align: center; font-size: 24px; font-weight: 700; color: #fff; }
+    .pl-g-note { font-size: 13px; color: #4a3020; white-space: nowrap; }
+
+    .pl-checks { display: flex; flex-direction: column; gap: 10px; }
+    .pl-check-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; border: 1.5px solid #2a1a08; background: #1a1108; cursor: pointer; user-select: none; transition: border-color 0.12s; -webkit-tap-highlight-color: transparent; }
+    .pl-check-item.active { border-color: #f77f00; background: #200f00; }
+    .pl-check-box { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #2a1a08; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 700; transition: all 0.12s; }
+    .pl-check-item.active .pl-check-box { background: #f77f00; border-color: #f77f00; color: #000; }
+    .pl-check-txt { font-size: 14px; color: #b09070; line-height: 1.4; }
+    .pl-check-sub { display: block; font-size: 12px; color: #4a3020; margin-top: 2px; }
+
+    .pl-submit { width: 100%; padding: 16px; margin-top: 4px; border-radius: 12px; border: none; background: linear-gradient(135deg,#c2410c,#f77f00); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 16px rgba(247,127,0,0.25); transition: all 0.18s; -webkit-tap-highlight-color: transparent; }
+    .pl-submit:active:not(:disabled) { transform: scale(0.98); }
+    .pl-submit:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+    .pl-result { text-align: center; padding: 48px 16px; }
+    .pl-result-emoji { font-size: 60px; display: block; margin-bottom: 16px; }
+    .pl-result-title { font-family: 'Playfair Display', serif; font-size: 26px; color: #fff; margin-bottom: 8px; }
+    .pl-result-sub { font-size: 14px; color: #6b5040; line-height: 1.7; margin-bottom: 20px; }
+    .pl-result-card { background: #1a1108; border: 1px solid #2a1a08; border-radius: 12px; padding: 16px 18px; font-size: 14px; color: #c4956a; text-align: left; line-height: 2; }
+    .pl-result-btn { margin-top: 20px; padding: 10px 28px; border-radius: 100px; border: 1.5px solid #2a1a08; background: transparent; color: #c4956a; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; }
+
+    .pl-sheet-table { width: 100%; border-collapse: collapse; }
+    .pl-sheet-table th { text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #4a3020; padding: 8px 10px; border-bottom: 1px solid #2a1a08; }
+    .pl-sheet-table td { padding: 11px 10px; border-bottom: 1px solid #1a1108; font-size: 14px; color: #b09070; }
+    .pl-sheet-table td:first-child { color: #f0ebe3; font-weight: 500; }
+    .pl-empty { text-align: center; padding: 40px; color: #4a3020; font-style: italic; font-size: 14px; }
+
+    .pl-hidden { display: none !important; }
+
+    .pl-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #0f0f0f; border-top: 1px solid #1a1a1a; display: flex; justify-content: space-around; padding: 8px 0 max(8px, env(safe-area-inset-bottom)); z-index: 100; }
+    .pl-nav a { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; color: #4a3020; font-size: 10px; font-weight: 500; padding: 4px 12px; }
+    .pl-nav a.active, .pl-nav a:hover { color: #f77f00; }
+    .pl-nav-icon { font-size: 20px; }
   </style>
 </head>
 <body>
 
-  <div class="hero">
-    <div class="hi">
-      <a href="/potlucks" class="back">← Potlucks</a>
+  <div class="pl-hero">
+    <div class="pl-hi">
+      <a href="/potlucks" class="pl-back">← Potlucks</a>
       <h1>{potluck.title}</h1>
-      <div class="hero-meta">
+      <div class="pl-meta">
         {potluck.date_label && <span>📅 {potluck.date_label}{potluck.time_label ? ` · ${potluck.time_label}` : ''}<br/></span>}
         {potluck.location && <span>📍 {potluck.location}{potluck.location_detail ? ` · ${potluck.location_detail}` : ''}</span>}
       </div>
-      <div class="hero-stats">
-        <span class="stat-pill">👥 {totalGuests} {totalGuests === 1 ? 'person' : 'people'} coming</span>
-        <span class="stat-pill">🍽 {signups.filter((s:any)=>s.dish).length} dishes claimed</span>
+      <div class="pl-stats">
+        <span class="pl-pill">👥 {totalGuests} {totalGuests === 1 ? 'person' : 'people'} coming</span>
+        <span class="pl-pill">🍽 {signups.filter((s:any)=>s.dish).length} dishes claimed</span>
       </div>
     </div>
   </div>
 
-  <div class="page">
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('signup')">Sign Up</button>
-      <button class="tab" onclick="switchTab('sheet')">Who's Bringing What</button>
+  <div class="pl-page">
+    <div class="pl-tabs">
+      <button class="pl-tab active" id="tab-signup">Sign Up</button>
+      <button class="pl-tab" id="tab-sheet">Who's Bringing What</button>
     </div>
 
     <!-- SIGN UP -->
-    <div class="panel active" id="panel-signup">
-
+    <div class="pl-panel active" id="panel-signup">
       <div id="form-wrap">
-        <div class="nudge"><strong>No dish? No problem.</strong><br/>Show up anyway — there's always more than enough.</div>
+        <div class="pl-nudge"><strong>No dish? No problem.</strong><br/>Show up anyway — there's always more than enough.</div>
 
-        <!-- Step 1: coming? -->
-        <div class="q">Are you coming?</div>
-        <div class="rsvp-row">
-          <button type="button" class="rsvp-btn yes" id="rsvp-yes" onclick="setRsvp('yes')">✅ Yes, I'm in!</button>
-          <button type="button" class="rsvp-btn no" id="rsvp-no" onclick="setRsvp('no')">❌ Can't make it</button>
+        <div class="pl-q">Are you coming?</div>
+        <div class="pl-rsvp-row">
+          <button type="button" class="pl-rsvp-btn yes" id="rsvp-yes">✅ Yes, I'm in!</button>
+          <button type="button" class="pl-rsvp-btn no" id="rsvp-no">❌ Can't make it</button>
         </div>
-        <div class="err-msg hidden" id="e-rsvp">Let us know either way!</div>
+        <div class="err pl-hidden" id="e-rsvp" style="font-size:12px;color:#f87171;margin-top:-20px;margin-bottom:16px">Let us know either way!</div>
 
-        <!-- Step 2: dish picker (only if yes) -->
-        <div id="dish-section" class="hidden">
-          <div class="q">What are you bringing?</div>
-          <p style="font-size:13px;color:#6b5040;margin-bottom:16px;margin-top:-8px">Tap to claim a spot. Skip this if you're not sure yet.</p>
+        <div id="dish-section" class="pl-hidden">
+          <div class="pl-q">What are you bringing?</div>
+          <p class="pl-sub">Tap to claim a spot. Skip this if you're not sure yet.</p>
 
           {catEntries.map(([cat, catSlots]) => (
             <div>
-              <div class="cat-head">{cat}</div>
-              <div class="slots-grid">
+              <div class="pl-cat-head">{cat}</div>
+              <div class="pl-grid">
                 {catSlots.map((slot: any) => {
                   const isFull = slot.claimed >= slot.max_claims;
                   const left = slot.max_claims - slot.claimed;
                   const pct = Math.round((slot.claimed / slot.max_claims) * 100);
                   return (
                     <div
-                      class={isFull ? 'slot-card full' : 'slot-card'}
+                      class={isFull ? 'pl-slot full' : 'pl-slot'}
                       data-dish={slot.suggestion}
                       data-cat={cat}
                       data-full={isFull ? 'true' : 'false'}
-                      onclick="selectSlot(this)"
                     >
-                      <div class="slot-name">{slot.suggestion}</div>
-                      <div class="slot-bar-wrap"><div class="slot-bar" style={`width:${pct}%`}></div></div>
-                      <div class="slot-footer">
-                        <span class={`slot-left ${isFull ? 'none' : left === 1 ? 'one' : 'open'}`}>
+                      <div class="pl-slot-name">{slot.suggestion}</div>
+                      <div class="pl-bar-wrap"><div class="pl-bar" style={`width:${pct}%`}></div></div>
+                      <div class="pl-slot-foot">
+                        <span class={`pl-left ${isFull ? 'none' : left === 1 ? 'one' : 'open'}`}>
                           {isFull ? 'Taken' : left === 1 ? '1 spot left' : `${left} spots left`}
                         </span>
-                        <span class="slot-check">✓</span>
+                        <span class="pl-check">✓</span>
                       </div>
                     </div>
                   );
@@ -226,90 +223,95 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
             </div>
           ))}
 
-          <div class="picked-bar" id="picked-bar">
-            <span class="picked-text" id="picked-text"></span>
-            <button class="picked-clear" onclick="clearDish()">✕</button>
+          <div class="pl-picked" id="picked-bar">
+            <span class="pl-picked-text" id="picked-text"></span>
+            <button class="pl-picked-clear" id="picked-clear">✕</button>
           </div>
-
-          <div class="div"></div>
+          <div class="pl-div"></div>
         </div>
 
-        <!-- Step 3: about you -->
-        <div id="about-section">
-          <div class="field">
-            <label>What's your name? <span style="color:#f77f00">*</span></label>
-            <input type="text" id="f-name" placeholder="First name works"/>
-            <div class="err-msg hidden" id="e-name">We need your name!</div>
-          </div>
+        <div class="pl-field">
+          <label>What's your name? <span style="color:#f77f00">*</span></label>
+          <input type="text" id="f-name" class="pl-input" placeholder="First name works"/>
+          <div class="err" id="e-name" style="font-size:12px;color:#f87171;margin-top:5px;display:none">We need your name!</div>
+        </div>
 
-          <div class="field">
-            <label>How many people are you bringing? <span class="opt">(including yourself)</span></label>
-            <div class="guest-row">
-              <button type="button" class="g-btn" onclick="changeGuests(-1)">−</button>
-              <div class="g-count" id="guest-count">1</div>
-              <button type="button" class="g-btn" onclick="changeGuests(1)">+</button>
-              <div class="g-note" id="guest-note">just me</div>
-            </div>
-          </div>
-
-          <div class="field">
-            <label>How did you hear about this? <span class="opt">(optional)</span></label>
-            <select id="f-platform">
-              <option value="">Pick one…</option>
-              <option value="Discord">Discord — Denver Social Community</option>
-              <option value="Facebook">Facebook</option>
-              <option value="Reddit">Reddit — r/Denver or r/DenverMeets</option>
-              <option value="Friend">A friend told me</option>
-              <option value="Other">Something else</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label>Any food allergies we should know about? <span class="opt">(optional)</span></label>
-            <textarea id="f-dietary" placeholder="e.g. gluten-free, nut allergy, vegan…"></textarea>
-          </div>
-
-          <div class="field">
-            <label>Can you help out? <span class="opt">(optional)</span></label>
-            <div class="checks">
-              <div class="check-item" data-extra="utensils"><div class="check-box"></div><div class="check-txt">I'll bring serving spoons and tongs<span class="check-sub">Super helpful for a potluck</span></div></div>
-              <div class="check-item" data-extra="earlyArrive"><div class="check-box"></div><div class="check-txt">I can show up 30 min early to help set up</div></div>
-              <div class="check-item" data-extra="seating"><div class="check-box"></div><div class="check-txt">I'll bring chairs or a blanket<span class="check-sub">It's open grass at Cheeseman</span></div></div>
-            </div>
+        <div class="pl-field">
+          <label>How many people are you bringing? <span class="opt">(including yourself)</span></label>
+          <div class="pl-guest-row">
+            <button type="button" class="pl-g-btn" id="g-minus">−</button>
+            <div class="pl-g-count" id="guest-count">1</div>
+            <button type="button" class="pl-g-btn" id="g-plus">+</button>
+            <div class="pl-g-note" id="guest-note">just me</div>
           </div>
         </div>
 
-        <button class="submit-btn" id="submit-btn" onclick="submitForm()">Count me in! 🌞</button>
+        <div class="pl-field">
+          <label>How did you hear about this? <span class="opt">(optional)</span></label>
+          <select id="f-platform" class="pl-select">
+            <option value="">Pick one…</option>
+            <option value="Discord">Discord — Denver Social Community</option>
+            <option value="Facebook">Facebook</option>
+            <option value="Reddit">Reddit — r/Denver or r/DenverMeets</option>
+            <option value="Friend">A friend told me</option>
+            <option value="Other">Something else</option>
+          </select>
+        </div>
+
+        <div class="pl-field">
+          <label>Any food allergies we should know about? <span class="opt">(optional)</span></label>
+          <textarea id="f-dietary" class="pl-textarea" placeholder="e.g. gluten-free, nut allergy, vegan…"></textarea>
+        </div>
+
+        <div class="pl-field">
+          <label>Can you help out? <span class="opt">(optional)</span></label>
+          <div class="pl-checks">
+            <div class="pl-check-item" data-extra="utensils">
+              <div class="pl-check-box"></div>
+              <div class="pl-check-txt">I'll bring serving spoons and tongs<span class="pl-check-sub">Super helpful for a potluck</span></div>
+            </div>
+            <div class="pl-check-item" data-extra="earlyArrive">
+              <div class="pl-check-box"></div>
+              <div class="pl-check-txt">I can show up 30 min early to help set up</div>
+            </div>
+            <div class="pl-check-item" data-extra="seating">
+              <div class="pl-check-box"></div>
+              <div class="pl-check-txt">I'll bring chairs or a blanket<span class="pl-check-sub">It's open grass at Cheeseman</span></div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="pl-submit" id="submit-btn">Count me in! 🌞</button>
       </div>
 
-      <div id="success-wrap" class="result hidden">
-        <span class="result-emoji">🎉</span>
-        <div class="result-title" id="success-title">You're in!</div>
-        <p class="result-sub">See you at Cheeseman Park on May 30th, noon to 4pm.</p>
-        <div class="result-card" id="success-detail"></div>
-        <button class="result-btn" onclick="location.reload()">Add someone else</button>
-      </div>
-      <div id="error-wrap" class="result hidden">
-        <span class="result-emoji">😬</span>
-        <div class="result-title">Something went wrong</div>
-        <p class="result-sub">Sorry about that. Give it another try.</p>
-        <button class="result-btn" onclick="document.getElementById('form-wrap').classList.remove('hidden');document.getElementById('error-wrap').classList.add('hidden')">Try again</button>
+      <div id="success-wrap" class="pl-result pl-hidden">
+        <span class="pl-result-emoji">🎉</span>
+        <div class="pl-result-title" id="success-title">You're in!</div>
+        <p class="pl-result-sub">See you at Cheeseman Park on May 30th, noon to 4pm.</p>
+        <div class="pl-result-card" id="success-detail"></div>
+        <button type="button" class="pl-result-btn" id="add-another">Add someone else</button>
       </div>
 
+      <div id="error-wrap" class="pl-result pl-hidden">
+        <span class="pl-result-emoji">😬</span>
+        <div class="pl-result-title">Something went wrong</div>
+        <p class="pl-result-sub">Sorry about that. Give it another try.</p>
+        <button type="button" class="pl-result-btn" id="try-again">Try again</button>
+      </div>
     </div>
 
     <!-- WHO'S BRINGING WHAT -->
-    <div class="panel" id="panel-sheet">
+    <div class="pl-panel" id="panel-sheet">
       {signups.length === 0
-        ? <div class="empty">Nobody's signed up yet — be the first!</div>
+        ? <div class="pl-empty">Nobody's signed up yet — be the first!</div>
         : (
-          <table class="sheet-table">
+          <table class="pl-sheet-table">
             <thead><tr><th>Name</th><th>Bringing</th><th>People</th></tr></thead>
             <tbody>
               {signups.map((s: any) => (
                 <tr>
                   <td>{s.name}</td>
-                  <td>{s.dish || <span style="color:#4a3020;font-style:italic">Not sure yet</span>}</td>
+                  <td>{s.dish || <em style="color:#4a3020">Not sure yet</em>}</td>
                   <td>{s.guest_count || 1}</td>
                 </tr>
               ))}
@@ -320,115 +322,182 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
     </div>
   </div>
 
-  <nav class="bottom-nav">
-    <a href="/" class="nav-item"><span class="nav-icon">🏠</span>Home</a>
-    <a href="/events" class="nav-item"><span class="nav-icon">📅</span>Events</a>
-    <a href="/potlucks" class="nav-item active"><span class="nav-icon">🍽</span>Potlucks</a>
-    <a href="/recs" class="nav-item"><span class="nav-icon">⭐</span>Recs</a>
+  <nav class="pl-nav">
+    <a href="/"><span class="pl-nav-icon">🏠</span>Home</a>
+    <a href="/events"><span class="pl-nav-icon">📅</span>Events</a>
+    <a href="/potlucks" class="active"><span class="pl-nav-icon">🍽</span>Potlucks</a>
+    <a href="/recs"><span class="pl-nav-icon">⭐</span>Recs</a>
   </nav>
 
-  <script define:vars={{ id }}>
-    let rsvp = '', guestCount = 1, extras = {utensils:false,earlyArrive:false,seating:false};
-    let selectedDish = '', selectedCat = '';
+  <script define:vars={{ potluckId: id }}>
+    // State
+    var rsvp = '';
+    var guestCount = 1;
+    var extras = { utensils: false, earlyArrive: false, seating: false };
+    var selectedDish = '';
+    var selectedCat = '';
 
-    function switchTab(t) {
-      document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', ['signup','sheet'][i] === t));
-      document.querySelectorAll('.panel').forEach((el,i) => el.classList.toggle('active', ['panel-signup','panel-sheet'][i] === `panel-${t}`));
-    }
+    // Tabs
+    document.getElementById('tab-signup').addEventListener('click', function() {
+      document.getElementById('tab-signup').classList.add('active');
+      document.getElementById('tab-sheet').classList.remove('active');
+      document.getElementById('panel-signup').classList.add('active');
+      document.getElementById('panel-sheet').classList.remove('active');
+    });
+    document.getElementById('tab-sheet').addEventListener('click', function() {
+      document.getElementById('tab-sheet').classList.add('active');
+      document.getElementById('tab-signup').classList.remove('active');
+      document.getElementById('panel-sheet').classList.add('active');
+      document.getElementById('panel-signup').classList.remove('active');
+    });
 
-    function setRsvp(val) {
-      rsvp = val;
-      document.getElementById('rsvp-yes').classList.toggle('active', val === 'yes');
-      document.getElementById('rsvp-no').classList.toggle('active', val === 'no');
-      document.getElementById('e-rsvp').classList.add('hidden');
-      document.getElementById('dish-section').classList.toggle('hidden', val !== 'yes');
-      document.getElementById('submit-btn').textContent = val === 'no' ? "Submit (we'll miss you) 👋" : 'Count me in! 🌞';
-    }
+    // RSVP
+    document.getElementById('rsvp-yes').addEventListener('click', function() {
+      rsvp = 'yes';
+      document.getElementById('rsvp-yes').classList.add('active');
+      document.getElementById('rsvp-no').classList.remove('active');
+      document.getElementById('dish-section').classList.remove('pl-hidden');
+      document.getElementById('e-rsvp').classList.add('pl-hidden');
+      document.getElementById('submit-btn').textContent = 'Count me in! 🌞';
+    });
+    document.getElementById('rsvp-no').addEventListener('click', function() {
+      rsvp = 'no';
+      document.getElementById('rsvp-no').classList.add('active');
+      document.getElementById('rsvp-yes').classList.remove('active');
+      document.getElementById('dish-section').classList.add('pl-hidden');
+      document.getElementById('e-rsvp').classList.add('pl-hidden');
+      document.getElementById('submit-btn').textContent = "Submit (we'll miss you) 👋";
+    });
 
-    function selectSlot(el) {
-      if (el.dataset.full === 'true') return;
-      const already = el.classList.contains('selected');
-      document.querySelectorAll('.slot-card').forEach(c => c.classList.remove('selected'));
-      if (!already) {
-        el.classList.add('selected');
-        selectedDish = el.dataset.dish;
-        selectedCat = el.dataset.cat;
-        document.getElementById('picked-text').textContent = `You're bringing: ${selectedDish}`;
-        document.getElementById('picked-bar').classList.add('show');
-      } else {
-        clearDish();
-      }
-    }
-
-    function clearDish() {
-      document.querySelectorAll('.slot-card').forEach(c => c.classList.remove('selected'));
+    // Slot picker
+    document.querySelectorAll('.pl-slot').forEach(function(el) {
+      el.addEventListener('click', function() {
+        if (el.dataset.full === 'true') return;
+        var already = el.classList.contains('selected');
+        document.querySelectorAll('.pl-slot').forEach(function(c) { c.classList.remove('selected'); });
+        if (!already) {
+          el.classList.add('selected');
+          selectedDish = el.dataset.dish;
+          selectedCat = el.dataset.cat;
+          document.getElementById('picked-text').textContent = 'You\'re bringing: ' + selectedDish;
+          document.getElementById('picked-bar').classList.add('show');
+        } else {
+          selectedDish = ''; selectedCat = '';
+          document.getElementById('picked-bar').classList.remove('show');
+        }
+      });
+    });
+    document.getElementById('picked-clear').addEventListener('click', function() {
+      document.querySelectorAll('.pl-slot').forEach(function(c) { c.classList.remove('selected'); });
       selectedDish = ''; selectedCat = '';
       document.getElementById('picked-bar').classList.remove('show');
-    }
+    });
 
-    function changeGuests(d) {
-      guestCount = Math.max(1, Math.min(10, guestCount + d));
+    // Guest count
+    document.getElementById('g-minus').addEventListener('click', function() {
+      guestCount = Math.max(1, guestCount - 1);
       document.getElementById('guest-count').textContent = String(guestCount);
-      document.getElementById('guest-note').textContent = guestCount === 1 ? 'just me' : `me + ${guestCount - 1} other${guestCount > 2 ? 's' : ''}`;
-    }
+      document.getElementById('guest-note').textContent = guestCount === 1 ? 'just me' : 'me + ' + (guestCount - 1) + ' other' + (guestCount > 2 ? 's' : '');
+    });
+    document.getElementById('g-plus').addEventListener('click', function() {
+      guestCount = Math.min(10, guestCount + 1);
+      document.getElementById('guest-count').textContent = String(guestCount);
+      document.getElementById('guest-note').textContent = guestCount === 1 ? 'just me' : 'me + ' + (guestCount - 1) + ' other' + (guestCount > 2 ? 's' : '');
+    });
 
-    document.querySelectorAll('[data-extra]').forEach(el => {
-      el.addEventListener('click', () => {
-        const key = el.dataset.extra; extras[key] = !extras[key];
+    // Checkboxes
+    document.querySelectorAll('.pl-check-item').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var key = el.dataset.extra;
+        extras[key] = !extras[key];
         el.classList.toggle('active', extras[key]);
-        el.querySelector('.check-box').textContent = extras[key] ? '✓' : '';
+        el.querySelector('.pl-check-box').textContent = extras[key] ? '✓' : '';
       });
     });
 
-    function validate() {
-      let ok = true;
-      if (!rsvp) { document.getElementById('e-rsvp').classList.remove('hidden'); ok = false; } else document.getElementById('e-rsvp').classList.add('hidden');
-      if (!document.getElementById('f-name').value.trim()) { document.getElementById('e-name').classList.remove('hidden'); ok = false; } else document.getElementById('e-name').classList.add('hidden');
-      return ok;
-    }
+    // Submit
+    document.getElementById('submit-btn').addEventListener('click', async function() {
+      var nameVal = document.getElementById('f-name').value.trim();
+      var ok = true;
 
-    async function submitForm() {
-      if (!validate()) return;
-      const btn = document.getElementById('submit-btn');
-      btn.disabled = true; btn.textContent = 'Saving…';
-      const name = document.getElementById('f-name').value.trim();
-      const platform = (document.getElementById('f-platform') as HTMLSelectElement).value;
-      const dietary = (document.getElementById('f-dietary') as HTMLTextAreaElement).value.trim();
-      const payload = {
-        potluckId: String(id), name, handle: '', platforms: platform,
-        rsvp, guestCount: String(guestCount),
+      if (!rsvp) {
+        document.getElementById('e-rsvp').classList.remove('pl-hidden');
+        ok = false;
+      }
+      if (!nameVal) {
+        document.getElementById('e-name').style.display = 'block';
+        ok = false;
+      } else {
+        document.getElementById('e-name').style.display = 'none';
+      }
+      if (!ok) return;
+
+      var btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      var platform = document.getElementById('f-platform').value;
+      var dietary = document.getElementById('f-dietary').value.trim();
+      var payload = {
+        potluckId: String(potluckId),
+        name: nameVal,
+        handle: '',
+        platforms: platform,
+        rsvp: rsvp,
+        guestCount: String(guestCount),
         dish: rsvp === 'yes' ? selectedDish : '',
         dishCategory: rsvp === 'yes' ? selectedCat : '',
-        dietary, ...extras
+        dietary: dietary,
+        utensils: extras.utensils,
+        earlyArrive: extras.earlyArrive,
+        seating: extras.seating
       };
+
       try {
-        const res = await fetch('/api/potluck', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-        const data = await res.json();
+        var res = await fetch('/api/potluck', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        var data = await res.json();
         if (data.ok) {
-          document.getElementById('form-wrap').classList.add('hidden');
-          document.getElementById('success-wrap').classList.remove('hidden');
-          document.getElementById('success-title').textContent = `You're in, ${name.split(' ')[0]}!`;
-          let d = '';
-          if (selectedDish) d += `🍽 ${selectedDish}<br/>`;
-          d += `👥 ${guestCount === 1 ? 'Just you' : `You + ${guestCount - 1} other${guestCount > 2 ? 's' : ''}`}<br/>`;
+          document.getElementById('form-wrap').classList.add('pl-hidden');
+          document.getElementById('success-wrap').classList.remove('pl-hidden');
+          document.getElementById('success-title').textContent = "You're in, " + nameVal.split(' ')[0] + '!';
+          var d = '';
+          if (selectedDish) d += '🍽 ' + selectedDish + '<br/>';
+          d += '👥 ' + (guestCount === 1 ? 'Just you' : 'You + ' + (guestCount - 1) + ' other' + (guestCount > 2 ? 's' : '')) + '<br/>';
           if (extras.utensils) d += '🥄 Bringing utensils<br/>';
           if (extras.earlyArrive) d += '⏰ Arriving early<br/>';
           if (extras.seating) d += '🪑 Bringing chairs or a blanket';
           document.getElementById('success-detail').innerHTML = d;
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else if (data.error === 'slot_full') {
-          btn.disabled = false; btn.textContent = 'Count me in! 🌞';
-          alert(`"${selectedDish}" just got taken! Pick something else.`);
-          clearDish();
+          btn.disabled = false;
+          btn.textContent = 'Count me in! 🌞';
+          alert('"' + selectedDish + '" just got taken! Pick something else.');
+          document.querySelectorAll('.pl-slot').forEach(function(c) { c.classList.remove('selected'); });
+          selectedDish = ''; selectedCat = '';
+          document.getElementById('picked-bar').classList.remove('show');
         } else {
-          document.getElementById('form-wrap').classList.add('hidden');
-          document.getElementById('error-wrap').classList.remove('hidden');
+          document.getElementById('form-wrap').classList.add('pl-hidden');
+          document.getElementById('error-wrap').classList.remove('pl-hidden');
         }
-      } catch {
-        document.getElementById('form-wrap').classList.add('hidden');
-        document.getElementById('error-wrap').classList.remove('hidden');
+      } catch(e) {
+        document.getElementById('form-wrap').classList.add('pl-hidden');
+        document.getElementById('error-wrap').classList.remove('pl-hidden');
       }
-    }
+    });
+
+    // Result buttons
+    document.getElementById('add-another').addEventListener('click', function() { location.reload(); });
+    document.getElementById('try-again').addEventListener('click', function() {
+      document.getElementById('form-wrap').classList.remove('pl-hidden');
+      document.getElementById('error-wrap').classList.add('pl-hidden');
+      document.getElementById('submit-btn').disabled = false;
+      document.getElementById('submit-btn').textContent = 'Count me in! 🌞';
+    });
   </script>
+
 </body>
 </html>
