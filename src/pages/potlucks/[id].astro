@@ -39,6 +39,7 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>{potluck.title} · Sign Up</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer><\/script>
   <style is:global>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { background: #f7f5f2; color: #1c1917; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
@@ -286,6 +287,12 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
           </div>
         </div>
 
+        <!-- Honeypot - hidden from humans, bots fill it -->
+        <input type="text" name="_gotcha" id="_gotcha" style="display:none;position:absolute;left:-9999px" tabindex="-1" autocomplete="off"/>
+
+        <!-- Turnstile bot check -->
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAADLDABpXrHXcFpVB" data-theme="light" data-size="flexible" style="margin-bottom:12px"></div>
+
         <button type="button" class="pl-submit" id="submit-btn">Count me in! 🌞</button>
       </div>
 
@@ -445,6 +452,8 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
       var dietary = document.getElementById('f-dietary').value.trim();
       var payload = {
         potluckId: String(potluckId),
+        _gotcha: honeypot,
+        _turnstile: turnstileToken,
         name: nameVal,
         handle: '',
         platforms: platform,
