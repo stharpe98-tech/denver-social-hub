@@ -1,0 +1,194 @@
+---
+import { getDB } from '../../../lib/db';
+const db = getDB();
+let pending: any[] = [];
+let approved: any[] = [];
+let webhookUrl = '';
+try {
+  if (db) {
+    const all = await db.prepare(`SELECT p.*, COUNT(DISTINCT r.id) as signups FROM potlucks p LEFT JOIN potluck_rsvp r ON r.potluck_id=p.id GROUP BY p.id ORDER BY p.id DESC`).all();
+    const rows = all?.results ?? [];
+    pending = rows.filter((p:any) => p.status === 'pending');
+    approved = rows.filter((p:any) => p.status !== 'pending');
+    const cfg = await db.prepare(`SELECT value FROM config WHERE key='webhook_url'`).first() as any;
+    webhookUrl = cfg?.value ?? '';
+  }
+} catch(e) { console.error(e); }
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Potluck Admin · Denver Social Community</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0f0f0f;color:#f0ebe3;font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:40px}
+    .hero{background:#1a0a00;border-bottom:1px solid #2a1a08;padding:32px 24px}
+    .hero-inner{max-width:720px;margin:0 auto}
+    .back{color:#6b5040;font-size:13px;text-decoration:none;margin-bottom:12px;display:inline-flex;align-items:center;gap:4px}
+    .hero h1{font-family:'Playfair Display',serif;font-size:clamp(22px,5vw,32px);color:#fff}
+    .page{max-width:720px;margin:0 auto;padding:24px 16px}
+    .section{margin-bottom:32px}
+    .sec-label{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#6b5040;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1a1108}
+    /* Settings */
+    .settings-card{background:#1a1108;border:1px solid #2a1a08;border-radius:14px;padding:20px}
+    .settings-row{display:flex;gap:10px;align-items:flex-end}
+    .settings-row input{flex:1;padding:11px 13px;background:#0f0f0f;border:1.5px solid #2a1a08;border-radius:9px;color:#f0ebe3;font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
+    .settings-row input:focus{border-color:#f77f00}
+    .settings-label{font-size:12px;color:#6b5040;margin-bottom:6px;display:block}
+    .settings-hint{font-size:11px;color:#4a3020;margin-top:6px;line-height:1.5}
+    /* Pending cards */
+    .pending-card{background:#1a1108;border:1px solid #3d2808;border-radius:14px;padding:18px;margin-bottom:10px}
+    .pending-title{font-family:'Playfair Display',serif;font-size:18px;color:#fff;margin-bottom:4px}
+    .pending-meta{font-size:13px;color:#6b5040;margin-bottom:14px;line-height:1.7}
+    .pending-actions{display:flex;gap:8px}
+    .btn-approve{background:linear-gradient(135deg,#065f46,#16a34a);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-reject{background:#1a0000;border:1px solid #7f1d1d;color:#f87171;padding:8px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer}
+    /* Approved table */
+    .approved-card{background:#1a1108;border:1px solid #2a1a08;border-radius:12px;padding:14px 18px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;text-decoration:none;transition:border-color 0.12s}
+    .approved-card:hover{border-color:#f77f00}
+    .approved-title{font-size:15px;color:#f0ebe3;font-weight:500}
+    .approved-meta{font-size:12px;color:#4a3020;margin-top:2px}
+    .approved-stats{font-size:12px;color:#6b5040;text-align:right;white-space:nowrap}
+    .approved-stats strong{color:#c4956a;display:block}
+    .status-badge{padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600}
+    .s-upcoming{background:rgba(247,127,0,0.15);border:1px solid rgba(247,127,0,0.3);color:#f5c842}
+    .s-past{background:#1a1a1a;border:1px solid #2a2a2a;color:#4a3020}
+    /* Create form */
+    .create-btn{background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;border:none;padding:10px 22px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+    .create-form{background:#1a1108;border:1px solid #2a1a08;border-radius:14px;padding:20px;margin-top:14px;display:none}
+    .field{margin-bottom:12px}
+    .field label{display:block;font-size:11px;color:#6b5040;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:0.3px}
+    input[type=text],textarea{width:100%;padding:10px 12px;background:#0f0f0f;border:1.5px solid #2a1a08;border-radius:8px;color:#f0ebe3;font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
+    input:focus,textarea:focus{border-color:#f77f00}
+    input::placeholder,textarea::placeholder{color:#4a3020}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .empty{text-align:center;padding:28px;color:#4a3020;font-style:italic;font-size:13px}
+    .save-btn{background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0d2e1a;border:1px solid #166534;color:#4ade80;padding:10px 20px;border-radius:8px;font-size:13px;display:none;z-index:999}
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="hero-inner">
+      <a href="/potlucks" class="back">← All Potlucks</a>
+      <h1>⚙ Potluck Admin</h1>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- Settings -->
+    <div class="section">
+      <div class="sec-label">⚡ Zapier Webhook · Google Sheets</div>
+      <div class="settings-card">
+        <span class="settings-label">Zapier Webhook URL</span>
+        <div class="settings-row">
+          <input type="text" id="webhook-input" value={webhookUrl} placeholder="https://hooks.zapier.com/hooks/catch/…"/>
+          <button class="save-btn" onclick="saveWebhook()">Save</button>
+        </div>
+        <div class="settings-hint">
+          Every sign-up fires to this URL. In Zapier: create a Zap → <strong>Webhooks by Zapier</strong> (Catch Hook) → <strong>Google Sheets</strong> (Create Spreadsheet Row). Paste the webhook URL here.
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending approvals -->
+    <div class="section">
+      <div class="sec-label">⏳ Pending Approval ({pending.length})</div>
+      {pending.length === 0
+        ? <div class="empty">No pending submissions</div>
+        : pending.map((p:any) => (
+          <div class="pending-card">
+            <div class="pending-title">{p.title}</div>
+            <div class="pending-meta">
+              {p.date_label && <span>📅 {p.date_label}{p.time_label ? ` · ${p.time_label}` : ''}<br/></span>}
+              {p.location && <span>📍 {p.location}{p.location_detail ? ` · ${p.location_detail}` : ''}<br/></span>}
+              {p.description && <span style="font-style:italic">{p.description}</span>}
+            </div>
+            <div class="pending-actions">
+              <button class="btn-approve" onclick={`approvePotluck(${p.id})`}>✓ Approve</button>
+              <button class="btn-reject" onclick={`rejectPotluck(${p.id})`}>✕ Reject</button>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+
+    <!-- Create new (admin only) -->
+    <div class="section">
+      <div class="sec-label">➕ Create New Potluck</div>
+      <button class="create-btn" onclick="document.getElementById('create-form').style.display='block';this.style.display='none'">+ New Potluck</button>
+      <div class="create-form" id="create-form">
+        <div class="field"><label>Title *</label><input type="text" id="c-title" placeholder="Summer Kickoff Potluck"/></div>
+        <div class="field"><label>Description</label><textarea id="c-desc" placeholder="What's the vibe?"></textarea></div>
+        <div class="grid2">
+          <div class="field"><label>Date</label><input type="text" id="c-date" placeholder="May 30th"/></div>
+          <div class="field"><label>Time</label><input type="text" id="c-time" placeholder="12pm–4pm"/></div>
+          <div class="field"><label>Location</label><input type="text" id="c-loc" placeholder="Cheeseman Park"/></div>
+          <div class="field"><label>Detail</label><input type="text" id="c-locdetail" placeholder="West side between 9th & 10th"/></div>
+        </div>
+        <button class="save-btn" onclick="createPotluck()">Create & Publish</button>
+      </div>
+    </div>
+
+    <!-- All potlucks -->
+    <div class="section">
+      <div class="sec-label">All Potlucks ({approved.length})</div>
+      {approved.length === 0
+        ? <div class="empty">None yet</div>
+        : approved.map((p:any) => (
+          <a href={`/potlucks/manage/${p.id}`} class="approved-card">
+            <div>
+              <div class="approved-title">{p.title}</div>
+              <div class="approved-meta">{p.date_label} · {p.location}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="approved-stats"><strong>{p.signups || 0}</strong>sign-ups</div>
+              <span class={p.status === 'upcoming' ? 'status-badge s-upcoming' : 'status-badge s-past'}>{p.status}</span>
+            </div>
+          </a>
+        ))
+      }
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast">Saved ✓</div>
+
+  <script>
+    function showToast(msg?: string) {
+      const t = document.getElementById('toast')!;
+      t.textContent = msg || 'Saved ✓';
+      t.style.display = 'block';
+      setTimeout(() => t.style.display = 'none', 2500);
+    }
+    async function saveWebhook() {
+      const url = (document.getElementById('webhook-input') as HTMLInputElement).value.trim();
+      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'set_config',key:'webhook_url',value:url}) });
+      const data = await res.json();
+      if (data.ok) showToast('Webhook saved ✓');
+    }
+    async function approvePotluck(id: number) {
+      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'approve',id}) });
+      const data = await res.json();
+      if (data.ok) { showToast('Approved ✓'); setTimeout(() => location.reload(), 800); }
+    }
+    async function rejectPotluck(id: number) {
+      if (!confirm('Reject and delete this submission?')) return;
+      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'reject',id}) });
+      const data = await res.json();
+      if (data.ok) { showToast('Rejected'); setTimeout(() => location.reload(), 800); }
+    }
+    async function createPotluck() {
+      const title = (document.getElementById('c-title') as HTMLInputElement).value.trim();
+      if (!title) return;
+      const body = { action:'create', title, description:(document.getElementById('c-desc') as HTMLTextAreaElement).value, date_label:(document.getElementById('c-date') as HTMLInputElement).value, time_label:(document.getElementById('c-time') as HTMLInputElement).value, location:(document.getElementById('c-loc') as HTMLInputElement).value, location_detail:(document.getElementById('c-locdetail') as HTMLInputElement).value, status:'upcoming' };
+      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.ok) window.location.href = `/potlucks/manage/${data.id}`;
+    }
+  </script>
+</body>
+</html>
