@@ -31,6 +31,9 @@ const redditName = user?.reddit_username || user?.name;
       <a href="/recs"     class:list={["nav-link", { active: currentPath === "/recs" }]}>
         <span class="nav-link-icon">*</span>recs
       </a>
+      <a href="/potlucks" class:list={["nav-link", { active: currentPath.startsWith("/potlucks") }]}>
+        <span class="nav-link-icon">🍽</span>potlucks
+      </a>
       <a href="/about"    class:list={["nav-link", { active: currentPath.startsWith("/about") }]}>
         <span class="nav-link-icon">?</span>about
       </a>
@@ -58,6 +61,7 @@ const redditName = user?.reddit_username || user?.name;
     <div class="mob-nav-inner">
       <a href="/"        class:list={[{ active: currentPath === "/" }]}><span class="mn-icon">~</span>home</a>
       <a href="/events"  class:list={[{ active: currentPath.startsWith("/events") }]}><span class="mn-icon">#</span>events</a>
+      <a href="/potlucks" class:list={[{ active: currentPath.startsWith("/potlucks") }]}><span class="mn-icon">🍽</span>potlucks</a>
       <a href="/recs"    class:list={[{ active: currentPath === "/recs" }]}><span class="mn-icon">*</span>recs</a>
       <a href="/about"   class:list={[{ active: currentPath.startsWith("/about") }]}><span class="mn-icon">?</span>about</a>
       {isAdmin && <a href="/admin" class:list={[{ active: currentPath.startsWith("/admin") }]}><span class="mn-icon">&gt;</span>admin</a>}
@@ -243,3 +247,4 @@ const redditName = user?.reddit_username || user?.name;
   /* ── Selection ── */
   ::selection { background: var(--accent-dim); color: var(--accent); }
 </style>
+
