@@ -1,0 +1,193 @@
+---
+import { getDB } from '../../lib/db';
+const db = getDB();
+const { id } = Astro.params;
+let potluck: any = null;
+let signups: any[] = [];
+try {
+  if (db && id) {
+    potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(id).first();
+    const s = await db.prepare(`SELECT * FROM potluck_rsvp WHERE potluck_id=? ORDER BY created_at DESC`).bind(id).all();
+    signups = s?.results ?? [];
+  }
+} catch(e) { console.error(e); }
+if (!potluck) return Astro.redirect('/potlucks');
+const attending = signups.filter((s:any) => s.rsvp === 'yes');
+const notAttending = signups.filter((s:any) => s.rsvp !== 'yes');
+const guestTotal = attending.reduce((sum:number, s:any) => sum + (parseInt(s.guest_count)||1), 0);
+const utensils = attending.filter((s:any) => s.utensils);
+const earlyArrive = attending.filter((s:any) => s.early_arrive);
+const seating = attending.filter((s:any) => s.seating);
+const dishes: Record<string,string[]> = {};
+attending.forEach((s:any) => {
+  if (s.dish) {
+    const k = s.dish.toLowerCase();
+    if (!dishes[k]) dishes[k] = [];
+    dishes[k].push(s.name);
+  }
+});
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Manage · {potluck.title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0f0f0f;color:#f0ebe3;font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:40px}
+    .hero{background:#1a0a00;border-bottom:1px solid #2a1a08;padding:32px 24px;position:relative}
+    .hero-inner{max-width:800px;margin:0 auto}
+    .back{color:#6b5040;font-size:13px;text-decoration:none;margin-bottom:12px;display:inline-flex;align-items:center;gap:4px}
+    .hero h1{font-family:'Playfair Display',serif;font-size:clamp(22px,5vw,32px);color:#fff;margin-bottom:4px}
+    .hero p{font-size:13px;color:#6b5040}
+    .page{max-width:800px;margin:0 auto;padding:24px 16px}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:28px}
+    .stat-card{background:#1a1108;border:1px solid #2a1a08;border-radius:12px;padding:16px;text-align:center}
+    .stat-num{font-size:28px;font-weight:700;color:#f5c842;margin-bottom:4px}
+    .stat-label{font-size:11px;color:#6b5040;text-transform:uppercase;letter-spacing:0.5px}
+    .section-label{font-size:10px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:#6b5040;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1a1108}
+    .section{margin-bottom:28px}
+    .dish-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+    .dish-item{background:#1a1108;border:1px solid #2a1a08;border-radius:10px;padding:8px 14px;font-size:13px}
+    .dish-name{color:#f0ebe3;font-weight:500;margin-bottom:2px}
+    .dish-who{color:#4a3020;font-size:11px}
+    .dish-item.full .dish-name{color:#f87171}
+    .badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600}
+    .badge-full{background:#2e0d0d;color:#f87171;border:1px solid #7f1d1d}
+    .table{width:100%;border-collapse:collapse}
+    .table th{text-align:left;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#4a3020;padding:8px 12px;border-bottom:1px solid #2a1a08}
+    .table td{padding:10px 12px;border-bottom:1px solid #1a1108;font-size:13px;color:#b09070;vertical-align:top}
+    .table td:first-child{color:#f0ebe3;font-weight:500}
+    .table tr:hover td{background:#1a1108}
+    .tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500;margin:1px}
+    .tag-discord{background:#1e1f4a;color:#7983f5}
+    .tag-facebook{background:#1a2a3a;color:#60a5fa}
+    .tag-reddit{background:#2a1500;color:#fb923c}
+    .tag-other{background:#1a1a1a;color:#6b7280}
+    .helper-row{display:flex;flex-wrap:wrap;gap:8px}
+    .helper-chip{background:#1a1108;border:1px solid #2a1a08;border-radius:8px;padding:6px 12px;font-size:12px;color:#b09070}
+    .del-btn{background:none;border:none;color:#4a3020;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px}
+    .del-btn:hover{background:#2e0d0d;color:#f87171}
+    .empty{text-align:center;padding:32px;color:#4a3020;font-style:italic;font-size:13px}
+    .edit-btn{background:rgba(247,127,0,0.1);border:1px solid rgba(247,127,0,0.2);color:#f5c842;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif}
+    .mark-past-btn{background:#1a1a1a;border:1px solid #2a2a2a;color:#6b7280;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif}
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="hero-inner">
+      <a href={`/potlucks/${id}`} class="back">← Back to event</a>
+      <h1>⚙ Manage · {potluck.title}</h1>
+      <p>{potluck.date_label} · {potluck.location}</p>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="edit-btn" onclick="document.getElementById('edit-panel').classList.toggle('hidden')">✏️ Edit event details</button>
+        {potluck.status === 'upcoming' && <button class="mark-past-btn" onclick="markPast()">Mark as Past</button>}
+      </div>
+      <div id="edit-panel" class="hidden" style="margin-top:16px;background:#1a1108;border:1px solid #2a1a08;border-radius:12px;padding:20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div><label style="font-size:11px;color:#6b5040;display:block;margin-bottom:4px">Title</label><input type="text" id="e-title" value={potluck.title} style="width:100%;padding:8px 10px;background:#0f0f0f;border:1px solid #2a1a08;border-radius:7px;color:#f0ebe3;font-family:'DM Sans',sans-serif;font-size:13px;outline:none"/></div>
+          <div><label style="font-size:11px;color:#6b5040;display:block;margin-bottom:4px">Date</label><input type="text" id="e-date" value={potluck.date_label} style="width:100%;padding:8px 10px;background:#0f0f0f;border:1px solid #2a1a08;border-radius:7px;color:#f0ebe3;font-family:'DM Sans',sans-serif;font-size:13px;outline:none"/></div>
+          <div><label style="font-size:11px;color:#6b5040;display:block;margin-bottom:4px">Time</label><input type="text" id="e-time" value={potluck.time_label} style="width:100%;padding:8px 10px;background:#0f0f0f;border:1px solid #2a1a08;border-radius:7px;color:#f0ebe3;font-family:'DM Sans',sans-serif;font-size:13px;outline:none"/></div>
+          <div><label style="font-size:11px;color:#6b5040;display:block;margin-bottom:4px">Location</label><input type="text" id="e-loc" value={potluck.location} style="width:100%;padding:8px 10px;background:#0f0f0f;border:1px solid #2a1a08;border-radius:7px;color:#f0ebe3;font-family:'DM Sans',sans-serif;font-size:13px;outline:none"/></div>
+        </div>
+        <button onclick="saveEdit()" style="background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Save changes</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num">{guestTotal}</div><div class="stat-label">Total People</div></div>
+      <div class="stat-card"><div class="stat-num">{attending.length}</div><div class="stat-label">Sign-ups</div></div>
+      <div class="stat-card"><div class="stat-num">{Object.keys(dishes).length}</div><div class="stat-label">Dishes</div></div>
+      <div class="stat-card"><div class="stat-num">{utensils.length}</div><div class="stat-label">Utensils</div></div>
+      <div class="stat-card"><div class="stat-num">{earlyArrive.length}</div><div class="stat-label">Early Help</div></div>
+      <div class="stat-card"><div class="stat-num">{seating.length}</div><div class="stat-label">Seating</div></div>
+    </div>
+
+    {Object.keys(dishes).length > 0 && (
+      <div class="section">
+        <div class="section-label">Dish breakdown</div>
+        <div class="dish-grid">
+          {Object.entries(dishes).map(([dish, names]) => (
+            <div class={`dish-item ${names.length >= 2 ? 'full' : ''}`}>
+              <div class="dish-name">
+                {dish} {names.length >= 2 && <span class="badge badge-full">FULL</span>}
+              </div>
+              <div class="dish-who">{(names as string[]).join(', ')}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {(utensils.length > 0 || earlyArrive.length > 0 || seating.length > 0) && (
+      <div class="section">
+        <div class="section-label">Helpers & logistics</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          {utensils.length > 0 && <div><span style="color:#6b5040;font-size:12px;margin-right:8px">🥄 Utensils:</span>{utensils.map((s:any)=><span class="helper-chip">{s.name}</span>)}</div>}
+          {earlyArrive.length > 0 && <div><span style="color:#6b5040;font-size:12px;margin-right:8px">⏰ Arriving early:</span>{earlyArrive.map((s:any)=><span class="helper-chip">{s.name}</span>)}</div>}
+          {seating.length > 0 && <div><span style="color:#6b5040;font-size:12px;margin-right:8px">🪑 Seating:</span>{seating.map((s:any)=><span class="helper-chip">{s.name}</span>)}</div>}
+        </div>
+      </div>
+    )}
+
+    <div class="section">
+      <div class="section-label">All sign-ups ({attending.length})</div>
+      {attending.length === 0
+        ? <div class="empty">No sign-ups yet</div>
+        : (
+          <table class="table">
+            <thead><tr><th>Name</th><th>Dish</th><th>Category</th><th>👥</th><th>From</th><th>Dietary</th><th></th></tr></thead>
+            <tbody>
+              {attending.map((s:any) => (
+                <tr>
+                  <td>{s.name}{s.handle && <span style="color:#4a3020;display:block;font-size:11px">{s.handle}</span>}</td>
+                  <td>{s.dish || '—'}</td>
+                  <td style="font-size:12px">{s.dish_category || '—'}</td>
+                  <td>{s.guest_count || 1}</td>
+                  <td>{s.platforms && s.platforms.split(',').map((p:string) => <span class={`tag tag-${p.trim().toLowerCase()}`}>{p.trim()}</span>)}</td>
+                  <td style="font-size:12px;color:#4a3020">{s.dietary || '—'}</td>
+                  <td><button class="del-btn" onclick={`deleteRsvp(${s.id})`}>✕</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )
+      }
+    </div>
+
+    {notAttending.length > 0 && (
+      <div class="section">
+        <div class="section-label">Can't make it ({notAttending.length})</div>
+        <div class="helper-row">
+          {notAttending.map((s:any) => <span class="helper-chip">{s.name}</span>)}
+        </div>
+      </div>
+    )}
+  </div>
+
+  <script define:vars={{ id, potluck }}>
+    async function deleteRsvp(rsvpId) {
+      if (!confirm('Remove this sign-up?')) return;
+      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'delete_rsvp',id:rsvpId}) });
+      const data = await res.json();
+      if (data.ok) location.reload();
+    }
+    async function saveEdit() {
+      const body = { action:'update', id: parseInt(id), title: document.getElementById('e-title').value, date_label: document.getElementById('e-date').value, time_label: document.getElementById('e-time').value, location: document.getElementById('e-loc').value, description: potluck.description, location_detail: potluck.location_detail, status: potluck.status };
+      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.ok) location.reload();
+    }
+    async function markPast() {
+      if (!confirm('Mark this potluck as past?')) return;
+      const body = { action:'update', id: parseInt(id), ...potluck, status: 'past' };
+      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.ok) location.reload();
+    }
+  </script>
+</body>
+</html>
