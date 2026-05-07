@@ -15,57 +15,61 @@ const host = Astro.url.host;
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Short Links · Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style is:global>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0e0e10;color:#e4e4e7;font-family:'Inter',sans-serif;min-height:100vh;padding-bottom:40px}
-    .hero{background:#0e0e10;border-bottom:1px solid #2a2a30;padding:28px 24px}
-    .hi{max-width:700px;margin:0 auto}
-    .back{color:#55555e;font-size:13px;text-decoration:none;margin-bottom:10px;display:inline-flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace}
-    .hero h1{font-size:22px;font-weight:700;color:#e4e4e7;margin-bottom:4px}
-    .hero p{font-size:13px;color:#55555e}
-    .page{max-width:700px;margin:0 auto;padding:24px 16px}
-    .create-card{background:#1a1a1f;border:1px solid #2a2a30;border-radius:12px;padding:20px;margin-bottom:28px}
-    .create-title{font-size:13px;font-weight:600;color:#8b8b94;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
-    .form-row{display:grid;grid-template-columns:1fr 1fr 2fr auto;gap:10px;align-items:end}
-    @media(max-width:600px){.form-row{grid-template-columns:1fr 1fr;gap:8px}}
-    .field label{display:block;font-size:11px;color:#55555e;margin-bottom:5px;font-family:'JetBrains Mono',monospace}
-    .field input{width:100%;padding:9px 12px;background:#0e0e10;border:1px solid #2a2a30;border-radius:7px;color:#e4e4e7;font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color 0.15s}
-    .field input:focus{border-color:#ff4500}
-    .field input::placeholder{color:#55555e}
-    .create-btn{padding:9px 18px;border-radius:7px;border:none;background:#ff4500;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;height:38px}
-    .sec-label{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#55555e;margin-bottom:12px}
-    .link-row{background:#1a1a1f;border:1px solid #2a2a30;border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
-    .link-short{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#ff4500;min-width:100px}
-    .link-dest{font-size:13px;color:#8b8b94;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .link-label{font-size:12px;color:#55555e;min-width:80px}
-    .link-clicks{font-family:'JetBrains Mono',monospace;font-size:12px;color:#55555e;min-width:48px;text-align:right}
-    .copy-btn{padding:5px 10px;border-radius:6px;border:1px solid #2a2a30;background:transparent;color:#8b8b94;font-size:11px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all 0.12s;white-space:nowrap}
-    .copy-btn:hover,.copy-btn.copied{border-color:#ff4500;color:#ff4500}
-    .del-btn{padding:5px 10px;border-radius:6px;border:1px solid #2a2a30;background:transparent;color:#55555e;font-size:11px;cursor:pointer;transition:all 0.12s}
-    .del-btn:hover{border-color:#ff4757;color:#ff4757}
-    .empty{text-align:center;padding:40px;color:#55555e;font-style:italic;font-size:13px}
-    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1f;border:1px solid #2a2a30;color:#e4e4e7;padding:10px 20px;border-radius:8px;font-size:13px;display:none;z-index:999;font-family:'JetBrains Mono',monospace}
-    @media(max-width:600px){.link-label,.link-clicks{display:none}.link-row{flex-wrap:wrap}}
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #0e0e10; color: #e4e4e7; font-family: 'Inter', sans-serif; min-height: 100vh; }
+    body { padding-bottom: 40px; -webkit-overflow-scrolling: touch; }
+    .lh { background: #0e0e10; border-bottom: 1px solid #2a2a30; padding: 28px 20px; }
+    .lh-in { max-width: 680px; margin: 0 auto; }
+    .lh-back { color: #55555e; font-size: 13px; text-decoration: none; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; }
+    .lh h1 { font-size: clamp(20px,5vw,26px); font-weight: 700; color: #e4e4e7; margin-bottom: 4px; }
+    .lh p { font-size: 13px; color: #55555e; font-family: 'JetBrains Mono', monospace; }
+    .lp { max-width: 680px; margin: 0 auto; padding: 20px 16px; }
+    .create-card { background: #1a1a1f; border: 1px solid #2a2a30; border-radius: 12px; padding: 18px; margin-bottom: 24px; }
+    .create-title { font-size: 11px; font-weight: 600; color: #55555e; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; }
+    .lc-field { margin-bottom: 12px; }
+    .lc-field label { display: block; font-size: 11px; color: #55555e; margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; }
+    .lc-input { width: 100%; padding: 11px 13px; background: #0e0e10; border: 1px solid #2a2a30; border-radius: 7px; color: #e4e4e7; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; -webkit-appearance: none; }
+    .lc-input:focus { border-color: #ff4500; }
+    .lc-input::placeholder { color: #55555e; }
+    .lc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media(max-width:420px) { .lc-grid { grid-template-columns: 1fr; } }
+    .create-btn { width: 100%; padding: 13px; border-radius: 8px; border: none; background: #ff4500; color: #fff; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+    .sec-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #55555e; margin-bottom: 12px; }
+    .link-card { background: #1a1a1f; border: 1px solid #2a2a30; border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; }
+    .link-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+    .link-slug { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: #ff4500; }
+    .link-label { font-size: 12px; color: #55555e; }
+    .link-dest { font-size: 12px; color: #8b8b94; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; margin-bottom: 10px; }
+    .link-actions { display: flex; gap: 8px; }
+    .copy-btn { flex: 1; padding: 9px; border-radius: 7px; border: 1px solid #2a2a30; background: transparent; color: #8b8b94; font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.12s; }
+    .copy-btn.copied, .copy-btn:active { border-color: #ff4500; color: #ff4500; }
+    .link-clicks { font-size: 12px; color: #55555e; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; gap: 4px; }
+    .del-btn { padding: 9px 14px; border-radius: 7px; border: 1px solid #2a2a30; background: transparent; color: #55555e; font-size: 13px; cursor: pointer; }
+    .del-btn:active { border-color: #ff4757; color: #ff4757; }
+    .empty { text-align: center; padding: 32px; color: #55555e; font-style: italic; font-size: 13px; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a1a1f; border: 1px solid #2a2a30; color: #e4e4e7; padding: 10px 20px; border-radius: 8px; font-size: 13px; display: none; z-index: 999; white-space: nowrap; }
   </style>
 </head>
 <body>
-  <div class="hero">
-    <div class="hi">
-      <a href="/admin/dashboard" class="back">← Admin</a>
+  <div class="lh">
+    <div class="lh-in">
+      <a href="/admin/dashboard" class="lh-back">← Admin</a>
       <h1>🔗 Short Links</h1>
-      <p>denversocialhub.com/go/[slug] → anywhere</p>
+      <p>/go/[slug] → anywhere</p>
     </div>
   </div>
-  <div class="page">
+
+  <div class="lp">
     <div class="create-card">
       <div class="create-title">Create new link</div>
-      <div class="form-row">
-        <div class="field"><label>Slug</label><input type="text" id="new-slug" placeholder="potluck"/></div>
-        <div class="field"><label>Label</label><input type="text" id="new-label" placeholder="Summer Potluck"/></div>
-        <div class="field"><label>Destination URL</label><input type="text" id="new-url" placeholder="https://… or /potlucks/1"/></div>
-        <button class="create-btn" id="create-btn">Create</button>
+      <div class="lc-grid">
+        <div class="lc-field"><label>slug</label><input type="text" id="new-slug" class="lc-input" placeholder="potluck"/></div>
+        <div class="lc-field"><label>label</label><input type="text" id="new-label" class="lc-input" placeholder="Summer Potluck"/></div>
       </div>
+      <div class="lc-field"><label>destination url</label><input type="text" id="new-url" class="lc-input" placeholder="https://… or /potlucks/1"/></div>
+      <button class="create-btn" id="create-btn">Create link</button>
     </div>
 
     <div class="sec-label">All links ({links.length})</div>
@@ -73,28 +77,33 @@ const host = Astro.url.host;
     {links.length === 0
       ? <div class="empty">No links yet</div>
       : links.map((l: any) => (
-        <div class="link-row" id={`row-${l.id}`}>
-          <div class="link-short">/go/{l.slug}</div>
-          <div class="link-dest" title={l.url}>{l.url}</div>
-          <div class="link-label">{l.label}</div>
-          <div class="link-clicks">{l.clicks} clicks</div>
-          <button class="copy-btn" data-url={`https://${host}/go/${l.slug}`}>copy</button>
-          <button class="del-btn" data-id={l.id}>del</button>
+        <div class="link-card" id={`row-${l.id}`}>
+          <div class="link-top">
+            <div>
+              <div class="link-slug">/go/{l.slug}</div>
+              {l.label && <div class="link-label">{l.label}</div>}
+            </div>
+            <div class="link-clicks">👆 {l.clicks}</div>
+          </div>
+          <div class="link-dest">{l.url}</div>
+          <div class="link-actions">
+            <button class="copy-btn" data-url={`https://${host}/go/${l.slug}`}>Copy link</button>
+            <button class="del-btn" data-id={l.id}>Delete</button>
+          </div>
         </div>
       ))
     }
   </div>
 
-  <div class="toast" id="toast">Copied!</div>
+  <div class="toast" id="toast"></div>
 
   <script is:inline>
     function showToast(msg) {
       var t = document.getElementById('toast');
-      t.textContent = msg || 'Done';
+      t.textContent = msg;
       t.style.display = 'block';
       setTimeout(function() { t.style.display = 'none'; }, 2000);
     }
-
     document.getElementById('create-btn').addEventListener('click', async function() {
       var slug = document.getElementById('new-slug').value.trim();
       var url = document.getElementById('new-url').value.trim();
@@ -102,20 +111,19 @@ const host = Astro.url.host;
       if (!slug || !url) { showToast('Slug and URL required'); return; }
       var res = await fetch('/api/short-links', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'create',slug,url,label}) });
       var data = await res.json();
-      if (data.ok) { showToast('Link created ✓'); setTimeout(function(){ location.reload(); }, 800); }
-      else showToast('Error: slug may already exist');
+      if (data.ok) { showToast('Created ✓'); setTimeout(function(){ location.reload(); }, 800); }
+      else showToast('Error — slug may already exist');
     });
-
     document.querySelectorAll('.copy-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        navigator.clipboard.writeText(btn.dataset.url);
-        btn.textContent = 'copied!';
-        btn.classList.add('copied');
-        showToast('Copied to clipboard ✓');
-        setTimeout(function(){ btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+        navigator.clipboard.writeText(btn.dataset.url).then(function() {
+          btn.textContent = 'Copied!';
+          btn.classList.add('copied');
+          showToast('Copied ✓');
+          setTimeout(function(){ btn.textContent = 'Copy link'; btn.classList.remove('copied'); }, 2000);
+        });
       });
     });
-
     document.querySelectorAll('.del-btn').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         if (!confirm('Delete this link?')) return;
