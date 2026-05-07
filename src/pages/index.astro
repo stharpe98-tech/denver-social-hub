@@ -295,16 +295,16 @@ const content = await getContent();
 <style is:inline>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0e0e10;
-    --surface: #1a1a1f;
+    --bg: #f7f5f2;
+    --surface: #ffffff;
     --surface-hover: #222228;
     --surface-raised: #26262c;
-    --border: #2a2a30;
+    --border: #e4ddd4;
     --border-hover: #3a3a42;
-    --text: #e4e4e7;
-    --text-sec: #8b8b94;
-    --text-faint: #55555e;
-    --accent: #ff4500;
+    --text: #1c1917;
+    --text-sec: #57524c;
+    --text-faint: #8a8a96;
+    --accent: #f77f00;
     --accent-dim: rgba(255,69,0,0.15);
     --accent-glow: rgba(255,69,0,0.3);
     --green: #00d26a;
@@ -353,7 +353,7 @@ const content = await getContent();
     position: sticky; top: 0; z-index: 200;
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 24px; height: 52px;
-    background: rgba(14,14,16,.92); backdrop-filter: blur(20px);
+    background: rgba(247,245,242,.92); backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
   }
   .nav-logo { font-family: var(--mono); font-weight: 700; font-size: 15px; color: var(--text-sec); }
@@ -536,7 +536,7 @@ const content = await getContent();
   /* MOBILE NAV */
   .mob-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
-    background: rgba(14,14,16,.95); backdrop-filter: blur(24px);
+    background: rgba(247,245,242,.95); backdrop-filter: blur(24px);
     border-top: 1px solid var(--border);
     padding: 4px 0 max(4px, env(safe-area-inset-bottom));
   }
