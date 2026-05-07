@@ -18,38 +18,38 @@ const host = Astro.url.host;
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style is:global>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: #0e0e10; color: #e4e4e7; font-family: 'Inter', sans-serif; min-height: 100vh; }
+    html, body { background: #f7f5f2; color: #1c1917; font-family: 'Inter', sans-serif; min-height: 100vh; }
     body { padding-bottom: 40px; -webkit-overflow-scrolling: touch; }
-    .lh { background: #0e0e10; border-bottom: 1px solid #2a2a30; padding: 28px 20px; }
+    .lh { background: #f7f5f2; border-bottom: 1px solid #e4ddd4; padding: 28px 20px; }
     .lh-in { max-width: 680px; margin: 0 auto; }
-    .lh-back { color: #55555e; font-size: 13px; text-decoration: none; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; }
-    .lh h1 { font-size: clamp(20px,5vw,26px); font-weight: 700; color: #e4e4e7; margin-bottom: 4px; }
-    .lh p { font-size: 13px; color: #55555e; font-family: 'JetBrains Mono', monospace; }
+    .lh-back { color: #8a8a96; font-size: 13px; text-decoration: none; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; }
+    .lh h1 { font-size: clamp(20px,5vw,26px); font-weight: 700; color: #1c1917; margin-bottom: 4px; }
+    .lh p { font-size: 13px; color: #8a8a96; font-family: 'JetBrains Mono', monospace; }
     .lp { max-width: 680px; margin: 0 auto; padding: 20px 16px; }
-    .create-card { background: #1a1a1f; border: 1px solid #2a2a30; border-radius: 12px; padding: 18px; margin-bottom: 24px; }
-    .create-title { font-size: 11px; font-weight: 600; color: #55555e; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; }
+    .create-card { background: #ffffff; border: 1px solid #e4ddd4; border-radius: 12px; padding: 18px; margin-bottom: 24px; }
+    .create-title { font-size: 11px; font-weight: 600; color: #8a8a96; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; }
     .lc-field { margin-bottom: 12px; }
-    .lc-field label { display: block; font-size: 11px; color: #55555e; margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; }
-    .lc-input { width: 100%; padding: 11px 13px; background: #0e0e10; border: 1px solid #2a2a30; border-radius: 7px; color: #e4e4e7; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; -webkit-appearance: none; }
+    .lc-field label { display: block; font-size: 11px; color: #8a8a96; margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; }
+    .lc-input { width: 100%; padding: 11px 13px; background: #f7f5f2; border: 1px solid #e4ddd4; border-radius: 7px; color: #1c1917; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; -webkit-appearance: none; }
     .lc-input:focus { border-color: #ff4500; }
-    .lc-input::placeholder { color: #55555e; }
+    .lc-input::placeholder { color: #8a8a96; }
     .lc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     @media(max-width:420px) { .lc-grid { grid-template-columns: 1fr; } }
-    .create-btn { width: 100%; padding: 13px; border-radius: 8px; border: none; background: #ff4500; color: #fff; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; }
-    .sec-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #55555e; margin-bottom: 12px; }
-    .link-card { background: #1a1a1f; border: 1px solid #2a2a30; border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; }
+    .create-btn { width: 100%; padding: 13px; border-radius: 8px; border: none; background: #ff4500; color: #1c1917; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+    .sec-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #8a8a96; margin-bottom: 12px; }
+    .link-card { background: #ffffff; border: 1px solid #e4ddd4; border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; }
     .link-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
     .link-slug { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: #ff4500; }
-    .link-label { font-size: 12px; color: #55555e; }
-    .link-dest { font-size: 12px; color: #8b8b94; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; margin-bottom: 10px; }
+    .link-label { font-size: 12px; color: #8a8a96; }
+    .link-dest { font-size: 12px; color: #6a6a76; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; margin-bottom: 10px; }
     .link-actions { display: flex; gap: 8px; }
-    .copy-btn { flex: 1; padding: 9px; border-radius: 7px; border: 1px solid #2a2a30; background: transparent; color: #8b8b94; font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.12s; }
+    .copy-btn { flex: 1; padding: 9px; border-radius: 7px; border: 1px solid #e4ddd4; background: transparent; color: #6a6a76; font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.12s; }
     .copy-btn.copied, .copy-btn:active { border-color: #ff4500; color: #ff4500; }
-    .link-clicks { font-size: 12px; color: #55555e; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; gap: 4px; }
-    .del-btn { padding: 9px 14px; border-radius: 7px; border: 1px solid #2a2a30; background: transparent; color: #55555e; font-size: 13px; cursor: pointer; }
+    .link-clicks { font-size: 12px; color: #8a8a96; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; gap: 4px; }
+    .del-btn { padding: 9px 14px; border-radius: 7px; border: 1px solid #e4ddd4; background: transparent; color: #8a8a96; font-size: 13px; cursor: pointer; }
     .del-btn:active { border-color: #ff4757; color: #ff4757; }
-    .empty { text-align: center; padding: 32px; color: #55555e; font-style: italic; font-size: 13px; }
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a1a1f; border: 1px solid #2a2a30; color: #e4e4e7; padding: 10px 20px; border-radius: 8px; font-size: 13px; display: none; z-index: 999; white-space: nowrap; }
+    .empty { text-align: center; padding: 32px; color: #8a8a96; font-style: italic; font-size: 13px; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #ffffff; border: 1px solid #e4ddd4; color: #1c1917; padding: 10px 20px; border-radius: 8px; font-size: 13px; display: none; z-index: 999; white-space: nowrap; }
   </style>
 </head>
 <body>
