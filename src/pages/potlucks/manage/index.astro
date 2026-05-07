@@ -13,90 +13,82 @@ try {
     const cfg = await db.prepare(`SELECT value FROM config WHERE key='webhook_url'`).first() as any;
     webhookUrl = cfg?.value ?? '';
   }
-} catch(e) { console.error(e); }
+} catch(e) {}
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Potluck Admin · Denver Social Community</title>
+  <title>Potluck Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
-  <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0f0f0f;color:#f0ebe3;font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:40px}
-    .hero{background:#1a0a00;border-bottom:1px solid #2a1a08;padding:32px 24px}
-    .hero-inner{max-width:720px;margin:0 auto}
-    .back{color:#6b5040;font-size:13px;text-decoration:none;margin-bottom:12px;display:inline-flex;align-items:center;gap:4px}
-    .hero h1{font-family:'Playfair Display',serif;font-size:clamp(22px,5vw,32px);color:#fff}
-    .page{max-width:720px;margin:0 auto;padding:24px 16px}
-    .section{margin-bottom:32px}
-    .sec-label{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#6b5040;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1a1108}
-    /* Settings */
-    .settings-card{background:#1a1108;border:1px solid #2a1a08;border-radius:14px;padding:20px}
-    .settings-row{display:flex;gap:10px;align-items:flex-end}
-    .settings-row input{flex:1;padding:11px 13px;background:#0f0f0f;border:1.5px solid #2a1a08;border-radius:9px;color:#f0ebe3;font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
-    .settings-row input:focus{border-color:#f77f00}
-    .settings-label{font-size:12px;color:#6b5040;margin-bottom:6px;display:block}
-    .settings-hint{font-size:11px;color:#4a3020;margin-top:6px;line-height:1.5}
-    /* Pending cards */
-    .pending-card{background:#1a1108;border:1px solid #3d2808;border-radius:14px;padding:18px;margin-bottom:10px}
-    .pending-title{font-family:'Playfair Display',serif;font-size:18px;color:#fff;margin-bottom:4px}
-    .pending-meta{font-size:13px;color:#6b5040;margin-bottom:14px;line-height:1.7}
-    .pending-actions{display:flex;gap:8px}
-    .btn-approve{background:linear-gradient(135deg,#065f46,#16a34a);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
-    .btn-reject{background:#1a0000;border:1px solid #7f1d1d;color:#f87171;padding:8px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer}
-    /* Approved table */
-    .approved-card{background:#1a1108;border:1px solid #2a1a08;border-radius:12px;padding:14px 18px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;text-decoration:none;transition:border-color 0.12s}
-    .approved-card:hover{border-color:#f77f00}
-    .approved-title{font-size:15px;color:#f0ebe3;font-weight:500}
-    .approved-meta{font-size:12px;color:#4a3020;margin-top:2px}
-    .approved-stats{font-size:12px;color:#6b5040;text-align:right;white-space:nowrap}
-    .approved-stats strong{color:#c4956a;display:block}
-    .status-badge{padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600}
-    .s-upcoming{background:rgba(247,127,0,0.15);border:1px solid rgba(247,127,0,0.3);color:#f5c842}
-    .s-past{background:#1a1a1a;border:1px solid #2a2a2a;color:#4a3020}
-    /* Create form */
-    .create-btn{background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;border:none;padding:10px 22px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
-    .create-form{background:#1a1108;border:1px solid #2a1a08;border-radius:14px;padding:20px;margin-top:14px;display:none}
-    .field{margin-bottom:12px}
-    .field label{display:block;font-size:11px;color:#6b5040;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:0.3px}
-    input[type=text],textarea{width:100%;padding:10px 12px;background:#0f0f0f;border:1.5px solid #2a1a08;border-radius:8px;color:#f0ebe3;font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
-    input:focus,textarea:focus{border-color:#f77f00}
-    input::placeholder,textarea::placeholder{color:#4a3020}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .empty{text-align:center;padding:28px;color:#4a3020;font-style:italic;font-size:13px}
-    .save-btn{background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
-    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0d2e1a;border:1px solid #166534;color:#4ade80;padding:10px 20px;border-radius:8px;font-size:13px;display:none;z-index:999}
+  <style is:global>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #0f0f0f; color: #f0ebe3; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+    body { padding-bottom: 40px; -webkit-overflow-scrolling: touch; }
+    .mh { background: #1a0a00; border-bottom: 1px solid #2a1a08; padding: 28px 20px; }
+    .mh-in { max-width: 700px; margin: 0 auto; }
+    .mh-back { color: #6b5040; font-size: 13px; text-decoration: none; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 4px; }
+    .mh h1 { font-family: 'Playfair Display', serif; font-size: clamp(20px,5vw,28px); color: #fff; }
+    .mp { max-width: 700px; margin: 0 auto; padding: 20px 16px; }
+    .ms { margin-bottom: 28px; }
+    .ms-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #6b5040; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1108; }
+    .settings-card { background: #1a1108; border: 1px solid #2a1a08; border-radius: 12px; padding: 18px; }
+    .settings-row { display: flex; gap: 10px; }
+    .settings-row input { flex: 1; padding: 11px 13px; background: #0f0f0f; border: 1.5px solid #2a1a08; border-radius: 9px; color: #f0ebe3; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; min-width: 0; }
+    .settings-row input:focus { border-color: #f77f00; }
+    .settings-row input::placeholder { color: #4a3020; }
+    .settings-hint { font-size: 12px; color: #4a3020; margin-top: 8px; line-height: 1.6; }
+    .pending-card { background: #1a1108; border: 1px solid #3d2808; border-radius: 12px; padding: 16px; margin-bottom: 10px; }
+    .pending-title { font-family: 'Playfair Display', serif; font-size: 18px; color: #fff; margin-bottom: 4px; }
+    .pending-meta { font-size: 13px; color: #6b5040; margin-bottom: 14px; line-height: 1.7; }
+    .pending-actions { display: flex; gap: 8px; }
+    .btn-approve { background: linear-gradient(135deg,#065f46,#16a34a); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; flex: 1; }
+    .btn-reject { background: #1a0000; border: 1px solid #7f1d1d; color: #f87171; padding: 10px 20px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; flex: 1; }
+    .approved-card { background: #1a1108; border: 1px solid #2a1a08; border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; text-decoration: none; gap: 12px; -webkit-tap-highlight-color: transparent; }
+    .approved-card:active { border-color: #f77f00; }
+    .approved-title { font-size: 15px; color: #f0ebe3; font-weight: 500; }
+    .approved-meta { font-size: 12px; color: #4a3020; margin-top: 2px; }
+    .approved-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .approved-signups { font-size: 12px; color: #6b5040; }
+    .abadge { padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+    .ab-up { background: rgba(247,127,0,0.15); border: 1px solid rgba(247,127,0,0.3); color: #f5c842; }
+    .ab-past { background: #1a1a1a; border: 1px solid #2a2a2a; color: #4a3020; }
+    .create-btn { background: linear-gradient(135deg,#c2410c,#f77f00); color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 12px; }
+    .create-form { background: #1a1108; border: 1px solid #2a1a08; border-radius: 12px; padding: 18px; display: none; }
+    .cf-field { margin-bottom: 12px; }
+    .cf-field label { display: block; font-size: 11px; color: #6b5040; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; }
+    .cf-input { width: 100%; padding: 11px 13px; background: #0f0f0f; border: 1.5px solid #2a1a08; border-radius: 9px; color: #f0ebe3; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; -webkit-appearance: none; }
+    .cf-input:focus { border-color: #f77f00; }
+    .cf-input::placeholder { color: #4a3020; }
+    .cf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media(max-width:400px) { .cf-grid { grid-template-columns: 1fr; } }
+    .save-btn { background: linear-gradient(135deg,#c2410c,#f77f00); color: #fff; border: none; padding: 12px 24px; border-radius: 9px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+    .empty { text-align: center; padding: 28px; color: #4a3020; font-style: italic; font-size: 13px; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0d2e1a; border: 1px solid #166534; color: #4ade80; padding: 10px 20px; border-radius: 8px; font-size: 13px; display: none; z-index: 999; white-space: nowrap; }
   </style>
 </head>
 <body>
-  <div class="hero">
-    <div class="hero-inner">
-      <a href="/potlucks" class="back">← All Potlucks</a>
+  <div class="mh">
+    <div class="mh-in">
+      <a href="/potlucks" class="mh-back">← Potlucks</a>
       <h1>⚙ Potluck Admin</h1>
     </div>
   </div>
 
-  <div class="page">
-
-    <!-- Settings -->
-    <div class="section">
-      <div class="sec-label">⚡ Zapier Webhook · Google Sheets</div>
+  <div class="mp">
+    <div class="ms">
+      <div class="ms-label">⚡ Zapier Webhook</div>
       <div class="settings-card">
-        <span class="settings-label">Zapier Webhook URL</span>
         <div class="settings-row">
           <input type="text" id="webhook-input" value={webhookUrl} placeholder="https://hooks.zapier.com/hooks/catch/…"/>
-          <button class="save-btn" onclick="saveWebhook()">Save</button>
+          <button class="save-btn" id="save-webhook" style="padding:11px 18px;font-size:14px">Save</button>
         </div>
-        <div class="settings-hint">
-          Every sign-up fires to this URL. In Zapier: create a Zap → <strong>Webhooks by Zapier</strong> (Catch Hook) → <strong>Google Sheets</strong> (Create Spreadsheet Row). Paste the webhook URL here.
-        </div>
+        <div class="settings-hint">Every sign-up fires to this URL → Google Sheets. In Zapier: Webhooks (Catch Hook) → Google Sheets (Create Row).</div>
       </div>
     </div>
 
-    <!-- Pending approvals -->
-    <div class="section">
-      <div class="sec-label">⏳ Pending Approval ({pending.length})</div>
+    <div class="ms">
+      <div class="ms-label">⏳ Pending ({pending.length})</div>
       {pending.length === 0
         ? <div class="empty">No pending submissions</div>
         : pending.map((p:any) => (
@@ -108,34 +100,31 @@ try {
               {p.description && <span style="font-style:italic">{p.description}</span>}
             </div>
             <div class="pending-actions">
-              <button class="btn-approve" onclick={`approvePotluck(${p.id})`}>✓ Approve</button>
-              <button class="btn-reject" onclick={`rejectPotluck(${p.id})`}>✕ Reject</button>
+              <button class="btn-approve" data-id={p.id}>✓ Approve</button>
+              <button class="btn-reject" data-id={p.id}>✕ Reject</button>
             </div>
           </div>
         ))
       }
     </div>
 
-    <!-- Create new (admin only) -->
-    <div class="section">
-      <div class="sec-label">➕ Create New Potluck</div>
-      <button class="create-btn" onclick="document.getElementById('create-form').style.display='block';this.style.display='none'">+ New Potluck</button>
+    <div class="ms">
+      <div class="ms-label">➕ Create New</div>
+      <button class="create-btn" id="toggle-create">+ New Potluck</button>
       <div class="create-form" id="create-form">
-        <div class="field"><label>Title *</label><input type="text" id="c-title" placeholder="Summer Kickoff Potluck"/></div>
-        <div class="field"><label>Description</label><textarea id="c-desc" placeholder="What's the vibe?"></textarea></div>
-        <div class="grid2">
-          <div class="field"><label>Date</label><input type="text" id="c-date" placeholder="May 30th"/></div>
-          <div class="field"><label>Time</label><input type="text" id="c-time" placeholder="12pm–4pm"/></div>
-          <div class="field"><label>Location</label><input type="text" id="c-loc" placeholder="Cheeseman Park"/></div>
-          <div class="field"><label>Detail</label><input type="text" id="c-locdetail" placeholder="West side between 9th & 10th"/></div>
+        <div class="cf-field"><label>Title *</label><input type="text" id="c-title" class="cf-input" placeholder="Summer Kickoff Potluck"/></div>
+        <div class="cf-grid">
+          <div class="cf-field"><label>Date</label><input type="text" id="c-date" class="cf-input" placeholder="May 30th"/></div>
+          <div class="cf-field"><label>Time</label><input type="text" id="c-time" class="cf-input" placeholder="12pm–4pm"/></div>
+          <div class="cf-field"><label>Location</label><input type="text" id="c-loc" class="cf-input" placeholder="Cheeseman Park"/></div>
+          <div class="cf-field"><label>Detail</label><input type="text" id="c-locdetail" class="cf-input" placeholder="West side"/></div>
         </div>
-        <button class="save-btn" onclick="createPotluck()">Create & Publish</button>
+        <button class="save-btn" id="create-submit">Create & Publish</button>
       </div>
     </div>
 
-    <!-- All potlucks -->
-    <div class="section">
-      <div class="sec-label">All Potlucks ({approved.length})</div>
+    <div class="ms">
+      <div class="ms-label">All Potlucks ({approved.length})</div>
       {approved.length === 0
         ? <div class="empty">None yet</div>
         : approved.map((p:any) => (
@@ -144,51 +133,63 @@ try {
               <div class="approved-title">{p.title}</div>
               <div class="approved-meta">{p.date_label} · {p.location}</div>
             </div>
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="approved-stats"><strong>{p.signups || 0}</strong>sign-ups</div>
-              <span class={p.status === 'upcoming' ? 'status-badge s-upcoming' : 'status-badge s-past'}>{p.status}</span>
+            <div class="approved-right">
+              <div class="approved-signups">{p.signups || 0} signups</div>
+              <span class={p.status === 'upcoming' ? 'abadge ab-up' : 'abadge ab-past'}>{p.status}</span>
             </div>
           </a>
         ))
       }
     </div>
-
   </div>
 
-  <div class="toast" id="toast">Saved ✓</div>
+  <div class="toast" id="toast"></div>
 
-  <script>
-    function showToast(msg?: string) {
-      const t = document.getElementById('toast')!;
-      t.textContent = msg || 'Saved ✓';
+  <script is:inline>
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
       t.style.display = 'block';
-      setTimeout(() => t.style.display = 'none', 2500);
+      setTimeout(function() { t.style.display = 'none'; }, 2500);
     }
-    async function saveWebhook() {
-      const url = (document.getElementById('webhook-input') as HTMLInputElement).value.trim();
-      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'set_config',key:'webhook_url',value:url}) });
-      const data = await res.json();
+
+    document.getElementById('save-webhook').addEventListener('click', async function() {
+      var url = document.getElementById('webhook-input').value.trim();
+      var res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'set_config',key:'webhook_url',value:url}) });
+      var data = await res.json();
       if (data.ok) showToast('Webhook saved ✓');
-    }
-    async function approvePotluck(id: number) {
-      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'approve',id}) });
-      const data = await res.json();
-      if (data.ok) { showToast('Approved ✓'); setTimeout(() => location.reload(), 800); }
-    }
-    async function rejectPotluck(id: number) {
-      if (!confirm('Reject and delete this submission?')) return;
-      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'reject',id}) });
-      const data = await res.json();
-      if (data.ok) { showToast('Rejected'); setTimeout(() => location.reload(), 800); }
-    }
-    async function createPotluck() {
-      const title = (document.getElementById('c-title') as HTMLInputElement).value.trim();
+    });
+
+    document.querySelectorAll('.btn-approve').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'approve',id:parseInt(btn.dataset.id)}) });
+        var data = await res.json();
+        if (data.ok) { showToast('Approved ✓'); setTimeout(function(){ location.reload(); }, 800); }
+      });
+    });
+
+    document.querySelectorAll('.btn-reject').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Reject this?')) return;
+        var res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'reject',id:parseInt(btn.dataset.id)}) });
+        var data = await res.json();
+        if (data.ok) { showToast('Rejected'); setTimeout(function(){ location.reload(); }, 800); }
+      });
+    });
+
+    document.getElementById('toggle-create').addEventListener('click', function() {
+      var f = document.getElementById('create-form');
+      f.style.display = f.style.display === 'block' ? 'none' : 'block';
+    });
+
+    document.getElementById('create-submit').addEventListener('click', async function() {
+      var title = document.getElementById('c-title').value.trim();
       if (!title) return;
-      const body = { action:'create', title, description:(document.getElementById('c-desc') as HTMLTextAreaElement).value, date_label:(document.getElementById('c-date') as HTMLInputElement).value, time_label:(document.getElementById('c-time') as HTMLInputElement).value, location:(document.getElementById('c-loc') as HTMLInputElement).value, location_detail:(document.getElementById('c-locdetail') as HTMLInputElement).value, status:'upcoming' };
-      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-      const data = await res.json();
-      if (data.ok) window.location.href = `/potlucks/manage/${data.id}`;
-    }
+      var body = { action:'create', title: title, description:'', date_label: document.getElementById('c-date').value, time_label: document.getElementById('c-time').value, location: document.getElementById('c-loc').value, location_detail: document.getElementById('c-locdetail').value, status:'upcoming' };
+      var res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      var data = await res.json();
+      if (data.ok) window.location.href = '/potlucks/manage/' + data.id;
+    });
   </script>
 </body>
 </html>
