@@ -1,0 +1,16 @@
+---
+import { getDB } from '../../lib/db';
+const db = getDB();
+const { slug } = Astro.params;
+let url = '/';
+try {
+  if (db && slug) {
+    const link = await db.prepare(`SELECT url FROM short_links WHERE slug=?`).bind(slug).first() as any;
+    if (link?.url) {
+      url = link.url;
+      await db.prepare(`UPDATE short_links SET clicks=clicks+1 WHERE slug=?`).bind(slug).run();
+    }
+  }
+} catch(e) {}
+return Astro.redirect(url, 302);
+---
