@@ -192,7 +192,7 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
 
         <div id="dish-section" class="pl-hidden">
           <div class="pl-q">What are you bringing?</div>
-          <p class="pl-sub">Tap to claim a spot. Skip this if you're not sure yet.</p>
+          <p class="pl-sub">Tap one or type your own below. No limits — more is always better!</p>
 
           {catEntries.map(([cat, catSlots]) => (
             <div>
@@ -204,17 +204,14 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
                   const pct = Math.round((slot.claimed / slot.max_claims) * 100);
                   return (
                     <div
-                      class={isFull ? 'pl-slot full' : 'pl-slot'}
+                      class="pl-slot"
                       data-dish={slot.suggestion}
                       data-cat={cat}
-                      data-full={isFull ? 'true' : 'false'}
+                      data-full="false"
                     >
                       <div class="pl-slot-name">{slot.suggestion}</div>
-                      <div class="pl-bar-wrap"><div class="pl-bar" style={`width:${pct}%`}></div></div>
                       <div class="pl-slot-foot">
-                        <span class={`pl-left ${isFull ? 'none' : left === 1 ? 'one' : 'open'}`}>
-                          {isFull ? 'Taken' : left === 1 ? '1 spot left' : `${left} spots left`}
-                        </span>
+                        {slot.claimed > 0 && <span style="font-size:11px;color:#a09890">{slot.claimed} bringing this</span>}
                         <span class="pl-check">✓</span>
                       </div>
                     </div>
@@ -227,6 +224,11 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
           <div class="pl-picked" id="picked-bar">
             <span class="pl-picked-text" id="picked-text"></span>
             <button class="pl-picked-clear" id="picked-clear">✕</button>
+          </div>
+
+          <div class="pl-field" style="margin-top:12px">
+            <label style="font-size:13px;color:#57524c;font-weight:500;display:block;margin-bottom:6px">Or type something different</label>
+            <input type="text" id="f-dish-custom" class="pl-input" placeholder="e.g. Crawfish étouffée, anything goes!"/>
           </div>
           <div class="pl-div"></div>
         </div>
@@ -474,7 +476,7 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
         platforms: platform,
         rsvp: rsvp,
         guestCount: String(guestCount),
-        dish: rsvp === 'yes' ? selectedDish : '',
+        dish: rsvp === 'yes' ? (selectedDish || document.getElementById('f-dish-custom').value.trim()) : '',
         dishCategory: rsvp === 'yes' ? selectedCat : '',
         dietary: dietary,
         utensils: extras.plates,
@@ -504,7 +506,7 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
         } else if (data.error === 'slot_full') {
           btn.disabled = false;
           btn.textContent = 'Count me in! 🌞';
-          alert('"' + selectedDish + '" just got taken! Pick something else.');
+          alert('Something went wrong with that dish. Try again.');
           document.querySelectorAll('.pl-slot').forEach(function(c) { c.classList.remove('selected'); });
           selectedDish = ''; selectedCat = '';
           document.getElementById('picked-bar').classList.remove('show');
