@@ -293,17 +293,7 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
             </div>
           </div>
 
-          <!-- Donate instead -->
-          <div style="margin-top:16px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:14px 16px;">
-            <div style="font-size:14px;font-weight:600;color:#15803d;margin-bottom:4px;">Rather donate and let us handle it?</div>
-            <div style="font-size:13px;color:#57524c;margin-bottom:10px;">Totally fine — we'll cover your dish with the donation.</div>
-            <div id="venmo-hidden" style="display:none;margin-top:4px"></div>
-            <button type="button" id="show-venmo-btn"
-              style="display:flex;align-items:center;gap:10px;background:#3d95ce;color:#fff;padding:11px 16px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;width:100%;">
-              <span style="font-size:20px;">💙</span>
-              Tap to donate via Venmo
-            </button>
-          </div>
+
         </div>
 
         <!-- Honeypot - hidden from humans, bots fill it -->
@@ -485,7 +475,7 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
         platforms: platform,
         rsvp: rsvp,
         guestCount: String(guestCount),
-        dish: rsvp === 'yes' ? (selectedDish || document.getElementById('f-dish-custom').value.trim()) : '',
+        dish: rsvp === 'yes' ? (donating ? '' : (selectedDish || (document.getElementById('f-dish') ? document.getElementById('f-dish').value.trim() : ''))) : '',
         dishCategory: rsvp === 'yes' ? selectedCat : '',
         dietary: dietary,
         utensils: extras.plates,
@@ -531,6 +521,31 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
 
     // Result buttons
     document.getElementById('add-another').addEventListener('click', function() { location.reload(); });
+
+    // Food / donate toggle
+    var donating = false;
+    document.getElementById('toggle-food').addEventListener('click', function() {
+      donating = false;
+      document.getElementById('food-panel').style.display = 'block';
+      document.getElementById('donate-panel').style.display = 'none';
+      document.getElementById('toggle-food').style.borderColor = '#f77f00';
+      document.getElementById('toggle-food').style.background = '#fff8ec';
+      document.getElementById('toggle-food').style.color = '#c2410c';
+      document.getElementById('toggle-donate').style.borderColor = '#e4ddd4';
+      document.getElementById('toggle-donate').style.background = '#ffffff';
+      document.getElementById('toggle-donate').style.color = '#57524c';
+    });
+    document.getElementById('toggle-donate').addEventListener('click', function() {
+      donating = true;
+      document.getElementById('donate-panel').style.display = 'block';
+      document.getElementById('food-panel').style.display = 'none';
+      document.getElementById('toggle-donate').style.borderColor = '#3d95ce';
+      document.getElementById('toggle-donate').style.background = '#eff8ff';
+      document.getElementById('toggle-donate').style.color = '#1d4ed8';
+      document.getElementById('toggle-food').style.borderColor = '#e4ddd4';
+      document.getElementById('toggle-food').style.background = '#ffffff';
+      document.getElementById('toggle-food').style.color = '#57524c';
+    });
 
     // Tap to reveal Venmo — fetches from API, never in HTML source
     document.getElementById('show-venmo-btn').addEventListener('click', async function() {
