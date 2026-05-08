@@ -1,0 +1,164 @@
+---
+import { getDB } from '../../lib/db';
+const db = getDB();
+let potlucks: any[] = [];
+try {
+  if (db) {
+    const { results } = await db.prepare(`SELECT id, title, date_label FROM potlucks WHERE status='upcoming' OR status='past' ORDER BY id DESC`).all();
+    potlucks = results ?? [];
+  }
+} catch(e) {}
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Analytics · Denver Social</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style is:global>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:#f7f5f2;color:#1c1917;font-family:'DM Sans',sans-serif;min-height:100vh}
+    body{padding-bottom:40px;-webkit-overflow-scrolling:touch}
+    .hero{background:#fff;border-bottom:1px solid #e4ddd4;padding:28px 20px}
+    .hi{max-width:700px;margin:0 auto}
+    .back{font-size:13px;color:#a09890;text-decoration:none;margin-bottom:10px;display:inline-flex;align-items:center;gap:4px}
+    .hero h1{font-family:'Playfair Display',serif;font-size:clamp(22px,5vw,28px);color:#1c1917;margin-bottom:4px}
+    .page{max-width:700px;margin:0 auto;padding:24px 16px}
+    .picker{margin-bottom:24px}
+    .picker label{display:block;font-size:12px;font-weight:600;color:#8a7a70;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
+    .picker select{width:100%;padding:11px 13px;background:#fff;border:1.5px solid #e4ddd4;border-radius:10px;color:#1c1917;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;-webkit-appearance:none}
+    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}
+    @media(max-width:460px){.stats-grid{grid-template-columns:1fr 1fr}}
+    .stat-card{background:#fff;border:1px solid #e4ddd4;border-radius:14px;padding:16px;text-align:center}
+    .stat-val{font-size:28px;font-weight:700;color:#f77f00;font-family:'Playfair Display',serif}
+    .stat-lbl{font-size:12px;color:#a09890;margin-top:4px}
+    .section{margin-bottom:28px}
+    .sec-label{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#a09890;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #e4ddd4}
+    .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .bar-label{font-size:13px;color:#57524c;width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .bar-wrap{flex:1;background:#f0ede8;border-radius:4px;height:20px;overflow:hidden}
+    .bar-fill{height:100%;background:linear-gradient(90deg,#c2410c,#f77f00);border-radius:4px;transition:width 0.5s}
+    .bar-count{font-size:12px;color:#a09890;width:30px;text-align:right;flex-shrink:0}
+    .source-pill{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e4ddd4;border-radius:100px;padding:6px 14px;margin:4px;font-size:13px;color:#57524c}
+    .source-count{font-weight:600;color:#f77f00}
+    .timeline-row{display:flex;justify-content:space-between;align-items:flex-end;gap:4px;height:80px;margin-top:8px}
+    .tl-bar{flex:1;background:linear-gradient(180deg,#f77f00,#c2410c);border-radius:4px 4px 0 0;min-width:8px;transition:height 0.4s}
+    .tl-labels{display:flex;justify-content:space-between;margin-top:6px}
+    .tl-lbl{font-size:10px;color:#a09890;flex:1;text-align:center;overflow:hidden}
+    .waitlist-pill{background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;font-size:14px;color:#dc2626;font-weight:500}
+    .empty{text-align:center;padding:32px;color:#a09890;font-style:italic;font-size:13px}
+    .loading{text-align:center;padding:40px;color:#a09890;font-size:14px}
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="hi">
+      <a href="/potlucks/manage" class="back">← Admin</a>
+      <h1>📊 Analytics</h1>
+    </div>
+  </div>
+  <div class="page">
+    <div class="picker">
+      <label>Select Event</label>
+      <select id="event-picker">
+        <option value="">— All events —</option>
+        {potlucks.map((p:any) => <option value={p.id}>{p.title}{p.date_label ? ` (${p.date_label})` : ''}</option>)}
+      </select>
+    </div>
+
+    <div id="stats-wrap">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val" id="s-coming">—</div><div class="stat-lbl">Coming</div></div>
+        <div class="stat-card"><div class="stat-val" id="s-guests">—</div><div class="stat-lbl">Total people</div></div>
+        <div class="stat-card"><div class="stat-val" id="s-dishes">—</div><div class="stat-lbl">Dishes</div></div>
+      </div>
+      <div id="waitlist-section" style="display:none;margin-bottom:20px">
+        <div class="waitlist-pill" id="waitlist-msg"></div>
+      </div>
+      <div class="section">
+        <div class="sec-label">Most Popular Dishes</div>
+        <div id="dishes-chart"><div class="empty">No data yet</div></div>
+      </div>
+      <div class="section">
+        <div class="sec-label">Where People Heard About It</div>
+        <div id="sources-wrap"><div class="empty">No data yet</div></div>
+      </div>
+      <div class="section">
+        <div class="sec-label">Sign-ups Over Time</div>
+        <div id="timeline-wrap"><div class="empty">No data yet</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    async function loadAnalytics(id) {
+      var url = '/api/analytics' + (id ? '?id=' + id : '');
+      var res = await fetch(url);
+      var data = await res.json();
+
+      if (!id) {
+        document.getElementById('s-coming').textContent = data.total_signups ?? '—';
+        document.getElementById('s-guests').textContent = data.total_guests ?? '—';
+        document.getElementById('s-dishes').textContent = '—';
+        document.getElementById('dishes-chart').innerHTML = '<div class="empty">Select an event for dish breakdown</div>';
+        document.getElementById('sources-wrap').innerHTML = '<div class="empty">Select an event for source breakdown</div>';
+        document.getElementById('timeline-wrap').innerHTML = '<div class="empty">Select an event for timeline</div>';
+        return;
+      }
+
+      // RSVP stats
+      var yes = data.rsvps?.find(function(r) { return r.rsvp === 'yes'; });
+      document.getElementById('s-coming').textContent = yes ? yes.count : 0;
+      document.getElementById('s-guests').textContent = yes ? yes.guests : 0;
+      document.getElementById('s-dishes').textContent = data.dishes?.length ?? 0;
+
+      // Waitlist
+      if (data.waitlist > 0) {
+        document.getElementById('waitlist-section').style.display = 'block';
+        document.getElementById('waitlist-msg').textContent = '⏳ ' + data.waitlist + ' people on the waitlist';
+      }
+
+      // Dishes
+      var dishes = data.dishes ?? [];
+      var maxD = dishes[0]?.count || 1;
+      document.getElementById('dishes-chart').innerHTML = dishes.length
+        ? dishes.map(function(d) {
+            return '<div class="bar-row"><div class="bar-label" title="' + d.dish + '">' + d.dish + '</div>'
+              + '<div class="bar-wrap"><div class="bar-fill" style="width:' + Math.round(d.count/maxD*100) + '%"></div></div>'
+              + '<div class="bar-count">' + d.count + '</div></div>';
+          }).join('')
+        : '<div class="empty">No dishes yet</div>';
+
+      // Sources
+      var sources = data.sources ?? [];
+      document.getElementById('sources-wrap').innerHTML = sources.length
+        ? sources.map(function(s) {
+            return '<span class="source-pill">' + s.platforms + ' <span class="source-count">' + s.count + '</span></span>';
+          }).join('')
+        : '<div class="empty">No source data yet</div>';
+
+      // Timeline
+      var tl = data.timeline ?? [];
+      if (tl.length > 0) {
+        var maxT = Math.max.apply(null, tl.map(function(t) { return t.signups; }));
+        document.getElementById('timeline-wrap').innerHTML =
+          '<div class="timeline-row">' +
+          tl.map(function(t) {
+            return '<div class="tl-bar" style="height:' + Math.round(t.signups/maxT*100) + '%" title="' + t.day + ': ' + t.signups + ' signups"></div>';
+          }).join('') + '</div>' +
+          '<div class="tl-labels">' +
+          tl.map(function(t) {
+            return '<div class="tl-lbl">' + t.day.slice(5) + '</div>';
+          }).join('') + '</div>';
+      } else {
+        document.getElementById('timeline-wrap').innerHTML = '<div class="empty">No sign-ups yet</div>';
+      }
+    }
+
+    document.getElementById('event-picker').addEventListener('change', function() {
+      loadAnalytics(this.value);
+    });
+    loadAnalytics('');
+  </script>
+</body>
+</html>
