@@ -320,14 +320,7 @@ const defaultTemplate = potluck.template || 'warm';
       <div id="form-wrap">
         <div class="pl-nudge"><strong>No dish? No problem.</strong><br/>Show up anyway — there's always more than enough.</div>
 
-        <div class="pl-q">Are you coming?</div>
-        <div class="pl-rsvp">
-          <button type="button" class="pl-rsvp-btn yes" id="rsvp-yes">✅ Yes, I'm in!</button>
-          <button type="button" class="pl-rsvp-btn no" id="rsvp-no">❌ Can't make it</button>
-        </div>
-        <div class="pl-err" id="e-rsvp">Let us know either way!</div>
-
-        <div id="attending-fields" class="pl-hidden">
+        <div id="attending-fields">
           <div class="pl-q">What are you bringing?</div>
           <p class="pl-sub">Bring food or donate — totally up to you.</p>
           <div class="pl-toggle">
@@ -511,7 +504,7 @@ const defaultTemplate = potluck.template || 'warm';
   </nav>
 
   <script define:vars={{ potluckId: id, defaultTheme: defaultTemplate, eventDate: potluck.date_label||'', eventTime: potluck.time_label||'' }}>
-    var rsvp='', guestCount=1, extras={plates:false,cooler:false,seating:false,cleanup:false};
+    var rsvp='yes', guestCount=1, extras={plates:false,cooler:false,seating:false,cleanup:false};
     var selectedDish='', selectedCat='', donating=false;
 
     // Theme switcher
@@ -562,23 +555,8 @@ const defaultTemplate = potluck.template || 'warm';
       });
     });
 
-    // RSVP
-    document.getElementById('rsvp-yes').addEventListener('click', function() {
-      rsvp='yes';
-      document.getElementById('rsvp-yes').classList.add('active');
-      document.getElementById('rsvp-no').classList.remove('active');
-      document.getElementById('attending-fields').classList.remove('pl-hidden');
-      document.getElementById('e-rsvp').style.display='none';
-      document.getElementById('submit-btn').textContent='Count me in! 🌞';
-    });
-    document.getElementById('rsvp-no').addEventListener('click', function() {
-      rsvp='no';
-      document.getElementById('rsvp-no').classList.add('active');
-      document.getElementById('rsvp-yes').classList.remove('active');
-      document.getElementById('attending-fields').classList.add('pl-hidden');
-      document.getElementById('e-rsvp').style.display='none';
-      document.getElementById('submit-btn').textContent="Submit (we'll miss you) 👋";
-    });
+    // RSVP is always 'yes' — form is sign-up only
+    var rsvp = 'yes';
 
     // Food/donate toggle
     document.getElementById('toggle-food').addEventListener('click', function() {
@@ -660,7 +638,7 @@ const defaultTemplate = potluck.template || 'warm';
     document.getElementById('submit-btn').addEventListener('click', async function() {
       var nameVal=document.getElementById('f-name').value.trim();
       var ok=true;
-      if (!rsvp){document.getElementById('e-rsvp').style.display='block';ok=false;}else document.getElementById('e-rsvp').style.display='none';
+
       if (!nameVal){document.getElementById('e-name').style.display='block';ok=false;}else document.getElementById('e-name').style.display='none';
       if (!ok) return;
       var btn=document.getElementById('submit-btn'); btn.disabled=true; btn.textContent='Saving…';
