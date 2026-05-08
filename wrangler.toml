@@ -16,3 +16,7 @@ id = "4a5f93d2399b43d9bae85d0b61023857"
 binding = "ASSETS"
 directory = "./dist"
 run_worker_first = true
+
+
+[triggers]
+crons = ["0 14 * * *"]  # Run daily at 2pm UTC (8am MT) for reminders
