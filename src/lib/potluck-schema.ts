@@ -10,6 +10,12 @@ export async function ensurePotluckSchema(db: D1Database): Promise<void> {
     await db.prepare("ALTER TABLE potlucks ADD COLUMN cover_photo TEXT").run();
   }
 
+  const slotCols = await db.prepare("PRAGMA table_info(potluck_slots)").all();
+  const slotNames = new Set((slotCols.results ?? []).map((r: any) => r.name));
+  if (!slotNames.has('slot_time')) {
+    await db.prepare("ALTER TABLE potluck_slots ADD COLUMN slot_time TEXT").run();
+  }
+
   const rsvpCols = await db.prepare("PRAGMA table_info(potluck_rsvp)").all();
   const rsvpNames = new Set((rsvpCols.results ?? []).map((r: any) => r.name));
   if (!rsvpNames.has('reminder_sent_at')) {

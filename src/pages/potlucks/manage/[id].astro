@@ -1,17 +1,22 @@
 ---
 import { getDB } from '../../../lib/db';
 import { requireApprovedOrg } from '../../../lib/admin-auth';
+import { ensurePotluckSchema } from '../../../lib/potluck-schema';
 const gate = await requireApprovedOrg(Astro);
 if (gate instanceof Response) return gate;
 const db = getDB();
 const { id } = Astro.params;
 let potluck: any = null;
 let signups: any[] = [];
+let slots: any[] = [];
 try {
   if (db && id) {
+    await ensurePotluckSchema(db);
     potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(id).first();
     const s = await db.prepare(`SELECT * FROM potluck_rsvp WHERE potluck_id=? ORDER BY created_at DESC`).bind(id).all();
     signups = s?.results ?? [];
+    const sl = await db.prepare(`SELECT * FROM potluck_slots WHERE potluck_id=? ORDER BY sort_order ASC, id ASC`).bind(id).all();
+    slots = sl?.results ?? [];
   }
 } catch(e) { console.error(e); }
 if (!potluck) return Astro.redirect('/potlucks');
@@ -102,6 +107,47 @@ const dishEntries = Object.entries(dishMap);
   </div>
 
   <div class="page">
+    <div class="sec">
+      <div class="sec-label">Sign-up Items ({slots.length})</div>
+      <div class="slot-grid-wrap">
+        <table class="slot-table">
+          <thead><tr><th style="width:120px">Time</th><th>Item</th><th style="width:100px">Category</th><th style="width:60px">Max</th><th style="width:80px"></th></tr></thead>
+          <tbody>
+            {slots.map((s:any) => (
+              <tr data-slot-id={s.id}>
+                <td><input type="text" class="sl-time" value={s.slot_time ?? ''} placeholder="—"/></td>
+                <td><input type="text" class="sl-suggestion" value={s.suggestion ?? ''}/></td>
+                <td><input type="text" class="sl-category" value={s.category ?? ''}/></td>
+                <td><input type="number" class="sl-max" value={s.max_claims ?? 1} min="1"/></td>
+                <td style="text-align:right"><button class="sl-save">Save</button> <button class="sl-del">✕</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:14px;background:#fff8ec;border:1.5px dashed #fcd5a0;border-radius:10px;padding:14px">
+        <div style="font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Add new item</div>
+        <div style="display:grid;grid-template-columns:120px 1fr 100px 60px auto;gap:6px;align-items:center">
+          <input type="text" id="new-time" placeholder="Time (opt)" style="padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
+          <input type="text" id="new-suggestion" placeholder="Item (e.g. Chips & dip)" style="padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
+          <input type="text" id="new-category" placeholder="Category" value="Items" style="padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
+          <input type="number" id="new-max" value="1" min="1" style="padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
+          <button id="add-slot" class="btn-orange" style="white-space:nowrap">+ Add</button>
+        </div>
+      </div>
+    </div>
+    <style is:inline>
+      .slot-grid-wrap{overflow-x:auto;background:#fff;border:1px solid #e4ddd4;border-radius:12px}
+      .slot-table{width:100%;border-collapse:collapse;font-size:13px}
+      .slot-table th{text-align:left;padding:10px 12px;font-size:11px;font-weight:700;color:#a09890;text-transform:uppercase;letter-spacing:0.5px;background:#f7f5f2;border-bottom:1px solid #e4ddd4}
+      .slot-table td{padding:6px 8px;border-bottom:1px solid #f0ede8;vertical-align:middle}
+      .slot-table input{width:100%;padding:7px 9px;border:1px solid transparent;border-radius:6px;font-family:inherit;font-size:13px;background:transparent}
+      .slot-table input:focus{border-color:#f77f00;background:#fffaf2;outline:none}
+      .slot-table .sl-save,.slot-table .sl-del{padding:6px 10px;border-radius:6px;border:1px solid #e4ddd4;background:#fff;font-size:12px;font-family:inherit;cursor:pointer}
+      .slot-table .sl-save{color:#c2410c;border-color:#fcd5a0}
+      .slot-table .sl-del{color:#a09890}
+    </style>
+
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-num">{guestTotal}</div><div class="stat-label">People Total</div></div>
       <div class="stat-card"><div class="stat-num">{attending.length}</div><div class="stat-label">Sign-ups</div></div>
@@ -188,6 +234,43 @@ const dishEntries = Object.entries(dishMap);
       const data = await res.json();
       if (data.ok) location.reload();
     }
+
+    document.querySelectorAll('.slot-table tr[data-slot-id]').forEach(function(row) {
+      const slotId = parseInt(row.getAttribute('data-slot-id'));
+      row.querySelector('.sl-save').addEventListener('click', async function() {
+        const body = {
+          action: 'update', id: slotId,
+          slot_time: row.querySelector('.sl-time').value.trim(),
+          suggestion: row.querySelector('.sl-suggestion').value.trim(),
+          category: row.querySelector('.sl-category').value.trim(),
+          max_claims: parseInt(row.querySelector('.sl-max').value) || 1,
+        };
+        const res = await fetch('/api/potluck-slots', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (data.ok) row.style.background = '#f0fdf4';
+      });
+      row.querySelector('.sl-del').addEventListener('click', async function() {
+        if (!confirm('Delete this item?')) return;
+        const res = await fetch('/api/potluck-slots', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'delete', id: slotId }) });
+        const data = await res.json();
+        if (data.ok) row.remove();
+      });
+    });
+
+    document.getElementById('add-slot').addEventListener('click', async function() {
+      const suggestion = document.getElementById('new-suggestion').value.trim();
+      if (!suggestion) { document.getElementById('new-suggestion').focus(); return; }
+      const body = {
+        action: 'add', potluck_id: parseInt(id),
+        slot_time: document.getElementById('new-time').value.trim(),
+        suggestion: suggestion,
+        category: document.getElementById('new-category').value.trim() || 'Items',
+        max_claims: parseInt(document.getElementById('new-max').value) || 1,
+      };
+      const res = await fetch('/api/potluck-slots', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.ok) location.reload();
+    });
   </script>
 </body>
 </html>
