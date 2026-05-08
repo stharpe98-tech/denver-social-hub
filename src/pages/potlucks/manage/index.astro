@@ -1,5 +1,8 @@
 ---
 import { getDB } from '../../../lib/db';
+import { requireApprovedOrg } from '../../../lib/admin-auth';
+const gate = await requireApprovedOrg(Astro);
+if (gate instanceof Response) return gate;
 const db = getDB();
 let pending: any[] = [];
 let approved: any[] = [];

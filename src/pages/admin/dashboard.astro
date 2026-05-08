@@ -1,10 +1,19 @@
 ---
-const cookie = Astro.cookies.get('dsn_org')?.value;
-let org: any = null;
-try { if (cookie) org = JSON.parse(cookie); } catch {}
-if (!org) return Astro.redirect('/admin/login');
+import { requireApprovedOrg, isSuperAdmin } from '../../lib/admin-auth';
 import { getDB } from '../../lib/db';
+const gate = await requireApprovedOrg(Astro);
+if (gate instanceof Response) return gate;
+const org = gate;
+const showApprovalUI = isSuperAdmin(org);
 const db = getDB();
+let pendingOrgs: any[] = [];
+let approvedOrgs: any[] = [];
+if (showApprovalUI && db) {
+  const all = await db.prepare("SELECT id, name, email, approved_for_potlucks FROM organizers ORDER BY id DESC").all();
+  const rows = (all.results ?? []) as any[];
+  pendingOrgs = rows.filter(r => !r.approved_for_potlucks);
+  approvedOrgs = rows.filter(r => !!r.approved_for_potlucks);
+}
 let events: any[] = [];
 let templates: any[] = [];
 try {
@@ -134,6 +143,46 @@ try {
       }
     </div>
 
+    {showApprovalUI && (
+      <div style="margin-bottom:28px">
+        <div class="sec-label">Organizer Access ({pendingOrgs.length} pending · {approvedOrgs.length} approved)</div>
+        {pendingOrgs.length > 0 && (
+          <div style="margin-bottom:14px">
+            <div style="font-size:12px;color:#a09890;margin-bottom:8px">Pending approval</div>
+            {pendingOrgs.map((o:any) => (
+              <div class="tmpl-card">
+                <div>
+                  <div class="tmpl-name">{o.name}</div>
+                  <div class="tmpl-meta">{o.email}</div>
+                </div>
+                <div class="tmpl-actions">
+                  <button class="use-btn" data-approve-id={o.id}>Approve</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {approvedOrgs.length > 0 && (
+          <div>
+            <div style="font-size:12px;color:#a09890;margin-bottom:8px">Approved</div>
+            {approvedOrgs.map((o:any) => (
+              <div class="tmpl-card">
+                <div>
+                  <div class="tmpl-name">{o.name}</div>
+                  <div class="tmpl-meta">{o.email}</div>
+                </div>
+                <div class="tmpl-actions">
+                  {o.email.toLowerCase() === 'stharpe98@gmail.com'
+                    ? <span style="font-size:11px;color:#a09890;padding:6px 10px">super</span>
+                    : <button class="del-btn" data-revoke-id={o.id}>Revoke</button>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+
     <!-- Recent events -->
     <div>
       <div class="sec-label">Your Events</div>
@@ -177,6 +226,24 @@ try {
     document.getElementById('copy-embed').addEventListener('click', function() {
       navigator.clipboard.writeText(document.getElementById('embed-code').textContent);
       showToast('Copied ✓');
+    });
+
+    document.querySelectorAll('[data-approve-id]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var id = parseInt(btn.getAttribute('data-approve-id'));
+        var res = await fetch('/api/admin/organizers', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'approve',id:id})});
+        var data = await res.json();
+        if (data.ok) location.reload();
+      });
+    });
+    document.querySelectorAll('[data-revoke-id]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Revoke potluck admin access for this user?')) return;
+        var id = parseInt(btn.getAttribute('data-revoke-id'));
+        var res = await fetch('/api/admin/organizers', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'revoke',id:id})});
+        var data = await res.json();
+        if (data.ok) location.reload();
+      });
     });
 
     document.querySelectorAll('.del-btn[data-tmpl-id]').forEach(function(btn) {

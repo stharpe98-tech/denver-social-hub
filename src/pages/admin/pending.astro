@@ -1,0 +1,44 @@
+---
+import { getOrgSession } from '../../lib/admin-auth';
+const session = getOrgSession(Astro);
+if (!session) return Astro.redirect('/admin/login');
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Pending approval</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:#f7f5f2;color:#1c1917;font-family:'DM Sans',sans-serif;min-height:100vh}
+    .wrap{max-width:480px;margin:0 auto;padding:80px 20px}
+    .card{background:#fff;border:1px solid #e4ddd4;border-radius:14px;padding:32px;text-align:center}
+    .icon{font-size:40px;margin-bottom:12px}
+    h1{font-family:'Playfair Display',serif;font-size:24px;margin-bottom:8px}
+    p{color:#57524c;font-size:14px;line-height:1.6;margin-bottom:8px}
+    .email{color:#a09890;font-size:13px;margin-top:18px;padding-top:18px;border-top:1px solid #f0ede8}
+    a{color:#c2410c;font-weight:600;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .signout{display:inline-block;margin-top:18px;font-size:13px;color:#a09890;background:none;border:none;cursor:pointer;font-family:inherit;text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="icon">⏳</div>
+      <h1>Pending approval</h1>
+      <p>Your account is registered, but potluck admin access requires approval from the site owner.</p>
+      <p>Reach out to <a href="mailto:stharpe98@gmail.com">stharpe98@gmail.com</a> to request access.</p>
+      <div class="email">Signed in as <strong>{session.email}</strong></div>
+      <button class="signout" id="signout">Sign out</button>
+    </div>
+  </div>
+  <script is:inline>
+    document.getElementById('signout').addEventListener('click', async function() {
+      await fetch('/api/auth', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});
+      location.href = '/admin/login';
+    });
+  </script>
+</body>
+</html>
