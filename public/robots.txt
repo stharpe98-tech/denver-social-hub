@@ -1,0 +1,14 @@
+User-agent: *
+Disallow: /potlucks/
+Disallow: /potlucks/edit
+Disallow: /admin/
+Disallow: /api/
+Allow: /
+Allow: /events
+Allow: /recs
+Allow: /about
+
+User-agent: Googlebot
+Disallow: /potlucks/
+Disallow: /admin/
+Disallow: /api/
