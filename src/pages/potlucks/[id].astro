@@ -272,6 +272,13 @@ const defaultTemplate = potluck.template || 'warm';
   </style>
 </head>
 <body>
+  {potluck.cover_photo && (
+  <div style="width:100%;height:220px;overflow:hidden;position:relative;background:#e4ddd4">
+    <img src={potluck.cover_photo} alt={potluck.title}
+      style="width:100%;height:100%;object-fit:cover;display:block"/>
+    <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,0.4))"></div>
+  </div>
+)}
   <div class="pl-hero">
     <div class="pl-hi">
       <a href="/potlucks" class="pl-back">← Potlucks</a>
@@ -295,10 +302,37 @@ const defaultTemplate = potluck.template || 'warm';
         {potluck.location && <span>📍 {potluck.location}{potluck.location_detail ? ` · ${potluck.location_detail}` : ''}</span>}
       </div>
       <div class="pl-pills">
-        <span class="pl-pill">👥 {totalGuests} coming</span>
+        <span class="pl-pill">👥 {totalGuests} {totalGuests === 1 ? 'person' : 'people'} coming</span>
         <span class="pl-pill">🍽 {attending.filter((s:any)=>s.dish).length} dishes claimed</span>
         <span class="pl-pill" id="countdown-pill" style="display:none"></span>
       </div>
+
+      {/* Attendee avatar strip — social proof */}
+      {attending.length > 0 && (
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+          <div style="display:flex;margin-right:4px">
+            {attending.slice(0,8).map((s:any, i:number) => {
+              const colors = ['#f77f00','#7c3aed','#0ea5e9','#16a34a','#ec4899','#f59e0b','#c2410c','#0369a1'];
+              const initials = (s.name || '?').split(' ').map((w:string) => w[0]).join('').slice(0,2).toUpperCase();
+              return (
+                <div title={s.name} style={`width:32px;height:32px;border-radius:50%;background:${colors[i%8]};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;border:2px solid var(--bg);margin-left:${i>0?'-8px':'0'};z-index:${8-i};position:relative;flex-shrink:0`}>
+                  {initials}
+                </div>
+              );
+            })}
+            {attending.length > 8 && (
+              <div style={`width:32px;height:32px;border-radius:50%;background:var(--surface);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text2);margin-left:-8px;position:relative;flex-shrink:0`}>
+                +{attending.length - 8}
+              </div>
+            )}
+          </div>
+          <span style="font-size:13px;color:var(--hero-sub)">
+            {attending.length === 1 ? `${attending[0].name} is coming` :
+             attending.length === 2 ? `${attending[0].name} and ${attending[1].name} are coming` :
+             `${attending[0].name}, ${attending[1].name} and ${attending.length - 2} other${attending.length > 3 ? 's' : ''} are coming`}
+          </span>
+        </div>
+      )}
       <div class="pl-share">
         <button class="pl-share-btn" id="copy-link">🔗 Copy link</button>
         <a class="pl-share-btn" id="share-fb" href="#" target="_blank">📘 Share</a>
@@ -346,6 +380,21 @@ const defaultTemplate = potluck.template || 'warm';
 
         <!-- Food panel -->
         <div id="food-panel">
+          {/* Dish gap nudge */}
+          {(() => {
+            const catTotals = catEntries.map(([cat, catSlots]) => ({
+              cat,
+              claimed: catSlots.reduce((sum:number, s:any) => sum + (s.claimed||0), 0)
+            }));
+            const empty = catTotals.filter(c => c.claimed === 0);
+            if (empty.length === 0) return null;
+            return (
+              <div style="background:var(--accent-dim);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--accent-txt)">
+                <strong>Still needed:</strong> {empty.map(c => c.cat.split(' ').slice(1).join(' ')).join(' · ')}
+              </div>
+            );
+          })()}
+
           {catEntries.map(([cat, catSlots]) => (
             <div>
               <div class="pl-cat-head">{cat}</div>
@@ -481,6 +530,10 @@ const defaultTemplate = potluck.template || 'warm';
       }
       <div style="text-align:center;margin-top:20px">
         <a href={`/api/potluck-export?id=${id}`} style="font-size:13px;color:var(--accent-txt);text-decoration:none;font-weight:500">⬇ Download as CSV</a>
+        <span style="margin:0 8px;color:var(--text3)">·</span>
+        <a href={`/potlucks/${id}/poster`} style="font-size:13px;color:var(--accent-txt);text-decoration:none;font-weight:500">🖼 Make a poster</a>
+        <span style="margin:0 8px;color:var(--text3)">·</span>
+        <a href={`/potlucks/manage/${id}`} style="font-size:13px;color:var(--accent-txt);text-decoration:none;font-weight:500">⚙ Manage</a>
       </div>
     </div>
 
