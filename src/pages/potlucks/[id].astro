@@ -352,13 +352,15 @@ const defaultTemplate = potluck.template || 'warm';
     <!-- SIGN UP -->
     <div class="pl-panel active" id="panel-signup">
       <div id="form-wrap">
-        <!-- Step 1: Who are you -->
+
+        <!-- Name -->
         <div class="pl-field">
           <label>What's your name? <span style="color:var(--accent)">*</span></label>
           <input type="text" id="f-name" class="pl-input" placeholder="First name works"/>
           <div class="pl-err" id="e-name">We need your name!</div>
         </div>
 
+        <!-- Guest count -->
         <div class="pl-field">
           <label>How many people are you bringing? <span class="pl-opt">(including yourself)</span></label>
           <div class="pl-guest-row">
@@ -371,113 +373,77 @@ const defaultTemplate = potluck.template || 'warm';
 
         <div class="pl-div"></div>
 
-        <!-- Step 2: Food or donate -->
+        <!-- What are you bringing -->
         <div class="pl-q">What are you bringing?</div>
-        <div class="pl-toggle" style="margin-bottom:16px">
-          <button type="button" class="pl-toggle-btn food-on" id="toggle-food">🍽 I'll bring something</button>
-          <button type="button" class="pl-toggle-btn" id="toggle-donate">💙 Have Seth bring it for me</button>
-        </div>
+        <p class="pl-sub" style="margin-bottom:14px">Tap a suggestion or type your own. No limits!</p>
 
-        <!-- Food panel -->
-        <div id="food-panel">
-          {/* Dish gap nudge */}
-          {(() => {
-            const catTotals = catEntries.map(([cat, catSlots]) => ({
-              cat,
-              claimed: catSlots.reduce((sum:number, s:any) => sum + (s.claimed||0), 0)
-            }));
-            const empty = catTotals.filter(c => c.claimed === 0);
-            if (empty.length === 0) return null;
-            return (
-              <div style="background:var(--accent-dim);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--accent-txt)">
-                <strong>Still needed:</strong> {empty.map(c => c.cat.split(' ').slice(1).join(' ')).join(' · ')}
-              </div>
-            );
-          })()}
-
-          {catEntries.map(([cat, catSlots]) => (
-            <div>
-              <div class="pl-cat-head">{cat}</div>
-              <div class="pl-grid">
-                {catSlots.map((slot:any) => (
-                  <div class="pl-slot" data-dish={slot.suggestion} data-cat={cat}>
-                    <div class="pl-slot-name">{slot.suggestion}</div>
-                    <div class="pl-slot-sub">
-                      <span>{slot.claimed > 0 ? `${slot.claimed} bringing this` : ''}</span>
-                      <span class="pl-slot-check">✓</span>
-                    </div>
+        {catEntries.map(([cat, catSlots]) => (
+          <div>
+            <div class="pl-cat-head">{cat}</div>
+            <div class="pl-grid">
+              {catSlots.map((slot:any) => (
+                <div class="pl-slot" data-dish={slot.suggestion} data-cat={cat}>
+                  <div class="pl-slot-name">{slot.suggestion}</div>
+                  <div class="pl-slot-sub">
+                    <span>{slot.claimed > 0 ? `${slot.claimed} bringing this` : ''}</span>
+                    <span class="pl-slot-check">✓</span>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          ))}
-          <div class="pl-picked" id="picked-bar">
-            <span class="pl-picked-txt" id="picked-text"></span>
-            <button class="pl-picked-clear" id="picked-clear">✕</button>
           </div>
-          <div class="pl-field pl-autocomplete" style="margin-top:10px" id="dish-ac-wrap">
-            <label style="font-size:13px;color:var(--text2);font-weight:500">Or type something different <span class="pl-opt">(optional)</span></label>
-            <input type="text" id="f-dish" class="pl-input" placeholder="Start typing… e.g. brownies, chicken" autocomplete="off"/>
-            <div class="pl-ac-list" id="ac-list"></div>
-          </div>
+        ))}
+
+        {/* Dish gap nudge */}
+        {(() => {
+          const catTotals = catEntries.map(([cat, catSlots]) => ({
+            cat, claimed: catSlots.reduce((sum:number, s:any) => sum + (s.claimed||0), 0)
+          }));
+          const empty = catTotals.filter(c => c.claimed === 0);
+          if (empty.length === 0) return null;
+          return (
+            <div style="background:var(--accent-dim);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin:12px 0;font-size:13px;color:var(--accent-txt)">
+              <strong>Still needed:</strong> {empty.map(c => c.cat.split(' ').slice(1).join(' ')).join(' · ')}
+            </div>
+          );
+        })()}
+
+        <div class="pl-picked" id="picked-bar">
+          <span class="pl-picked-txt" id="picked-text"></span>
+          <button class="pl-picked-clear" id="picked-clear">✕</button>
         </div>
 
-        <!-- Donate panel -->
-        <div class="pl-donate-box" id="donate-panel">
-          <div style="font-size:14px;font-weight:600;color:var(--success-txt);margin-bottom:4px">I'll handle it for you 💙</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Tell me what you want me to bring, then send me a few bucks to cover it.</div>
-          <div class="pl-field" style="margin-bottom:14px">
-            <label style="font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:7px">What should I bring for you?</label>
-            <input type="text" id="f-request" class="pl-input" placeholder="e.g. Lemonade, chips & salsa, brownies…"/>
-          </div>
-          <div id="venmo-hidden"></div>
-          <button type="button" id="show-venmo-btn" style="display:flex;align-items:center;gap:10px;background:#3d95ce;color:#fff;padding:11px 16px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;width:100%;">
-            <span style="font-size:20px">💙</span>Tap to send money via Venmo
-          </button>
-          <div style="font-size:12px;color:var(--text3);margin-top:8px;text-align:center">No pressure on amount — whatever feels right</div>
+        <div class="pl-field pl-autocomplete" style="margin-top:12px" id="dish-ac-wrap">
+          <label style="font-size:13px;color:var(--text2);font-weight:500">Or type something different <span class="pl-opt">(optional)</span></label>
+          <input type="text" id="f-dish" class="pl-input" placeholder="Start typing…" autocomplete="off"/>
+          <div class="pl-ac-list" id="ac-list"></div>
         </div>
 
         <div class="pl-div"></div>
 
-        <!-- Step 3: Help out (compact) -->
+        <!-- Helpers -->
         <div class="pl-field">
           <label>Can you help out? <span class="pl-opt">(optional)</span></label>
           <div class="pl-checks">
-            <div class="pl-check-item" data-extra="plates"><div class="pl-check-box"></div><div class="pl-check-txt">Plates, napkins & cups</div></div>
-            <div class="pl-check-item" data-extra="cooler"><div class="pl-check-box"></div><div class="pl-check-txt">Cooler with drinks or ice</div></div>
-            <div class="pl-check-item" data-extra="seating"><div class="pl-check-box"></div><div class="pl-check-txt">Chairs or a blanket</div></div>
-            <div class="pl-check-item" data-extra="cleanup"><div class="pl-check-box"></div><div class="pl-check-txt">Help clean up at the end</div></div>
+            <div class="pl-check-item" data-extra="plates"><div class="pl-check-box"></div><div class="pl-check-txt">I'll bring plates, napkins & cups</div></div>
+            <div class="pl-check-item" data-extra="cooler"><div class="pl-check-box"></div><div class="pl-check-txt">I'll bring a cooler with drinks or ice</div></div>
+            <div class="pl-check-item" data-extra="seating"><div class="pl-check-box"></div><div class="pl-check-txt">I'll bring chairs or a blanket</div></div>
+            <div class="pl-check-item" data-extra="cleanup"><div class="pl-check-box"></div><div class="pl-check-txt">I can help clean up</div></div>
           </div>
         </div>
 
         <div class="pl-div"></div>
 
-        <!-- Step 4: Contact -->
+        <!-- Email -->
         <div class="pl-field">
-          <label>Email <span class="pl-opt">(optional — confirmation & day-before reminder)</span></label>
+          <label>Email <span class="pl-opt">(optional — we'll send a reminder the day before)</span></label>
           <input type="email" id="f-email" class="pl-input" placeholder="you@example.com"/>
         </div>
 
         <details style="margin-bottom:16px">
-          <summary style="font-size:13px;color:var(--text3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px">
-            <span>+</span> More optional info
-          </summary>
-          <div style="margin-top:12px;display:flex;flex-direction:column;gap:12px">
-            <div class="pl-field" style="margin-bottom:0">
-              <label>Food allergies?</label>
-              <textarea id="f-dietary" class="pl-textarea" placeholder="Gluten-free, nut allergy, vegan… Leave blank if none."></textarea>
-            </div>
-            <div class="pl-field" style="margin-bottom:0">
-              <label>How did you hear about this?</label>
-              <select id="f-platform" class="pl-select">
-                <option value="">Pick one…</option>
-                <option>Discord — Denver Social Community</option>
-                <option>Facebook</option>
-                <option>Reddit</option>
-                <option>A friend told me</option>
-                <option>Something else</option>
-              </select>
-            </div>
+          <summary style="font-size:13px;color:var(--text3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span>+</span> Food allergies or anything else we should know</summary>
+          <div style="margin-top:12px">
+            <textarea id="f-dietary" class="pl-textarea" placeholder="Gluten-free, nut allergy, vegan…"></textarea>
           </div>
         </details>
 
@@ -485,6 +451,7 @@ const defaultTemplate = potluck.template || 'warm';
         <div class="cf-turnstile" data-sitekey="0x4AAAAAADLDABpXrHXcFpVB" data-theme="auto" data-size="flexible" style="margin-bottom:12px"></div>
         <button type="button" class="pl-submit" id="submit-btn">Count me in! 🌞</button>
       </div>
+
 
       <div id="success-wrap" class="pl-result pl-hidden">
         <span class="pl-result-emoji">🎉</span>
@@ -576,7 +543,7 @@ const defaultTemplate = potluck.template || 'warm';
 
   <script define:vars={{ potluckId: id, defaultTheme: defaultTemplate, eventDate: potluck.date_label||'', eventTime: potluck.time_label||'' }}>
     var rsvp='yes', guestCount=1, extras={plates:false,cooler:false,seating:false,cleanup:false};
-    var selectedDish='', selectedCat='', donating=false;
+    var selectedDish='', selectedCat='';
 
     // Theme switcher
     var html = document.documentElement;
@@ -691,24 +658,6 @@ const defaultTemplate = potluck.template || 'warm';
       acInput.addEventListener('blur', function() { setTimeout(function(){ acList.classList.remove('open'); }, 150); });
     }
 
-    // Food/donate toggle
-    document.getElementById('toggle-food').addEventListener('click', function() {
-      donating=false;
-      document.getElementById('food-panel').style.display='block';
-      document.getElementById('donate-panel').style.display='none';
-      document.getElementById('toggle-food').classList.add('food-on');
-      document.getElementById('toggle-food').classList.remove('donate-on');
-      document.getElementById('toggle-donate').className='pl-toggle-btn';
-    });
-    document.getElementById('toggle-donate').addEventListener('click', function() {
-      donating=true;
-      document.getElementById('donate-panel').style.display='block';
-      document.getElementById('food-panel').style.display='none';
-      document.getElementById('toggle-donate').classList.add('donate-on');
-      document.getElementById('toggle-donate').classList.remove('food-on');
-      document.getElementById('toggle-food').className='pl-toggle-btn';
-    });
-
     // Slot picker
     document.querySelectorAll('.pl-slot').forEach(function(el) {
       el.addEventListener('click', function() {
@@ -751,22 +700,6 @@ const defaultTemplate = potluck.template || 'warm';
       });
     });
 
-    // Venmo reveal
-    document.getElementById('show-venmo-btn').addEventListener('click', async function() {
-      var btn=document.getElementById('show-venmo-btn');
-      var box=document.getElementById('venmo-hidden');
-      if (box.children.length>0) return;
-      btn.textContent='Loading…';
-      try {
-        var res=await fetch('/api/donate-info');
-        var data=await res.json();
-        if (data.venmo) {
-          box.innerHTML='<a href="https://venmo.com/u/'+data.venmo+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;background:#3d95ce;color:#fff;padding:11px 16px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:600;margin-top:8px;"><span style="font-size:20px">💙</span>Pay @'+data.venmo+' on Venmo</a>';
-          btn.style.display='none';
-        }
-      } catch(e){btn.textContent='Tap to donate via Venmo';}
-    });
-
     // Submit
     document.getElementById('submit-btn').addEventListener('click', async function() {
       var nameVal=document.getElementById('f-name').value.trim();
@@ -796,10 +729,7 @@ const defaultTemplate = potluck.template || 'warm';
           document.getElementById('success-title').textContent="You're in, "+nameVal.split(' ')[0]+'!';
           var d='';
           if (dishVal) d+='🍽 '+dishVal+'<br/>';
-          if (donating) {
-            var req = document.getElementById('f-request') ? document.getElementById('f-request').value.trim() : '';
-            d += req ? '💙 Seth will bring: ' + req + '<br/>' : '💙 Contributing instead<br/>';
-          }
+
           d+='👥 '+(guestCount===1?'Just you':'You + '+(guestCount-1)+' other'+(guestCount>2?'s':''))+'<br/>';
           if (extras.plates) d+='🍽 Bringing plates & cups<br/>';
           if (extras.cooler) d+='🧊 Bringing a cooler<br/>';
