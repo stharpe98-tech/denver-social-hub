@@ -319,22 +319,10 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
         <p class="pl-result-sub">See you at Cheeseman Park on May 30th, noon to 4pm.</p>
         <div class="pl-result-card" id="success-detail"></div>
 
-        <div style="margin-top:20px;background:#fff8ec;border:1.5px solid #fcd5a0;border-radius:14px;padding:16px 18px;text-align:left;width:100%">
+        <div id="contact-info" style="display:none;margin-top:20px;background:#fff8ec;border:1.5px solid #fcd5a0;border-radius:14px;padding:16px 18px;text-align:left;width:100%">
           <div style="font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Questions? Get in touch</div>
-          <a href="sms:7203416757" style="display:flex;align-items:center;gap:10px;text-decoration:none;margin-bottom:10px;">
-            <span style="font-size:22px">📱</span>
-            <div>
-              <div style="font-size:14px;font-weight:600;color:#1c1917">Text me</div>
-              <div style="font-size:13px;color:#8a7a70">(720) 341-6757</div>
-            </div>
-          </a>
-          <a href="https://discord.com/users/351549533081042944" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
-            <span style="font-size:22px">🎮</span>
-            <div>
-              <div style="font-size:14px;font-weight:600;color:#1c1917">Discord</div>
-              <div style="font-size:13px;color:#8a7a70">@godtminilegs</div>
-            </div>
-          </a>
+          <div id="contact-phone"></div>
+          <div id="contact-discord" style="margin-top:10px"></div>
         </div>
 
         <button type="button" class="pl-result-btn" id="add-another">Add someone else</button>
