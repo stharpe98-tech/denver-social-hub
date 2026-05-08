@@ -318,101 +318,113 @@ const defaultTemplate = potluck.template || 'warm';
     <!-- SIGN UP -->
     <div class="pl-panel active" id="panel-signup">
       <div id="form-wrap">
-        <div class="pl-nudge"><strong>No dish? No problem.</strong><br/>Show up anyway — there's always more than enough.</div>
-
-        <div id="attending-fields">
-          <div class="pl-q">What are you bringing?</div>
-          <p class="pl-sub">Bring food or donate — totally up to you.</p>
-          <div class="pl-toggle">
-            <button type="button" class="pl-toggle-btn food-on" id="toggle-food">🍽 I'll bring food</button>
-            <button type="button" class="pl-toggle-btn" id="toggle-donate">💙 I'd rather donate</button>
-          </div>
-
-          <!-- Food panel -->
-          <div id="food-panel">
-            {catEntries.map(([cat, catSlots]) => (
-              <div>
-                <div class="pl-cat-head">{cat}</div>
-                <div class="pl-grid">
-                  {catSlots.map((slot:any) => (
-                    <div class="pl-slot" data-dish={slot.suggestion} data-cat={cat}>
-                      <div class="pl-slot-name">{slot.suggestion}</div>
-                      <div class="pl-slot-sub">
-                        <span>{slot.claimed > 0 ? `${slot.claimed} bringing this` : ''}</span>
-                        <span class="pl-slot-check">✓</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-            <div class="pl-picked" id="picked-bar">
-              <span class="pl-picked-txt" id="picked-text"></span>
-              <button class="pl-picked-clear" id="picked-clear">✕</button>
-            </div>
-            <div class="pl-field" style="margin-top:12px">
-              <label>Or type something different <span class="pl-opt">(optional)</span></label>
-              <input type="text" id="f-dish" class="pl-input" placeholder="Anything goes!"/>
-            </div>
-          </div>
-
-          <!-- Donate panel -->
-          <div class="pl-donate-box" id="donate-panel">
-            <div style="font-size:14px;font-weight:600;color:var(--success-txt);margin-bottom:4px">Donate instead 💙</div>
-            <div style="font-size:13px;color:var(--text2);margin-bottom:12px">We'll use it to cover a dish. Any amount helps!</div>
-            <div id="venmo-hidden"></div>
-            <button type="button" id="show-venmo-btn" style="display:flex;align-items:center;gap:10px;background:#3d95ce;color:#fff;padding:11px 16px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;width:100%;">
-              <span style="font-size:20px">💙</span>Tap to donate via Venmo
-            </button>
-          </div>
-          <div class="pl-div"></div>
-
-          <div class="pl-field">
-            <label>How many people? <span class="pl-opt">(including yourself)</span></label>
-            <div class="pl-guest-row">
-              <button type="button" class="pl-g-btn" id="g-minus">−</button>
-              <div class="pl-g-count" id="guest-count">1</div>
-              <button type="button" class="pl-g-btn" id="g-plus">+</button>
-              <div class="pl-g-note" id="guest-note">just me</div>
-            </div>
-          </div>
-
-          <div class="pl-field">
-            <label>Can you help out? <span class="pl-opt">(optional)</span></label>
-            <div class="pl-checks">
-              <div class="pl-check-item" data-extra="plates"><div class="pl-check-box"></div><div class="pl-check-txt">I'll bring plates, napkins & cups<span class="pl-check-sub">Always needed!</span></div></div>
-              <div class="pl-check-item" data-extra="cooler"><div class="pl-check-box"></div><div class="pl-check-txt">I'll bring a cooler with drinks or ice</div></div>
-              <div class="pl-check-item" data-extra="seating"><div class="pl-check-box"></div><div class="pl-check-txt">I'll bring chairs or a blanket<span class="pl-check-sub">Open grass at Cheeseman</span></div></div>
-              <div class="pl-check-item" data-extra="cleanup"><div class="pl-check-box"></div><div class="pl-check-txt">I can help clean up at the end</div></div>
-            </div>
-          </div>
-          <div class="pl-div"></div>
-        </div>
-
+        <!-- Step 1: Who are you -->
         <div class="pl-field">
           <label>What's your name? <span style="color:var(--accent)">*</span></label>
           <input type="text" id="f-name" class="pl-input" placeholder="First name works"/>
           <div class="pl-err" id="e-name">We need your name!</div>
         </div>
+
         <div class="pl-field">
-          <label>Email <span class="pl-opt">(for confirmation & day-before reminder)</span></label>
+          <label>How many people are you bringing? <span class="pl-opt">(including yourself)</span></label>
+          <div class="pl-guest-row">
+            <button type="button" class="pl-g-btn" id="g-minus">−</button>
+            <div class="pl-g-count" id="guest-count">1</div>
+            <button type="button" class="pl-g-btn" id="g-plus">+</button>
+            <div class="pl-g-note" id="guest-note">just me</div>
+          </div>
+        </div>
+
+        <div class="pl-div"></div>
+
+        <!-- Step 2: Food or donate -->
+        <div class="pl-q">What are you bringing?</div>
+        <div class="pl-toggle" style="margin-bottom:16px">
+          <button type="button" class="pl-toggle-btn food-on" id="toggle-food">🍽 I'll bring food</button>
+          <button type="button" class="pl-toggle-btn" id="toggle-donate">💙 I'd rather donate</button>
+        </div>
+
+        <!-- Food panel -->
+        <div id="food-panel">
+          {catEntries.map(([cat, catSlots]) => (
+            <div>
+              <div class="pl-cat-head">{cat}</div>
+              <div class="pl-grid">
+                {catSlots.map((slot:any) => (
+                  <div class="pl-slot" data-dish={slot.suggestion} data-cat={cat}>
+                    <div class="pl-slot-name">{slot.suggestion}</div>
+                    <div class="pl-slot-sub">
+                      <span>{slot.claimed > 0 ? `${slot.claimed} bringing this` : ''}</span>
+                      <span class="pl-slot-check">✓</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div class="pl-picked" id="picked-bar">
+            <span class="pl-picked-txt" id="picked-text"></span>
+            <button class="pl-picked-clear" id="picked-clear">✕</button>
+          </div>
+          <div class="pl-field" style="margin-top:10px">
+            <label style="font-size:13px;color:var(--text2);font-weight:500">Or type something different <span class="pl-opt">(optional)</span></label>
+            <input type="text" id="f-dish" class="pl-input" placeholder="Anything goes!"/>
+          </div>
+        </div>
+
+        <!-- Donate panel -->
+        <div class="pl-donate-box" id="donate-panel">
+          <div style="font-size:14px;font-weight:600;color:var(--success-txt);margin-bottom:4px">Donate instead 💙</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:12px">We'll use it to cover a dish. Any amount helps!</div>
+          <div id="venmo-hidden"></div>
+          <button type="button" id="show-venmo-btn" style="display:flex;align-items:center;gap:10px;background:#3d95ce;color:#fff;padding:11px 16px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;width:100%;">
+            <span style="font-size:20px">💙</span>Tap to donate via Venmo
+          </button>
+        </div>
+
+        <div class="pl-div"></div>
+
+        <!-- Step 3: Help out (compact) -->
+        <div class="pl-field">
+          <label>Can you help out? <span class="pl-opt">(optional)</span></label>
+          <div class="pl-checks">
+            <div class="pl-check-item" data-extra="plates"><div class="pl-check-box"></div><div class="pl-check-txt">Plates, napkins & cups</div></div>
+            <div class="pl-check-item" data-extra="cooler"><div class="pl-check-box"></div><div class="pl-check-txt">Cooler with drinks or ice</div></div>
+            <div class="pl-check-item" data-extra="seating"><div class="pl-check-box"></div><div class="pl-check-txt">Chairs or a blanket</div></div>
+            <div class="pl-check-item" data-extra="cleanup"><div class="pl-check-box"></div><div class="pl-check-txt">Help clean up at the end</div></div>
+          </div>
+        </div>
+
+        <div class="pl-div"></div>
+
+        <!-- Step 4: Contact -->
+        <div class="pl-field">
+          <label>Email <span class="pl-opt">(optional — confirmation & day-before reminder)</span></label>
           <input type="email" id="f-email" class="pl-input" placeholder="you@example.com"/>
         </div>
-        <div class="pl-field">
-          <label>How did you hear about this? <span class="pl-opt">(optional)</span></label>
-          <select id="f-platform" class="pl-select">
-            <option value="">Pick one…</option>
-            <option>Discord — Denver Social Community</option>
-            <option>Facebook</option>
-            <option>Reddit — r/Denver or r/DenverMeets</option>
-            <option>A friend told me</option>
-            <option>Something else</option>
-          </select>
-        </div>
-        <div class="pl-field">
-          <label>Food allergies? <span class="pl-opt">(optional)</span></label>
-          <textarea id="f-dietary" class="pl-textarea" placeholder="Gluten-free, nut allergy, vegan… Leave blank if none."></textarea>
-        </div>
+
+        <details style="margin-bottom:16px">
+          <summary style="font-size:13px;color:var(--text3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px">
+            <span>+</span> More optional info
+          </summary>
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:12px">
+            <div class="pl-field" style="margin-bottom:0">
+              <label>Food allergies?</label>
+              <textarea id="f-dietary" class="pl-textarea" placeholder="Gluten-free, nut allergy, vegan… Leave blank if none."></textarea>
+            </div>
+            <div class="pl-field" style="margin-bottom:0">
+              <label>How did you hear about this?</label>
+              <select id="f-platform" class="pl-select">
+                <option value="">Pick one…</option>
+                <option>Discord — Denver Social Community</option>
+                <option>Facebook</option>
+                <option>Reddit</option>
+                <option>A friend told me</option>
+                <option>Something else</option>
+              </select>
+            </div>
+          </div>
+        </details>
 
         <input type="text" name="_gotcha" id="_gotcha" style="display:none;position:absolute;left:-9999px" tabindex="-1" autocomplete="off"/>
         <div class="cf-turnstile" data-sitekey="0x4AAAAAADLDABpXrHXcFpVB" data-theme="auto" data-size="flexible" style="margin-bottom:12px"></div>
