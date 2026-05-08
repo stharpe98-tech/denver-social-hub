@@ -5,21 +5,22 @@ const { id } = Astro.params;
 let potluck: any = null;
 let slots: any[] = [];
 let signups: any[] = [];
+let comments: any[] = [];
 try {
   if (db && id) {
     potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(id).first();
+    if (potluck?.locked) return Astro.redirect('/potlucks');
     const slotsRes = await db.prepare(`
-      SELECT s.id, s.category, s.suggestion, s.max_claims, s.sort_order,
-        COUNT(r.id) as claimed
+      SELECT s.id, s.category, s.suggestion, COUNT(r.id) as claimed
       FROM potluck_slots s
-      LEFT JOIN potluck_rsvp r ON LOWER(r.dish)=LOWER(s.suggestion)
-        AND r.potluck_id=s.potluck_id AND r.rsvp='yes'
-      WHERE s.potluck_id=?
-      GROUP BY s.id ORDER BY s.sort_order ASC
+      LEFT JOIN potluck_rsvp r ON LOWER(r.dish)=LOWER(s.suggestion) AND r.potluck_id=s.potluck_id AND r.rsvp='yes'
+      WHERE s.potluck_id=? GROUP BY s.id ORDER BY s.sort_order ASC
     `).bind(id).all();
     slots = slotsRes?.results ?? [];
-    const s = await db.prepare(`SELECT name, dish, guest_count FROM potluck_rsvp WHERE potluck_id=? AND rsvp='yes' ORDER BY created_at ASC`).bind(id).all();
+    const s = await db.prepare(`SELECT name, dish, guest_count, rsvp FROM potluck_rsvp WHERE potluck_id=? ORDER BY created_at ASC`).bind(id).all();
     signups = s?.results ?? [];
+    const c = await db.prepare(`SELECT name, comment, created_at FROM potluck_comments WHERE potluck_id=? ORDER BY created_at ASC`).bind(id).all();
+    comments = c?.results ?? [];
   }
 } catch(e) { console.error(e); }
 if (!potluck) return Astro.redirect('/potlucks');
@@ -30,234 +31,327 @@ slots.forEach((s: any) => {
   categories[s.category].push(s);
 });
 const catEntries = Object.entries(categories);
-const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.guest_count) || 1), 0);
+const attending = signups.filter((s:any) => s.rsvp === 'yes');
+const totalGuests = attending.reduce((sum: number, s: any) => sum + (parseInt(s.guest_count)||1), 0);
+
+const template = potluck.template || 'warm';
+
+// Template CSS vars
+const themes: Record<string, string> = {
+  warm: `
+    --bg: #f7f5f2; --surface: #ffffff; --border: #e4ddd4; --border-hover: #cec5b8;
+    --text: #1c1917; --text-sec: #57524c; --text-faint: #a09890;
+    --accent: #f77f00; --accent-dim: rgba(247,127,0,0.10); --accent-text: #c2410c;
+    --hero-bg: linear-gradient(160deg,#fff8f0,#fef3e0,#fff8f0);
+    --hero-text: #1c1917; --hero-sub: #8a6a40;
+    --card-bg: #ffffff; --input-bg: #fafaf8;
+    --btn-bg: linear-gradient(135deg,#c2410c,#f77f00); --btn-text: #fff;
+    --tag-bg: rgba(247,127,0,0.10); --tag-text: #c2410c;
+    --success-bg: #f0fdf4; --success-border: #86efac; --success-text: #15803d;
+    --comment-bg: #fafaf8;
+  `,
+  dark: `
+    --bg: #0f0f0f; --surface: #1a1a1f; --border: #2e2e38; --border-hover: #3e3e4a;
+    --text: #f0eff4; --text-sec: #9898a6; --text-faint: #5a5a6a;
+    --accent: #7c3aed; --accent-dim: rgba(124,58,237,0.15); --accent-text: #a78bfa;
+    --hero-bg: linear-gradient(160deg,#0f0f1a,#1a0f2e,#0f0f1a);
+    --hero-text: #f0eff4; --hero-sub: #9898a6;
+    --card-bg: #1a1a1f; --input-bg: #0f0f0f;
+    --btn-bg: linear-gradient(135deg,#5b21b6,#7c3aed); --btn-text: #fff;
+    --tag-bg: rgba(124,58,237,0.15); --tag-text: #a78bfa;
+    --success-bg: #0d2e1a; --success-border: #166534; --success-text: #4ade80;
+    --comment-bg: #0f0f0f;
+  `,
+  clean: `
+    --bg: #ffffff; --surface: #f9f9f9; --border: #eeeeee; --border-hover: #dddddd;
+    --text: #111111; --text-sec: #555555; --text-faint: #aaaaaa;
+    --accent: #2563eb; --accent-dim: rgba(37,99,235,0.08); --accent-text: #1d4ed8;
+    --hero-bg: linear-gradient(160deg,#eff6ff,#dbeafe,#eff6ff);
+    --hero-text: #111111; --hero-sub: #3b82f6;
+    --card-bg: #ffffff; --input-bg: #f9f9f9;
+    --btn-bg: linear-gradient(135deg,#1d4ed8,#2563eb); --btn-text: #fff;
+    --tag-bg: rgba(37,99,235,0.08); --tag-text: #1d4ed8;
+    --success-bg: #f0fdf4; --success-border: #86efac; --success-text: #15803d;
+    --comment-bg: #f9f9f9;
+  `
+};
+
+const eventDate = potluck.date_label || '';
+const eventTime = potluck.time_label || '';
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="robots" content="noindex, nofollow"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
   <title>{potluck.title} · Sign Up</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style is:global>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: #f7f5f2; color: #1c1917; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
-    body { padding-bottom: 80px; overflow-y: scroll; -webkit-overflow-scrolling: touch; }
+    :root { --bg: #f7f5f2; --surface: #ffffff; --border: #e4ddd4; --border-hover: #cec5b8;
+    --text: #1c1917; --text-sec: #57524c; --text-faint: #a09890;
+    --accent: #f77f00; --accent-dim: rgba(247,127,0,0.10); --accent-text: #c2410c;
+    --hero-bg: linear-gradient(160deg,#fff8f0,#fef3e0,#fff8f0);
+    --hero-text: #1c1917; --hero-sub: #8a6a40;
+    --card-bg: #ffffff; --input-bg: #fafaf8;
+    --btn-bg: linear-gradient(135deg,#c2410c,#f77f00); --btn-text: #fff;
+    --tag-bg: rgba(247,127,0,0.10); --tag-text: #c2410c;
+    --success-bg: #f0fdf4; --success-border: #86efac; --success-text: #15803d;
+    --comment-bg: #fafaf8; }
+    html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+    body { padding-bottom: 80px; -webkit-overflow-scrolling: touch; }
 
-    .pl-hero { background: linear-gradient(160deg,#fff8f0,#fef3e0,#fff8f0); border-bottom: 1px solid #e4ddd4; padding: 36px 24px 28px; position: relative; overflow: hidden; }
-    .pl-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%,#f77f0022,transparent 70%); pointer-events: none; }
-    .pl-hi { max-width: 560px; margin: 0 auto; position: relative; z-index: 1; }
-    .pl-back { color: #8a7a70; font-size: 13px; text-decoration: none; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 4px; }
-    .pl-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(24px,5vw,34px); color: #1c1917; margin-bottom: 8px; }
-    .pl-meta { font-size: 13px; color: #8a6a40; line-height: 1.9; }
-    .pl-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
-    .pl-pill { background: rgba(247,127,0,0.12); border: 1px solid rgba(247,127,0,0.2); border-radius: 100px; padding: 4px 12px; font-size: 12px; color: #92400e; font-weight: 500; }
+    .p-hero { background: var(--hero-bg); border-bottom: 1px solid var(--border); padding: 32px 20px 24px; }
+    .p-hi { max-width: 560px; margin: 0 auto; }
+    .p-back { font-size: 13px; color: var(--text-faint); text-decoration: none; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 4px; }
+    .p-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(22px,5vw,32px); color: var(--hero-text); margin-bottom: 8px; line-height: 1.2; }
+    .p-meta { font-size: 13px; color: var(--hero-sub); line-height: 1.9; margin-bottom: 12px; }
+    .p-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .p-pill { background: var(--accent-dim); border: 1px solid var(--accent-dim); border-radius: 100px; padding: 4px 12px; font-size: 12px; color: var(--accent-text); font-weight: 500; }
+    .p-countdown { font-size: 13px; color: var(--accent-text); font-weight: 600; background: var(--accent-dim); display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 100px; }
+    .p-share { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .p-share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 500; cursor: pointer; text-decoration: none; font-family: 'DM Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
 
-    .pl-page { max-width: 560px; margin: 0 auto; padding: 28px 16px; }
+    .p-page { max-width: 560px; margin: 0 auto; padding: 24px 16px; }
+    .p-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    .p-tab { flex: 1; padding: 11px; font-size: 13px; font-weight: 600; color: var(--text-faint); cursor: pointer; border: none; border-bottom: 2px solid transparent; background: none; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+    .p-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .p-panel { display: none; }
+    .p-panel.active { display: block; }
 
-    .pl-tabs { display: flex; border-bottom: 1px solid #e4ddd4; margin-bottom: 28px; }
-    .pl-tab { flex: 1; padding: 12px; font-size: 14px; font-weight: 600; color: #a09890; cursor: pointer; border: none; border-bottom: 2px solid transparent; background: none; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
-    .pl-tab.active { color: #f77f00; border-bottom-color: #f77f00; }
+    .p-nudge { background: var(--accent-dim); border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 18px; margin-bottom: 24px; font-size: 14px; color: var(--text-sec); font-style: italic; text-align: center; line-height: 1.6; }
+    .p-nudge strong { color: var(--text); font-style: normal; }
 
-    .pl-panel { display: none; }
-    .pl-panel.active { display: block; }
+    .p-q { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+    .p-sub { font-size: 13px; color: var(--text-faint); margin-bottom: 14px; }
 
-    .pl-nudge { background: #ffffff; border: 1px solid #fcd5a0; border-radius: 14px; padding: 14px 18px; margin-bottom: 28px; font-size: 14px; color: #92400e; font-style: italic; text-align: center; line-height: 1.6; }
-    .pl-nudge strong { color: #1c1917; font-style: normal; }
+    .p-rsvp { display: flex; gap: 10px; margin-bottom: 24px; }
+    .p-rsvp-btn { flex: 1; padding: 13px; border-radius: 12px; border: 2px solid var(--border); background: var(--surface); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: var(--text-faint); cursor: pointer; transition: all 0.15s; }
+    .p-rsvp-btn.yes.active { border-color: #16a34a; background: var(--success-bg); color: var(--success-text); }
+    .p-rsvp-btn.no.active { border-color: #dc2626; background: #fef2f2; color: #dc2626; }
 
-    .pl-q { font-size: 18px; font-weight: 600; color: #1c1917; margin-bottom: 14px; }
-    .pl-sub { font-size: 13px; color: #8a7a70; margin-bottom: 16px; margin-top: -8px; }
+    .p-toggle { display: flex; gap: 10px; margin-bottom: 20px; }
+    .p-toggle-btn { flex: 1; padding: 12px; border-radius: 10px; border: 2px solid var(--border); background: var(--surface); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: var(--text-faint); cursor: pointer; transition: all 0.15s; }
+    .p-toggle-btn.food-active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-text); }
+    .p-toggle-btn.donate-active { border-color: #3d95ce; background: #eff8ff; color: #1d4ed8; }
 
-    .pl-rsvp-row { display: flex; gap: 10px; margin-bottom: 28px; }
-    .pl-rsvp-btn { flex: 1; padding: 14px; border-radius: 12px; border: 2px solid #e4ddd4; background: #ffffff; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; color: #a09890; cursor: pointer; transition: all 0.15s; }
-    .pl-rsvp-btn.yes.active { border-color: #16a34a; background: #0d2e1a; color: #4ade80; }
-    .pl-rsvp-btn.no.active { border-color: #7f1d1d; background: #2e0d0d; color: #f87171; }
+    .p-cat-head { font-size: 11px; font-weight: 600; color: var(--text-faint); letter-spacing: 0.5px; margin: 16px 0 8px; display: flex; align-items: center; gap: 8px; }
+    .p-cat-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .p-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    @media(max-width:380px) { .p-grid { grid-template-columns: 1fr; } }
+    .p-slot { background: var(--card-bg); border: 2px solid var(--border); border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: all 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .p-slot:active { border-color: var(--accent); }
+    .p-slot.selected { border-color: var(--accent); background: var(--accent-dim); }
+    .p-slot-name { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+    .p-slot-foot { font-size: 11px; color: var(--text-faint); display: flex; justify-content: space-between; align-items: center; }
+    .p-check { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); display: none; align-items: center; justify-content: center; font-size: 10px; color: #fff; font-weight: 800; }
+    .p-slot.selected .p-check { display: flex; }
 
-    .pl-cat-head { font-size: 12px; font-weight: 600; color: #8a7a70; letter-spacing: 0.5px; margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
-    .pl-cat-head::after { content: ''; flex: 1; height: 1px; background: #ffffff; }
+    .p-picked { background: var(--accent-dim); border: 1.5px solid var(--accent); border-radius: 10px; padding: 9px 13px; margin: 12px 0; display: none; justify-content: space-between; align-items: center; }
+    .p-picked.show { display: flex; }
+    .p-picked-text { font-size: 13px; color: var(--accent-text); font-weight: 500; }
+    .p-picked-clear { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 18px; padding: 0 4px; }
 
-    .pl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    @media(max-width:380px) { .pl-grid { grid-template-columns: 1fr; } }
+    .p-donate-panel { background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 16px; display: none; }
+    .p-donate-title { font-size: 14px; font-weight: 600; color: #15803d; margin-bottom: 4px; }
+    .p-donate-sub { font-size: 13px; color: var(--text-sec); margin-bottom: 12px; }
 
-    .pl-slot { background: #ffffff; border: 2px solid #e4ddd4; border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: all 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
-    .pl-slot:hover:not(.full) { border-color: #f77f0066; }
-    .pl-slot.selected { border-color: #f77f00; background: #200f00; }
-    .pl-slot.full { opacity: 0.35; cursor: not-allowed; }
-    .pl-slot-name { font-size: 14px; font-weight: 500; color: #1c1917; margin-bottom: 8px; line-height: 1.3; }
-    .pl-slot.full .pl-slot-name { color: #a09890; }
-    .pl-bar-wrap { height: 3px; background: #e4ddd4; border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
-    .pl-bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg,#c2410c,#f77f00); }
-    .pl-slot-foot { display: flex; justify-content: space-between; align-items: center; }
-    .pl-left { font-size: 11px; font-weight: 500; }
-    .pl-left.open { color: #4ade80; }
-    .pl-left.one { color: #fcd34d; }
-    .pl-left.none { color: #f87171; }
-    .pl-check { width: 18px; height: 18px; border-radius: 50%; background: #f77f00; display: none; align-items: center; justify-content: center; font-size: 11px; color: #000; font-weight: 800; }
-    .pl-slot.selected .pl-check { display: flex; }
+    .p-div { height: 1px; background: var(--border); margin: 20px 0; }
+    .p-field { margin-bottom: 18px; }
+    .p-field label { display: block; font-size: 13px; font-weight: 600; color: var(--text-sec); margin-bottom: 7px; }
+    .p-field label .opt { font-size: 11px; font-weight: 400; color: var(--text-faint); margin-left: 4px; }
+    .p-input { width: 100%; padding: 12px 14px; background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; -webkit-appearance: none; transition: border-color 0.15s; }
+    .p-input:focus { border-color: var(--accent); }
+    .p-input::placeholder { color: var(--text-faint); }
+    .p-select { width: 100%; padding: 12px 36px 12px 14px; background: var(--input-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 13px center; border: 1.5px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; -webkit-appearance: none; }
+    .p-textarea { width: 100%; padding: 12px 14px; background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; resize: vertical; min-height: 72px; }
+    .p-textarea:focus,.p-select:focus { border-color: var(--accent); }
+    .p-textarea::placeholder { color: var(--text-faint); }
 
-    .pl-picked { background: #200f00; border: 1.5px solid #f77f00; border-radius: 10px; padding: 10px 14px; margin: 16px 0 24px; display: none; justify-content: space-between; align-items: center; }
-    .pl-picked.show { display: flex; }
-    .pl-picked-text { font-size: 14px; color: #92400e; font-weight: 500; }
-    .pl-picked-clear { background: none; border: none; color: #a09890; cursor: pointer; font-size: 20px; padding: 0 4px; line-height: 1; }
+    .p-guest-row { display: flex; align-items: center; gap: 12px; }
+    .p-g-btn { width: 44px; height: 44px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface); font-size: 20px; font-weight: 600; color: var(--text-sec); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .p-g-count { flex: 1; text-align: center; font-size: 22px; font-weight: 700; color: var(--text); }
+    .p-g-note { font-size: 13px; color: var(--text-faint); white-space: nowrap; }
 
-    .pl-div { height: 1px; background: linear-gradient(90deg,transparent,#e4ddd4,transparent); margin: 24px 0; }
+    .p-checks { display: flex; flex-direction: column; gap: 8px; }
+    .p-check-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .p-check-item.active { border-color: var(--accent); background: var(--accent-dim); }
+    .p-check-box { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 700; transition: all 0.12s; }
+    .p-check-item.active .p-check-box { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .p-check-txt { font-size: 14px; color: var(--text-sec); line-height: 1.4; }
+    .p-check-sub { display: block; font-size: 11px; color: var(--text-faint); margin-top: 1px; }
 
-    .pl-field { margin-bottom: 20px; }
-    .pl-field label { display: block; font-size: 15px; font-weight: 600; color: #1c1917; margin-bottom: 8px; }
-    .pl-field label .opt { font-size: 12px; font-weight: 400; color: #a09890; margin-left: 4px; }
-    .pl-field .err { font-size: 12px; color: #f87171; margin-top: 5px; display: none; }
+    .p-submit { width: 100%; padding: 15px; margin-top: 6px; border-radius: 12px; border: none; background: var(--btn-bg); color: var(--btn-text); font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 16px var(--accent-dim); transition: all 0.18s; -webkit-tap-highlight-color: transparent; }
+    .p-submit:active:not(:disabled) { transform: scale(0.98); }
+    .p-submit:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 
-    .pl-input { width: 100%; padding: 12px 14px; background: #ffffff; border: 1.5px solid #e4ddd4; border-radius: 10px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; transition: border-color 0.15s; -webkit-appearance: none; appearance: none; }
-    .pl-input:focus { border-color: #f77f00; }
-    .pl-input::placeholder { color: #a09890; }
-    .pl-select { width: 100%; padding: 12px 40px 12px 14px; background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c4956a' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 14px center; border: 1.5px solid #e4ddd4; border-radius: 10px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; -webkit-appearance: none; appearance: none; }
-    .pl-select:focus { border-color: #f77f00; }
-    .pl-textarea { width: 100%; padding: 12px 14px; background: #ffffff; border: 1.5px solid #e4ddd4; border-radius: 10px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; resize: vertical; min-height: 72px; }
-    .pl-textarea:focus { border-color: #f77f00; }
-    .pl-textarea::placeholder { color: #a09890; }
+    .p-result { text-align: center; padding: 40px 16px; }
+    .p-result-emoji { font-size: 56px; display: block; margin-bottom: 14px; }
+    .p-result-title { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text); margin-bottom: 8px; }
+    .p-result-sub { font-size: 14px; color: var(--text-faint); line-height: 1.7; margin-bottom: 16px; }
+    .p-result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; font-size: 14px; color: var(--text-sec); text-align: left; line-height: 2; }
+    .p-result-btn { margin-top: 16px; padding: 10px 24px; border-radius: 100px; border: 1.5px solid var(--border); background: transparent; color: var(--text-sec); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; }
 
-    .pl-guest-row { display: flex; align-items: center; gap: 14px; }
-    .pl-g-btn { width: 44px; height: 44px; border-radius: 10px; border: 1.5px solid #e4ddd4; background: #ffffff; font-size: 22px; font-weight: 600; color: #8a6a40; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
-    .pl-g-count { flex: 1; text-align: center; font-size: 24px; font-weight: 700; color: #1c1917; }
-    .pl-g-note { font-size: 13px; color: #a09890; white-space: nowrap; }
+    /* Sheet */
+    .p-sheet-table { width: 100%; border-collapse: collapse; }
+    .p-sheet-table th { text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-faint); padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    .p-sheet-table td { padding: 11px 10px; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text-sec); }
+    .p-sheet-table td:first-child { color: var(--text); font-weight: 500; }
 
-    .pl-checks { display: flex; flex-direction: column; gap: 10px; }
-    .pl-check-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; border: 1.5px solid #e4ddd4; background: #ffffff; cursor: pointer; user-select: none; transition: border-color 0.12s; -webkit-tap-highlight-color: transparent; }
-    .pl-check-item.active { border-color: #f77f00; background: #200f00; }
-    .pl-check-box { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #e4ddd4; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 700; transition: all 0.12s; }
-    .pl-check-item.active .pl-check-box { background: #f77f00; border-color: #f77f00; color: #000; }
-    .pl-check-txt { font-size: 14px; color: #57524c; line-height: 1.4; }
-    .pl-check-sub { display: block; font-size: 12px; color: #a09890; margin-top: 2px; }
+    /* Comments */
+    .p-comment { background: var(--comment-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+    .p-comment-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .p-comment-text { font-size: 14px; color: var(--text-sec); line-height: 1.5; }
+    .p-comment-time { font-size: 11px; color: var(--text-faint); margin-top: 6px; }
 
-    .pl-submit { width: 100%; padding: 16px; margin-top: 4px; border-radius: 12px; border: none; background: linear-gradient(135deg,#c2410c,#f77f00); color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 16px rgba(247,127,0,0.25); transition: all 0.18s; -webkit-tap-highlight-color: transparent; }
-    .pl-submit:active:not(:disabled) { transform: scale(0.98); }
-    .pl-submit:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+    .p-empty { text-align: center; padding: 32px; color: var(--text-faint); font-style: italic; font-size: 14px; }
+    .p-hidden { display: none !important; }
+    .p-err { font-size: 12px; color: #dc2626; margin-top: 4px; display: none; }
 
-    .pl-result { text-align: center; padding: 48px 16px; }
-    .pl-result-emoji { font-size: 60px; display: block; margin-bottom: 16px; }
-    .pl-result-title { font-family: 'Playfair Display', serif; font-size: 26px; color: #1c1917; margin-bottom: 8px; }
-    .pl-result-sub { font-size: 14px; color: #8a7a70; line-height: 1.7; margin-bottom: 20px; }
-    .pl-result-card { background: #ffffff; border: 1px solid #e4ddd4; border-radius: 12px; padding: 16px 18px; font-size: 14px; color: #8a6a40; text-align: left; line-height: 2; }
-    .pl-result-btn { margin-top: 20px; padding: 10px 28px; border-radius: 100px; border: 1.5px solid #e4ddd4; background: transparent; color: #8a6a40; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; }
+    /* Progress bar */
+    .p-progress { margin-bottom: 20px; }
+    .p-progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-faint); margin-bottom: 6px; }
+    .p-progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .p-progress-fill { height: 100%; background: var(--btn-bg); border-radius: 3px; transition: width 0.4s; }
 
-    .pl-sheet-table { width: 100%; border-collapse: collapse; }
-    .pl-sheet-table th { text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #a09890; padding: 8px 10px; border-bottom: 1px solid #e4ddd4; }
-    .pl-sheet-table td { padding: 11px 10px; border-bottom: 1px solid #ffffff; font-size: 14px; color: #57524c; }
-    .pl-sheet-table td:first-child { color: #1c1917; font-weight: 500; }
-    .pl-empty { text-align: center; padding: 40px; color: #a09890; font-style: italic; font-size: 14px; }
-
-    .pl-hidden { display: none !important; }
-
-    .pl-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #f7f5f2; border-top: 1px solid #1a1a1a; display: flex; justify-content: space-around; padding: 8px 0 max(8px, env(safe-area-inset-bottom)); z-index: 100; }
-    .pl-nav a { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; color: #a09890; font-size: 10px; font-weight: 500; padding: 4px 12px; }
-    .pl-nav a.active, .pl-nav a:hover { color: #f77f00; }
-    .pl-nav-icon { font-size: 20px; }
+    .p-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0 max(8px,env(safe-area-inset-bottom)); z-index: 100; }
+    .p-nav a { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; color: var(--text-faint); font-size: 10px; font-weight: 500; padding: 4px 12px; -webkit-tap-highlight-color: transparent; }
+    .p-nav a.active { color: var(--accent); }
+    .p-nav-icon { font-size: 20px; }
   </style>
 </head>
 <body>
-
-  <div class="pl-hero">
-    <div class="pl-hi">
-      <a href="/potlucks" class="pl-back">← Potlucks</a>
+  <div class="p-hero">
+    <div class="p-hi">
+      <a href="/potlucks" class="p-back">← Potlucks</a>
       <h1>{potluck.title}</h1>
-      <div class="pl-meta">
+      <div class="p-meta">
         {potluck.date_label && <span>📅 {potluck.date_label}{potluck.time_label ? ` · ${potluck.time_label}` : ''}<br/></span>}
         {potluck.location && <span>📍 {potluck.location}{potluck.location_detail ? ` · ${potluck.location_detail}` : ''}</span>}
       </div>
-      <div class="pl-stats">
-        <span class="pl-pill">👥 {totalGuests} {totalGuests === 1 ? 'person' : 'people'} coming</span>
-        <span class="pl-pill">🍽 {signups.filter((s:any)=>s.dish).length} dishes claimed</span>
+      <div id="p-countdown" class="p-countdown" style="display:none;margin-bottom:12px"></div>
+      <div class="p-stats">
+        <span class="p-pill">👥 {totalGuests} coming</span>
+        <span class="p-pill">🍽 {attending.filter((s:any)=>s.dish).length} dishes</span>
+        <span class="p-pill">💬 {comments.length} comments</span>
+      </div>
+      <div class="p-share">
+        <button class="p-share-btn" id="copy-link">🔗 Copy link</button>
+        <a class="p-share-btn" id="share-fb" href="#" target="_blank">📘 Facebook</a>
+        <a class="p-share-btn" id="share-reddit" href="#" target="_blank">🤙 Reddit</a>
       </div>
     </div>
   </div>
 
-  <div class="pl-page">
-    <div class="pl-tabs">
-      <button class="pl-tab active" id="tab-signup">Sign Up</button>
-      <button class="pl-tab" id="tab-sheet">Who's Bringing What</button>
+  <div class="p-page">
+    <div class="p-tabs">
+      <button class="p-tab active" id="tab-signup">Sign Up</button>
+      <button class="p-tab" id="tab-sheet">Who's Coming</button>
+      <button class="p-tab" id="tab-comments">Comments {comments.length > 0 ? `(${comments.length})` : ''}</button>
     </div>
 
     <!-- SIGN UP -->
-    <div class="pl-panel active" id="panel-signup">
+    <div class="p-panel active" id="panel-signup">
       <div id="form-wrap">
-        <div class="pl-nudge"><strong>No dish? No problem.</strong><br/>Show up anyway — there's always more than enough.</div>
+        <div class="p-nudge"><strong>No dish? No problem.</strong><br/>Show up anyway — there's always more than enough.</div>
 
-        <div class="pl-q">Are you coming?</div>
-        <div class="pl-rsvp-row">
-          <button type="button" class="pl-rsvp-btn yes" id="rsvp-yes">✅ Yes, I'm in!</button>
-          <button type="button" class="pl-rsvp-btn no" id="rsvp-no">❌ Can't make it</button>
+        <div class="p-q">Are you coming?</div>
+        <div class="p-rsvp">
+          <button type="button" class="p-rsvp-btn yes" id="rsvp-yes">✅ Yes, I'm in!</button>
+          <button type="button" class="p-rsvp-btn no" id="rsvp-no">❌ Can't make it</button>
         </div>
-        <div class="err pl-hidden" id="e-rsvp" style="font-size:12px;color:#dc2626;margin-top:-20px;margin-bottom:16px">Let us know either way!</div>
+        <div class="p-err" id="e-rsvp">Let us know either way!</div>
 
-        <div id="dish-section" class="pl-hidden">
-          <div class="pl-q">What are you bringing?</div>
-          <p class="pl-sub">Tap one or type your own below. No limits — more is always better!</p>
+        <div id="attending-fields" class="p-hidden">
+          <!-- Food / Donate toggle -->
+          <div class="p-q">What are you bringing?</div>
+          <p class="p-sub">Bring food or donate — totally up to you.</p>
+          <div class="p-toggle">
+            <button type="button" class="p-toggle-btn food-active" id="toggle-food">🍽 I'll bring food</button>
+            <button type="button" class="p-toggle-btn" id="toggle-donate">💙 I'd rather donate</button>
+          </div>
 
-          {catEntries.map(([cat, catSlots]) => (
-            <div>
-              <div class="pl-cat-head">{cat}</div>
-              <div class="pl-grid">
-                {catSlots.map((slot: any) => {
-                  const isFull = slot.claimed >= slot.max_claims;
-                  const left = slot.max_claims - slot.claimed;
-                  const pct = Math.round((slot.claimed / slot.max_claims) * 100);
-                  return (
-                    <div
-                      class="pl-slot"
-                      data-dish={slot.suggestion}
-                      data-cat={cat}
-                      data-full="false"
-                    >
-                      <div class="pl-slot-name">{slot.suggestion}</div>
-                      <div class="pl-slot-foot">
-                        {slot.claimed > 0 && <span style="font-size:11px;color:#a09890">{slot.claimed} bringing this</span>}
-                        <span class="pl-check">✓</span>
+          <!-- Food panel -->
+          <div id="food-panel">
+            {catEntries.length > 0 && catEntries.map(([cat, catSlots]) => (
+              <div>
+                <div class="p-cat-head">{cat}</div>
+                <div class="p-grid">
+                  {catSlots.map((slot: any) => (
+                    <div class="p-slot" data-dish={slot.suggestion} data-cat={cat}>
+                      <div class="p-slot-name">{slot.suggestion}</div>
+                      <div class="p-slot-foot">
+                        {slot.claimed > 0 && <span>{slot.claimed} bringing this</span>}
+                        <span class="p-check">✓</span>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
+            ))}
+            <div class="p-picked" id="picked-bar">
+              <span class="p-picked-text" id="picked-text"></span>
+              <button class="p-picked-clear" id="picked-clear">✕</button>
             </div>
-          ))}
-
-          <div class="pl-picked" id="picked-bar">
-            <span class="pl-picked-text" id="picked-text"></span>
-            <button class="pl-picked-clear" id="picked-clear">✕</button>
+            <div class="p-field" style="margin-top:12px">
+              <label>Or type something different <span class="opt">(optional)</span></label>
+              <input type="text" id="f-dish" class="p-input" placeholder="e.g. Crawfish étouffée, anything goes!"/>
+            </div>
           </div>
 
-          <div class="pl-field" style="margin-top:12px">
-            <label style="font-size:13px;color:#57524c;font-weight:500;display:block;margin-bottom:6px">Or type something different</label>
-            <input type="text" id="f-dish-custom" class="pl-input" placeholder="e.g. Crawfish étouffée, anything goes!"/>
+          <!-- Donate panel -->
+          <div class="p-donate-panel" id="donate-panel">
+            <div class="p-donate-title">Donate instead 💙</div>
+            <div class="p-donate-sub">We'll use it to cover a dish. Any amount helps!</div>
+            <div id="venmo-hidden"></div>
+            <button type="button" id="show-venmo-btn"
+              style="display:flex;align-items:center;gap:10px;background:#3d95ce;color:#fff;padding:11px 16px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;width:100%;">
+              <span style="font-size:20px">💙</span>Tap to donate via Venmo
+            </button>
           </div>
-          <div class="pl-div"></div>
-        </div>
 
-        <div class="pl-field">
-          <label>What's your name? <span style="color:#f77f00">*</span></label>
-          <input type="text" id="f-name" class="pl-input" placeholder="First name works"/>
-          <div class="err" id="e-name" style="font-size:12px;color:#dc2626;margin-top:5px;display:none">We need your name!</div>
-        </div>
-        <div class="pl-field">
-          <label>Email address <span class="opt">(optional — for confirmation &amp; reminders)</span></label>
-          <input type="email" id="f-email" class="pl-input" placeholder="you@example.com"/>
-          <div style="font-size:12px;color:#a09890;margin-top:5px;">We'll send you a confirmation and a reminder the day before. No spam, ever.</div>
-        </div>
+          <div class="p-div"></div>
 
-        <div class="pl-field">
-          <label>How many people are you bringing? <span class="opt">(including yourself)</span></label>
-          <div class="pl-guest-row">
-            <button type="button" class="pl-g-btn" id="g-minus">−</button>
-            <div class="pl-g-count" id="guest-count">1</div>
-            <button type="button" class="pl-g-btn" id="g-plus">+</button>
-            <div class="pl-g-note" id="guest-note">just me</div>
+          <!-- Guest count -->
+          <div class="p-field">
+            <label>How many people are you bringing? <span class="opt">(including yourself)</span></label>
+            <div class="p-guest-row">
+              <button type="button" class="p-g-btn" id="g-minus">−</button>
+              <div class="p-g-count" id="guest-count">1</div>
+              <button type="button" class="p-g-btn" id="g-plus">+</button>
+              <div class="p-g-note" id="guest-note">just me</div>
+            </div>
+          </div>
+
+          <!-- Helpers -->
+          <div class="p-field">
+            <label>Can you help out? <span class="opt">(optional)</span></label>
+            <div class="p-checks">
+              <div class="p-check-item" data-extra="plates"><div class="p-check-box"></div><div class="p-check-txt">I'll bring plates, napkins & cups<span class="p-check-sub">Easy to forget, always needed</span></div></div>
+              <div class="p-check-item" data-extra="cooler"><div class="p-check-box"></div><div class="p-check-txt">I'll bring a cooler with drinks or ice</div></div>
+              <div class="p-check-item" data-extra="seating"><div class="p-check-box"></div><div class="p-check-txt">I'll bring chairs or a blanket<span class="p-check-sub">Open grass at Cheeseman</span></div></div>
+              <div class="p-check-item" data-extra="cleanup"><div class="p-check-box"></div><div class="p-check-txt">I can help clean up at the end</div></div>
+            </div>
           </div>
         </div>
 
-        <div class="pl-field">
+        <!-- About you -->
+        <div class="p-div"></div>
+        <div class="p-field">
+          <label>What's your name? *</label>
+          <input type="text" id="f-name" class="p-input" placeholder="First name works"/>
+          <div class="p-err" id="e-name">We need your name!</div>
+        </div>
+        <div class="p-field">
+          <label>Email address <span class="opt">(for confirmation & reminders)</span></label>
+          <input type="email" id="f-email" class="p-input" placeholder="you@example.com"/>
+          <div style="font-size:12px;color:var(--text-faint);margin-top:5px">We'll send you a confirmation and a reminder the day before. No spam.</div>
+        </div>
+        <div class="p-field">
           <label>How did you hear about this? <span class="opt">(optional)</span></label>
-          <select id="f-platform" class="pl-select">
+          <select id="f-platform" class="p-select">
             <option value="">Pick one…</option>
             <option value="Discord">Discord — Denver Social Community</option>
             <option value="Facebook">Facebook</option>
@@ -266,80 +360,49 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
             <option value="Other">Something else</option>
           </select>
         </div>
-
-        <div class="pl-field">
-          <label>Any food allergies we should know about? <span class="opt">(optional)</span></label>
-          <textarea id="f-dietary" class="pl-textarea" placeholder="e.g. gluten-free, nut allergy, vegan…"></textarea>
+        <div class="p-field">
+          <label>Any food allergies? <span class="opt">(optional)</span></label>
+          <textarea id="f-dietary" class="p-textarea" placeholder="Gluten-free, nut allergy, vegan… Leave blank if none."></textarea>
         </div>
 
-        <div class="pl-field">
-          <label>Can you help out? <span class="opt">(optional)</span></label>
-          <div class="pl-checks">
-            <div class="pl-check-item" data-extra="plates">
-              <div class="pl-check-box"></div>
-              <div class="pl-check-txt">I'll bring plates, napkins &amp; cups<span class="pl-check-sub">Easy to forget, always needed</span></div>
-            </div>
-            <div class="pl-check-item" data-extra="cooler">
-              <div class="pl-check-box"></div>
-              <div class="pl-check-txt">I'll bring a cooler with drinks or ice</div>
-            </div>
-            <div class="pl-check-item" data-extra="seating">
-              <div class="pl-check-box"></div>
-              <div class="pl-check-txt">I'll bring chairs or a blanket<span class="pl-check-sub">Open grass at Cheeseman</span></div>
-            </div>
-            <div class="pl-check-item" data-extra="cleanup">
-              <div class="pl-check-box"></div>
-              <div class="pl-check-txt">I can help clean up at the end</div>
-            </div>
-          </div>
-
-
-        </div>
-
-        <!-- Honeypot - hidden from humans, bots fill it -->
         <input type="text" name="_gotcha" id="_gotcha" style="display:none;position:absolute;left:-9999px" tabindex="-1" autocomplete="off"/>
-
-        <!-- Turnstile bot check -->
         <div class="cf-turnstile" data-sitekey="0x4AAAAAADLDABpXrHXcFpVB" data-theme="light" data-size="flexible" style="margin-bottom:12px"></div>
-
-        <button type="button" class="pl-submit" id="submit-btn">Count me in! 🌞</button>
+        <button type="button" class="p-submit" id="submit-btn">Count me in! 🌞</button>
       </div>
 
-      <div id="success-wrap" class="pl-result pl-hidden">
-        <span class="pl-result-emoji">🎉</span>
-        <div class="pl-result-title" id="success-title">You're in!</div>
-        <p class="pl-result-sub">See you at Cheeseman Park on May 30th, noon to 4pm.</p>
-        <div class="pl-result-card" id="success-detail"></div>
-
-        <div id="contact-info" style="display:none;margin-top:20px;background:#fff8ec;border:1.5px solid #fcd5a0;border-radius:14px;padding:16px 18px;text-align:left;width:100%">
-          <div style="font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Questions? Get in touch</div>
+      <div id="success-wrap" class="p-result p-hidden">
+        <span class="p-result-emoji">🎉</span>
+        <div class="p-result-title" id="success-title">You're in!</div>
+        <p class="p-result-sub">See you there!</p>
+        <div class="p-result-card" id="success-detail"></div>
+        <div id="contact-info" style="display:none;margin-top:16px;background:var(--accent-dim);border:1.5px solid var(--border);border-radius:14px;padding:16px;text-align:left">
+          <div style="font-size:12px;font-weight:700;color:var(--accent-text);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Questions? Get in touch</div>
           <div id="contact-phone"></div>
           <div id="contact-discord" style="margin-top:10px"></div>
+          <div id="venmo-btn" style="margin-top:10px"></div>
         </div>
-
-        <button type="button" class="pl-result-btn" id="add-another">Add someone else</button>
+        <button type="button" class="p-result-btn" id="add-another">Add someone else</button>
       </div>
-
-      <div id="error-wrap" class="pl-result pl-hidden">
-        <span class="pl-result-emoji">😬</span>
-        <div class="pl-result-title">Something went wrong</div>
-        <p class="pl-result-sub">Sorry about that. Give it another try.</p>
-        <button type="button" class="pl-result-btn" id="try-again">Try again</button>
+      <div id="error-wrap" class="p-result p-hidden">
+        <span class="p-result-emoji">😬</span>
+        <div class="p-result-title">Something went wrong</div>
+        <p class="p-result-sub">Give it another try.</p>
+        <button type="button" class="p-result-btn" id="try-again">Try again</button>
       </div>
     </div>
 
-    <!-- WHO'S BRINGING WHAT -->
-    <div class="pl-panel" id="panel-sheet">
-      {signups.length === 0
-        ? <div class="pl-empty">Nobody's signed up yet — be the first!</div>
+    <!-- WHO'S COMING -->
+    <div class="p-panel" id="panel-sheet">
+      {attending.length === 0
+        ? <div class="p-empty">Nobody's signed up yet — be the first!</div>
         : (
-          <table class="pl-sheet-table">
+          <table class="p-sheet-table">
             <thead><tr><th>Name</th><th>Bringing</th><th>People</th></tr></thead>
             <tbody>
-              {signups.map((s: any) => (
+              {attending.map((s:any) => (
                 <tr>
                   <td>{s.name}</td>
-                  <td>{s.dish || <em style="color:#a09890">Not sure yet</em>}</td>
+                  <td>{s.dish || <em style="color:var(--text-faint)">Not sure yet</em>}</td>
                   <td>{s.guest_count || 1}</td>
                 </tr>
               ))}
@@ -347,36 +410,80 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
           </table>
         )
       }
+      <div style="text-align:center;margin-top:20px">
+        <a href={`/api/potluck-export?id=${id}`} style="font-size:13px;color:var(--accent-text);text-decoration:none;font-weight:500">⬇ Download sign-up list (CSV)</a>
+      </div>
+    </div>
+
+    <!-- COMMENTS -->
+    <div class="p-panel" id="panel-comments">
+      <div style="margin-bottom:20px">
+        <div class="p-field">
+          <label>Leave a comment</label>
+          <input type="text" id="c-name" class="p-input" placeholder="Your name" style="margin-bottom:8px"/>
+          <textarea id="c-text" class="p-textarea" placeholder="So excited! Can't wait 🎉" style="margin-bottom:8px"></textarea>
+          <button type="button" id="post-comment" class="p-submit" style="font-size:14px;padding:12px">Post comment</button>
+        </div>
+      </div>
+      <div id="comments-list">
+        {comments.length === 0
+          ? <div class="p-empty">No comments yet — be the first!</div>
+          : comments.map((c:any) => (
+            <div class="p-comment">
+              <div class="p-comment-name">{c.name}</div>
+              <div class="p-comment-text">{c.comment}</div>
+              <div class="p-comment-time">{new Date(c.created_at).toLocaleDateString('en-US', {month:'short',day:'numeric'})}</div>
+            </div>
+          ))
+        }
+      </div>
     </div>
   </div>
 
-  <nav class="pl-nav">
-    <a href="/"><span class="pl-nav-icon">🏠</span>Home</a>
-    <a href="/events"><span class="pl-nav-icon">📅</span>Events</a>
-    <a href="/potlucks" class="active"><span class="pl-nav-icon">🍽</span>Potlucks</a>
-    <a href="/recs"><span class="pl-nav-icon">⭐</span>Recs</a>
+  <nav class="p-nav">
+    <a href="/"><span class="p-nav-icon">🏠</span>Home</a>
+    <a href="/events"><span class="p-nav-icon">📅</span>Events</a>
+    <a href="/potlucks" class="active"><span class="p-nav-icon">🍽</span>Potlucks</a>
+    <a href="/recs"><span class="p-nav-icon">⭐</span>Recs</a>
   </nav>
 
-  <script define:vars={{ potluckId: id }}>
-    // State
-    var rsvp = '';
-    var guestCount = 1;
-    var extras = { plates: false, cooler: false, seating: false, cleanup: false };
-    var selectedDish = '';
-    var selectedCat = '';
+  <script define:vars={{ potluckId: id, eventDate, eventTime }}>
+    var rsvp = '', guestCount = 1, extras = {plates:false,cooler:false,seating:false,cleanup:false};
+    var selectedDish = '', selectedCat = '', donating = false;
+
+    // Countdown
+    if (eventDate) {
+      var dateStr = eventDate + ' 2026 ' + (eventTime ? eventTime.split('–')[0] : '12:00pm');
+      var d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        var diff = Math.ceil((d - Date.now()) / 86400000);
+        var el = document.getElementById('p-countdown');
+        if (diff > 0) { el.textContent = '⏳ ' + diff + ' day' + (diff !== 1 ? 's' : '') + ' away'; el.style.display = 'inline-flex'; }
+        else if (diff === 0) { el.textContent = '🎉 Today!'; el.style.display = 'inline-flex'; }
+      }
+    }
+
+    // Share buttons
+    var url = window.location.href;
+    var title = document.querySelector('h1').textContent;
+    document.getElementById('copy-link').addEventListener('click', function() {
+      navigator.clipboard.writeText(url).then(function() {
+        var btn = document.getElementById('copy-link');
+        btn.textContent = '✓ Copied!';
+        setTimeout(function() { btn.textContent = '🔗 Copy link'; }, 2000);
+      });
+    });
+    document.getElementById('share-fb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
+    document.getElementById('share-reddit').href = 'https://reddit.com/submit?url=' + encodeURIComponent(url) + '&title=' + encodeURIComponent(title);
 
     // Tabs
-    document.getElementById('tab-signup').addEventListener('click', function() {
-      document.getElementById('tab-signup').classList.add('active');
-      document.getElementById('tab-sheet').classList.remove('active');
-      document.getElementById('panel-signup').classList.add('active');
-      document.getElementById('panel-sheet').classList.remove('active');
-    });
-    document.getElementById('tab-sheet').addEventListener('click', function() {
-      document.getElementById('tab-sheet').classList.add('active');
-      document.getElementById('tab-signup').classList.remove('active');
-      document.getElementById('panel-sheet').classList.add('active');
-      document.getElementById('panel-signup').classList.remove('active');
+    ['signup','sheet','comments'].forEach(function(t, i) {
+      document.getElementById('tab-' + t).addEventListener('click', function() {
+        document.querySelectorAll('.p-tab').forEach(function(el) { el.classList.remove('active'); });
+        document.querySelectorAll('.p-panel').forEach(function(el) { el.classList.remove('active'); });
+        document.getElementById('tab-' + t).classList.add('active');
+        document.getElementById('panel-' + t).classList.add('active');
+      });
     });
 
     // RSVP
@@ -384,25 +491,42 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
       rsvp = 'yes';
       document.getElementById('rsvp-yes').classList.add('active');
       document.getElementById('rsvp-no').classList.remove('active');
-      document.getElementById('dish-section').classList.remove('pl-hidden');
-      document.getElementById('e-rsvp').classList.add('pl-hidden');
+      document.getElementById('attending-fields').classList.remove('p-hidden');
+      document.getElementById('e-rsvp').style.display = 'none';
       document.getElementById('submit-btn').textContent = 'Count me in! 🌞';
     });
     document.getElementById('rsvp-no').addEventListener('click', function() {
       rsvp = 'no';
       document.getElementById('rsvp-no').classList.add('active');
       document.getElementById('rsvp-yes').classList.remove('active');
-      document.getElementById('dish-section').classList.add('pl-hidden');
-      document.getElementById('e-rsvp').classList.add('pl-hidden');
+      document.getElementById('attending-fields').classList.add('p-hidden');
+      document.getElementById('e-rsvp').style.display = 'none';
       document.getElementById('submit-btn').textContent = "Submit (we'll miss you) 👋";
     });
 
-    // Slot picker
-    document.querySelectorAll('.pl-slot').forEach(function(el) {
+    // Toggle food/donate
+    document.getElementById('toggle-food').addEventListener('click', function() {
+      donating = false;
+      document.getElementById('food-panel').style.display = 'block';
+      document.getElementById('donate-panel').style.display = 'none';
+      document.getElementById('toggle-food').classList.add('food-active');
+      document.getElementById('toggle-food').classList.remove('donate-active');
+      document.getElementById('toggle-donate').classList.remove('food-active','donate-active');
+    });
+    document.getElementById('toggle-donate').addEventListener('click', function() {
+      donating = true;
+      document.getElementById('donate-panel').style.display = 'block';
+      document.getElementById('food-panel').style.display = 'none';
+      document.getElementById('toggle-donate').classList.add('donate-active');
+      document.getElementById('toggle-donate').classList.remove('food-active');
+      document.getElementById('toggle-food').classList.remove('food-active','donate-active');
+    });
+
+    // Slots
+    document.querySelectorAll('.p-slot').forEach(function(el) {
       el.addEventListener('click', function() {
-        if (el.dataset.full === 'true') return;
         var already = el.classList.contains('selected');
-        document.querySelectorAll('.pl-slot').forEach(function(c) { c.classList.remove('selected'); });
+        document.querySelectorAll('.p-slot').forEach(function(c) { c.classList.remove('selected'); });
         if (!already) {
           el.classList.add('selected');
           selectedDish = el.dataset.dish;
@@ -416,7 +540,7 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
       });
     });
     document.getElementById('picked-clear').addEventListener('click', function() {
-      document.querySelectorAll('.pl-slot').forEach(function(c) { c.classList.remove('selected'); });
+      document.querySelectorAll('.p-slot').forEach(function(c) { c.classList.remove('selected'); });
       selectedDish = ''; selectedCat = '';
       document.getElementById('picked-bar').classList.remove('show');
     });
@@ -425,153 +549,117 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
     document.getElementById('g-minus').addEventListener('click', function() {
       guestCount = Math.max(1, guestCount - 1);
       document.getElementById('guest-count').textContent = String(guestCount);
-      document.getElementById('guest-note').textContent = guestCount === 1 ? 'just me' : 'me + ' + (guestCount - 1) + ' other' + (guestCount > 2 ? 's' : '');
+      document.getElementById('guest-note').textContent = guestCount === 1 ? 'just me' : 'me + ' + (guestCount-1) + ' other' + (guestCount > 2 ? 's' : '');
     });
     document.getElementById('g-plus').addEventListener('click', function() {
       guestCount = Math.min(10, guestCount + 1);
       document.getElementById('guest-count').textContent = String(guestCount);
-      document.getElementById('guest-note').textContent = guestCount === 1 ? 'just me' : 'me + ' + (guestCount - 1) + ' other' + (guestCount > 2 ? 's' : '');
+      document.getElementById('guest-note').textContent = guestCount === 1 ? 'just me' : 'me + ' + (guestCount-1) + ' other' + (guestCount > 2 ? 's' : '');
     });
 
     // Checkboxes
-    document.querySelectorAll('.pl-check-item').forEach(function(el) {
+    document.querySelectorAll('.p-check-item').forEach(function(el) {
       el.addEventListener('click', function() {
-        var key = el.dataset.extra;
-        extras[key] = !extras[key];
+        var key = el.dataset.extra; extras[key] = !extras[key];
         el.classList.toggle('active', extras[key]);
-        el.querySelector('.pl-check-box').textContent = extras[key] ? '✓' : '';
+        el.querySelector('.p-check-box').textContent = extras[key] ? '✓' : '';
       });
     });
 
-    // Submit
-    document.getElementById('submit-btn').addEventListener('click', async function() {
-      var nameVal = document.getElementById('f-name').value.trim();
-      var ok = true;
-
-      if (!rsvp) {
-        document.getElementById('e-rsvp').classList.remove('pl-hidden');
-        ok = false;
-      }
-      if (!nameVal) {
-        document.getElementById('e-name').style.display = 'block';
-        ok = false;
-      } else {
-        document.getElementById('e-name').style.display = 'none';
-      }
-      if (!ok) return;
-
-      var btn = document.getElementById('submit-btn');
-      btn.disabled = true;
-      btn.textContent = 'Saving…';
-
-      var platform = document.getElementById('f-platform').value;
-      var dietary = document.getElementById('f-dietary').value.trim();
-      var payload = {
-        potluckId: String(potluckId),
-        _gotcha: honeypot,
-        _turnstile: turnstileToken,
-        name: nameVal,
-        handle: '',
-        platforms: platform,
-        rsvp: rsvp,
-        guestCount: String(guestCount),
-        dish: rsvp === 'yes' ? (donating ? '' : (selectedDish || (document.getElementById('f-dish') ? document.getElementById('f-dish').value.trim() : ''))) : '',
-        dishCategory: rsvp === 'yes' ? selectedCat : '',
-        dietary: dietary,
-        utensils: extras.plates,
-        earlyArrive: extras.cooler,
-        seating: extras.seating
-      };
-
-      try {
-        var res = await fetch('/api/potluck', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        var data = await res.json();
-        if (data.ok) {
-          document.getElementById('form-wrap').classList.add('pl-hidden');
-          document.getElementById('success-wrap').classList.remove('pl-hidden');
-          document.getElementById('success-title').textContent = "You're in, " + nameVal.split(' ')[0] + '!';
-          var d = '';
-          if (selectedDish) d += '🍽 ' + selectedDish + '<br/>';
-          d += '👥 ' + (guestCount === 1 ? 'Just you' : 'You + ' + (guestCount - 1) + ' other' + (guestCount > 2 ? 's' : '')) + '<br/>';
-          if (extras.utensils) d += '🥄 Bringing utensils<br/>';
-          if (extras.earlyArrive) d += '⏰ Arriving early<br/>';
-          if (extras.seating) d += '🪑 Bringing chairs or a blanket';
-          document.getElementById('success-detail').innerHTML = d;
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else if (data.error === 'slot_full') {
-          btn.disabled = false;
-          btn.textContent = 'Count me in! 🌞';
-          alert('Something went wrong with that dish. Try again.');
-          document.querySelectorAll('.pl-slot').forEach(function(c) { c.classList.remove('selected'); });
-          selectedDish = ''; selectedCat = '';
-          document.getElementById('picked-bar').classList.remove('show');
-        } else {
-          document.getElementById('form-wrap').classList.add('pl-hidden');
-          document.getElementById('error-wrap').classList.remove('pl-hidden');
-        }
-      } catch(e) {
-        document.getElementById('form-wrap').classList.add('pl-hidden');
-        document.getElementById('error-wrap').classList.remove('pl-hidden');
-      }
-    });
-
-    // Result buttons
-    document.getElementById('add-another').addEventListener('click', function() { location.reload(); });
-
-    // Food / donate toggle
-    var donating = false;
-    document.getElementById('toggle-food').addEventListener('click', function() {
-      donating = false;
-      document.getElementById('food-panel').style.display = 'block';
-      document.getElementById('donate-panel').style.display = 'none';
-      document.getElementById('toggle-food').style.borderColor = '#f77f00';
-      document.getElementById('toggle-food').style.background = '#fff8ec';
-      document.getElementById('toggle-food').style.color = '#c2410c';
-      document.getElementById('toggle-donate').style.borderColor = '#e4ddd4';
-      document.getElementById('toggle-donate').style.background = '#ffffff';
-      document.getElementById('toggle-donate').style.color = '#57524c';
-    });
-    document.getElementById('toggle-donate').addEventListener('click', function() {
-      donating = true;
-      document.getElementById('donate-panel').style.display = 'block';
-      document.getElementById('food-panel').style.display = 'none';
-      document.getElementById('toggle-donate').style.borderColor = '#3d95ce';
-      document.getElementById('toggle-donate').style.background = '#eff8ff';
-      document.getElementById('toggle-donate').style.color = '#1d4ed8';
-      document.getElementById('toggle-food').style.borderColor = '#e4ddd4';
-      document.getElementById('toggle-food').style.background = '#ffffff';
-      document.getElementById('toggle-food').style.color = '#57524c';
-    });
-
-    // Tap to reveal Venmo — fetches from API, never in HTML source
+    // Venmo reveal
     document.getElementById('show-venmo-btn').addEventListener('click', async function() {
       var btn = document.getElementById('show-venmo-btn');
       var box = document.getElementById('venmo-hidden');
-      if (box.style.display === 'block') return; // already revealed
+      if (box.children.length > 0) return;
       btn.textContent = 'Loading…';
       try {
         var res = await fetch('/api/donate-info');
         var data = await res.json();
         if (data.venmo) {
           box.innerHTML = '<a href="https://venmo.com/u/' + data.venmo + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;background:#3d95ce;color:#fff;padding:11px 16px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:600;margin-top:8px;"><span style="font-size:20px;">💙</span>Pay @' + data.venmo + ' on Venmo</a>';
-          box.style.display = 'block';
           btn.style.display = 'none';
         }
-      } catch(e) {
-        btn.textContent = 'Tap to donate via Venmo';
+      } catch(e) { btn.textContent = 'Tap to donate via Venmo'; }
+    });
+
+    // Submit
+    document.getElementById('submit-btn').addEventListener('click', async function() {
+      var nameVal = document.getElementById('f-name').value.trim();
+      var ok = true;
+      if (!rsvp) { document.getElementById('e-rsvp').style.display = 'block'; ok = false; } else document.getElementById('e-rsvp').style.display = 'none';
+      if (!nameVal) { document.getElementById('e-name').style.display = 'block'; ok = false; } else document.getElementById('e-name').style.display = 'none';
+      if (!ok) return;
+      var btn = document.getElementById('submit-btn'); btn.disabled = true; btn.textContent = 'Saving…';
+      var dishVal = donating ? '' : (selectedDish || document.getElementById('f-dish').value.trim());
+      var honeypot = document.getElementById('_gotcha').value;
+      var turnstileEl = document.querySelector('[name="cf-turnstile-response"]');
+      var turnstileToken = turnstileEl ? turnstileEl.value : '';
+      var payload = {
+        potluckId: String(potluckId), _gotcha: honeypot, _turnstile: turnstileToken,
+        name: nameVal, email: document.getElementById('f-email').value.trim(),
+        handle: '', platforms: document.getElementById('f-platform').value,
+        rsvp: rsvp, guestCount: String(guestCount),
+        dish: dishVal, dishCategory: selectedCat,
+        dietary: document.getElementById('f-dietary').value.trim(),
+        utensils: extras.plates, earlyArrive: extras.cooler, seating: extras.seating
+      };
+      try {
+        var res = await fetch('/api/potluck', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        var data = await res.json();
+        if (data.ok) {
+          document.getElementById('form-wrap').classList.add('p-hidden');
+          document.getElementById('success-wrap').classList.remove('p-hidden');
+          document.getElementById('success-title').textContent = "You're in, " + nameVal.split(' ')[0] + '!';
+          var d = '';
+          if (dishVal) d += '🍽 ' + dishVal + '<br/>';
+          if (donating) d += '💙 Donating instead<br/>';
+          d += '👥 ' + (guestCount === 1 ? 'Just you' : 'You + ' + (guestCount-1) + ' other' + (guestCount > 2 ? 's' : '')) + '<br/>';
+          if (extras.plates) d += '🍽 Bringing plates & cups<br/>';
+          if (extras.cooler) d += '🧊 Bringing a cooler<br/>';
+          if (extras.seating) d += '🪑 Bringing chairs / blanket<br/>';
+          if (extras.cleanup) d += '🧹 Helping clean up';
+          document.getElementById('success-detail').innerHTML = d;
+          if (data.contact) {
+            var ci = document.getElementById('contact-info');
+            if (data.contact.venmo) document.getElementById('venmo-btn').innerHTML = '<a href="https://venmo.com/u/' + data.contact.venmo + '" target="_blank" style="display:flex;align-items:center;gap:8px;color:#3d95ce;text-decoration:none;font-size:13px;font-weight:500;margin-top:4px;"><span>💙</span>@' + data.contact.venmo + '</a>';
+            if (data.contact.phone) document.getElementById('contact-phone').innerHTML = '<a href="sms:' + data.contact.phone.replace(/[^\d]/g,'') + '" style="display:flex;align-items:center;gap:8px;text-decoration:none;"><span style="font-size:20px">📱</span><div><div style="font-size:14px;font-weight:600;color:var(--text)">Text me</div><div style="font-size:13px;color:var(--text-faint)">' + data.contact.phone + '</div></div></a>';
+            if (data.contact.discord) document.getElementById('contact-discord').innerHTML = '<a href="' + (data.contact.discord_url||'#') + '" target="_blank" style="display:flex;align-items:center;gap:8px;text-decoration:none;"><span style="font-size:20px">🎮</span><div><div style="font-size:14px;font-weight:600;color:var(--text)">Discord</div><div style="font-size:13px;color:var(--text-faint)">' + data.contact.discord + '</div></div></a>';
+            ci.style.display = 'block';
+          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          document.getElementById('form-wrap').classList.add('p-hidden');
+          document.getElementById('error-wrap').classList.remove('p-hidden');
+        }
+      } catch { document.getElementById('form-wrap').classList.add('p-hidden'); document.getElementById('error-wrap').classList.remove('p-hidden'); }
+    });
+
+    document.getElementById('add-another').addEventListener('click', function() { location.reload(); });
+    document.getElementById('try-again').addEventListener('click', function() {
+      document.getElementById('form-wrap').classList.remove('p-hidden');
+      document.getElementById('error-wrap').classList.add('p-hidden');
+      var btn = document.getElementById('submit-btn'); btn.disabled = false; btn.textContent = 'Count me in! 🌞';
+    });
+
+    // Comments
+    document.getElementById('post-comment').addEventListener('click', async function() {
+      var name = document.getElementById('c-name').value.trim();
+      var text = document.getElementById('c-text').value.trim();
+      if (!name || !text) return;
+      var btn = document.getElementById('post-comment'); btn.disabled = true; btn.textContent = 'Posting…';
+      var res = await fetch('/api/potluck-comments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({potluckId: String(potluckId), name, comment: text}) });
+      var data = await res.json();
+      if (data.ok) {
+        var list = document.getElementById('comments-list');
+        var el = document.createElement('div'); el.className = 'p-comment';
+        el.innerHTML = '<div class="p-comment-name">' + name + '</div><div class="p-comment-text">' + text + '</div><div class="p-comment-time">Just now</div>';
+        if (list.querySelector('.p-empty')) list.innerHTML = '';
+        list.insertBefore(el, list.firstChild);
+        document.getElementById('c-name').value = '';
+        document.getElementById('c-text').value = '';
+        btn.disabled = false; btn.textContent = 'Post comment';
       }
     });
-    document.getElementById('try-again').addEventListener('click', function() {
-      document.getElementById('form-wrap').classList.remove('pl-hidden');
-      document.getElementById('error-wrap').classList.add('pl-hidden');
-      document.getElementById('submit-btn').disabled = false;
-      document.getElementById('submit-btn').textContent = 'Count me in! 🌞';
-    });
   </script>
-
 </body>
 </html>
