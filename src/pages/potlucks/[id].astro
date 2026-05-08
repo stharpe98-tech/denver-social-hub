@@ -297,11 +297,9 @@ const totalGuests = signups.reduce((sum: number, s: any) => sum + (parseInt(s.gu
           <div style="margin-top:16px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:14px 16px;">
             <div style="font-size:14px;font-weight:600;color:#15803d;margin-bottom:4px;">Rather donate and let us handle it?</div>
             <div style="font-size:13px;color:#57524c;margin-bottom:12px;">Totally fine — we'll cover your dish with the donation.</div>
-            <a href="https://venmo.com/u/beekeepseth" target="_blank" rel="noopener"
-              style="display:flex;align-items:center;gap:10px;background:#3d95ce;color:#fff;padding:11px 16px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:600;">
-              <span style="font-size:20px;">💙</span>
-              Pay via Venmo — @beekeepseth
-            </a>
+            <div id="venmo-btn" style="display:none">
+              <!-- Populated from API after submission — not visible to crawlers -->
+            </div>
           </div>
         </div>
 
