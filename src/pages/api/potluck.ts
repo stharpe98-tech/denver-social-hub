@@ -130,6 +130,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       phone: cfg.contact_phone || '',
       discord: cfg.contact_discord || '',
       discord_url: cfg.contact_discord_url || '',
+      venmo: cfg.venmo_handle || '',
     };
     return new Response(JSON.stringify({ ok: true, editUrl, contact }), { headers: { 'Content-Type': 'application/json' } });
   } catch (e: any) {
