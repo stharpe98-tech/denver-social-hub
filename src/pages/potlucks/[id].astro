@@ -353,77 +353,76 @@ const defaultTemplate = potluck.template || 'warm';
     <div class="pl-panel active" id="panel-signup">
       <div id="form-wrap">
 
-        <!-- Name -->
-        <div class="pl-field">
-          <label>What's your name? <span style="color:var(--accent)">*</span></label>
-          <input type="text" id="f-name" class="pl-input" placeholder="First name works"/>
-          <div class="pl-err" id="e-name">We need your name!</div>
-        </div>
-
-        <!-- Guest count -->
-        <div class="pl-field">
-          <label>How many people are you bringing? <span class="pl-opt">(including yourself)</span></label>
-          <div class="pl-guest-row">
-            <button type="button" class="pl-g-btn" id="g-minus">−</button>
-            <div class="pl-g-count" id="guest-count">1</div>
-            <button type="button" class="pl-g-btn" id="g-plus">+</button>
-            <div class="pl-g-note" id="guest-note">just me</div>
+        <!-- ── SECTION 1: About You ── -->
+        <div class="pl-section">
+          <div class="pl-section-label">👤 About You</div>
+          <div class="pl-field">
+            <label>Your name <span style="color:var(--accent)">*</span></label>
+            <input type="text" id="f-name" class="pl-input" placeholder="First name works"/>
+            <div class="pl-err" id="e-name">We need your name!</div>
+          </div>
+          <div class="pl-field" style="margin-bottom:0">
+            <label>How many people are you bringing? <span class="pl-opt">(including yourself)</span></label>
+            <div class="pl-guest-row">
+              <button type="button" class="pl-g-btn" id="g-minus">−</button>
+              <div class="pl-g-count" id="guest-count">1</div>
+              <button type="button" class="pl-g-btn" id="g-plus">+</button>
+              <div class="pl-g-note" id="guest-note">just me</div>
+            </div>
           </div>
         </div>
 
-        <div class="pl-div"></div>
+        <!-- ── SECTION 2: What Are You Bringing ── -->
+        <div class="pl-section">
+          <div class="pl-section-label">🍽 What Are You Bringing?</div>
+          <p class="pl-sub" style="margin-bottom:14px">Tap a suggestion or type your own. Bring anything — no limits!</p>
 
-        <!-- What are you bringing -->
-        <div class="pl-q">What are you bringing?</div>
-        <p class="pl-sub" style="margin-bottom:14px">Tap a suggestion or type your own. No limits!</p>
+          {/* Dish gap nudge */}
+          {(() => {
+            const catTotals = catEntries.map(([cat, catSlots]) => ({
+              cat, claimed: catSlots.reduce((sum:number, s:any) => sum + (s.claimed||0), 0)
+            }));
+            const empty = catTotals.filter(c => c.claimed === 0);
+            if (empty.length === 0) return null;
+            return (
+              <div style="background:var(--accent-dim);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--accent-txt)">
+                <strong>Still needed:</strong> {empty.map(c => c.cat.split(' ').slice(1).join(' ')).join(' · ')}
+              </div>
+            );
+          })()}
 
-        {catEntries.map(([cat, catSlots]) => (
-          <div>
-            <div class="pl-cat-head">{cat}</div>
-            <div class="pl-grid">
-              {catSlots.map((slot:any) => (
-                <div class="pl-slot" data-dish={slot.suggestion} data-cat={cat}>
-                  <div class="pl-slot-name">{slot.suggestion}</div>
-                  <div class="pl-slot-sub">
-                    <span>{slot.claimed > 0 ? `${slot.claimed} bringing this` : ''}</span>
-                    <span class="pl-slot-check">✓</span>
+          {catEntries.map(([cat, catSlots]) => (
+            <div>
+              <div class="pl-cat-head">{cat}</div>
+              <div class="pl-grid">
+                {catSlots.map((slot:any) => (
+                  <div class="pl-slot" data-dish={slot.suggestion} data-cat={cat}>
+                    <div class="pl-slot-name">{slot.suggestion}</div>
+                    <div class="pl-slot-sub">
+                      <span>{slot.claimed > 0 ? `${slot.claimed} bringing this` : ''}</span>
+                      <span class="pl-slot-check">✓</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+          ))}
+
+          <div class="pl-picked" id="picked-bar">
+            <span class="pl-picked-txt" id="picked-text"></span>
+            <button class="pl-picked-clear" id="picked-clear">✕</button>
           </div>
-        ))}
 
-        {/* Dish gap nudge */}
-        {(() => {
-          const catTotals = catEntries.map(([cat, catSlots]) => ({
-            cat, claimed: catSlots.reduce((sum:number, s:any) => sum + (s.claimed||0), 0)
-          }));
-          const empty = catTotals.filter(c => c.claimed === 0);
-          if (empty.length === 0) return null;
-          return (
-            <div style="background:var(--accent-dim);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin:12px 0;font-size:13px;color:var(--accent-txt)">
-              <strong>Still needed:</strong> {empty.map(c => c.cat.split(' ').slice(1).join(' ')).join(' · ')}
-            </div>
-          );
-        })()}
-
-        <div class="pl-picked" id="picked-bar">
-          <span class="pl-picked-txt" id="picked-text"></span>
-          <button class="pl-picked-clear" id="picked-clear">✕</button>
+          <div class="pl-autocomplete" style="margin-top:12px">
+            <label style="font-size:13px;color:var(--text2);font-weight:500;display:block;margin-bottom:7px">Or type something different <span class="pl-opt">(optional)</span></label>
+            <input type="text" id="f-dish" class="pl-input" placeholder="Start typing…" autocomplete="off"/>
+            <div class="pl-ac-list" id="ac-list"></div>
+          </div>
         </div>
 
-        <div class="pl-field pl-autocomplete" style="margin-top:12px" id="dish-ac-wrap">
-          <label style="font-size:13px;color:var(--text2);font-weight:500">Or type something different <span class="pl-opt">(optional)</span></label>
-          <input type="text" id="f-dish" class="pl-input" placeholder="Start typing…" autocomplete="off"/>
-          <div class="pl-ac-list" id="ac-list"></div>
-        </div>
-
-        <div class="pl-div"></div>
-
-        <!-- Helpers -->
-        <div class="pl-field">
-          <label>Can you help out? <span class="pl-opt">(optional)</span></label>
+        <!-- ── SECTION 3: Can You Help ── -->
+        <div class="pl-section">
+          <div class="pl-section-label">🙌 Can You Help Out? <span class="pl-opt" style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
           <div class="pl-checks">
             <div class="pl-check-item" data-extra="plates"><div class="pl-check-box"></div><div class="pl-check-txt">I'll bring plates, napkins & cups</div></div>
             <div class="pl-check-item" data-extra="cooler"><div class="pl-check-box"></div><div class="pl-check-txt">I'll bring a cooler with drinks or ice</div></div>
@@ -432,20 +431,21 @@ const defaultTemplate = potluck.template || 'warm';
           </div>
         </div>
 
-        <div class="pl-div"></div>
-
-        <!-- Email -->
-        <div class="pl-field">
-          <label>Email <span class="pl-opt">(optional — we'll send a reminder the day before)</span></label>
-          <input type="email" id="f-email" class="pl-input" placeholder="you@example.com"/>
-        </div>
-
-        <details style="margin-bottom:16px">
-          <summary style="font-size:13px;color:var(--text3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span>+</span> Food allergies or anything else we should know</summary>
-          <div style="margin-top:12px">
-            <textarea id="f-dietary" class="pl-textarea" placeholder="Gluten-free, nut allergy, vegan…"></textarea>
+        <!-- ── SECTION 4: Stay in the Loop ── -->
+        <div class="pl-section">
+          <div class="pl-section-label">📬 Stay in the Loop <span class="pl-opt" style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+          <div class="pl-field">
+            <label>Email address</label>
+            <input type="email" id="f-email" class="pl-input" placeholder="you@example.com"/>
+            <div style="font-size:12px;color:var(--text3);margin-top:5px">We'll send a confirmation and a reminder the day before. No spam.</div>
           </div>
-        </details>
+          <details>
+            <summary style="font-size:13px;color:var(--text3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;user-select:none"><span>+</span> Food allergies or anything else we should know</summary>
+            <div style="margin-top:12px">
+              <textarea id="f-dietary" class="pl-textarea" placeholder="Gluten-free, nut allergy, vegan… Leave blank if none."></textarea>
+            </div>
+          </details>
+        </div>
 
         <input type="text" name="_gotcha" id="_gotcha" style="display:none;position:absolute;left:-9999px" tabindex="-1" autocomplete="off"/>
         <div class="cf-turnstile" data-sitekey="0x4AAAAAADLDABpXrHXcFpVB" data-theme="auto" data-size="flexible" style="margin-bottom:12px"></div>
