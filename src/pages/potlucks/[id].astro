@@ -89,9 +89,9 @@ slots.forEach((s:any) => {
     .cat-title::after { content: ''; flex: 1; height: 1px; background: #e4ddd4; }
 
     /* Item rows */
-    .item { background: #fff; border: 1.5px solid #e4ddd4; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; transition: all 0.15s; }
-    .item.claimed { border-color: #86efac; background: #f0fdf4; }
-    .item.claiming { border-color: #f77f00; background: #fff8ec; }
+    .item { background: #fff; border: 1.5px solid #e4ddd4; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
+    .item[data-id]:active { background: #fff8ec; border-color: #f77f00; }
+    .item.claimed { border-color: #86efac; background: #f0fdf4; cursor: default; }
     .item-name { flex: 1; font-size: 15px; font-weight: 500; color: #1c1917; }
     .item.claimed .item-name { color: #15803d; }
     .item-who { font-size: 13px; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 5px; }
@@ -191,10 +191,10 @@ slots.forEach((s:any) => {
           </div>
         )}
 
-        <div class="share-row">
-          <button class="share-btn" id="copy-btn">🔗 Copy link</button>
-          <a class="share-btn" id="share-fb" href="#">📘 Share</a>
-          <a class="share-btn" href={`/potlucks/${id}/poster`}>🖼 Poster</a>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
+          <button id="copy-btn" style="background:none;border:none;font-size:13px;color:#a09890;cursor:pointer;padding:0;font-family:inherit;display:flex;align-items:center;gap:4px">🔗 Copy link</button>
+          <span style="color:#e4ddd4">·</span>
+          <a href={`/potlucks/${id}/poster`} style="font-size:13px;color:#a09890;text-decoration:none">🖼 Poster</a>
         </div>
       </div>
     </div>
@@ -219,9 +219,9 @@ slots.forEach((s:any) => {
             </div>
           ) : (
             <div>
-              <div class="item" id={`item-${item.id}`}>
+              <div class="item" id={`item-${item.id}`} data-id={item.id} data-dish={item.suggestion} style="cursor:pointer">
                 <div class="item-name">{item.suggestion}</div>
-                <button class="claim-btn" data-id={item.id} data-dish={item.suggestion}>I'll bring this!</button>
+                <span style="font-size:20px;color:#e4ddd4;flex-shrink:0">›</span>
               </div>
               <div class="claim-form" id={`form-${item.id}`}>
                 <div class="claim-form-title">🙌 Bringing {item.suggestion}!</div>
@@ -247,12 +247,13 @@ slots.forEach((s:any) => {
       <!-- Bring something else -->
       <div class="cat-block">
         <div class="cat-title">Something else?</div>
-        <div class="custom-block" id="custom-toggle">
+        <div class="custom-block" id="custom-toggle" style="cursor:pointer">
           <span class="custom-icon">✏️</span>
           <div class="custom-text">
-            <strong>I'll bring something not on the list</strong>
+            <strong>Bringing something else?</strong>
             Tap to add it
           </div>
+          <span style="font-size:20px;color:#e4ddd4;margin-left:auto">›</span>
         </div>
         <div class="claim-form hidden" id="custom-form">
           <div class="claim-form-title">✏️ What are you bringing?</div>
@@ -323,15 +324,18 @@ slots.forEach((s:any) => {
     });
     document.getElementById('share-fb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
 
-    // Claim buttons — open inline form
-    document.querySelectorAll('.claim-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var id = btn.dataset.id;
+    // Tappable item rows — open inline form
+    document.querySelectorAll('.item[data-id]').forEach(function(row) {
+      row.addEventListener('click', function() {
+        var id = row.dataset.id;
         // Close any other open forms
         document.querySelectorAll('.claim-form').forEach(function(f) { f.classList.remove('open'); f.classList.add('hidden'); });
-        document.getElementById('claim-form-' + id) && null;
         var form = document.getElementById('form-' + id);
-        if (form) { form.classList.add('open'); form.classList.remove('hidden'); document.getElementById('name-' + id).focus(); }
+        if (form) {
+          form.classList.add('open'); form.classList.remove('hidden');
+          document.getElementById('name-' + id).focus();
+          form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
       });
     });
 
