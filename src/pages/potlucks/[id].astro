@@ -374,8 +374,8 @@ const defaultTemplate = potluck.template || 'warm';
         <!-- Step 2: Food or donate -->
         <div class="pl-q">What are you bringing?</div>
         <div class="pl-toggle" style="margin-bottom:16px">
-          <button type="button" class="pl-toggle-btn food-on" id="toggle-food">🍽 I'll bring food</button>
-          <button type="button" class="pl-toggle-btn" id="toggle-donate">💙 I'd rather donate</button>
+          <button type="button" class="pl-toggle-btn food-on" id="toggle-food">🍽 I'll bring something</button>
+          <button type="button" class="pl-toggle-btn" id="toggle-donate">💙 Have Seth bring it for me</button>
         </div>
 
         <!-- Food panel -->
@@ -424,12 +424,17 @@ const defaultTemplate = potluck.template || 'warm';
 
         <!-- Donate panel -->
         <div class="pl-donate-box" id="donate-panel">
-          <div style="font-size:14px;font-weight:600;color:var(--success-txt);margin-bottom:4px">Donate instead 💙</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:12px">We'll use it to cover a dish. Any amount helps!</div>
+          <div style="font-size:14px;font-weight:600;color:var(--success-txt);margin-bottom:4px">I'll handle it for you 💙</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Tell me what you want me to bring, then send me a few bucks to cover it.</div>
+          <div class="pl-field" style="margin-bottom:14px">
+            <label style="font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:7px">What should I bring for you?</label>
+            <input type="text" id="f-request" class="pl-input" placeholder="e.g. Lemonade, chips & salsa, brownies…"/>
+          </div>
           <div id="venmo-hidden"></div>
           <button type="button" id="show-venmo-btn" style="display:flex;align-items:center;gap:10px;background:#3d95ce;color:#fff;padding:11px 16px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;width:100%;">
-            <span style="font-size:20px">💙</span>Tap to donate via Venmo
+            <span style="font-size:20px">💙</span>Tap to send money via Venmo
           </button>
+          <div style="font-size:12px;color:var(--text3);margin-top:8px;text-align:center">No pressure on amount — whatever feels right</div>
         </div>
 
         <div class="pl-div"></div>
@@ -791,7 +796,10 @@ const defaultTemplate = potluck.template || 'warm';
           document.getElementById('success-title').textContent="You're in, "+nameVal.split(' ')[0]+'!';
           var d='';
           if (dishVal) d+='🍽 '+dishVal+'<br/>';
-          if (donating) d+='💙 Donating instead<br/>';
+          if (donating) {
+            var req = document.getElementById('f-request') ? document.getElementById('f-request').value.trim() : '';
+            d += req ? '💙 Seth will bring: ' + req + '<br/>' : '💙 Contributing instead<br/>';
+          }
           d+='👥 '+(guestCount===1?'Just you':'You + '+(guestCount-1)+' other'+(guestCount>2?'s':''))+'<br/>';
           if (extras.plates) d+='🍽 Bringing plates & cups<br/>';
           if (extras.cooler) d+='🧊 Bringing a cooler<br/>';
