@@ -303,6 +303,7 @@ const defaultTemplate = potluck.template || 'warm';
         <button class="pl-share-btn" id="copy-link">🔗 Copy link</button>
         <a class="pl-share-btn" id="share-fb" href="#" target="_blank">📘 Share</a>
         <a class="pl-share-btn" id="share-reddit" href="#" target="_blank">🤙 Reddit</a>
+        <a class="pl-share-btn" href={`/potlucks/${id}/poster`}>🖼 Poster</a>
       </div>
     </div>
   </div>
@@ -443,6 +444,16 @@ const defaultTemplate = potluck.template || 'warm';
         <div class="pl-result-title">Something went wrong</div>
         <p class="pl-result-sub">Give it another try.</p>
         <button type="button" class="pl-result-btn" id="try-again">Try again</button>
+      </div>
+
+      <!-- Waitlist -->
+      <div id="waitlist-wrap" style="margin-top:20px;background:var(--success-bg);border:1.5px solid var(--success-border);border-radius:14px;padding:18px;display:none">
+        <div style="font-size:15px;font-weight:600;color:var(--success-txt);margin-bottom:4px">📋 Join the waitlist</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:14px">If a spot opens up, we'll let you know.</div>
+        <input type="text" id="wl-name" class="pl-input" placeholder="Your name" style="margin-bottom:8px"/>
+        <input type="email" id="wl-email" class="pl-input" placeholder="your@email.com" style="margin-bottom:10px"/>
+        <button type="button" class="pl-submit" id="wl-submit" style="font-size:14px;padding:12px">Join waitlist</button>
+        <div id="wl-success" style="display:none;margin-top:10px;font-size:13px;color:var(--success-txt)">✓ You're on the waitlist!</div>
       </div>
     </div>
 
