@@ -125,7 +125,13 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       }).catch(() => {});
     }
 
-    return new Response(JSON.stringify({ ok: true, editUrl }), { headers: { 'Content-Type': 'application/json' } });
+    // Return contact info securely in response (never in HTML source)
+    const contact = {
+      phone: cfg.contact_phone || '',
+      discord: cfg.contact_discord || '',
+      discord_url: cfg.contact_discord_url || '',
+    };
+    return new Response(JSON.stringify({ ok: true, editUrl, contact }), { headers: { 'Content-Type': 'application/json' } });
   } catch (e: any) {
     return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500 });
   }
