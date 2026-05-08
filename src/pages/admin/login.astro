@@ -1,0 +1,78 @@
+---
+const cookie = Astro.cookies.get('dsn_org')?.value;
+if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'); } catch {} }
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Sign In · Denver Social</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style is:global>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:#f7f5f2;color:#1c1917;font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+    .card{background:#fff;border:1px solid #e4ddd4;border-radius:20px;padding:32px;width:100%;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
+    .logo{text-align:center;margin-bottom:24px}
+    .logo h1{font-family:'Playfair Display',serif;font-size:24px;color:#1c1917}
+    .logo p{font-size:13px;color:#a09890;margin-top:4px}
+    .tabs{display:flex;border-bottom:1px solid #e4ddd4;margin-bottom:20px}
+    .tab{flex:1;padding:10px;font-size:14px;font-weight:600;color:#a09890;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;font-family:'DM Sans',sans-serif}
+    .tab.active{color:#f77f00;border-bottom-color:#f77f00}
+    .panel{display:none}.panel.active{display:block}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:12px;font-weight:600;color:#8a7a70;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.3px}
+    .field input{width:100%;padding:11px 13px;background:#f7f5f2;border:1.5px solid #e4ddd4;border-radius:10px;color:#1c1917;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;-webkit-appearance:none}
+    .field input:focus{border-color:#f77f00}
+    .submit{width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px}
+    .err{font-size:13px;color:#dc2626;margin-top:10px;text-align:center;display:none}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>🏔 Denver Social</h1>
+      <p>Event organizer portal</p>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="tab" onclick="switchTab('register')">Create Account</button>
+    </div>
+    <div class="panel active" id="panel-login">
+      <div class="field"><label>Email</label><input type="email" id="l-email" placeholder="you@example.com"/></div>
+      <div class="field"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••"/></div>
+      <button class="submit" id="login-btn">Sign in →</button>
+      <div class="err" id="l-err"></div>
+    </div>
+    <div class="panel" id="panel-register">
+      <div class="field"><label>Your Name / Org Name</label><input type="text" id="r-name" placeholder="Denver Social Community"/></div>
+      <div class="field"><label>Email</label><input type="email" id="r-email" placeholder="you@example.com"/></div>
+      <div class="field"><label>Password</label><input type="password" id="r-pass" placeholder="Choose a password"/></div>
+      <button class="submit" id="register-btn">Create account →</button>
+      <div class="err" id="r-err"></div>
+    </div>
+  </div>
+
+  <script is:inline>
+    function switchTab(t) {
+      document.querySelectorAll('.tab').forEach(function(el,i){el.classList.toggle('active',['login','register'][i]===t);});
+      document.querySelectorAll('.panel').forEach(function(el,i){el.classList.toggle('active',['panel-login','panel-register'][i]==='panel-'+t);});
+    }
+
+    document.getElementById('login-btn').addEventListener('click', async function() {
+      var btn = this; btn.textContent = 'Signing in…'; btn.disabled = true;
+      var res = await fetch('/api/auth', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email:document.getElementById('l-email').value,password:document.getElementById('l-pass').value})});
+      var data = await res.json();
+      if (data.ok) { location.href = '/admin/dashboard'; }
+      else { document.getElementById('l-err').textContent = data.error || 'Invalid email or password'; document.getElementById('l-err').style.display='block'; btn.textContent='Sign in →'; btn.disabled=false; }
+    });
+
+    document.getElementById('register-btn').addEventListener('click', async function() {
+      var btn = this; btn.textContent = 'Creating…'; btn.disabled = true;
+      var res = await fetch('/api/auth', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'register',name:document.getElementById('r-name').value,email:document.getElementById('r-email').value,password:document.getElementById('r-pass').value})});
+      var data = await res.json();
+      if (data.ok) { location.href = '/admin/dashboard'; }
+      else { document.getElementById('r-err').textContent = data.error || 'Could not create account'; document.getElementById('r-err').style.display='block'; btn.textContent='Create account →'; btn.disabled=false; }
+    });
+  </script>
+</body>
+</html>
