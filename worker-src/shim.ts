@@ -6,24 +6,17 @@
 // @ts-ignore — generated at build time, no types
 import astroWorker from '../worker/index.js';
 import { buildReminderEmail } from '../src/lib/email';
+import { ensurePotluckSchema } from '../src/lib/potluck-schema';
 
 interface Env {
   DB: D1Database;
   [key: string]: unknown;
 }
 
-async function ensureReminderColumn(db: D1Database): Promise<void> {
-  const cols = await db.prepare("PRAGMA table_info(potluck_rsvp)").all();
-  const names = new Set((cols.results ?? []).map((r: any) => r.name));
-  if (!names.has('reminder_sent_at')) {
-    await db.prepare("ALTER TABLE potluck_rsvp ADD COLUMN reminder_sent_at TEXT").run();
-  }
-}
-
 async function sendReminders(env: Env): Promise<{ sent: number; errors: number; skipped: string | null }> {
   const db = env.DB;
   if (!db) return { sent: 0, errors: 0, skipped: 'no_db' };
-  await ensureReminderColumn(db);
+  await ensurePotluckSchema(db);
 
   const cfgRows = await db.prepare("SELECT key, value FROM config").all();
   const cfg: Record<string, string> = {};

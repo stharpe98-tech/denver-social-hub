@@ -157,6 +157,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       discord: cfg.contact_discord || '',
       discord_url: cfg.contact_discord_url || '',
       venmo: cfg.venmo_handle || '',
+      stripe_link: cfg.stripe_link || '',
+      cashapp_handle: cfg.cashapp_handle || '',
     };
     return new Response(JSON.stringify({ ok: true, editUrl, contact }), { headers: { 'Content-Type': 'application/json' } });
   } catch (e: any) {

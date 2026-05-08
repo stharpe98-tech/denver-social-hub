@@ -6,6 +6,9 @@ export async function ensurePotluckSchema(db: D1Database): Promise<void> {
   if (!potluckNames.has('event_date')) {
     await db.prepare("ALTER TABLE potlucks ADD COLUMN event_date TEXT").run();
   }
+  if (!potluckNames.has('cover_photo')) {
+    await db.prepare("ALTER TABLE potlucks ADD COLUMN cover_photo TEXT").run();
+  }
 
   const rsvpCols = await db.prepare("PRAGMA table_info(potluck_rsvp)").all();
   const rsvpNames = new Set((rsvpCols.results ?? []).map((r: any) => r.name));

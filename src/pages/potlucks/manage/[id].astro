@@ -94,6 +94,7 @@ const dishEntries = Object.entries(dishMap);
           <div class="field"><label>Event Date (for reminders)</label><input type="date" id="e-event-date" value={potluck.event_date ?? ''}/></div>
           <div class="field"><label>Time</label><input type="text" id="e-time" value={potluck.time_label ?? ''}/></div>
           <div class="field"><label>Location</label><input type="text" id="e-loc" value={potluck.location ?? ''}/></div>
+          <div class="field" style="grid-column:1/-1"><label>Cover Photo URL</label><input type="text" id="e-cover" value={potluck.cover_photo ?? ''} placeholder="https://images.unsplash.com/…"/></div>
         </div>
         <button class="btn-orange" onclick="saveEdit()" style="margin-top:4px">Save</button>
       </div>
@@ -175,14 +176,14 @@ const dishEntries = Object.entries(dishMap);
       if (data.ok) location.reload();
     }
     async function saveEdit() {
-      const body = { action:'update', id: parseInt(id), title: document.getElementById('e-title').value, date_label: document.getElementById('e-date').value, event_date: document.getElementById('e-event-date').value || null, time_label: document.getElementById('e-time').value, location: document.getElementById('e-loc').value, description: potluck.description || '', location_detail: potluck.location_detail || '', status: potluck.status };
+      const body = { action:'update', id: parseInt(id), title: document.getElementById('e-title').value, date_label: document.getElementById('e-date').value, event_date: document.getElementById('e-event-date').value || null, time_label: document.getElementById('e-time').value, location: document.getElementById('e-loc').value, cover_photo: document.getElementById('e-cover').value.trim() || null, description: potluck.description || '', location_detail: potluck.location_detail || '', status: potluck.status };
       const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.ok) location.reload();
     }
     async function markPast() {
       if (!confirm('Mark this potluck as past?')) return;
-      const body = { action:'update', id: parseInt(id), title: potluck.title, description: potluck.description || '', date_label: potluck.date_label || '', event_date: potluck.event_date || null, time_label: potluck.time_label || '', location: potluck.location || '', location_detail: potluck.location_detail || '', status: 'past' };
+      const body = { action:'update', id: parseInt(id), title: potluck.title, description: potluck.description || '', date_label: potluck.date_label || '', event_date: potluck.event_date || null, time_label: potluck.time_label || '', location: potluck.location || '', location_detail: potluck.location_detail || '', cover_photo: potluck.cover_photo || null, status: 'past' };
       const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.ok) location.reload();
