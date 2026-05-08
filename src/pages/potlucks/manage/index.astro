@@ -128,6 +128,7 @@ try {
         <div class="cf-field"><label>Description</label><input type="text" id="c-desc" class="cf-input" placeholder="What's the vibe?"/></div>
         <div class="cf-grid">
           <div class="cf-field"><label>Date</label><input type="text" id="c-date" class="cf-input" placeholder="May 30th"/></div>
+          <div class="cf-field"><label>Event Date (for reminders)</label><input type="date" id="c-event-date" class="cf-input"/></div>
           <div class="cf-field"><label>Time</label><input type="text" id="c-time" class="cf-input" placeholder="12pm–4pm"/></div>
           <div class="cf-field"><label>Location</label><input type="text" id="c-loc" class="cf-input" placeholder="Cheeseman Park"/></div>
           <div class="cf-field"><label>Detail</label><input type="text" id="c-locdetail" class="cf-input" placeholder="West side"/></div>
@@ -240,7 +241,7 @@ try {
     document.getElementById('create-submit').addEventListener('click', async function() {
       var title = document.getElementById('c-title').value.trim();
       if (!title) return;
-      var tmplInput = document.getElementById('c-template'); var body = { action:'create', title: title, description:'', date_label: document.getElementById('c-date').value, time_label: document.getElementById('c-time').value, location: document.getElementById('c-loc').value, location_detail: document.getElementById('c-locdetail').value, status:'upcoming', template: tmplInput ? tmplInput.value : 'warm' };
+      var tmplInput = document.getElementById('c-template'); var body = { action:'create', title: title, description:'', date_label: document.getElementById('c-date').value, event_date: document.getElementById('c-event-date').value || null, time_label: document.getElementById('c-time').value, location: document.getElementById('c-loc').value, location_detail: document.getElementById('c-locdetail').value, status:'upcoming', template: tmplInput ? tmplInput.value : 'warm' };
       var res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       var data = await res.json();
       if (data.ok) window.location.href = '/potlucks/manage/' + data.id;
