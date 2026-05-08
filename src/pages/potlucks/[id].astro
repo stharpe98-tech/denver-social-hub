@@ -182,18 +182,9 @@ const defaultTemplate = potluck.template || 'warm';
 
     /* Theme switcher */
     .pl-theme-picker { display:flex; gap:6px; align-items:center; flex-shrink:0; }
-    .pl-theme-btn { width:26px; height:26px; border-radius:50%; border:2px solid transparent; cursor:pointer; transition:all 0.15s; -webkit-tap-highlight-color:transparent; }
-    .pl-theme-btn.active { border-color:var(--text); transform:scale(1.15); }
-    .pl-theme-btn[data-t="warm"]     { background:linear-gradient(135deg,#fff8f0,#f77f00); }
-    .pl-theme-btn[data-t="dark"]     { background:linear-gradient(135deg,#0d0d12,#818cf8); }
-    .pl-theme-btn[data-t="clean"]    { background:linear-gradient(135deg,#f8f8f8,#0ea5e9); }
-    .pl-theme-btn[data-t="festive"]  { background:linear-gradient(135deg,#fef9c3,#f59e0b); }
-    .pl-theme-btn[data-t="birthday"] { background:linear-gradient(135deg,#fdf2f8,#ec4899); }
-    .pl-theme-btn[data-t="halloween"]{ background:linear-gradient(135deg,#1c0a00,#f97316); }
-    .pl-theme-btn[data-t="holiday"]  { background:linear-gradient(135deg,#f0fdf4,#dc2626); }
-    .pl-theme-btn[data-t="summer"]   { background:linear-gradient(135deg,#fef9c3,#0ea5e9); }
-    .pl-theme-btn[data-t="fall"]     { background:linear-gradient(135deg,#fff7ed,#c2410c); }
-    .pl-theme-btn[data-t="spring"]   { background:linear-gradient(135deg,#fdf4ff,#a855f7); }
+    .pl-theme-btn { width:32px; height:32px; border-radius:8px; border:2px solid transparent; background:none; cursor:pointer; font-size:18px; line-height:1; display:flex; align-items:center; justify-content:center; transition:all 0.15s; -webkit-tap-highlight-color:transparent; padding:0; }
+    .pl-theme-btn:hover { transform:scale(1.15); }
+    .pl-theme-btn.active { border-color:var(--text); background:var(--accent-dim); transform:scale(1.15); }
 
     /* Page */
     .pl-page { max-width:560px; margin:0 auto; padding:22px 16px; }
@@ -286,17 +277,17 @@ const defaultTemplate = potluck.template || 'warm';
       <a href="/potlucks" class="pl-back">← Potlucks</a>
       <div class="pl-hero-top">
         <h1>{potluck.title}</h1>
-        <div class="pl-theme-picker" style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:140px;flex-shrink:0">
-          <button class="pl-theme-btn" data-t="warm" title="Warm 🌞"></button>
-          <button class="pl-theme-btn" data-t="dark" title="Dark 🌙"></button>
-          <button class="pl-theme-btn" data-t="clean" title="Clean ✨"></button>
-          <button class="pl-theme-btn" data-t="festive" title="Festive 🎉"></button>
-          <button class="pl-theme-btn" data-t="birthday" title="Birthday 🎂"></button>
-          <button class="pl-theme-btn" data-t="halloween" title="Halloween 🎃"></button>
-          <button class="pl-theme-btn" data-t="holiday" title="Holiday 🎄"></button>
-          <button class="pl-theme-btn" data-t="summer" title="Summer 🌊"></button>
-          <button class="pl-theme-btn" data-t="fall" title="Fall 🍂"></button>
-          <button class="pl-theme-btn" data-t="spring" title="Spring 🌸"></button>
+        <div class="pl-theme-picker" style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:150px;flex-shrink:0">
+          <button class="pl-theme-btn" data-t="warm">🌞</button>
+          <button class="pl-theme-btn" data-t="dark">🌙</button>
+          <button class="pl-theme-btn" data-t="clean">✨</button>
+          <button class="pl-theme-btn" data-t="festive">🎉</button>
+          <button class="pl-theme-btn" data-t="birthday">🎂</button>
+          <button class="pl-theme-btn" data-t="halloween">🎃</button>
+          <button class="pl-theme-btn" data-t="holiday">🎄</button>
+          <button class="pl-theme-btn" data-t="summer">🌊</button>
+          <button class="pl-theme-btn" data-t="fall">🍂</button>
+          <button class="pl-theme-btn" data-t="spring">🌸</button>
         </div>
       </div>
       <div class="pl-meta">
