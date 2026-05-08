@@ -5,781 +5,438 @@ const { id } = Astro.params;
 let potluck: any = null;
 let slots: any[] = [];
 let signups: any[] = [];
-let comments: any[] = [];
 try {
   if (db && id) {
     potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(id).first();
     if (potluck?.locked) return Astro.redirect('/potlucks');
-    const slotsRes = await db.prepare(`
-      SELECT s.id, s.category, s.suggestion, COUNT(r.id) as claimed
-      FROM potluck_slots s
-      LEFT JOIN potluck_rsvp r ON LOWER(r.dish)=LOWER(s.suggestion) AND r.potluck_id=s.potluck_id AND r.rsvp='yes'
-      WHERE s.potluck_id=? GROUP BY s.id ORDER BY s.sort_order ASC
+    const s = await db.prepare(`
+      SELECT ps.id, ps.suggestion, ps.category, ps.sort_order,
+        pr.name as claimed_by, pr.id as rsvp_id
+      FROM potluck_slots ps
+      LEFT JOIN potluck_rsvp pr ON LOWER(pr.dish)=LOWER(ps.suggestion)
+        AND pr.potluck_id=ps.potluck_id AND pr.rsvp='yes'
+      WHERE ps.potluck_id=?
+      ORDER BY ps.sort_order ASC
     `).bind(id).all();
-    slots = slotsRes?.results ?? [];
-    const s = await db.prepare(`SELECT name, dish, guest_count, rsvp FROM potluck_rsvp WHERE potluck_id=? ORDER BY created_at ASC`).bind(id).all();
-    signups = s?.results ?? [];
-    const c = await db.prepare(`SELECT name, comment, created_at FROM potluck_comments WHERE potluck_id=? ORDER BY created_at ASC`).bind(id).all();
-    comments = c?.results ?? [];
+    slots = s?.results ?? [];
+    const r = await db.prepare(`SELECT name, dish, guest_count FROM potluck_rsvp WHERE potluck_id=? AND rsvp='yes' ORDER BY created_at ASC`).bind(id).all();
+    signups = r?.results ?? [];
   }
 } catch(e) { console.error(e); }
 if (!potluck) return Astro.redirect('/potlucks');
 
-const categories: Record<string,any[]> = {};
-slots.forEach((s:any) => { if (!categories[s.category]) categories[s.category]=[]; categories[s.category].push(s); });
-const catEntries = Object.entries(categories);
-const attending = signups.filter((s:any) => s.rsvp==='yes');
-const totalGuests = attending.reduce((sum:number,s:any) => sum+(parseInt(s.guest_count)||1), 0);
-const defaultTemplate = potluck.template || 'warm';
+const claimed = slots.filter((s:any) => s.claimed_by).length;
+const total = slots.length;
+const pct = total > 0 ? Math.round((claimed/total)*100) : 0;
+const attending = signups.length;
+const colors = ['#f77f00','#7c3aed','#0ea5e9','#16a34a','#ec4899','#f59e0b','#c2410c'];
+
+// Group slots by category
+const cats: Record<string, any[]> = {};
+slots.forEach((s:any) => {
+  if (!cats[s.category]) cats[s.category] = [];
+  cats[s.category].push(s);
+});
 ---
 <!DOCTYPE html>
-<html lang="en" data-theme={defaultTemplate}>
+<html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <meta name="robots" content="noindex, nofollow"/>
-  <title>{potluck.title} · Sign Up</title>
+  <meta name="robots" content="noindex"/>
+  <title>{potluck.title}</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style is:global>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    /* ── WARM THEME (default) ── */
-    [data-theme="warm"] {
-      --bg:#f7f5f2; --surface:#fff; --surface2:#fafaf8; --border:#e4ddd4; --border2:#cec5b8;
-      --text:#1c1917; --text2:#57524c; --text3:#a09890;
-      --accent:#f77f00; --accent-dim:rgba(247,127,0,0.10); --accent-txt:#c2410c;
-      --hero:linear-gradient(135deg,#fff8f0 0%,#fef3e0 50%,#fff8f0 100%);
-      --hero-border:#fcd5a0; --hero-txt:#1c1917; --hero-sub:#8a6a40;
-      --btn:linear-gradient(135deg,#c2410c,#f77f00); --btn-txt:#fff;
-      --success-bg:#f0fdf4; --success-border:#86efac; --success-txt:#15803d;
-      --tag-bg:rgba(247,127,0,0.10); --tag-txt:#c2410c;
-    }
-
-    /* ── DARK THEME ── */
-    [data-theme="dark"] {
-      --bg:#0d0d12; --surface:#1a1a24; --surface2:#13131c; --border:#2a2a3a; --border2:#3a3a50;
-      --text:#e8e8f0; --text2:#9898b0; --text3:#55556a;
-      --accent:#818cf8; --accent-dim:rgba(129,140,248,0.12); --accent-txt:#a5b4fc;
-      --hero:linear-gradient(135deg,#0d0d1e 0%,#1a0a2e 50%,#0d0d1e 100%);
-      --hero-border:#3a2a5a; --hero-txt:#e8e8f0; --hero-sub:#818cf8;
-      --btn:linear-gradient(135deg,#4f46e5,#818cf8); --btn-txt:#fff;
-      --success-bg:#0d2e1a; --success-border:#166534; --success-txt:#4ade80;
-      --tag-bg:rgba(129,140,248,0.12); --tag-txt:#a5b4fc;
-    }
-
-    /* ── CLEAN THEME ── */
-    [data-theme="clean"] {
-      --bg:#fff; --surface:#f8f8f8; --surface2:#f3f3f3; --border:#e5e5e5; --border2:#d0d0d0;
-      --text:#111; --text2:#444; --text3:#999;
-      --accent:#0ea5e9; --accent-dim:rgba(14,165,233,0.08); --accent-txt:#0369a1;
-      --hero:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 50%,#f0f9ff 100%);
-      --hero-border:#bae6fd; --hero-txt:#111; --hero-sub:#0369a1;
-      --btn:linear-gradient(135deg,#0369a1,#0ea5e9); --btn-txt:#fff;
-      --success-bg:#f0fdf4; --success-border:#86efac; --success-txt:#15803d;
-      --tag-bg:rgba(14,165,233,0.08); --tag-txt:#0369a1;
-    }
-
-    /* ── FESTIVE THEME ── */
-    [data-theme="festive"] {
-      --bg:#fff9f0; --surface:#fff; --surface2:#fff5e8; --border:#fde68a; --border2:#fbbf24;
-      --text:#1c0a00; --text2:#78350f; --text3:#d97706;
-      --accent:#f59e0b; --accent-dim:rgba(245,158,11,0.12); --accent-txt:#92400e;
-      --hero:linear-gradient(135deg,#fef9c3 0%,#fef08a 50%,#fef9c3 100%);
-      --hero-border:#fde047; --hero-txt:#1c0a00; --hero-sub:#92400e;
-      --btn:linear-gradient(135deg,#d97706,#f59e0b); --btn-txt:#fff;
-      --success-bg:#f0fdf4; --success-border:#86efac; --success-txt:#15803d;
-      --tag-bg:rgba(245,158,11,0.12); --tag-txt:#92400e;
-    }
-
-    /* ── BIRTHDAY THEME ── */
-    [data-theme="birthday"] {
-      --bg:#fff5fc; --surface:#fff; --surface2:#fdf0fa; --border:#f9a8d4; --border2:#ec4899;
-      --text:#1a0010; --text2:#831843; --text3:#db2777;
-      --accent:#ec4899; --accent-dim:rgba(236,72,153,0.10); --accent-txt:#9d174d;
-      --hero:linear-gradient(135deg,#fdf2f8 0%,#fce7f3 40%,#fef9c3 100%);
-      --hero-border:#f9a8d4; --hero-txt:#1a0010; --hero-sub:#be185d;
-      --btn:linear-gradient(135deg,#be185d,#ec4899); --btn-txt:#fff;
-      --success-bg:#f0fdf4; --success-border:#86efac; --success-txt:#15803d;
-      --tag-bg:rgba(236,72,153,0.10); --tag-txt:#9d174d;
-    }
-
-    /* ── HALLOWEEN THEME ── */
-    [data-theme="halloween"] {
-      --bg:#0d0800; --surface:#1a1000; --surface2:#110a00; --border:#3d1f00; --border2:#7c3a00;
-      --text:#fef3c7; --text2:#d97706; --text3:#92400e;
-      --accent:#f97316; --accent-dim:rgba(249,115,22,0.15); --accent-txt:#fb923c;
-      --hero:linear-gradient(135deg,#0d0800 0%,#1c0a00 40%,#0d0800 100%);
-      --hero-border:#7c3a00; --hero-txt:#fef3c7; --hero-sub:#f97316;
-      --btn:linear-gradient(135deg,#9a3412,#f97316); --btn-txt:#fff;
-      --success-bg:#0d2e1a; --success-border:#166534; --success-txt:#4ade80;
-      --tag-bg:rgba(249,115,22,0.15); --tag-txt:#fb923c;
-    }
-
-    /* ── HOLIDAY THEME ── */
-    [data-theme="holiday"] {
-      --bg:#f8fff8; --surface:#fff; --surface2:#f0fdf4; --border:#86efac; --border2:#4ade80;
-      --text:#052e16; --text2:#166534; --text3:#4ade80;
-      --accent:#16a34a; --accent-dim:rgba(22,163,74,0.10); --accent-txt:#15803d;
-      --hero:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 40%,#fef2f2 100%);
-      --hero-border:#86efac; --hero-txt:#052e16; --hero-sub:#dc2626;
-      --btn:linear-gradient(135deg,#dc2626,#16a34a); --btn-txt:#fff;
-      --success-bg:#f0fdf4; --success-border:#86efac; --success-txt:#15803d;
-      --tag-bg:rgba(22,163,74,0.10); --tag-txt:#15803d;
-    }
-
-    /* ── SUMMER THEME ── */
-    [data-theme="summer"] {
-      --bg:#fffdf0; --surface:#fff; --surface2:#fffbeb; --border:#fde68a; --border2:#fbbf24;
-      --text:#1c1200; --text2:#78620a; --text3:#d4a017;
-      --accent:#0ea5e9; --accent-dim:rgba(14,165,233,0.10); --accent-txt:#0369a1;
-      --hero:linear-gradient(135deg,#fef9c3 0%,#bae6fd 100%);
-      --hero-border:#7dd3fc; --hero-txt:#1c1200; --hero-sub:#0369a1;
-      --btn:linear-gradient(135deg,#0369a1,#38bdf8); --btn-txt:#fff;
-      --success-bg:#f0fdf4; --success-border:#86efac; --success-txt:#15803d;
-      --tag-bg:rgba(14,165,233,0.10); --tag-txt:#0369a1;
-    }
-
-    /* ── FALL THEME ── */
-    [data-theme="fall"] {
-      --bg:#faf5ef; --surface:#fff; --surface2:#fdf6ee; --border:#e8c9a0; --border2:#c8934a;
-      --text:#1c0e00; --text2:#7c4e1a; --text3:#b06820;
-      --accent:#c2410c; --accent-dim:rgba(194,65,12,0.10); --accent-txt:#9a3412;
-      --hero:linear-gradient(135deg,#fff7ed 0%,#fef3c7 50%,#fef2f2 100%);
-      --hero-border:#fed7aa; --hero-txt:#1c0e00; --hero-sub:#9a3412;
-      --btn:linear-gradient(135deg,#7c2d12,#c2410c); --btn-txt:#fff;
-      --success-bg:#f0fdf4; --success-border:#86efac; --success-txt:#15803d;
-      --tag-bg:rgba(194,65,12,0.10); --tag-txt:#9a3412;
-    }
-
-    /* ── SPRING THEME ── */
-    [data-theme="spring"] {
-      --bg:#fdf9ff; --surface:#fff; --surface2:#faf5ff; --border:#e9d5ff; --border2:#c084fc;
-      --text:#1a0030; --text2:#6b21a8; --text3:#a855f7;
-      --accent:#a855f7; --accent-dim:rgba(168,85,247,0.10); --accent-txt:#7e22ce;
-      --hero:linear-gradient(135deg,#fdf4ff 0%,#fce7f3 50%,#f0fdf4 100%);
-      --hero-border:#e9d5ff; --hero-txt:#1a0030; --hero-sub:#7e22ce;
-      --btn:linear-gradient(135deg,#7e22ce,#a855f7); --btn-txt:#fff;
-      --success-bg:#f0fdf4; --success-border:#86efac; --success-txt:#15803d;
-      --tag-bg:rgba(168,85,247,0.10); --tag-txt:#7e22ce;
-    }
-
-    html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans',sans-serif; min-height:100vh; transition: background 0.3s, color 0.3s; }
-    body { padding-bottom:80px; -webkit-overflow-scrolling:touch; }
+    html, body { background: #f7f5f2; color: #1c1917; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+    body { padding-bottom: 40px; -webkit-overflow-scrolling: touch; }
 
     /* Hero */
-    .pl-hero { background: var(--hero); border-bottom:1px solid var(--hero-border); padding:28px 20px 22px; }
-    .pl-hi { max-width:560px; margin:0 auto; }
-    .pl-back { font-size:13px; color:var(--text3); text-decoration:none; margin-bottom:10px; display:inline-flex; align-items:center; gap:4px; }
-    .pl-hero-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; }
-    .pl-hero h1 { font-family:'Playfair Display',serif; font-size:clamp(20px,5vw,30px); color:var(--hero-txt); line-height:1.2; flex:1; }
-    .pl-meta { font-size:13px; color:var(--hero-sub); line-height:1.9; margin-bottom:10px; }
-    .pl-pills { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
-    .pl-pill { background:var(--tag-bg); border-radius:100px; padding:4px 12px; font-size:12px; color:var(--tag-txt); font-weight:500; }
-    .pl-countdown { font-size:12px; font-weight:600; color:var(--accent-txt); }
-    .pl-share { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-    .pl-share-btn { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text2); font-size:12px; font-weight:500; cursor:pointer; text-decoration:none; font-family:'DM Sans',sans-serif; -webkit-tap-highlight-color:transparent; }
+    .hero { position: relative; overflow: hidden; }
+    .hero-img { width: 100%; height: 200px; object-fit: cover; display: block; }
+    .hero-img-placeholder { width: 100%; height: 200px; background: linear-gradient(135deg,#fff8f0,#fef3e0); }
+    .hero-body { background: #fff; border-bottom: 1px solid #e4ddd4; padding: 20px; }
+    .hero-inner { max-width: 600px; margin: 0 auto; }
+    .back { font-size: 13px; color: #a09890; text-decoration: none; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 4px; }
+    .event-title { font-family: 'Playfair Display', serif; font-size: clamp(22px,5vw,30px); color: #1c1917; margin-bottom: 10px; line-height: 1.2; }
+    .event-meta { font-size: 14px; color: #57524c; line-height: 2; margin-bottom: 14px; }
+    .event-meta span { display: inline-flex; align-items: center; gap: 6px; }
 
-    /* Theme switcher */
-    .pl-theme-picker { display:flex; gap:6px; align-items:center; flex-shrink:0; }
-    .pl-theme-btn { width:32px; height:32px; border-radius:8px; border:2px solid transparent; background:none; cursor:pointer; font-size:18px; line-height:1; display:flex; align-items:center; justify-content:center; transition:all 0.15s; -webkit-tap-highlight-color:transparent; padding:0; }
-    .pl-theme-btn:hover { transform:scale(1.15); }
-    .pl-theme-btn.active { border-color:var(--text); background:var(--accent-dim); transform:scale(1.15); }
+    /* Progress */
+    .progress-wrap { margin-bottom: 14px; }
+    .progress-top { display: flex; justify-content: space-between; font-size: 13px; color: #57524c; margin-bottom: 6px; }
+    .progress-top strong { color: #f77f00; }
+    .progress-bar { height: 8px; background: #f0ede8; border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #c2410c, #f77f00); border-radius: 4px; transition: width 0.4s; }
+
+    /* Attendee avatars */
+    .avatars { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; border: 2px solid #f7f5f2; flex-shrink: 0; }
+    .avatar-more { background: #e4ddd4; color: #8a7a70; font-size: 11px; font-weight: 600; }
+    .avatars-text { font-size: 13px; color: #8a7a70; }
+
+    /* Share row */
+    .share-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .share-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 8px; border: 1px solid #e4ddd4; background: #f7f5f2; color: #57524c; font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; text-decoration: none; -webkit-tap-highlight-color: transparent; }
 
     /* Page */
-    .pl-page { max-width:560px; margin:0 auto; padding:22px 16px; }
-    .pl-tabs { display:flex; border-bottom:1px solid var(--border); margin-bottom:22px; }
-    .pl-tab { flex:1; padding:11px; font-size:13px; font-weight:600; color:var(--text3); cursor:pointer; border:none; border-bottom:2px solid transparent; background:none; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
-    .pl-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
-    .pl-panel { display:none; }
-    .pl-panel.active { display:block; }
+    .page { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
 
-    /* Form elements */
-    .pl-nudge { background:var(--accent-dim); border:1px solid var(--border); border-radius:12px; padding:13px 16px; margin-bottom:22px; font-size:14px; color:var(--text2); font-style:italic; text-align:center; line-height:1.6; }
-    .pl-nudge strong { color:var(--text); font-style:normal; }
-    .pl-q { font-size:17px; font-weight:600; color:var(--text); margin-bottom:12px; }
-    .pl-sub { font-size:13px; color:var(--text3); margin-bottom:14px; }
-    .pl-rsvp { display:flex; gap:10px; margin-bottom:22px; }
-    .pl-rsvp-btn { flex:1; padding:13px; border-radius:12px; border:2px solid var(--border); background:var(--surface); font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; color:var(--text3); cursor:pointer; transition:all 0.15s; }
-    .pl-rsvp-btn.yes.active { border-color:#16a34a; background:var(--success-bg); color:var(--success-txt); }
-    .pl-rsvp-btn.no.active { border-color:#dc2626; background:#fef2f2; color:#dc2626; }
-    .pl-toggle { display:flex; gap:10px; margin-bottom:18px; }
-    .pl-toggle-btn { flex:1; padding:12px; border-radius:10px; border:2px solid var(--border); background:var(--surface); font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; color:var(--text3); cursor:pointer; transition:all 0.15s; }
-    .pl-toggle-btn.food-on { border-color:var(--accent); background:var(--accent-dim); color:var(--accent-txt); }
-    .pl-toggle-btn.donate-on { border-color:#3d95ce; background:#eff8ff; color:#1d4ed8; }
-    .pl-cat-head { font-size:11px; font-weight:600; color:var(--text3); letter-spacing:0.5px; margin:16px 0 8px; display:flex; align-items:center; gap:8px; }
-    .pl-cat-head::after { content:''; flex:1; height:1px; background:var(--border); }
-    .pl-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    @media(max-width:380px) { .pl-grid { grid-template-columns:1fr; } }
-    .pl-slot { background:var(--surface); border:2px solid var(--border); border-radius:12px; padding:12px 14px; cursor:pointer; transition:all 0.15s; -webkit-tap-highlight-color:transparent; }
-    .pl-slot.selected { border-color:var(--accent); background:var(--accent-dim); }
-    .pl-slot-name { font-size:14px; font-weight:500; color:var(--text); margin-bottom:4px; }
-    .pl-slot-sub { font-size:11px; color:var(--text3); display:flex; justify-content:space-between; }
-    .pl-slot-check { width:16px; height:16px; border-radius:50%; background:var(--accent); display:none; align-items:center; justify-content:center; font-size:10px; color:#fff; font-weight:800; }
-    .pl-slot.selected .pl-slot-check { display:flex; }
-    .pl-picked { background:var(--accent-dim); border:1.5px solid var(--accent); border-radius:10px; padding:9px 13px; margin:12px 0; display:none; justify-content:space-between; align-items:center; }
-    .pl-picked.show { display:flex; }
-    .pl-picked-txt { font-size:13px; color:var(--accent-txt); font-weight:500; }
-    .pl-picked-clear { background:none; border:none; color:var(--text3); cursor:pointer; font-size:18px; padding:0 4px; }
-    .pl-donate-box { background:var(--success-bg); border:1.5px solid var(--success-border); border-radius:12px; padding:16px; display:none; }
-    .pl-div { height:1px; background:var(--border); margin:18px 0; }
-    .pl-field { margin-bottom:16px; }
-    .pl-field label { display:block; font-size:13px; font-weight:600; color:var(--text2); margin-bottom:7px; }
-    .pl-opt { font-size:11px; font-weight:400; color:var(--text3); margin-left:4px; }
-    .pl-input { width:100%; padding:12px 14px; background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; outline:none; -webkit-appearance:none; transition:border-color 0.15s; }
-    .pl-input:focus { border-color:var(--accent); }
-    .pl-input::placeholder { color:var(--text3); }
-    .pl-select { width:100%; padding:12px 36px 12px 14px; background:var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 13px center; border:1.5px solid var(--border); border-radius:10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; outline:none; -webkit-appearance:none; }
-    .pl-select:focus { border-color:var(--accent); }
-    .pl-textarea { width:100%; padding:12px 14px; background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; outline:none; resize:vertical; min-height:72px; }
-    .pl-textarea:focus { border-color:var(--accent); }
-    .pl-textarea::placeholder { color:var(--text3); }
-    .pl-guest-row { display:flex; align-items:center; gap:12px; }
-    .pl-g-btn { width:44px; height:44px; border-radius:10px; border:1.5px solid var(--border); background:var(--surface); font-size:20px; font-weight:600; color:var(--text2); cursor:pointer; display:flex; align-items:center; justify-content:center; }
-    .pl-g-count { flex:1; text-align:center; font-size:22px; font-weight:700; color:var(--text); }
-    .pl-g-note { font-size:13px; color:var(--text3); white-space:nowrap; }
-    .pl-checks { display:flex; flex-direction:column; gap:8px; }
-    .pl-check-item { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:10px; border:1.5px solid var(--border); background:var(--surface); cursor:pointer; -webkit-tap-highlight-color:transparent; }
-    .pl-check-item.active { border-color:var(--accent); background:var(--accent-dim); }
-    .pl-check-box { width:22px; height:22px; border-radius:6px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; font-weight:700; }
-    .pl-check-item.active .pl-check-box { background:var(--accent); border-color:var(--accent); color:#fff; }
-    .pl-check-txt { font-size:14px; color:var(--text2); line-height:1.4; }
-    .pl-check-sub { display:block; font-size:11px; color:var(--text3); margin-top:1px; }
-    .pl-submit { width:100%; padding:15px; margin-top:6px; border-radius:12px; border:none; background:var(--btn); color:var(--btn-txt); font-family:'DM Sans',sans-serif; font-size:16px; font-weight:600; cursor:pointer; box-shadow:0 4px 16px var(--accent-dim); transition:all 0.18s; -webkit-tap-highlight-color:transparent; }
-    .pl-submit:active:not(:disabled) { transform:scale(0.98); }
-    .pl-submit:disabled { opacity:0.4; cursor:not-allowed; }
-    .pl-err { font-size:12px; color:#dc2626; margin-top:4px; display:none; }
-    .pl-result { text-align:center; padding:40px 16px; }
-    .pl-result-emoji { font-size:56px; display:block; margin-bottom:14px; }
-    .pl-result-title { font-family:'Playfair Display',serif; font-size:24px; color:var(--text); margin-bottom:8px; }
-    .pl-result-sub { font-size:14px; color:var(--text3); line-height:1.7; margin-bottom:16px; }
-    .pl-result-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 18px; font-size:14px; color:var(--text2); text-align:left; line-height:2; }
-    .pl-result-btn { margin-top:16px; padding:10px 24px; border-radius:100px; border:1.5px solid var(--border); background:transparent; color:var(--text2); cursor:pointer; font-family:'DM Sans',sans-serif; font-size:14px; }
-    .pl-sheet-table { width:100%; border-collapse:collapse; }
-    .pl-sheet-table th { text-align:left; font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--text3); padding:8px 10px; border-bottom:1px solid var(--border); }
-    .pl-sheet-table td { padding:11px 10px; border-bottom:1px solid var(--border); font-size:14px; color:var(--text2); }
-    .pl-sheet-table td:first-child { color:var(--text); font-weight:500; }
-    .pl-comment { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
-    .pl-comment-name { font-size:13px; font-weight:600; color:var(--text); margin-bottom:4px; }
-    .pl-comment-text { font-size:14px; color:var(--text2); line-height:1.5; }
-    .pl-comment-time { font-size:11px; color:var(--text3); margin-top:6px; }
-    .pl-empty { text-align:center; padding:32px; color:var(--text3); font-style:italic; font-size:14px; }
-    .pl-hidden { display:none !important; }
-    .pl-nav { position:fixed; bottom:0; left:0; right:0; background:var(--bg); border-top:1px solid var(--border); display:flex; justify-content:space-around; padding:8px 0 max(8px,env(safe-area-inset-bottom)); z-index:100; }
-    .pl-nav a { display:flex; flex-direction:column; align-items:center; gap:2px; text-decoration:none; color:var(--text3); font-size:10px; font-weight:500; padding:4px 12px; -webkit-tap-highlight-color:transparent; }
-    .pl-nav a.active { color:var(--accent); }
-    .pl-nav-icon { font-size:20px; }
+    /* Category */
+    .cat-block { margin-bottom: 24px; }
+    .cat-title { font-size: 13px; font-weight: 700; color: #8a7a70; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .cat-title::after { content: ''; flex: 1; height: 1px; background: #e4ddd4; }
+
+    /* Item rows */
+    .item { background: #fff; border: 1.5px solid #e4ddd4; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; transition: all 0.15s; }
+    .item.claimed { border-color: #86efac; background: #f0fdf4; }
+    .item.claiming { border-color: #f77f00; background: #fff8ec; }
+    .item-name { flex: 1; font-size: 15px; font-weight: 500; color: #1c1917; }
+    .item.claimed .item-name { color: #15803d; }
+    .item-who { font-size: 13px; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    .item-who::before { content: '✓'; font-size: 14px; }
+    .claim-btn { flex-shrink: 0; padding: 8px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg,#c2410c,#f77f00); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+    .claim-btn:active { opacity: 0.85; transform: scale(0.97); }
+
+    /* Inline claim form */
+    .claim-form { display: none; background: #fff8ec; border: 1.5px solid #f77f00; border-radius: 12px; padding: 16px; margin-bottom: 8px; }
+    .claim-form.open { display: block; }
+    .claim-form-title { font-size: 14px; font-weight: 600; color: #c2410c; margin-bottom: 12px; }
+    .claim-input { width: 100%; padding: 11px 13px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 9px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; margin-bottom: 10px; -webkit-appearance: none; }
+    .claim-input:focus { border-color: #f77f00; }
+    .claim-input::placeholder { color: #c0b8b0; }
+    .claim-row { display: flex; gap: 8px; align-items: center; }
+    .claim-submit { flex: 1; padding: 12px; border-radius: 9px; border: none; background: linear-gradient(135deg,#c2410c,#f77f00); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .claim-cancel { padding: 12px 16px; border-radius: 9px; border: 1.5px solid #e4ddd4; background: transparent; color: #8a7a70; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; }
+    .claim-guest-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .g-btn { width: 38px; height: 38px; border-radius: 8px; border: 1.5px solid #e4ddd4; background: #fff; font-size: 18px; font-weight: 600; color: #57524c; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .g-count { flex: 1; text-align: center; font-size: 20px; font-weight: 700; color: #1c1917; }
+    .g-note { font-size: 12px; color: #a09890; white-space: nowrap; }
+    .claim-email { width: 100%; padding: 11px 13px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 9px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; margin-bottom: 10px; -webkit-appearance: none; }
+    .claim-email:focus { border-color: #f77f00; }
+    .claim-email::placeholder { color: #c0b8b0; }
+    .claim-hint { font-size: 11px; color: #a09890; margin-bottom: 10px; line-height: 1.5; }
+
+    /* Custom dish */
+    .custom-block { background: #fff; border: 1.5px dashed #e4ddd4; border-radius: 12px; padding: 14px 16px; margin-top: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .custom-block:active { background: #fff8ec; border-color: #f77f00; }
+    .custom-icon { font-size: 22px; flex-shrink: 0; }
+    .custom-text { font-size: 14px; color: #8a7a70; }
+    .custom-text strong { color: #1c1917; display: block; }
+
+    /* Success toast */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #15803d; color: #fff; padding: 12px 24px; border-radius: 100px; font-size: 14px; font-weight: 600; display: none; z-index: 999; box-shadow: 0 4px 20px rgba(0,0,0,0.2); white-space: nowrap; }
+    .toast.show { display: block; animation: slideup 0.2s ease; }
+    @keyframes slideup { from { transform: translateX(-50%) translateY(12px); opacity:0; } to { transform: translateX(-50%) translateY(0); opacity:1; } }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid #e4ddd4; margin-bottom: 20px; }
+    .tab { flex: 1; padding: 11px; font-size: 13px; font-weight: 600; color: #a09890; cursor: pointer; border: none; border-bottom: 2px solid transparent; background: none; font-family: 'DM Sans', sans-serif; }
+    .tab.active { color: #f77f00; border-bottom-color: #f77f00; }
+    .panel { display: none; } .panel.active { display: block; }
+
+    /* Who's coming */
+    .coming-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0ede8; }
+    .coming-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .coming-name { font-size: 15px; font-weight: 500; color: #1c1917; }
+    .coming-dish { font-size: 13px; color: #8a7a70; margin-top: 1px; }
+    .coming-guests { font-size: 12px; color: #c2410c; font-weight: 500; margin-left: auto; flex-shrink: 0; }
+
+    .empty { text-align: center; padding: 40px; color: #a09890; font-style: italic; font-size: 14px; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  {potluck.cover_photo && (
-  <div style="width:100%;height:220px;overflow:hidden;position:relative;background:#e4ddd4">
-    <img src={potluck.cover_photo} alt={potluck.title}
-      style="width:100%;height:100%;object-fit:cover;display:block"/>
-    <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,0.4))"></div>
-  </div>
-)}
-  <div class="pl-hero">
-    <div class="pl-hi">
-      <a href="/potlucks" class="pl-back">← Potlucks</a>
-      <div class="pl-hero-top">
-        <h1>{potluck.title}</h1>
-        <div class="pl-theme-picker" style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:150px;flex-shrink:0">
-          <button class="pl-theme-btn" data-t="warm">🌞</button>
-          <button class="pl-theme-btn" data-t="dark">🌙</button>
-          <button class="pl-theme-btn" data-t="clean">✨</button>
-          <button class="pl-theme-btn" data-t="festive">🎉</button>
-          <button class="pl-theme-btn" data-t="birthday">🎂</button>
-          <button class="pl-theme-btn" data-t="halloween">🎃</button>
-          <button class="pl-theme-btn" data-t="holiday">🎄</button>
-          <button class="pl-theme-btn" data-t="summer">🌊</button>
-          <button class="pl-theme-btn" data-t="fall">🍂</button>
-          <button class="pl-theme-btn" data-t="spring">🌸</button>
-        </div>
-      </div>
-      <div class="pl-meta">
-        {potluck.date_label && <span>📅 {potluck.date_label}{potluck.time_label ? ` · ${potluck.time_label}` : ''}<br/></span>}
-        {potluck.location && <span>📍 {potluck.location}{potluck.location_detail ? ` · ${potluck.location_detail}` : ''}</span>}
-      </div>
-      <div class="pl-pills">
-        <span class="pl-pill">👥 {totalGuests} {totalGuests === 1 ? 'person' : 'people'} coming</span>
-        <span class="pl-pill">🍽 {attending.filter((s:any)=>s.dish).length} dishes claimed</span>
-        <span class="pl-pill" id="countdown-pill" style="display:none"></span>
-      </div>
 
-      {/* Attendee avatar strip — social proof */}
-      {attending.length > 0 && (
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-          <div style="display:flex;margin-right:4px">
-            {attending.slice(0,8).map((s:any, i:number) => {
-              const colors = ['#f77f00','#7c3aed','#0ea5e9','#16a34a','#ec4899','#f59e0b','#c2410c','#0369a1'];
-              const initials = (s.name || '?').split(' ').map((w:string) => w[0]).join('').slice(0,2).toUpperCase();
-              return (
-                <div title={s.name} style={`width:32px;height:32px;border-radius:50%;background:${colors[i%8]};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;border:2px solid var(--bg);margin-left:${i>0?'-8px':'0'};z-index:${8-i};position:relative;flex-shrink:0`}>
-                  {initials}
-                </div>
-              );
-            })}
-            {attending.length > 8 && (
-              <div style={`width:32px;height:32px;border-radius:50%;background:var(--surface);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text2);margin-left:-8px;position:relative;flex-shrink:0`}>
-                +{attending.length - 8}
+  <!-- HERO -->
+  <div class="hero">
+    {potluck.cover_photo
+      ? <img src={potluck.cover_photo} alt={potluck.title} class="hero-img"/>
+      : <div class="hero-img-placeholder"></div>
+    }
+    <div class="hero-body">
+      <div class="hero-inner">
+        <a href="/potlucks" class="back">← Potlucks</a>
+        <h1 class="event-title">{potluck.title}</h1>
+        <div class="event-meta">
+          {potluck.date_label && <span>📅 {potluck.date_label}{potluck.time_label ? ` · ${potluck.time_label}` : ''}</span>}
+          {potluck.location && <span style="margin-left:8px">📍 {potluck.location}{potluck.location_detail ? ` — ${potluck.location_detail}` : ''}</span>}
+        </div>
+
+        {/* Progress */}
+        <div class="progress-wrap">
+          <div class="progress-top">
+            <span><strong>{claimed}</strong> of {total} items claimed</span>
+            <span>{attending} {attending === 1 ? 'person' : 'people'} coming</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style={`width:${pct}%`}></div>
+          </div>
+        </div>
+
+        {/* Avatars */}
+        {signups.length > 0 && (
+          <div class="avatars">
+            {signups.slice(0,6).map((s:any, i:number) => (
+              <div class="avatar" style={`background:${colors[i%7]}`} title={s.name}>
+                {(s.name||'?').split(' ').map((w:string)=>w[0]).join('').slice(0,2).toUpperCase()}
               </div>
-            )}
+            ))}
+            {signups.length > 6 && <div class="avatar avatar-more">+{signups.length - 6}</div>}
+            <span class="avatars-text">
+              {signups.length === 1 ? `${signups[0].name} is coming` :
+               `${signups[0].name} and ${signups.length - 1} other${signups.length > 2 ? 's' : ''} are coming`}
+            </span>
           </div>
-          <span style="font-size:13px;color:var(--hero-sub)">
-            {attending.length === 1 ? `${attending[0].name} is coming` :
-             attending.length === 2 ? `${attending[0].name} and ${attending[1].name} are coming` :
-             `${attending[0].name}, ${attending[1].name} and ${attending.length - 2} other${attending.length > 3 ? 's' : ''} are coming`}
-          </span>
+        )}
+
+        <div class="share-row">
+          <button class="share-btn" id="copy-btn">🔗 Copy link</button>
+          <a class="share-btn" id="share-fb" href="#">📘 Share</a>
+          <a class="share-btn" href={`/potlucks/${id}/poster`}>🖼 Poster</a>
         </div>
-      )}
-      <div class="pl-share">
-        <button class="pl-share-btn" id="copy-link">🔗 Copy link</button>
-        <a class="pl-share-btn" id="share-fb" href="#" target="_blank">📘 Share</a>
-        <a class="pl-share-btn" id="share-reddit" href="#" target="_blank">🤙 Reddit</a>
-        <a class="pl-share-btn" href={`/potlucks/${id}/poster`}>🖼 Poster</a>
       </div>
     </div>
   </div>
 
-  <div class="pl-page">
-    <div class="pl-tabs">
-      <button class="pl-tab active" id="tab-signup">Sign Up</button>
-      <button class="pl-tab" id="tab-sheet">Who's Coming ({attending.length})</button>
-      <button class="pl-tab" id="tab-comments">Comments ({comments.length})</button>
+  <div class="page">
+    <div class="tabs">
+      <button class="tab active" id="tab-list">Sign Up</button>
+      <button class="tab" id="tab-coming">Who's Coming ({signups.length})</button>
     </div>
 
-    <!-- SIGN UP -->
-    <div class="pl-panel active" id="panel-signup">
-      <div id="form-wrap">
+    <!-- SIGN UP LIST -->
+    <div class="panel active" id="panel-list">
 
-        <!-- ── SECTION 1: About You ── -->
-        <div class="pl-section">
-          <div class="pl-section-label">👤 About You</div>
-          <div class="pl-field">
-            <label>Your name <span style="color:var(--accent)">*</span></label>
-            <input type="text" id="f-name" class="pl-input" placeholder="First name works"/>
-            <div class="pl-err" id="e-name">We need your name!</div>
-          </div>
-          <div class="pl-field" style="margin-bottom:0">
-            <label>How many people are you bringing? <span class="pl-opt">(including yourself)</span></label>
-            <div class="pl-guest-row">
-              <button type="button" class="pl-g-btn" id="g-minus">−</button>
-              <div class="pl-g-count" id="guest-count">1</div>
-              <button type="button" class="pl-g-btn" id="g-plus">+</button>
-              <div class="pl-g-note" id="guest-note">just me</div>
+      {Object.entries(cats).map(([cat, items]) => (
+        <div class="cat-block">
+          <div class="cat-title">{cat}</div>
+          {items.map((item:any) => item.claimed_by ? (
+            <div class="item claimed">
+              <div class="item-name">{item.suggestion}</div>
+              <div class="item-who">{item.claimed_by}</div>
             </div>
-          </div>
-        </div>
-
-        <!-- ── SECTION 2: What Are You Bringing ── -->
-        <div class="pl-section">
-          <div class="pl-section-label">🍽 What Are You Bringing?</div>
-          <p class="pl-sub" style="margin-bottom:14px">Tap a suggestion or type your own. Bring anything — no limits!</p>
-
-          {/* Dish gap nudge */}
-          {(() => {
-            const catTotals = catEntries.map(([cat, catSlots]) => ({
-              cat, claimed: catSlots.reduce((sum:number, s:any) => sum + (s.claimed||0), 0)
-            }));
-            const empty = catTotals.filter(c => c.claimed === 0);
-            if (empty.length === 0) return null;
-            return (
-              <div style="background:var(--accent-dim);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--accent-txt)">
-                <strong>Still needed:</strong> {empty.map(c => c.cat.split(' ').slice(1).join(' ')).join(' · ')}
-              </div>
-            );
-          })()}
-
-          {catEntries.map(([cat, catSlots]) => (
+          ) : (
             <div>
-              <div class="pl-cat-head">{cat}</div>
-              <div class="pl-grid">
-                {catSlots.map((slot:any) => (
-                  <div class="pl-slot" data-dish={slot.suggestion} data-cat={cat}>
-                    <div class="pl-slot-name">{slot.suggestion}</div>
-                    <div class="pl-slot-sub">
-                      <span>{slot.claimed > 0 ? `${slot.claimed} bringing this` : ''}</span>
-                      <span class="pl-slot-check">✓</span>
-                    </div>
-                  </div>
-                ))}
+              <div class="item" id={`item-${item.id}`}>
+                <div class="item-name">{item.suggestion}</div>
+                <button class="claim-btn" data-id={item.id} data-dish={item.suggestion}>I'll bring this!</button>
+              </div>
+              <div class="claim-form" id={`form-${item.id}`}>
+                <div class="claim-form-title">🙌 Bringing {item.suggestion}!</div>
+                <input type="text" class="claim-input" id={`name-${item.id}`} placeholder="Your name *"/>
+                <div class="claim-guest-row">
+                  <button type="button" class="g-btn" data-item={item.id} data-dir="-1">−</button>
+                  <div class="g-count" id={`gc-${item.id}`}>1</div>
+                  <button type="button" class="g-btn" data-item={item.id} data-dir="1">+</button>
+                  <div class="g-note" id={`gn-${item.id}`}>just me</div>
+                </div>
+                <input type="email" class="claim-email" id={`email-${item.id}`} placeholder="Email (optional — for a reminder)"/>
+                <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
+                <div class="claim-row">
+                  <button class="claim-submit" data-id={item.id} data-dish={item.suggestion}>Claim it! 🎉</button>
+                  <button class="claim-cancel" data-id={item.id}>Cancel</button>
+                </div>
               </div>
             </div>
           ))}
-
-          <div class="pl-picked" id="picked-bar">
-            <span class="pl-picked-txt" id="picked-text"></span>
-            <button class="pl-picked-clear" id="picked-clear">✕</button>
-          </div>
-
-          <div class="pl-autocomplete" style="margin-top:12px">
-            <label style="font-size:13px;color:var(--text2);font-weight:500;display:block;margin-bottom:7px">Or type something different <span class="pl-opt">(optional)</span></label>
-            <input type="text" id="f-dish" class="pl-input" placeholder="Start typing…" autocomplete="off"/>
-            <div class="pl-ac-list" id="ac-list"></div>
-          </div>
         </div>
+      ))}
 
-        <!-- ── SECTION 3: Can You Help ── -->
-        <div class="pl-section">
-          <div class="pl-section-label">🙌 Can You Help Out? <span class="pl-opt" style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
-          <div class="pl-checks">
-            <div class="pl-check-item" data-extra="plates"><div class="pl-check-box"></div><div class="pl-check-txt">I'll bring plates, napkins & cups</div></div>
-            <div class="pl-check-item" data-extra="cooler"><div class="pl-check-box"></div><div class="pl-check-txt">I'll bring a cooler with drinks or ice</div></div>
-            <div class="pl-check-item" data-extra="seating"><div class="pl-check-box"></div><div class="pl-check-txt">I'll bring chairs or a blanket</div></div>
-            <div class="pl-check-item" data-extra="cleanup"><div class="pl-check-box"></div><div class="pl-check-txt">I can help clean up</div></div>
+      <!-- Bring something else -->
+      <div class="cat-block">
+        <div class="cat-title">Something else?</div>
+        <div class="custom-block" id="custom-toggle">
+          <span class="custom-icon">✏️</span>
+          <div class="custom-text">
+            <strong>I'll bring something not on the list</strong>
+            Tap to add it
           </div>
         </div>
-
-        <!-- ── SECTION 4: Stay in the Loop ── -->
-        <div class="pl-section">
-          <div class="pl-section-label">📬 Stay in the Loop <span class="pl-opt" style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
-          <div class="pl-field">
-            <label>Email address</label>
-            <input type="email" id="f-email" class="pl-input" placeholder="you@example.com"/>
-            <div style="font-size:12px;color:var(--text3);margin-top:5px">We'll send a confirmation and a reminder the day before. No spam.</div>
+        <div class="claim-form hidden" id="custom-form">
+          <div class="claim-form-title">✏️ What are you bringing?</div>
+          <input type="text" class="claim-input" id="custom-dish" placeholder="e.g. Cornbread, fruit punch…" autocomplete="off"/>
+          <input type="text" class="claim-input" id="custom-name" placeholder="Your name *"/>
+          <div class="claim-guest-row">
+            <button type="button" class="g-btn" id="custom-minus">−</button>
+            <div class="g-count" id="custom-gc">1</div>
+            <button type="button" class="g-btn" id="custom-plus">+</button>
+            <div class="g-note" id="custom-gn">just me</div>
           </div>
-          <details>
-            <summary style="font-size:13px;color:var(--text3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;user-select:none"><span>+</span> Food allergies or anything else we should know</summary>
-            <div style="margin-top:12px">
-              <textarea id="f-dietary" class="pl-textarea" placeholder="Gluten-free, nut allergy, vegan… Leave blank if none."></textarea>
-            </div>
-          </details>
+          <input type="email" class="claim-email" id="custom-email" placeholder="Email (optional — for a reminder)"/>
+          <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
+          <div class="claim-row">
+            <button class="claim-submit" id="custom-submit">I'm bringing it! 🎉</button>
+            <button class="claim-cancel" id="custom-cancel">Cancel</button>
+          </div>
         </div>
-
-        <input type="text" name="_gotcha" id="_gotcha" style="display:none;position:absolute;left:-9999px" tabindex="-1" autocomplete="off"/>
-        <div class="cf-turnstile" data-sitekey="0x4AAAAAADLDABpXrHXcFpVB" data-theme="auto" data-size="flexible" style="margin-bottom:12px"></div>
-        <button type="button" class="pl-submit" id="submit-btn">Count me in! 🌞</button>
       </div>
 
-
-      <div id="success-wrap" class="pl-result pl-hidden">
-        <span class="pl-result-emoji">🎉</span>
-        <div class="pl-result-title" id="success-title">You're in!</div>
-        <p class="pl-result-sub">{potluck.date_label ? `See you ${potluck.date_label}!` : 'See you there!'}</p>
-        <div class="pl-result-card" id="success-detail"></div>
-        <div id="contact-info" style="display:none;margin-top:16px;background:var(--accent-dim);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:left">
-          <div style="font-size:11px;font-weight:700;color:var(--accent-txt);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Questions? Get in touch</div>
-          <div id="contact-phone"></div>
-          <div id="contact-discord" style="margin-top:10px"></div>
-          <div id="venmo-btn-result" style="margin-top:10px"></div>
-        </div>
-        <button type="button" class="pl-result-btn" id="add-another">Add someone else</button>
-      </div>
-      <div id="error-wrap" class="pl-result pl-hidden">
-        <span class="pl-result-emoji">😬</span>
-        <div class="pl-result-title">Something went wrong</div>
-        <p class="pl-result-sub">Give it another try.</p>
-        <button type="button" class="pl-result-btn" id="try-again">Try again</button>
-      </div>
-
-      <!-- Waitlist -->
-      <div id="waitlist-wrap" style="margin-top:20px;background:var(--success-bg);border:1.5px solid var(--success-border);border-radius:14px;padding:18px;display:none">
-        <div style="font-size:15px;font-weight:600;color:var(--success-txt);margin-bottom:4px">📋 Join the waitlist</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:14px">If a spot opens up, we'll let you know.</div>
-        <input type="text" id="wl-name" class="pl-input" placeholder="Your name" style="margin-bottom:8px"/>
-        <input type="email" id="wl-email" class="pl-input" placeholder="your@email.com" style="margin-bottom:10px"/>
-        <button type="button" class="pl-submit" id="wl-submit" style="font-size:14px;padding:12px">Join waitlist</button>
-        <div id="wl-success" style="display:none;margin-top:10px;font-size:13px;color:var(--success-txt)">✓ You're on the waitlist!</div>
-      </div>
     </div>
 
     <!-- WHO'S COMING -->
-    <div class="pl-panel" id="panel-sheet">
-      {attending.length === 0
-        ? <div class="pl-empty">Nobody's signed up yet — be the first!</div>
-        : <table class="pl-sheet-table">
-            <thead><tr><th>Name</th><th>Bringing</th><th>People</th></tr></thead>
-            <tbody>
-              {attending.map((s:any) => (
-                <tr>
-                  <td>{s.name}</td>
-                  <td>{s.dish || <em style="color:var(--text3)">Not sure yet</em>}</td>
-                  <td>{s.guest_count||1}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-      }
-      <div style="text-align:center;margin-top:20px">
-        <a href={`/api/potluck-export?id=${id}`} style="font-size:13px;color:var(--accent-txt);text-decoration:none;font-weight:500">⬇ Download as CSV</a>
-        <span style="margin:0 8px;color:var(--text3)">·</span>
-        <a href={`/potlucks/${id}/poster`} style="font-size:13px;color:var(--accent-txt);text-decoration:none;font-weight:500">🖼 Make a poster</a>
-        <span style="margin:0 8px;color:var(--text3)">·</span>
-        <a href={`/potlucks/manage/${id}`} style="font-size:13px;color:var(--accent-txt);text-decoration:none;font-weight:500">⚙ Manage</a>
-      </div>
-    </div>
-
-    <!-- COMMENTS -->
-    <div class="pl-panel" id="panel-comments">
-      <div style="margin-bottom:20px">
-        <div class="pl-field"><label>Leave a comment</label>
-          <input type="text" id="c-name" class="pl-input" placeholder="Your name" style="margin-bottom:8px"/>
-          <textarea id="c-text" class="pl-textarea" placeholder="So excited! Can't wait 🎉" style="margin-bottom:8px"></textarea>
-          <button type="button" id="post-comment" class="pl-submit" style="font-size:14px;padding:12px">Post</button>
-        </div>
-      </div>
-      <div id="comments-list">
-        {comments.length === 0
-          ? <div class="pl-empty">No comments yet — be the first!</div>
-          : comments.map((c:any) => (
-            <div class="pl-comment">
-              <div class="pl-comment-name">{c.name}</div>
-              <div class="pl-comment-text">{c.comment}</div>
-              <div class="pl-comment-time">{new Date(c.created_at+'Z').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+    <div class="panel" id="panel-coming">
+      {signups.length === 0
+        ? <div class="empty">Nobody's signed up yet — be the first! 🙌</div>
+        : signups.map((s:any, i:number) => (
+          <div class="coming-row">
+            <div class="coming-avatar" style={`background:${colors[i%7]}`}>
+              {(s.name||'?').split(' ').map((w:string)=>w[0]).join('').slice(0,2).toUpperCase()}
             </div>
-          ))
-        }
-      </div>
+            <div>
+              <div class="coming-name">{s.name}</div>
+              <div class="coming-dish">{s.dish || 'Showing up 🎉'}</div>
+            </div>
+            {s.guest_count > 1 && <div class="coming-guests">+{s.guest_count - 1}</div>}
+          </div>
+        ))
+      }
     </div>
   </div>
 
-  <nav class="pl-nav">
-    <a href="/"><span class="pl-nav-icon">🏠</span>Home</a>
-    <a href="/events"><span class="pl-nav-icon">📅</span>Events</a>
-    <a href="/potlucks" class="active"><span class="pl-nav-icon">🍽</span>Potlucks</a>
-    <a href="/recs"><span class="pl-nav-icon">⭐</span>Recs</a>
-  </nav>
+  <div class="toast" id="toast"></div>
 
-  <script define:vars={{ potluckId: id, defaultTheme: defaultTemplate, eventDate: potluck.date_label||'', eventTime: potluck.time_label||'' }}>
-    var rsvp='yes', guestCount=1, extras={plates:false,cooler:false,seating:false,cleanup:false};
-    var selectedDish='', selectedCat='';
-
-    // Theme switcher
-    var html = document.documentElement;
-    var savedTheme = localStorage.getItem('pl-theme') || defaultTheme;
-    html.setAttribute('data-theme', savedTheme);
-    document.querySelectorAll('.pl-theme-btn').forEach(function(btn) {
-      if (btn.dataset.t === savedTheme) btn.classList.add('active');
-      btn.addEventListener('click', function() {
-        var t = btn.dataset.t;
-        html.setAttribute('data-theme', t);
-        localStorage.setItem('pl-theme', t);
-        document.querySelectorAll('.pl-theme-btn').forEach(function(b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-      });
-    });
-
-    // Countdown
-    if (eventDate) {
-      var d = new Date(eventDate + ' 2026');
-      if (!isNaN(d.getTime())) {
-        var diff = Math.ceil((d - Date.now()) / 86400000);
-        var pill = document.getElementById('countdown-pill');
-        if (diff > 0) { pill.textContent = '⏳ ' + diff + ' day' + (diff!==1?'s':'') + ' away'; pill.style.display='inline-flex'; }
-        else if (diff === 0) { pill.textContent = '🎉 Today!'; pill.style.display='inline-flex'; }
-      }
-    }
-
-    // Share
-    var pageUrl = window.location.href;
-    var pageTitle = document.querySelector('h1').textContent.trim();
-    document.getElementById('copy-link').addEventListener('click', function() {
-      navigator.clipboard.writeText(pageUrl).then(function() {
-        var b = document.getElementById('copy-link'); b.textContent='✓ Copied!';
-        setTimeout(function(){b.textContent='🔗 Copy link';},2000);
-      });
-    });
-    document.getElementById('share-fb').href = 'https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(pageUrl);
-    document.getElementById('share-reddit').href = 'https://reddit.com/submit?url='+encodeURIComponent(pageUrl)+'&title='+encodeURIComponent(pageTitle);
+  <script define:vars={{ potluckId: id }}>
+    var guestCounts = {};
 
     // Tabs
-    ['signup','sheet','comments'].forEach(function(t) {
-      document.getElementById('tab-'+t).addEventListener('click', function() {
-        document.querySelectorAll('.pl-tab').forEach(function(e){e.classList.remove('active');});
-        document.querySelectorAll('.pl-panel').forEach(function(e){e.classList.remove('active');});
-        document.getElementById('tab-'+t).classList.add('active');
-        document.getElementById('panel-'+t).classList.add('active');
+    document.getElementById('tab-list').addEventListener('click', function() {
+      document.getElementById('tab-list').classList.add('active');
+      document.getElementById('tab-coming').classList.remove('active');
+      document.getElementById('panel-list').classList.add('active');
+      document.getElementById('panel-coming').classList.remove('active');
+    });
+    document.getElementById('tab-coming').addEventListener('click', function() {
+      document.getElementById('tab-coming').classList.add('active');
+      document.getElementById('tab-list').classList.remove('active');
+      document.getElementById('panel-coming').classList.add('active');
+      document.getElementById('panel-list').classList.remove('active');
+    });
+
+    // Share
+    var url = window.location.href;
+    document.getElementById('copy-btn').addEventListener('click', function() {
+      navigator.clipboard.writeText(url).then(function() {
+        showToast('Link copied! 🔗');
+      });
+    });
+    document.getElementById('share-fb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
+
+    // Claim buttons — open inline form
+    document.querySelectorAll('.claim-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = btn.dataset.id;
+        // Close any other open forms
+        document.querySelectorAll('.claim-form').forEach(function(f) { f.classList.remove('open'); f.classList.add('hidden'); });
+        document.getElementById('claim-form-' + id) && null;
+        var form = document.getElementById('form-' + id);
+        if (form) { form.classList.add('open'); form.classList.remove('hidden'); document.getElementById('name-' + id).focus(); }
       });
     });
 
-    // RSVP is always 'yes' — form is sign-up only
-    var rsvp = 'yes';
-
-    // Autocomplete for dish input
-    var allSuggestions = [];
-    // Collect from rendered slots
-    document.querySelectorAll('.pl-slot').forEach(function(el) {
-      allSuggestions.push({ name: el.dataset.dish, cat: el.dataset.cat, count: parseInt(el.querySelector('.pl-slot-sub span')?.textContent || '0') });
-    });
-    // Extra common potluck items not in slots
-    var extras = [
-      'Charcuterie Board','Guacamole','Deviled Eggs','Corn on the Cob',
-      'Baked Beans','Rice Dish','Pasta Dish','Potato Dish','Green Bean Casserole',
-      'Caprese Salad','Antipasto','Garlic Bread','Dinner Rolls',
-      'Cheesecake','Pie','Ice Cream','Popsicles','Trail Mix',
-      'Soda','Beer','Wine','Kombucha','Sparkling Cider','Punch',
-      'Grapes','Strawberries','Blueberries','Mixed Berries',
-    ];
-    extras.forEach(function(name) {
-      if (!allSuggestions.find(function(s) { return s.name.toLowerCase() === name.toLowerCase(); })) {
-        allSuggestions.push({ name: name, cat: '', count: 0 });
-      }
-    });
-
-    var acInput = document.getElementById('f-dish');
-    var acList = document.getElementById('ac-list');
-    var acOpen = false;
-
-    function showAC(query) {
-      if (!query || query.length < 1) { acList.classList.remove('open'); return; }
-      var q = query.toLowerCase();
-      var matches = allSuggestions.filter(function(s) {
-        return s.name.toLowerCase().includes(q);
-      }).slice(0, 8);
-      if (matches.length === 0) { acList.classList.remove('open'); return; }
-      acList.innerHTML = matches.map(function(s) {
-        var highlight = s.name.replace(new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi'), '<strong>$1</strong>');
-        return '<div class="pl-ac-item" data-val="' + s.name + '">' +
-          '<span class="pl-ac-item-name">' + highlight + '</span>' +
-          (s.cat ? '<span class="pl-ac-item-cat">' + s.cat.split(' ').slice(1).join(' ') + '</span>' : '') +
-          (s.count > 0 ? '<span class="pl-ac-item-count">' + s.count + ' bringing</span>' : '') +
-          '</div>';
-      }).join('');
-      acList.classList.add('open');
-      // Add click handlers
-      acList.querySelectorAll('.pl-ac-item').forEach(function(item) {
-        item.addEventListener('mousedown', function(e) { e.preventDefault(); });
-        item.addEventListener('click', function() {
-          acInput.value = item.dataset.val;
-          acList.classList.remove('open');
-          // Also clear slot selection since they typed their own
-          document.querySelectorAll('.pl-slot').forEach(function(c){c.classList.remove('selected');});
-          selectedDish = item.dataset.val; selectedCat = '';
-          document.getElementById('picked-text').textContent = 'You\'re bringing: ' + item.dataset.val;
-          document.getElementById('picked-bar').classList.add('show');
-        });
+    // Cancel buttons
+    document.querySelectorAll('.claim-cancel').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = btn.dataset.id;
+        if (id) { var f = document.getElementById('form-' + id); if (f) { f.classList.remove('open'); f.classList.add('hidden'); } }
+        else { document.getElementById('custom-form').classList.remove('open'); document.getElementById('custom-form').classList.add('hidden'); }
       });
-    }
+    });
 
-    if (acInput) {
-      acInput.addEventListener('input', function() { showAC(this.value); });
-      acInput.addEventListener('focus', function() { if (this.value) showAC(this.value); });
-      acInput.addEventListener('blur', function() { setTimeout(function(){ acList.classList.remove('open'); }, 150); });
-    }
+    // Guest count buttons
+    document.querySelectorAll('.g-btn[data-item]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var itemId = btn.dataset.item;
+        if (!guestCounts[itemId]) guestCounts[itemId] = 1;
+        guestCounts[itemId] = Math.max(1, Math.min(10, guestCounts[itemId] + parseInt(btn.dataset.dir)));
+        document.getElementById('gc-' + itemId).textContent = String(guestCounts[itemId]);
+        document.getElementById('gn-' + itemId).textContent = guestCounts[itemId] === 1 ? 'just me' : 'me + ' + (guestCounts[itemId]-1) + ' other' + (guestCounts[itemId]>2?'s':'');
+      });
+    });
 
-    // Slot picker
-    document.querySelectorAll('.pl-slot').forEach(function(el) {
-      el.addEventListener('click', function() {
-        var already = el.classList.contains('selected');
-        document.querySelectorAll('.pl-slot').forEach(function(c){c.classList.remove('selected');});
-        if (!already) {
-          el.classList.add('selected'); selectedDish=el.dataset.dish; selectedCat=el.dataset.cat;
-          document.getElementById('picked-text').textContent='You\'re bringing: '+selectedDish;
-          document.getElementById('picked-bar').classList.add('show');
+    // Custom dish toggle
+    var customCount = 1;
+    document.getElementById('custom-toggle').addEventListener('click', function() {
+      var f = document.getElementById('custom-form');
+      f.classList.toggle('hidden');
+      if (!f.classList.contains('hidden')) document.getElementById('custom-dish').focus();
+    });
+    document.getElementById('custom-minus').addEventListener('click', function() {
+      customCount = Math.max(1, customCount-1);
+      document.getElementById('custom-gc').textContent = String(customCount);
+      document.getElementById('custom-gn').textContent = customCount===1?'just me':'me + '+(customCount-1)+' other'+(customCount>2?'s':'');
+    });
+    document.getElementById('custom-plus').addEventListener('click', function() {
+      customCount = Math.min(10, customCount+1);
+      document.getElementById('custom-gc').textContent = String(customCount);
+      document.getElementById('custom-gn').textContent = customCount===1?'just me':'me + '+(customCount-1)+' other'+(customCount>2?'s':'');
+    });
+    document.getElementById('custom-cancel').addEventListener('click', function() {
+      document.getElementById('custom-form').classList.add('hidden');
+    });
+
+    // Submit claim
+    document.querySelectorAll('.claim-submit').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var itemId = btn.dataset.id;
+        var dish = btn.dataset.dish;
+        var name, guests, email;
+
+        if (itemId) {
+          name = document.getElementById('name-' + itemId).value.trim();
+          guests = guestCounts[itemId] || 1;
+          email = document.getElementById('email-' + itemId).value.trim();
         } else {
-          selectedDish=''; selectedCat='';
-          document.getElementById('picked-bar').classList.remove('show');
+          // custom
+          dish = document.getElementById('custom-dish').value.trim();
+          name = document.getElementById('custom-name').value.trim();
+          guests = customCount;
+          email = document.getElementById('custom-email').value.trim();
+          if (!dish) { document.getElementById('custom-dish').focus(); return; }
         }
-      });
-    });
-    document.getElementById('picked-clear').addEventListener('click', function() {
-      document.querySelectorAll('.pl-slot').forEach(function(c){c.classList.remove('selected');});
-      selectedDish=''; selectedCat='';
-      document.getElementById('picked-bar').classList.remove('show');
-    });
 
-    // Guest count
-    document.getElementById('g-minus').addEventListener('click', function() {
-      guestCount=Math.max(1,guestCount-1);
-      document.getElementById('guest-count').textContent=String(guestCount);
-      document.getElementById('guest-note').textContent=guestCount===1?'just me':'me + '+(guestCount-1)+' other'+(guestCount>2?'s':'');
-    });
-    document.getElementById('g-plus').addEventListener('click', function() {
-      guestCount=Math.min(10,guestCount+1);
-      document.getElementById('guest-count').textContent=String(guestCount);
-      document.getElementById('guest-note').textContent=guestCount===1?'just me':'me + '+(guestCount-1)+' other'+(guestCount>2?'s':'');
-    });
+        if (!name) {
+          var nameField = itemId ? document.getElementById('name-' + itemId) : document.getElementById('custom-name');
+          nameField.style.borderColor = '#f77f00';
+          nameField.focus();
+          return;
+        }
 
-    // Checkboxes
-    document.querySelectorAll('.pl-check-item').forEach(function(el) {
-      el.addEventListener('click', function() {
-        var key=el.dataset.extra; extras[key]=!extras[key];
-        el.classList.toggle('active',extras[key]);
-        el.querySelector('.pl-check-box').textContent=extras[key]?'✓':'';
-      });
-    });
+        btn.disabled = true; btn.textContent = 'Saving…';
 
-    // Submit
-    document.getElementById('submit-btn').addEventListener('click', async function() {
-      var nameVal=document.getElementById('f-name').value.trim();
-      var ok=true;
-
-      if (!nameVal){document.getElementById('e-name').style.display='block';ok=false;}else document.getElementById('e-name').style.display='none';
-      if (!ok) return;
-      var btn=document.getElementById('submit-btn'); btn.disabled=true; btn.textContent='Saving…';
-      var dishVal=donating?'':(selectedDish||document.getElementById('f-dish').value.trim());
-      var honeypot=document.getElementById('_gotcha').value;
-      var tsEl=document.querySelector('[name="cf-turnstile-response"]');
-      var payload={
-        potluckId:String(potluckId), _gotcha:honeypot, _turnstile:tsEl?tsEl.value:'',
-        name:nameVal, email:document.getElementById('f-email').value.trim(),
-        handle:'', platforms:document.getElementById('f-platform').value,
-        rsvp:rsvp, guestCount:String(guestCount),
-        dish:dishVal, dishCategory:selectedCat,
-        dietary:document.getElementById('f-dietary').value.trim(),
-        utensils:extras.plates, earlyArrive:extras.cooler, seating:extras.seating
-      };
-      try {
-        var res=await fetch('/api/potluck',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-        var data=await res.json();
-        if (data.ok) {
-          document.getElementById('form-wrap').classList.add('pl-hidden');
-          document.getElementById('success-wrap').classList.remove('pl-hidden');
-          document.getElementById('success-title').textContent="You're in, "+nameVal.split(' ')[0]+'!';
-          var d='';
-          if (dishVal) d+='🍽 '+dishVal+'<br/>';
-
-          d+='👥 '+(guestCount===1?'Just you':'You + '+(guestCount-1)+' other'+(guestCount>2?'s':''))+'<br/>';
-          if (extras.plates) d+='🍽 Bringing plates & cups<br/>';
-          if (extras.cooler) d+='🧊 Bringing a cooler<br/>';
-          if (extras.seating) d+='🪑 Bringing chairs or a blanket<br/>';
-          if (extras.cleanup) d+='🧹 Helping clean up';
-          document.getElementById('success-detail').innerHTML=d;
-          if (data.contact) {
-            var ci=document.getElementById('contact-info');
-            if (data.contact.venmo) document.getElementById('venmo-btn-result').innerHTML='<a href="https://venmo.com/u/'+data.contact.venmo+'" target="_blank" style="display:flex;align-items:center;gap:8px;color:#3d95ce;text-decoration:none;font-size:13px;font-weight:500;"><span>💙</span>@'+data.contact.venmo+'</a>';
-            if (data.contact.phone) document.getElementById('contact-phone').innerHTML='<a href="sms:'+data.contact.phone.replace(/[^\d]/g,'')+'" style="display:flex;align-items:center;gap:8px;text-decoration:none;"><span style="font-size:20px">📱</span><div><div style="font-size:14px;font-weight:600;color:var(--text)">Text me</div><div style="font-size:13px;color:var(--text3)">'+data.contact.phone+'</div></div></a>';
-            if (data.contact.discord) document.getElementById('contact-discord').innerHTML='<a href="'+(data.contact.discord_url||'#')+'" target="_blank" style="display:flex;align-items:center;gap:8px;text-decoration:none;"><span style="font-size:20px">🎮</span><div><div style="font-size:14px;font-weight:600;color:var(--text)">Discord</div><div style="font-size:13px;color:var(--text3)">'+data.contact.discord+'</div></div></a>';
-            ci.style.display='block';
+        try {
+          var res = await fetch('/api/potluck', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              potluckId: String(potluckId), name, email, handle: '',
+              platforms: '', rsvp: 'yes', guestCount: String(guests),
+              dish: dish, dishCategory: '', dietary: '',
+              utensils: false, earlyArrive: false, seating: false,
+              _gotcha: '', _turnstile: ''
+            })
+          });
+          var data = await res.json();
+          if (data.ok) {
+            showToast('You\'re in, ' + name.split(' ')[0] + '! 🎉');
+            setTimeout(function() { location.reload(); }, 1200);
+          } else {
+            btn.disabled = false; btn.textContent = itemId ? 'Claim it! 🎉' : 'I\'m bringing it! 🎉';
+            showToast('Something went wrong — try again');
           }
-          window.scrollTo({top:0,behavior:'smooth'});
-        } else {
-          document.getElementById('form-wrap').classList.add('pl-hidden');
-          document.getElementById('error-wrap').classList.remove('pl-hidden');
+        } catch(e) {
+          btn.disabled = false; btn.textContent = itemId ? 'Claim it! 🎉' : 'I\'m bringing it! 🎉';
         }
-      } catch {
-        document.getElementById('form-wrap').classList.add('pl-hidden');
-        document.getElementById('error-wrap').classList.remove('pl-hidden');
-      }
+      });
     });
 
-    document.getElementById('add-another').addEventListener('click', function(){location.reload();});
-    document.getElementById('try-again').addEventListener('click', function() {
-      document.getElementById('form-wrap').classList.remove('pl-hidden');
-      document.getElementById('error-wrap').classList.add('pl-hidden');
-      var btn=document.getElementById('submit-btn'); btn.disabled=false; btn.textContent='Count me in! 🌞';
-    });
-
-    // Comments
-    document.getElementById('post-comment').addEventListener('click', async function() {
-      var name=document.getElementById('c-name').value.trim();
-      var text=document.getElementById('c-text').value.trim();
-      if (!name||!text) return;
-      var btn=document.getElementById('post-comment'); btn.disabled=true; btn.textContent='Posting…';
-      var res=await fetch('/api/potluck-comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({potluckId:String(potluckId),name,comment:text})});
-      var data=await res.json();
-      if (data.ok) {
-        var list=document.getElementById('comments-list');
-        var el=document.createElement('div'); el.className='pl-comment';
-        el.innerHTML='<div class="pl-comment-name">'+name+'</div><div class="pl-comment-text">'+text+'</div><div class="pl-comment-time">Just now</div>';
-        if (list.querySelector('.pl-empty')) list.innerHTML='';
-        list.insertBefore(el,list.firstChild);
-        document.getElementById('c-name').value='';
-        document.getElementById('c-text').value='';
-        btn.disabled=false; btn.textContent='Post';
-      }
-    });
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(function() { t.classList.remove('show'); }, 2500);
+    }
   </script>
 </body>
 </html>
