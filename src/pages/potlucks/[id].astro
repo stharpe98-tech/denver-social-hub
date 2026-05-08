@@ -415,9 +415,10 @@ const defaultTemplate = potluck.template || 'warm';
             <span class="pl-picked-txt" id="picked-text"></span>
             <button class="pl-picked-clear" id="picked-clear">✕</button>
           </div>
-          <div class="pl-field" style="margin-top:10px">
+          <div class="pl-field pl-autocomplete" style="margin-top:10px" id="dish-ac-wrap">
             <label style="font-size:13px;color:var(--text2);font-weight:500">Or type something different <span class="pl-opt">(optional)</span></label>
-            <input type="text" id="f-dish" class="pl-input" placeholder="Anything goes!"/>
+            <input type="text" id="f-dish" class="pl-input" placeholder="Start typing… e.g. brownies, chicken" autocomplete="off"/>
+            <div class="pl-ac-list" id="ac-list"></div>
           </div>
         </div>
 
@@ -622,6 +623,68 @@ const defaultTemplate = potluck.template || 'warm';
 
     // RSVP is always 'yes' — form is sign-up only
     var rsvp = 'yes';
+
+    // Autocomplete for dish input
+    var allSuggestions = [];
+    // Collect from rendered slots
+    document.querySelectorAll('.pl-slot').forEach(function(el) {
+      allSuggestions.push({ name: el.dataset.dish, cat: el.dataset.cat, count: parseInt(el.querySelector('.pl-slot-sub span')?.textContent || '0') });
+    });
+    // Extra common potluck items not in slots
+    var extras = [
+      'Charcuterie Board','Guacamole','Deviled Eggs','Corn on the Cob',
+      'Baked Beans','Rice Dish','Pasta Dish','Potato Dish','Green Bean Casserole',
+      'Caprese Salad','Antipasto','Garlic Bread','Dinner Rolls',
+      'Cheesecake','Pie','Ice Cream','Popsicles','Trail Mix',
+      'Soda','Beer','Wine','Kombucha','Sparkling Cider','Punch',
+      'Grapes','Strawberries','Blueberries','Mixed Berries',
+    ];
+    extras.forEach(function(name) {
+      if (!allSuggestions.find(function(s) { return s.name.toLowerCase() === name.toLowerCase(); })) {
+        allSuggestions.push({ name: name, cat: '', count: 0 });
+      }
+    });
+
+    var acInput = document.getElementById('f-dish');
+    var acList = document.getElementById('ac-list');
+    var acOpen = false;
+
+    function showAC(query) {
+      if (!query || query.length < 1) { acList.classList.remove('open'); return; }
+      var q = query.toLowerCase();
+      var matches = allSuggestions.filter(function(s) {
+        return s.name.toLowerCase().includes(q);
+      }).slice(0, 8);
+      if (matches.length === 0) { acList.classList.remove('open'); return; }
+      acList.innerHTML = matches.map(function(s) {
+        var highlight = s.name.replace(new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi'), '<strong>$1</strong>');
+        return '<div class="pl-ac-item" data-val="' + s.name + '">' +
+          '<span class="pl-ac-item-name">' + highlight + '</span>' +
+          (s.cat ? '<span class="pl-ac-item-cat">' + s.cat.split(' ').slice(1).join(' ') + '</span>' : '') +
+          (s.count > 0 ? '<span class="pl-ac-item-count">' + s.count + ' bringing</span>' : '') +
+          '</div>';
+      }).join('');
+      acList.classList.add('open');
+      // Add click handlers
+      acList.querySelectorAll('.pl-ac-item').forEach(function(item) {
+        item.addEventListener('mousedown', function(e) { e.preventDefault(); });
+        item.addEventListener('click', function() {
+          acInput.value = item.dataset.val;
+          acList.classList.remove('open');
+          // Also clear slot selection since they typed their own
+          document.querySelectorAll('.pl-slot').forEach(function(c){c.classList.remove('selected');});
+          selectedDish = item.dataset.val; selectedCat = '';
+          document.getElementById('picked-text').textContent = 'You\'re bringing: ' + item.dataset.val;
+          document.getElementById('picked-bar').classList.add('show');
+        });
+      });
+    }
+
+    if (acInput) {
+      acInput.addEventListener('input', function() { showAC(this.value); });
+      acInput.addEventListener('focus', function() { if (this.value) showAC(this.value); });
+      acInput.addEventListener('blur', function() { setTimeout(function(){ acList.classList.remove('open'); }, 150); });
+    }
 
     // Food/donate toggle
     document.getElementById('toggle-food').addEventListener('click', function() {
