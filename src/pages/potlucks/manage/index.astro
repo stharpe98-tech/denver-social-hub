@@ -1,5 +1,8 @@
 ---
 import { getDB } from '../../../lib/db';
+import { requireApprovedOrg } from '../../../lib/admin-auth';
+const gate = await requireApprovedOrg(Astro);
+if (gate instanceof Response) return gate;
 const db = getDB();
 let pending: any[] = [];
 let approved: any[] = [];
@@ -99,6 +102,30 @@ try {
     </div>
 
     <div class="ms">
+      <div class="ms-label">📞 Contact & Payments</div>
+      <div class="settings-card">
+        <div class="cf-field" style="margin-bottom:10px"><label>Organizer Email (gets notified per sign-up)</label><input type="text" id="cfg-organizer-email" class="cf-input" placeholder="you@example.com"/></div>
+        <div class="cf-field" style="margin-bottom:10px"><label>Contact Phone (shown after sign-up)</label><input type="text" id="cfg-contact-phone" class="cf-input" placeholder="(720) 555-1234"/></div>
+        <div class="cf-field" style="margin-bottom:10px"><label>Discord Handle</label><input type="text" id="cfg-contact-discord" class="cf-input" placeholder="@yourhandle"/></div>
+        <div class="cf-field" style="margin-bottom:10px"><label>Discord Invite URL</label><input type="text" id="cfg-contact-discord-url" class="cf-input" placeholder="https://discord.gg/…"/></div>
+        <div class="cf-field" style="margin-bottom:10px"><label>Venmo Handle</label><input type="text" id="cfg-venmo" class="cf-input" placeholder="@yourvenmo"/></div>
+        <div class="cf-field" style="margin-bottom:10px"><label>Stripe Payment Link (optional)</label><input type="text" id="cfg-stripe" class="cf-input" placeholder="https://buy.stripe.com/…"/></div>
+        <div class="cf-field" style="margin-bottom:12px"><label>Cash App Handle (optional)</label><input type="text" id="cfg-cashapp" class="cf-input" placeholder="$yourcashtag"/></div>
+        <button class="save-btn" id="save-contact-cfg">Save</button>
+        <div class="settings-hint" style="margin-top:8px">Phone, Discord, Venmo, etc. show up on the post-signup confirmation card — never in the public HTML.</div>
+      </div>
+    </div>
+
+    <div class="ms">
+      <div class="ms-label">🛡 Bot Protection (Cloudflare Turnstile)</div>
+      <div class="settings-card">
+        <div class="cf-field" style="margin-bottom:10px"><label>Turnstile Secret Key</label><input type="text" id="cfg-turnstile-secret" class="cf-input" placeholder="0x4AAAAAAA…"/></div>
+        <button class="save-btn" id="save-turnstile-cfg">Save</button>
+        <div class="settings-hint" style="margin-top:8px">Get this from dash.cloudflare.com → Turnstile. The site key is already wired in code.</div>
+      </div>
+    </div>
+
+    <div class="ms">
       <div class="ms-label">⏳ Pending ({pending.length})</div>
       {pending.length === 0
         ? <div class="empty">No pending submissions</div>
@@ -128,6 +155,7 @@ try {
         <div class="cf-field"><label>Description</label><input type="text" id="c-desc" class="cf-input" placeholder="What's the vibe?"/></div>
         <div class="cf-grid">
           <div class="cf-field"><label>Date</label><input type="text" id="c-date" class="cf-input" placeholder="May 30th"/></div>
+          <div class="cf-field"><label>Event Date (for reminders)</label><input type="date" id="c-event-date" class="cf-input"/></div>
           <div class="cf-field"><label>Time</label><input type="text" id="c-time" class="cf-input" placeholder="12pm–4pm"/></div>
           <div class="cf-field"><label>Location</label><input type="text" id="c-loc" class="cf-input" placeholder="Cheeseman Park"/></div>
           <div class="cf-field"><label>Detail</label><input type="text" id="c-locdetail" class="cf-input" placeholder="West side"/></div>
@@ -207,12 +235,41 @@ try {
       f.style.display = f.style.display === 'block' ? 'none' : 'block';
     });
 
-    // Load existing email config
+    // Load existing config
     fetch('/api/potlucks?type=config').then(function(r){ return r.json(); }).then(function(cfg){
-      if (cfg.resend_api_key) document.getElementById('resend-key').value = cfg.resend_api_key;
-      if (cfg.site_url) document.getElementById('site-url').value = cfg.site_url;
-      if (cfg.from_email) document.getElementById('from-email').value = cfg.from_email;
+      var setVal = function(id, val) { var el = document.getElementById(id); if (el && val) el.value = val; };
+      setVal('resend-key', cfg.resend_api_key);
+      setVal('site-url', cfg.site_url);
+      setVal('from-email', cfg.from_email);
+      setVal('cfg-organizer-email', cfg.organizer_email);
+      setVal('cfg-contact-phone', cfg.contact_phone);
+      setVal('cfg-contact-discord', cfg.contact_discord);
+      setVal('cfg-contact-discord-url', cfg.contact_discord_url);
+      setVal('cfg-venmo', cfg.venmo_handle);
+      setVal('cfg-stripe', cfg.stripe_link);
+      setVal('cfg-cashapp', cfg.cashapp_handle);
+      setVal('cfg-turnstile-secret', cfg.turnstile_secret_key);
     }).catch(function(){});
+
+    function saveCfg(key, value) {
+      return fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'set_config',key:key,value:value}) });
+    }
+    document.getElementById('save-contact-cfg').addEventListener('click', async function() {
+      await Promise.all([
+        saveCfg('organizer_email', document.getElementById('cfg-organizer-email').value.trim()),
+        saveCfg('contact_phone', document.getElementById('cfg-contact-phone').value.trim()),
+        saveCfg('contact_discord', document.getElementById('cfg-contact-discord').value.trim()),
+        saveCfg('contact_discord_url', document.getElementById('cfg-contact-discord-url').value.trim()),
+        saveCfg('venmo_handle', document.getElementById('cfg-venmo').value.trim()),
+        saveCfg('stripe_link', document.getElementById('cfg-stripe').value.trim()),
+        saveCfg('cashapp_handle', document.getElementById('cfg-cashapp').value.trim()),
+      ]);
+      showToast('Contact info saved ✓');
+    });
+    document.getElementById('save-turnstile-cfg').addEventListener('click', async function() {
+      await saveCfg('turnstile_secret_key', document.getElementById('cfg-turnstile-secret').value.trim());
+      showToast('Turnstile saved ✓');
+    });
 
     document.getElementById('save-email-cfg').addEventListener('click', async function() {
       var key = document.getElementById('resend-key').value.trim();
@@ -240,7 +297,7 @@ try {
     document.getElementById('create-submit').addEventListener('click', async function() {
       var title = document.getElementById('c-title').value.trim();
       if (!title) return;
-      var tmplInput = document.getElementById('c-template'); var body = { action:'create', title: title, description:'', date_label: document.getElementById('c-date').value, time_label: document.getElementById('c-time').value, location: document.getElementById('c-loc').value, location_detail: document.getElementById('c-locdetail').value, status:'upcoming', template: tmplInput ? tmplInput.value : 'warm' };
+      var tmplInput = document.getElementById('c-template'); var body = { action:'create', title: title, description:'', date_label: document.getElementById('c-date').value, event_date: document.getElementById('c-event-date').value || null, time_label: document.getElementById('c-time').value, location: document.getElementById('c-loc').value, location_detail: document.getElementById('c-locdetail').value, cover_photo: document.getElementById('c-cover').value.trim() || null, status:'upcoming', template: tmplInput ? tmplInput.value : 'warm' };
       var res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       var data = await res.json();
       if (data.ok) window.location.href = '/potlucks/manage/' + data.id;

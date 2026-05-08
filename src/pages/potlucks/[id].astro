@@ -10,7 +10,7 @@ try {
     potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(id).first();
     if (potluck?.locked) return Astro.redirect('/potlucks');
     const s = await db.prepare(`
-      SELECT ps.id, ps.suggestion, ps.category, ps.sort_order,
+      SELECT ps.id, ps.suggestion, ps.category, ps.sort_order, ps.max_claims, ps.slot_time,
         pr.name as claimed_by, pr.id as rsvp_id
       FROM potluck_slots ps
       LEFT JOIN potluck_rsvp pr ON LOWER(pr.dish)=LOWER(ps.suggestion)
@@ -83,10 +83,39 @@ slots.forEach((s:any) => {
     /* Page */
     .page { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
 
-    /* Category */
-    .cat-block { margin-bottom: 24px; }
-    .cat-title { font-size: 13px; font-weight: 700; color: #8a7a70; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-    .cat-title::after { content: ''; flex: 1; height: 1px; background: #e4ddd4; }
+    /* View toggle */
+    .view-toggle { display: inline-flex; background: #fff; border: 1px solid #e4ddd4; border-radius: 10px; padding: 3px; margin-bottom: 16px; }
+    .vt-btn { background: transparent; border: none; padding: 7px 18px; font-size: 13px; font-weight: 600; color: #a09890; border-radius: 7px; cursor: pointer; font-family: 'DM Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+    .vt-btn.active { background: linear-gradient(135deg, #c2410c, #f77f00); color: #fff; }
+
+    /* Grid view */
+    .grid-wrap { background: #fff; border: 1.5px solid #e4ddd4; border-radius: 14px; overflow-x: auto; }
+    .signup-grid { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .signup-grid th { text-align: left; padding: 12px 14px; font-size: 11px; font-weight: 700; color: #8a7a70; text-transform: uppercase; letter-spacing: 1px; background: #f7f5f2; border-bottom: 1.5px solid #e4ddd4; }
+    .signup-grid td { padding: 14px; border-bottom: 1px solid #f0ede8; vertical-align: middle; }
+    .signup-grid tr:last-child td { border-bottom: none; }
+    .g-time { font-weight: 600; color: #57524c; white-space: nowrap; }
+    .g-item { color: #1c1917; font-weight: 500; }
+    .g-cat { font-size: 11px; color: #a09890; font-weight: 400; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .g-prog { font-size: 13px; color: #6b5040; }
+    .g-action { text-align: right; }
+    .g-signup-btn { padding: 8px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #c2410c, #f77f00); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .g-signup-btn:hover { opacity: 0.9; }
+    .g-claimed { font-size: 13px; color: #16a34a; font-weight: 600; white-space: nowrap; }
+    .g-empty { text-align: center; color: #a09890; padding: 30px; font-style: italic; }
+
+    /* Category dropdowns */
+    .cat-block { margin-bottom: 12px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 14px; overflow: hidden; }
+    .cat-block[open] { border-color: #fcd5a0; }
+    .cat-title { font-size: 13px; font-weight: 700; color: #57524c; text-transform: uppercase; letter-spacing: 1px; padding: 16px 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; user-select: none; }
+    .cat-title::-webkit-details-marker { display: none; }
+    .cat-title:hover { background: #fffaf2; }
+    .cat-block[open] .cat-title { border-bottom: 1px solid #f0ede8; background: #fffaf2; }
+    .cat-label { flex: 1; }
+    .cat-count { font-size: 11px; font-weight: 600; color: #a09890; letter-spacing: 0.5px; text-transform: none; }
+    .cat-chev { font-size: 16px; color: #a09890; transition: transform 0.2s; flex-shrink: 0; }
+    .cat-block[open] .cat-chev { transform: rotate(180deg); }
+    .cat-body { padding: 14px 14px 6px; }
 
     /* Item rows */
     .item { background: #fff; border: 1.5px solid #e4ddd4; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
@@ -206,47 +235,104 @@ slots.forEach((s:any) => {
       <button class="tab" id="tab-coming">Who's Coming ({signups.length})</button>
     </div>
 
+    <div class="view-toggle" id="view-toggle">
+      <button class="vt-btn active" data-view="cards">Cards</button>
+      <button class="vt-btn" data-view="grid">Grid</button>
+    </div>
+
+    <!-- SIGN UP GRID (table view) -->
+    <div class="panel" id="panel-grid">
+      <div class="grid-wrap">
+        <table class="signup-grid">
+          <thead>
+            <tr>
+              <th style="width:130px">Time</th>
+              <th>Item</th>
+              <th style="width:110px">Progress</th>
+              <th style="width:120px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {slots.map((s:any) => {
+              const filled = s.claimed_by ? 1 : 0;
+              const max = s.max_claims || 1;
+              return (
+                <tr>
+                  <td class="g-time">{s.slot_time || '—'}</td>
+                  <td class="g-item">{s.suggestion}{s.category && <div class="g-cat">{s.category}</div>}</td>
+                  <td class="g-prog">{filled} of {max} filled</td>
+                  <td class="g-action">
+                    {s.claimed_by
+                      ? <span class="g-claimed">✓ {s.claimed_by}</span>
+                      : <button class="g-signup-btn" data-id={s.id} data-dish={s.suggestion}>Sign up</button>
+                    }
+                  </td>
+                </tr>
+              );
+            })}
+            {slots.length === 0 && (
+              <tr><td colspan="4" class="g-empty">No items yet — check back soon!</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- SIGN UP LIST -->
     <div class="panel active" id="panel-list">
 
-      {Object.entries(cats).map(([cat, items]) => (
-        <div class="cat-block">
-          <div class="cat-title">{cat}</div>
-          {items.map((item:any) => item.claimed_by ? (
-            <div class="item claimed">
-              <div class="item-name">{item.suggestion}</div>
-              <div class="item-who">{item.claimed_by}</div>
-            </div>
-          ) : (
-            <div>
-              <div class="item" id={`item-${item.id}`} data-id={item.id} data-dish={item.suggestion} style="cursor:pointer">
-                <div class="item-name">{item.suggestion}</div>
-                <span style="font-size:20px;color:#e4ddd4;flex-shrink:0">›</span>
-              </div>
-              <div class="claim-form" id={`form-${item.id}`}>
-                <div class="claim-form-title">🙌 Bringing {item.suggestion}!</div>
-                <input type="text" class="claim-input" id={`name-${item.id}`} placeholder="Your name *"/>
-                <div class="claim-guest-row">
-                  <button type="button" class="g-btn" data-item={item.id} data-dir="-1">−</button>
-                  <div class="g-count" id={`gc-${item.id}`}>1</div>
-                  <button type="button" class="g-btn" data-item={item.id} data-dir="1">+</button>
-                  <div class="g-note" id={`gn-${item.id}`}>just me</div>
+      {Object.entries(cats).map(([cat, items]) => {
+        const catTotal = items.length;
+        const catClaimed = items.filter((i:any) => i.claimed_by).length;
+        return (
+          <details class="cat-block">
+            <summary class="cat-title">
+              <span class="cat-label">{cat}</span>
+              <span class="cat-count">{catClaimed} of {catTotal} claimed</span>
+              <span class="cat-chev">⌄</span>
+            </summary>
+            <div class="cat-body">
+              {items.map((item:any) => item.claimed_by ? (
+                <div class="item claimed">
+                  <div class="item-name">{item.suggestion}</div>
+                  <div class="item-who">{item.claimed_by}</div>
                 </div>
-                <input type="email" class="claim-email" id={`email-${item.id}`} placeholder="Email (optional — for a reminder)"/>
-                <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
-                <div class="claim-row">
-                  <button class="claim-submit" data-id={item.id} data-dish={item.suggestion}>Claim it! 🎉</button>
-                  <button class="claim-cancel" data-id={item.id}>Cancel</button>
+              ) : (
+                <div>
+                  <div class="item" id={`item-${item.id}`} data-id={item.id} data-dish={item.suggestion} style="cursor:pointer">
+                    <div class="item-name">{item.suggestion}</div>
+                    <span style="font-size:20px;color:#e4ddd4;flex-shrink:0">›</span>
+                  </div>
+                  <div class="claim-form" id={`form-${item.id}`}>
+                    <div class="claim-form-title">🙌 Bringing {item.suggestion}!</div>
+                    <input type="text" class="claim-input" id={`name-${item.id}`} placeholder="Your name *"/>
+                    <div class="claim-guest-row">
+                      <button type="button" class="g-btn" data-item={item.id} data-dir="-1">−</button>
+                      <div class="g-count" id={`gc-${item.id}`}>1</div>
+                      <button type="button" class="g-btn" data-item={item.id} data-dir="1">+</button>
+                      <div class="g-note" id={`gn-${item.id}`}>just me</div>
+                    </div>
+                    <input type="email" class="claim-email" id={`email-${item.id}`} placeholder="Email (optional — for a reminder)"/>
+                    <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
+                    <div class="claim-row">
+                      <button class="claim-submit" data-id={item.id} data-dish={item.suggestion}>Claim it! 🎉</button>
+                      <button class="claim-cancel" data-id={item.id}>Cancel</button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ))}
+          </details>
+        );
+      })}
 
       <!-- Bring something else -->
-      <div class="cat-block">
-        <div class="cat-title">Something else?</div>
+      <details class="cat-block">
+        <summary class="cat-title">
+          <span class="cat-label">Something else?</span>
+          <span class="cat-chev">⌄</span>
+        </summary>
+        <div class="cat-body">
         <div class="custom-block" id="custom-toggle" style="cursor:pointer">
           <span class="custom-icon">✏️</span>
           <div class="custom-text">
@@ -272,7 +358,8 @@ slots.forEach((s:any) => {
             <button class="claim-cancel" id="custom-cancel">Cancel</button>
           </div>
         </div>
-      </div>
+        </div>
+      </details>
 
     </div>
 
@@ -298,21 +385,71 @@ slots.forEach((s:any) => {
 
   <div class="toast" id="toast"></div>
 
+  <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:18px;max-width:440px;width:100%;padding:28px 26px;box-shadow:0 20px 60px rgba(0,0,0,0.25);font-family:'DM Sans',sans-serif">
+      <div style="font-size:36px;text-align:center;margin-bottom:6px">🎉</div>
+      <div id="confirm-title" style="font-size:22px;font-weight:700;text-align:center;margin-bottom:6px;color:#1c1917">You're in!</div>
+      <div id="confirm-sub" style="font-size:14px;text-align:center;color:#57524c;margin-bottom:20px">Confirmation email is on the way.</div>
+      <div id="confirm-contact" style="background:#f7f5f2;border-radius:12px;padding:16px 18px;margin-bottom:14px;display:none">
+        <div style="font-size:11px;font-weight:700;color:#a09890;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Stay in touch</div>
+        <div id="cc-rows" style="font-size:14px;color:#1c1917;line-height:1.9"></div>
+      </div>
+      <div id="confirm-pay" style="background:#fff8ec;border:1.5px solid #fcd5a0;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:none">
+        <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Want to chip in?</div>
+        <div id="cp-rows" style="font-size:14px;line-height:1.8"></div>
+      </div>
+      <button id="confirm-ok" style="width:100%;padding:13px;background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;font-size:15px;font-weight:600;border:none;border-radius:10px;cursor:pointer;font-family:inherit">Got it</button>
+    </div>
+  </div>
+
   <script define:vars={{ potluckId: id }}>
     var guestCounts = {};
 
     // Tabs
+    var currentSignupView = 'cards'; // remembers grid vs cards across tab switches
+    function showSignupView(v) {
+      currentSignupView = v;
+      document.querySelectorAll('.vt-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.view === v); });
+      document.getElementById('panel-list').classList.toggle('active', v === 'cards');
+      document.getElementById('panel-grid').classList.toggle('active', v === 'grid');
+    }
     document.getElementById('tab-list').addEventListener('click', function() {
       document.getElementById('tab-list').classList.add('active');
       document.getElementById('tab-coming').classList.remove('active');
-      document.getElementById('panel-list').classList.add('active');
       document.getElementById('panel-coming').classList.remove('active');
+      document.getElementById('view-toggle').style.display = '';
+      showSignupView(currentSignupView);
     });
     document.getElementById('tab-coming').addEventListener('click', function() {
       document.getElementById('tab-coming').classList.add('active');
       document.getElementById('tab-list').classList.remove('active');
       document.getElementById('panel-coming').classList.add('active');
       document.getElementById('panel-list').classList.remove('active');
+      document.getElementById('panel-grid').classList.remove('active');
+      document.getElementById('view-toggle').style.display = 'none';
+    });
+    document.querySelectorAll('.vt-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { showSignupView(btn.dataset.view); });
+    });
+
+    // Grid → cards: clicking "Sign up" in the grid switches to cards view
+    // and opens that item's claim form so the existing inline form logic
+    // is the only place a sign-up actually happens.
+    document.querySelectorAll('.g-signup-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var itemId = btn.dataset.id;
+        showSignupView('cards');
+        // expand the parent <details> if collapsed, then open the item's form
+        var item = document.getElementById('item-' + itemId);
+        if (item) {
+          var details = item.closest('details');
+          if (details) details.open = true;
+          setTimeout(function() {
+            item.click();
+            item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 30);
+        }
+      });
     });
 
     // Share
@@ -423,8 +560,7 @@ slots.forEach((s:any) => {
           });
           var data = await res.json();
           if (data.ok) {
-            showToast('You\'re in, ' + name.split(' ')[0] + '! 🎉');
-            setTimeout(function() { location.reload(); }, 1200);
+            showConfirmation(name.split(' ')[0], data.contact || {});
           } else {
             btn.disabled = false; btn.textContent = itemId ? 'Claim it! 🎉' : 'I\'m bringing it! 🎉';
             showToast('Something went wrong — try again');
@@ -441,6 +577,35 @@ slots.forEach((s:any) => {
       t.classList.add('show');
       setTimeout(function() { t.classList.remove('show'); }, 2500);
     }
+
+    function escHtml(s) { return String(s||'').replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+    function showConfirmation(firstName, contact) {
+      document.getElementById('confirm-title').textContent = "You're in, " + firstName + "!";
+      var ccRows = [];
+      if (contact.phone) ccRows.push('<div>📞 ' + escHtml(contact.phone) + '</div>');
+      if (contact.discord_url) ccRows.push('<div>💬 <a href="' + escHtml(contact.discord_url) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">Join Discord</a>' + (contact.discord ? ' · ' + escHtml(contact.discord) : '') + '</div>');
+      else if (contact.discord) ccRows.push('<div>💬 ' + escHtml(contact.discord) + '</div>');
+      if (ccRows.length > 0) {
+        document.getElementById('cc-rows').innerHTML = ccRows.join('');
+        document.getElementById('confirm-contact').style.display = 'block';
+      }
+      var cpRows = [];
+      if (contact.venmo) cpRows.push('<div>💸 Venmo: <a href="https://venmo.com/' + escHtml(String(contact.venmo).replace(/^@/, '')) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">' + escHtml(contact.venmo) + '</a></div>');
+      if (contact.cashapp_handle) cpRows.push('<div>💵 Cash App: <a href="https://cash.app/' + escHtml(String(contact.cashapp_handle).replace(/^\$/, '$')) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">' + escHtml(contact.cashapp_handle) + '</a></div>');
+      if (contact.stripe_link) cpRows.push('<div>💳 <a href="' + escHtml(contact.stripe_link) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">Pay with card</a></div>');
+      if (cpRows.length > 0) {
+        document.getElementById('cp-rows').innerHTML = cpRows.join('');
+        document.getElementById('confirm-pay').style.display = 'block';
+      }
+      var overlay = document.getElementById('confirm-overlay');
+      overlay.style.display = 'flex';
+    }
+
+    document.getElementById('confirm-ok').addEventListener('click', function() {
+      document.getElementById('confirm-overlay').style.display = 'none';
+      location.reload();
+    });
   </script>
 </body>
 </html>

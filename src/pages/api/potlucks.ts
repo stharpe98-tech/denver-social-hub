@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../lib/db';
+import { ensurePotluckSchema } from '../../lib/potluck-schema';
 
 export const GET: APIRoute = async ({ url }) => {
   const db = getDB();
@@ -27,9 +28,10 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const b = await request.json() as Record<string, any>;
     const action = b.action;
+    await ensurePotluckSchema(db);
     if (action === 'suggest') {
-      await db.prepare(`INSERT INTO potlucks (title,description,date_label,time_label,location,location_detail,status) VALUES (?,?,?,?,?,?,?)`)
-        .bind(b.title??'New Potluck',b.description??'',b.date_label??'',b.time_label??'',b.location??'',b.location_detail??'','pending').run();
+      await db.prepare(`INSERT INTO potlucks (title,description,date_label,time_label,location,location_detail,status,event_date) VALUES (?,?,?,?,?,?,?,?)`)
+        .bind(b.title??'New Potluck',b.description??'',b.date_label??'',b.time_label??'',b.location??'',b.location_detail??'','pending',b.event_date??null).run();
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
     }
     if (action === 'approve') {
@@ -41,13 +43,13 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
     }
     if (action === 'create') {
-      const result = await db.prepare(`INSERT INTO potlucks (title,description,date_label,time_label,location,location_detail,status) VALUES (?,?,?,?,?,?,?)`)
-        .bind(b.title??'',b.description??'',b.date_label??'',b.time_label??'',b.location??'',b.location_detail??'',b.status??'upcoming').run();
+      const result = await db.prepare(`INSERT INTO potlucks (title,description,date_label,time_label,location,location_detail,status,event_date,cover_photo) VALUES (?,?,?,?,?,?,?,?,?)`)
+        .bind(b.title??'',b.description??'',b.date_label??'',b.time_label??'',b.location??'',b.location_detail??'',b.status??'upcoming',b.event_date??null,b.cover_photo??null).run();
       return new Response(JSON.stringify({ ok: true, id: result.meta.last_row_id }), { headers: { 'Content-Type': 'application/json' } });
     }
     if (action === 'update') {
-      await db.prepare(`UPDATE potlucks SET title=?,description=?,date_label=?,time_label=?,location=?,location_detail=?,status=?,template=?,locked=?,organizer_email=? WHERE id=?`)
-        .bind(b.title,b.description,b.date_label,b.time_label,b.location,b.location_detail,b.status,b.template??'warm',b.locked?1:0,b.organizer_email??'',b.id).run();
+      await db.prepare(`UPDATE potlucks SET title=?,description=?,date_label=?,time_label=?,location=?,location_detail=?,status=?,template=?,locked=?,organizer_email=?,event_date=?,cover_photo=? WHERE id=?`)
+        .bind(b.title,b.description,b.date_label,b.time_label,b.location,b.location_detail,b.status,b.template??'warm',b.locked?1:0,b.organizer_email??'',b.event_date??null,b.cover_photo??null,b.id).run();
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
     }
     if (action === 'delete_rsvp') {
