@@ -111,6 +111,32 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       }).catch(() => {});
     }
 
+    // Organizer notification email
+    const orgEmail = cfg.organizer_email || potluck?.organizer_email;
+    if (orgEmail && cfg.resend_api_key && b.rsvp === 'yes') {
+      const orgHtml = `<div style="font-family:sans-serif;max-width:500px;padding:20px">
+        <h2 style="color:#c2410c">New sign-up: ${potluck?.title}</h2>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:8px 0;border-bottom:1px solid #f0ede8;color:#57524c;width:120px">Name</td><td style="padding:8px 0;border-bottom:1px solid #f0ede8;font-weight:600">${b.name}</td></tr>
+          ${b.dish ? `<tr><td style="padding:8px 0;border-bottom:1px solid #f0ede8;color:#57524c">Bringing</td><td style="padding:8px 0;border-bottom:1px solid #f0ede8;font-weight:600">${b.dish}</td></tr>` : ''}
+          <tr><td style="padding:8px 0;border-bottom:1px solid #f0ede8;color:#57524c">Guests</td><td style="padding:8px 0;border-bottom:1px solid #f0ede8">${b.guestCount}</td></tr>
+          ${b.email ? `<tr><td style="padding:8px 0;border-bottom:1px solid #f0ede8;color:#57524c">Email</td><td style="padding:8px 0;border-bottom:1px solid #f0ede8">${b.email}</td></tr>` : ''}
+          ${b.platforms ? `<tr><td style="padding:8px 0;color:#57524c">Found via</td><td style="padding:8px 0">${b.platforms}</td></tr>` : ''}
+        </table>
+        <p style="margin-top:16px;font-size:13px;color:#a09890">Total coming: check your admin panel at /potlucks/manage/${potluckId}</p>
+      </div>`;
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${cfg.resend_api_key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: cfg.from_email || 'Denver Social <noreply@denversocialhub.com>',
+          to: [orgEmail],
+          subject: `New sign-up: ${b.name} is coming to ${potluck?.title}${b.dish ? ` — bringing ${b.dish}` : ''}`,
+          html: orgHtml,
+        }),
+      }).catch(() => {});
+    }
+
     // Zapier webhook
     if (cfg.webhook_url?.startsWith('http')) {
       fetch(cfg.webhook_url, {
