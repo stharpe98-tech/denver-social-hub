@@ -83,10 +83,18 @@ slots.forEach((s:any) => {
     /* Page */
     .page { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
 
-    /* Category */
-    .cat-block { margin-bottom: 24px; }
-    .cat-title { font-size: 13px; font-weight: 700; color: #8a7a70; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-    .cat-title::after { content: ''; flex: 1; height: 1px; background: #e4ddd4; }
+    /* Category dropdowns */
+    .cat-block { margin-bottom: 12px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 14px; overflow: hidden; }
+    .cat-block[open] { border-color: #fcd5a0; }
+    .cat-title { font-size: 13px; font-weight: 700; color: #57524c; text-transform: uppercase; letter-spacing: 1px; padding: 16px 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; user-select: none; }
+    .cat-title::-webkit-details-marker { display: none; }
+    .cat-title:hover { background: #fffaf2; }
+    .cat-block[open] .cat-title { border-bottom: 1px solid #f0ede8; background: #fffaf2; }
+    .cat-label { flex: 1; }
+    .cat-count { font-size: 11px; font-weight: 600; color: #a09890; letter-spacing: 0.5px; text-transform: none; }
+    .cat-chev { font-size: 16px; color: #a09890; transition: transform 0.2s; flex-shrink: 0; }
+    .cat-block[open] .cat-chev { transform: rotate(180deg); }
+    .cat-body { padding: 14px 14px 6px; }
 
     /* Item rows */
     .item { background: #fff; border: 1.5px solid #e4ddd4; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
@@ -209,44 +217,58 @@ slots.forEach((s:any) => {
     <!-- SIGN UP LIST -->
     <div class="panel active" id="panel-list">
 
-      {Object.entries(cats).map(([cat, items]) => (
-        <div class="cat-block">
-          <div class="cat-title">{cat}</div>
-          {items.map((item:any) => item.claimed_by ? (
-            <div class="item claimed">
-              <div class="item-name">{item.suggestion}</div>
-              <div class="item-who">{item.claimed_by}</div>
-            </div>
-          ) : (
-            <div>
-              <div class="item" id={`item-${item.id}`} data-id={item.id} data-dish={item.suggestion} style="cursor:pointer">
-                <div class="item-name">{item.suggestion}</div>
-                <span style="font-size:20px;color:#e4ddd4;flex-shrink:0">›</span>
-              </div>
-              <div class="claim-form" id={`form-${item.id}`}>
-                <div class="claim-form-title">🙌 Bringing {item.suggestion}!</div>
-                <input type="text" class="claim-input" id={`name-${item.id}`} placeholder="Your name *"/>
-                <div class="claim-guest-row">
-                  <button type="button" class="g-btn" data-item={item.id} data-dir="-1">−</button>
-                  <div class="g-count" id={`gc-${item.id}`}>1</div>
-                  <button type="button" class="g-btn" data-item={item.id} data-dir="1">+</button>
-                  <div class="g-note" id={`gn-${item.id}`}>just me</div>
+      {Object.entries(cats).map(([cat, items]) => {
+        const catTotal = items.length;
+        const catClaimed = items.filter((i:any) => i.claimed_by).length;
+        return (
+          <details class="cat-block">
+            <summary class="cat-title">
+              <span class="cat-label">{cat}</span>
+              <span class="cat-count">{catClaimed} of {catTotal} claimed</span>
+              <span class="cat-chev">⌄</span>
+            </summary>
+            <div class="cat-body">
+              {items.map((item:any) => item.claimed_by ? (
+                <div class="item claimed">
+                  <div class="item-name">{item.suggestion}</div>
+                  <div class="item-who">{item.claimed_by}</div>
                 </div>
-                <input type="email" class="claim-email" id={`email-${item.id}`} placeholder="Email (optional — for a reminder)"/>
-                <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
-                <div class="claim-row">
-                  <button class="claim-submit" data-id={item.id} data-dish={item.suggestion}>Claim it! 🎉</button>
-                  <button class="claim-cancel" data-id={item.id}>Cancel</button>
+              ) : (
+                <div>
+                  <div class="item" id={`item-${item.id}`} data-id={item.id} data-dish={item.suggestion} style="cursor:pointer">
+                    <div class="item-name">{item.suggestion}</div>
+                    <span style="font-size:20px;color:#e4ddd4;flex-shrink:0">›</span>
+                  </div>
+                  <div class="claim-form" id={`form-${item.id}`}>
+                    <div class="claim-form-title">🙌 Bringing {item.suggestion}!</div>
+                    <input type="text" class="claim-input" id={`name-${item.id}`} placeholder="Your name *"/>
+                    <div class="claim-guest-row">
+                      <button type="button" class="g-btn" data-item={item.id} data-dir="-1">−</button>
+                      <div class="g-count" id={`gc-${item.id}`}>1</div>
+                      <button type="button" class="g-btn" data-item={item.id} data-dir="1">+</button>
+                      <div class="g-note" id={`gn-${item.id}`}>just me</div>
+                    </div>
+                    <input type="email" class="claim-email" id={`email-${item.id}`} placeholder="Email (optional — for a reminder)"/>
+                    <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
+                    <div class="claim-row">
+                      <button class="claim-submit" data-id={item.id} data-dish={item.suggestion}>Claim it! 🎉</button>
+                      <button class="claim-cancel" data-id={item.id}>Cancel</button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ))}
+          </details>
+        );
+      })}
 
       <!-- Bring something else -->
-      <div class="cat-block">
-        <div class="cat-title">Something else?</div>
+      <details class="cat-block">
+        <summary class="cat-title">
+          <span class="cat-label">Something else?</span>
+          <span class="cat-chev">⌄</span>
+        </summary>
+        <div class="cat-body">
         <div class="custom-block" id="custom-toggle" style="cursor:pointer">
           <span class="custom-icon">✏️</span>
           <div class="custom-text">
@@ -272,7 +294,8 @@ slots.forEach((s:any) => {
             <button class="claim-cancel" id="custom-cancel">Cancel</button>
           </div>
         </div>
-      </div>
+        </div>
+      </details>
 
     </div>
 
