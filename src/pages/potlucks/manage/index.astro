@@ -130,6 +130,16 @@ try {
           <div class="cf-field"><label>Location</label><input type="text" id="c-loc" class="cf-input" placeholder="Cheeseman Park"/></div>
           <div class="cf-field"><label>Detail</label><input type="text" id="c-locdetail" class="cf-input" placeholder="West side"/></div>
         </div>
+        <div class="cf-field" style="margin-bottom:12px">
+          <label>Template</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="tmpl-btn active" data-t="warm" style="padding:8px 14px;border-radius:8px;border:2px solid #f77f00;background:rgba(247,127,0,0.1);color:#c2410c;font-family:inherit;font-size:13px;cursor:pointer">🌞 Warm</button>
+            <button type="button" class="tmpl-btn" data-t="dark" style="padding:8px 14px;border-radius:8px;border:2px solid #e4ddd4;background:#fff;color:#57524c;font-family:inherit;font-size:13px;cursor:pointer">🌙 Dark</button>
+            <button type="button" class="tmpl-btn" data-t="clean" style="padding:8px 14px;border-radius:8px;border:2px solid #e4ddd4;background:#fff;color:#57524c;font-family:inherit;font-size:13px;cursor:pointer">✨ Clean</button>
+            <button type="button" class="tmpl-btn" data-t="festive" style="padding:8px 14px;border-radius:8px;border:2px solid #e4ddd4;background:#fff;color:#57524c;font-family:inherit;font-size:13px;cursor:pointer">🎉 Festive</button>
+          </div>
+          <input type="hidden" id="c-template" value="warm"/>
+        </div>
         <button class="save-btn" id="create-submit">Create & Publish</button>
       </div>
     </div>
@@ -143,6 +153,8 @@ try {
             <div>
               <div class="approved-title">{p.title}</div>
               <div class="approved-meta">{p.date_label} · {p.location}</div>
+              {p.template && p.template !== 'warm' && <span style="font-size:11px;background:var(--accent-dim,rgba(247,127,0,0.1));color:#c2410c;padding:2px 8px;border-radius:6px;margin-top:2px;display:inline-block">{p.template}</span>}
+              {p.locked ? <span style="font-size:11px;background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:6px;margin-top:2px;display:inline-block">🔒 locked</span> : ''}
             </div>
             <div class="approved-right">
               <div class="approved-signups">{p.signups || 0} signups</div>
@@ -212,10 +224,21 @@ try {
       showToast('Email settings saved ✓');
     });
 
+    // Template picker
+    document.querySelectorAll('.tmpl-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.tmpl-btn').forEach(function(b) {
+          b.style.borderColor='#e4ddd4'; b.style.background='#fff'; b.style.color='#57524c';
+        });
+        btn.style.borderColor='#f77f00'; btn.style.background='rgba(247,127,0,0.1)'; btn.style.color='#c2410c';
+        document.getElementById('c-template').value = btn.dataset.t;
+      });
+    });
+
     document.getElementById('create-submit').addEventListener('click', async function() {
       var title = document.getElementById('c-title').value.trim();
       if (!title) return;
-      var body = { action:'create', title: title, description:'', date_label: document.getElementById('c-date').value, time_label: document.getElementById('c-time').value, location: document.getElementById('c-loc').value, location_detail: document.getElementById('c-locdetail').value, status:'upcoming' };
+      var tmplInput = document.getElementById('c-template'); var body = { action:'create', title: title, description:'', date_label: document.getElementById('c-date').value, time_label: document.getElementById('c-time').value, location: document.getElementById('c-loc').value, location_detail: document.getElementById('c-locdetail').value, status:'upcoming', template: tmplInput ? tmplInput.value : 'warm' };
       var res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       var data = await res.json();
       if (data.ok) window.location.href = '/potlucks/manage/' + data.id;
