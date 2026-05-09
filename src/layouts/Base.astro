@@ -18,7 +18,7 @@ const redditName = user?.reddit_username || user?.name;
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 </head>
 <body>
 
@@ -26,7 +26,7 @@ const redditName = user?.reddit_username || user?.name;
   <header class="site-header">
     <div class="site-header-inner">
       <a href="/" class="site-logo">
-        <span class="site-logo-icon">🏔</span>
+        <span class="site-logo-icon" aria-hidden="true">🌆</span>
         <span class="site-logo-text">Denver Social</span>
       </a>
 
@@ -41,13 +41,13 @@ const redditName = user?.reddit_username || user?.name;
         {user ? (
           <>
             <a href="/profile" class="site-user">
-              <span class="site-user-name">u/{redditName}</span>
-              <span class="site-user-karma">{user.karma || 0} karma</span>
+              <span class="site-user-name">{redditName ? `u/${redditName}` : 'Profile'}</span>
+              {typeof user.karma === 'number' && <span class="site-user-karma">{user.karma} karma</span>}
             </a>
             <a href="/api/logout" class="site-logout">Sign out</a>
           </>
         ) : (
-          <a href="/login" class="site-cta">Sign in with Reddit</a>
+          <a href="/login" class="site-cta">Sign in</a>
         )}
       </div>
     </div>
@@ -82,29 +82,71 @@ const redditName = user?.reddit_username || user?.name;
 <style is:global>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* CLAUDE.md design tokens — Clean & Crisp light theme */
   :root {
-    --bg: #f7f5f2;
-    --surface: #ffffff;
-    --surface-hover: #f0ede8;
-    --border: #e4ddd4;
-    --border-hover: #cec5b8;
-    --text: #1c1917;
-    --text-sec: #57524c;
-    --text-faint: #a09890;
-    --accent: #f77f00;
-    --accent-dim: rgba(247,127,0,0.10);
-    --accent-glow: rgba(247,127,0,0.22);
-    --green: #16a34a;
-    --green-dim: rgba(22,163,74,0.10);
-    --red: #dc2626;
-    --red-dim: rgba(220,38,38,0.10);
-    --yellow: #d97706;
-    --yellow-dim: rgba(217,119,6,0.10);
+    /* Surface */
+    --bg: #FFFFFF;
+    --surface: #F8F9FB;
+    --surface-hover: #F0F2F5;
+    --border: #E5E7EB;
+    --border-hover: #D1D5DB;
+
+    /* Text */
+    --text: #111827;
+    --text-sec: #6B7280;
+    --text-faint: #9CA3AF;
+
+    /* Accents */
+    --accent: #0EA5E9;       /* sky blue primary */
+    --accent-dim: rgba(14, 165, 233, 0.10);
+    --accent-glow: rgba(14, 165, 233, 0.22);
+    --accent2: #10B981;      /* emerald green secondary */
+    --accent2-dim: rgba(16, 185, 129, 0.10);
+    --mint: #10B981;         /* alias */
+
+    /* CTA */
+    --cta-bg: #0EA5E9;
+    --cta-text: #FFFFFF;
+
+    /* Tags */
+    --tag-bg: #E0F2FE;       /* sky-100 */
+    --tag-text: #0369A1;     /* sky-700 */
+    --tag-bg2: #D1FAE5;      /* emerald-100 */
+    --tag-text2: #047857;    /* emerald-700 */
+    --tag-bg3: #FEF3C7;      /* amber-100 */
+    --tag-text3: #92400E;    /* amber-800 */
+
+    /* Status */
+    --green: #10B981;
+    --green-dim: rgba(16, 185, 129, 0.10);
+    --red: #DC2626;
+    --red-dim: rgba(220, 38, 38, 0.10);
+    --yellow: #D97706;
+    --yellow-dim: rgba(217, 119, 6, 0.10);
+
+    /* Type */
     --font: 'Inter', system-ui, sans-serif;
-    --font-display: 'Playfair Display', Georgia, serif;
-    --radius: 10px;
-    --radius-lg: 16px;
-    --radius-xl: 20px;
+    --font-display: 'Outfit', system-ui, sans-serif;
+
+    /* Shape */
+    --radius: 14px;
+    --radius-lg: 20px;
+    --radius-pill: 50px;
+
+    /* Shadow */
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --card-shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+
+    /* 4px spacing scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+    --space-8: 64px;
+    --space-9: 96px;
   }
 
   html { font-family: var(--font); background: var(--bg); color: var(--text); scroll-behavior: smooth; }
@@ -112,61 +154,85 @@ const redditName = user?.reddit_username || user?.name;
   a { color: inherit; text-decoration: none; }
   img { display: block; max-width: 100%; }
   button { font-family: var(--font); }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
 
-  /* ── Site Header ── */
+  /* ── Site Header (light, top, desktop/tablet) ── */
   .site-header {
     position: sticky; top: 0; z-index: 200;
-    background: rgba(247,245,242,0.94); backdrop-filter: blur(20px);
+    background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
-    height: 56px; display: flex; align-items: center;
+    height: 64px; display: flex; align-items: center;
   }
   .site-header-inner {
     width: 100%; max-width: 1100px; margin: 0 auto;
-    padding: 0 20px; display: flex; align-items: center; gap: 16px;
+    padding: 0 var(--space-5);
+    display: flex; align-items: center; gap: var(--space-4);
   }
 
-  .site-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; flex-shrink: 0; }
+  .site-logo {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    text-decoration: none; flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+  .site-logo:hover { opacity: 0.85; }
+  .site-logo:active { opacity: 0.7; }
   .site-logo-icon { font-size: 22px; }
-  .site-logo-text { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+  .site-logo-text {
+    font-family: var(--font-display);
+    font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+    color: var(--text);
+  }
 
-  .site-nav { display: flex; gap: 4px; align-items: center; margin-left: 8px; }
+  .site-nav { display: flex; gap: var(--space-1); align-items: center; margin-left: var(--space-3); }
   .site-nav-link {
-    font-size: 14px; font-weight: 500; color: var(--text-faint);
-    padding: 6px 12px; border-radius: var(--radius);
+    font-size: 14px; font-weight: 500; color: var(--text-sec);
+    padding: 8px 14px; border-radius: 999px;
     transition: all 0.15s; text-decoration: none;
   }
-  .site-nav-link:hover { color: var(--text-sec); background: var(--surface); }
+  .site-nav-link:hover { color: var(--text); background: var(--surface); }
+  .site-nav-link:active { background: var(--surface-hover); }
   .site-nav-link.active { color: var(--accent); background: var(--accent-dim); }
   @media(max-width: 700px) { .site-nav { display: none; } }
 
-  .site-auth { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-  .site-user { display: flex; flex-direction: column; align-items: flex-end; text-decoration: none; padding: 6px 10px; border-radius: var(--radius); transition: background 0.15s; }
+  .site-auth { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+  .site-user {
+    display: flex; flex-direction: column; align-items: flex-end;
+    text-decoration: none; padding: 6px 12px; border-radius: 10px;
+    transition: background 0.15s;
+  }
   .site-user:hover { background: var(--surface); }
   .site-user-name { font-size: 13px; font-weight: 600; color: var(--text); }
-  .site-user-karma { font-size: 11px; color: var(--accent); font-weight: 500; }
-  .site-logout { font-size: 12px; color: var(--text-faint); padding: 6px 10px; border-radius: var(--radius); transition: color 0.15s; }
+  .site-user-karma { font-size: 11px; color: var(--accent); font-weight: 600; }
+  .site-logout {
+    font-size: 13px; color: var(--text-faint);
+    padding: 6px 10px; border-radius: 10px;
+    transition: color 0.15s;
+  }
   .site-logout:hover { color: var(--red); }
   .site-cta {
-    font-size: 13px; font-weight: 600;
-    background: var(--accent); color: #fff;
-    padding: 8px 16px; border-radius: var(--radius);
-    transition: opacity 0.15s;
+    font-size: 14px; font-weight: 600;
+    background: var(--cta-bg); color: var(--cta-text);
+    padding: 10px 20px; border-radius: var(--radius-pill);
+    transition: all 0.15s;
     white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(14,165,233,0.22);
   }
-  .site-cta:hover { opacity: 0.88; }
+  .site-cta:hover { box-shadow: 0 4px 14px rgba(14,165,233,0.32); transform: translateY(-1px); }
+  .site-cta:active { transform: translateY(0); }
   @media(max-width: 500px) {
     .site-user-karma { display: none; }
-    .site-cta { font-size: 12px; padding: 7px 12px; }
+    .site-cta { font-size: 13px; padding: 9px 16px; }
+    .site-header-inner { gap: var(--space-2); padding: 0 var(--space-4); }
   }
 
   /* ── Mobile bottom nav ── */
   .mob-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-    background: rgba(247,245,242,0.97); backdrop-filter: blur(24px);
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
     border-top: 1px solid var(--border);
     display: flex; justify-content: space-around; align-items: center;
     padding: 6px 0 max(6px, env(safe-area-inset-bottom));
-    height: 56px;
+    height: 60px;
   }
   .mob-link {
     display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -177,48 +243,61 @@ const redditName = user?.reddit_username || user?.name;
   }
   .mob-link.active { color: var(--accent); }
   .mob-icon { font-size: 22px; line-height: 1; }
-  .mob-label { font-size: 10px; font-weight: 500; }
+  .mob-label { font-size: 10px; font-weight: 600; letter-spacing: 0.2px; }
   @media(min-width: 701px) { .mob-nav { display: none; } body { padding-bottom: 0; } }
 
   /* ── Shared components ── */
   .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); padding: 20px;
-    transition: border-color 0.15s;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--space-5);
+    box-shadow: var(--card-shadow);
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
   }
-  .card:hover { border-color: var(--border-hover); }
+  .card:hover { box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
+  .card:active { transform: translateY(1px); }
 
-  .btn {
+  .btn-cta {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    padding: 10px 20px; border-radius: var(--radius); font-size: 14px; font-weight: 600;
-    cursor: pointer; text-decoration: none; border: none; transition: all 0.15s;
-    font-family: var(--font); -webkit-tap-highlight-color: transparent;
+    padding: 12px 24px; border-radius: var(--radius-pill);
+    font-size: 15px; font-weight: 600;
+    background: var(--cta-bg); color: var(--cta-text); border: none;
+    cursor: pointer; text-decoration: none;
+    box-shadow: 0 1px 3px rgba(14,165,233,0.25);
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
   }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { opacity: 0.9; box-shadow: 0 4px 16px var(--accent-glow); }
-  .btn-ghost { background: var(--surface); color: var(--text-sec); border: 1px solid var(--border); }
-  .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); }
+  .btn-cta:hover { box-shadow: 0 6px 20px rgba(14,165,233,0.35); transform: translateY(-1px); }
+  .btn-cta:active { transform: translateY(0); box-shadow: 0 1px 3px rgba(14,165,233,0.25); }
+
+  .btn-sec {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 12px 22px; border-radius: var(--radius-pill);
+    font-size: 15px; font-weight: 600;
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    cursor: pointer; text-decoration: none; transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-sec:hover { border-color: var(--border-hover); background: var(--surface); }
+  .btn-sec:active { background: var(--surface-hover); }
 
   .input {
-    width: 100%; padding: 11px 14px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); font-size: 14px; color: var(--text);
-    font-family: var(--font); outline: none; transition: border-color 0.15s;
+    width: 100%; padding: 12px 14px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; font-size: 14px; color: var(--text);
+    font-family: var(--font); outline: none; transition: border-color 0.15s, box-shadow 0.15s;
     -webkit-appearance: none; appearance: none;
   }
   .input::placeholder { color: var(--text-faint); }
   .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 
   /* Tags */
-  .tag {
-    font-size: 11px; font-weight: 600;
-    padding: 3px 8px; border-radius: 6px;
-    display: inline-flex; align-items: center;
-  }
-  .tag-orange { background: var(--accent-dim); color: var(--accent); }
-  .tag-green  { background: var(--green-dim);  color: var(--green);  }
-  .tag-red    { background: var(--red-dim);    color: var(--red);    }
-  .tag-yellow { background: var(--yellow-dim); color: var(--yellow); }
+  .tag { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; display: inline-flex; align-items: center; }
+  .tag-blue   { background: var(--tag-bg);  color: var(--tag-text);  }
+  .tag-green  { background: var(--tag-bg2); color: var(--tag-text2); }
+  .tag-yellow { background: var(--tag-bg3); color: var(--tag-text3); }
+  .tag-purple { background: var(--tag-bg); color: var(--tag-text); }     /* legacy alias → blue */
+  .tag-orange { background: var(--tag-bg3); color: var(--tag-text3); }  /* legacy alias → yellow */
+  .tag-red    { background: var(--red-dim); color: var(--red); }
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
@@ -229,11 +308,16 @@ const redditName = user?.reddit_username || user?.name;
 
   /* Footer */
   .site-footer {
-    padding: 32px 20px; border-top: 1px solid var(--border);
-    text-align: center; margin-bottom: 72px;
+    padding: var(--space-6) var(--space-5);
+    border-top: 1px solid var(--border);
+    text-align: center;
+    margin-bottom: 72px;
   }
-  .site-footer-brand { font-size: 14px; font-weight: 700; color: var(--text-sec); margin-bottom: 4px; }
+  .site-footer-brand { font-family: var(--font-display); font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
   .site-footer-brand span { color: var(--accent); }
   .site-footer-text { font-size: 12px; color: var(--text-faint); }
-</style>
 
+  @media(min-width: 701px) {
+    .site-footer { margin-bottom: 0; }
+  }
+</style>
