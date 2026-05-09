@@ -108,6 +108,26 @@ try {
       </div>
     </div>
 
+    <!-- Quick PIN -->
+    <div style="margin-bottom:28px">
+      <div class="sec-label">Quick PIN (for this device)</div>
+      <div class="profile-section">
+        <div style="font-size:13px;color:#57524c;margin-bottom:12px;line-height:1.6">
+          Set a 4–8 digit PIN to sign in fast on this device. The PIN only works on devices you've trusted, so a stolen PIN alone can't log in. 5 wrong tries removes the device — you'd need to log in normally and re-enroll.
+        </div>
+        <div class="pf-row" style="grid-template-columns:1fr 1fr">
+          <div class="pf-field"><label>New PIN</label><input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="pin-new" class="pf-input" placeholder="1234" autocomplete="off"/></div>
+          <div class="pf-field"><label>Device name (optional)</label><input type="text" id="pin-label" class="pf-input" placeholder="Seth's MacBook" autocomplete="off"/></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="save-btn" id="pin-save-btn">Save PIN for this device</button>
+          <button class="del-btn" id="pin-disable-all-btn" type="button">Remove all PINs</button>
+        </div>
+        <div id="pin-err" style="font-size:13px;color:#dc2626;margin-top:10px;display:none"></div>
+        <div id="pin-list" style="font-size:13px;color:#57524c;margin-top:14px;border-top:1px solid #f0ede8;padding-top:14px">Loading trusted devices…</div>
+      </div>
+    </div>
+
     <!-- White label / profile -->
     <div style="margin-bottom:28px">
       <div class="sec-label">Your Profile & Branding</div>
@@ -328,6 +348,71 @@ try {
     });
 
     refreshPasskeyList();
+
+    // ── Quick PIN (trusted-device) ──
+    async function refreshPinList() {
+      const listEl = document.getElementById('pin-list');
+      if (!listEl) return;
+      try {
+        const res = await fetch('/api/pin/manage');
+        const data = await res.json();
+        const devices = data.devices || [];
+        if (devices.length === 0) {
+          listEl.innerHTML = '<em style="color:#a09890">No PIN set on any device yet.</em>';
+          return;
+        }
+        listEl.innerHTML = '<div style="font-size:11px;font-weight:700;color:#a09890;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Trusted devices</div>' + devices.map((d) => {
+          const label = d.device_label || 'Unnamed device';
+          const date = new Date(d.created_at).toLocaleDateString();
+          const last = d.last_used_at ? new Date(d.last_used_at).toLocaleDateString() : 'never';
+          const here = d.is_current ? ' <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 6px;border-radius:6px;margin-left:6px">this device</span>' : '';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0ede8">
+            <div><strong>📱 ${label}</strong>${here}<div style="font-size:11px;color:#a09890">added ${date} · last used ${last}</div></div>
+            <button class="del-btn" data-trusted-id="${d.id}">Remove</button>
+          </div>`;
+        }).join('');
+        listEl.querySelectorAll('[data-trusted-id]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Remove PIN access from this device?')) return;
+            await fetch('/api/pin/manage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id: parseInt(btn.getAttribute('data-trusted-id')) }) });
+            refreshPinList();
+          });
+        });
+      } catch {
+        listEl.textContent = 'Failed to load trusted devices.';
+      }
+    }
+
+    document.getElementById('pin-save-btn')?.addEventListener('click', async () => {
+      const errEl = document.getElementById('pin-err');
+      errEl.style.display = 'none';
+      const pin = document.getElementById('pin-new').value.trim();
+      const label = document.getElementById('pin-label').value.trim();
+      if (!/^\d{4,8}$/.test(pin)) {
+        errEl.textContent = 'PIN must be 4–8 digits.';
+        errEl.style.display = 'block';
+        return;
+      }
+      const res = await fetch('/api/pin/setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin, deviceLabel: label }) });
+      const data = await res.json();
+      if (!data.ok) {
+        errEl.textContent = data.error || 'Could not save PIN.';
+        errEl.style.display = 'block';
+        return;
+      }
+      document.getElementById('pin-new').value = '';
+      showToast('PIN saved ✓');
+      refreshPinList();
+    });
+
+    document.getElementById('pin-disable-all-btn')?.addEventListener('click', async () => {
+      if (!confirm('Remove PIN access from ALL devices?')) return;
+      await fetch('/api/pin/manage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete_all' }) });
+      showToast('All PINs removed');
+      refreshPinList();
+    });
+
+    refreshPinList();
   </script>
 </body>
 </html>
