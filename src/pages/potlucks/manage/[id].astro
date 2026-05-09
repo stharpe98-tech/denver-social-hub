@@ -90,6 +90,7 @@ const dishEntries = Object.entries(dishMap);
       <p>{potluck.date_label} · {potluck.location}</p>
       <div class="hero-actions">
         <button class="btn-orange" onclick="document.getElementById('edit-panel').classList.toggle('hidden')">✏️ Edit details</button>
+        <button class="btn-ghost" onclick="duplicatePotluck()">Duplicate</button>
         <button class="btn-ghost" onclick="markPast()">Mark as Past</button>
       </div>
       <div class="edit-panel hidden" id="edit-panel">
@@ -135,6 +136,20 @@ const dishEntries = Object.entries(dishMap);
           <button id="add-slot" class="btn-orange" style="white-space:nowrap">+ Add</button>
         </div>
       </div>
+      <details style="margin-top:14px;background:#f7f5f2;border:1px solid #e4ddd4;border-radius:10px">
+        <summary style="padding:12px 14px;cursor:pointer;font-size:13px;font-weight:600;color:#57524c;list-style:none">📋 Bulk-import items (paste a list)</summary>
+        <div style="padding:0 14px 14px">
+          <div style="font-size:12px;color:#a09890;margin-bottom:8px;line-height:1.5">
+            One item per line. Just an item name, or use <code style="background:#fff;padding:1px 5px;border-radius:4px;font-size:11px">Time | Item | Category | Max</code> for full control. Examples:<br/>
+            <code style="font-size:11px;color:#57524c;display:block;background:#fff;padding:8px;border-radius:6px;margin-top:6px;line-height:1.6">Chips &amp; dip<br/>Salad<br/>10am Setup | Plates &amp; napkins | Setup | 1<br/>| Cornbread | Sides | 2</code>
+          </div>
+          <textarea id="bulk-text" rows="6" placeholder={`Chips & dip\nMain dish\nDessert`} style="width:100%;padding:10px;border:1px solid #e4ddd4;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:13px;resize:vertical"></textarea>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+            <input type="text" id="bulk-default-cat" placeholder="Default category" value="Items" style="flex:1;padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
+            <button id="bulk-add" class="btn-orange" style="white-space:nowrap">Import all</button>
+          </div>
+        </div>
+      </details>
     </div>
     <style is:inline>
       .slot-grid-wrap{overflow-x:auto;background:#fff;border:1px solid #e4ddd4;border-radius:12px}
@@ -227,6 +242,14 @@ const dishEntries = Object.entries(dishMap);
       const data = await res.json();
       if (data.ok) location.reload();
     }
+    async function duplicatePotluck() {
+      const newTitle = prompt('Title for the copy?', (potluck.title || '') + ' (Copy)');
+      if (!newTitle) return;
+      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'duplicate', id: parseInt(id), new_title: newTitle }) });
+      const data = await res.json();
+      if (data.ok) window.location.href = '/potlucks/manage/' + data.id;
+      else alert('Could not duplicate: ' + (data.error || 'unknown'));
+    }
     async function markPast() {
       if (!confirm('Mark this potluck as past?')) return;
       const body = { action:'update', id: parseInt(id), title: potluck.title, description: potluck.description || '', date_label: potluck.date_label || '', event_date: potluck.event_date || null, time_label: potluck.time_label || '', location: potluck.location || '', location_detail: potluck.location_detail || '', cover_photo: potluck.cover_photo || null, status: 'past' };
@@ -255,6 +278,19 @@ const dishEntries = Object.entries(dishMap);
         const data = await res.json();
         if (data.ok) row.remove();
       });
+    });
+
+    document.getElementById('bulk-add').addEventListener('click', async function() {
+      const text = document.getElementById('bulk-text').value;
+      if (!text.trim()) return;
+      const body = {
+        action: 'bulk_add', potluck_id: parseInt(id),
+        text: text,
+        default_category: document.getElementById('bulk-default-cat').value.trim() || 'Items',
+      };
+      const res = await fetch('/api/potluck-slots', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.ok) location.reload();
     });
 
     document.getElementById('add-slot').addEventListener('click', async function() {

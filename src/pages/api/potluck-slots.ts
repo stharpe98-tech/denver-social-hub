@@ -42,6 +42,34 @@ export const POST: APIRoute = async (ctx) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
     }
 
+    if (action === 'bulk_add') {
+      const potluckId = parseInt(b.potluck_id);
+      const lines: string[] = (b.text ?? '').split('\n').map((l: string) => l.trim()).filter(Boolean);
+      if (!potluckId || lines.length === 0) {
+        return new Response(JSON.stringify({ ok: false, error: 'missing_fields' }), { status: 400 });
+      }
+      const defaultCategory = b.default_category || 'Items';
+      const maxOrder = await db.prepare("SELECT MAX(sort_order) as m FROM potluck_slots WHERE potluck_id = ?")
+        .bind(potluckId).first() as any;
+      let nextOrder = (maxOrder?.m ?? 0) + 1;
+      let added = 0;
+      for (const line of lines) {
+        // Pipe-delimited: "Time | Item | Category | Max" — only Item is required.
+        // Bare line is treated as a single item with default category.
+        const parts = line.split('|').map(s => s.trim());
+        const slotTime = parts.length > 1 ? (parts[0] || null) : null;
+        const suggestion = parts.length > 1 ? parts[1] : parts[0];
+        const category = parts[2] || defaultCategory;
+        const maxClaims = parseInt(parts[3]) || 1;
+        if (!suggestion) continue;
+        await db.prepare(
+          "INSERT INTO potluck_slots (potluck_id, category, suggestion, max_claims, sort_order, slot_time) VALUES (?,?,?,?,?,?)"
+        ).bind(potluckId, category, suggestion, maxClaims, nextOrder++, slotTime).run();
+        added++;
+      }
+      return new Response(JSON.stringify({ ok: true, added }), { headers: { 'Content-Type': 'application/json' } });
+    }
+
     if (action === 'update') {
       const id = parseInt(b.id);
       if (!id) return new Response(JSON.stringify({ ok: false, error: 'missing_id' }), { status: 400 });

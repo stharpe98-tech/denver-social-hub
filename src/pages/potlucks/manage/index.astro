@@ -117,6 +117,18 @@ try {
     </div>
 
     <div class="ms">
+      <div class="ms-label">📱 SMS Notifications (Twilio)</div>
+      <div class="settings-card">
+        <div class="cf-field" style="margin-bottom:10px"><label>Twilio Account SID</label><input type="text" id="cfg-twilio-sid" class="cf-input" placeholder="AC…"/></div>
+        <div class="cf-field" style="margin-bottom:10px"><label>Twilio Auth Token</label><input type="text" id="cfg-twilio-token" class="cf-input" placeholder="••••••••"/></div>
+        <div class="cf-field" style="margin-bottom:10px"><label>Twilio "From" Number (E.164)</label><input type="text" id="cfg-twilio-from" class="cf-input" placeholder="+15551234567"/></div>
+        <div class="cf-field" style="margin-bottom:12px"><label>Your Phone (where notifications go)</label><input type="text" id="cfg-twilio-to" class="cf-input" placeholder="+17203411234"/></div>
+        <button class="save-btn" id="save-twilio-cfg">Save</button>
+        <div class="settings-hint" style="margin-top:8px">Sends a one-line SMS to your phone every time someone signs up. Get credentials from twilio.com (free trial included).</div>
+      </div>
+    </div>
+
+    <div class="ms">
       <div class="ms-label">🛡 Bot Protection (Cloudflare Turnstile)</div>
       <div class="settings-card">
         <div class="cf-field" style="margin-bottom:10px"><label>Turnstile Secret Key</label><input type="text" id="cfg-turnstile-secret" class="cf-input" placeholder="0x4AAAAAAA…"/></div>
@@ -249,6 +261,10 @@ try {
       setVal('cfg-stripe', cfg.stripe_link);
       setVal('cfg-cashapp', cfg.cashapp_handle);
       setVal('cfg-turnstile-secret', cfg.turnstile_secret_key);
+      setVal('cfg-twilio-sid', cfg.twilio_account_sid);
+      setVal('cfg-twilio-token', cfg.twilio_auth_token);
+      setVal('cfg-twilio-from', cfg.twilio_from);
+      setVal('cfg-twilio-to', cfg.twilio_to);
     }).catch(function(){});
 
     function saveCfg(key, value) {
@@ -269,6 +285,15 @@ try {
     document.getElementById('save-turnstile-cfg').addEventListener('click', async function() {
       await saveCfg('turnstile_secret_key', document.getElementById('cfg-turnstile-secret').value.trim());
       showToast('Turnstile saved ✓');
+    });
+    document.getElementById('save-twilio-cfg').addEventListener('click', async function() {
+      await Promise.all([
+        saveCfg('twilio_account_sid', document.getElementById('cfg-twilio-sid').value.trim()),
+        saveCfg('twilio_auth_token', document.getElementById('cfg-twilio-token').value.trim()),
+        saveCfg('twilio_from', document.getElementById('cfg-twilio-from').value.trim()),
+        saveCfg('twilio_to', document.getElementById('cfg-twilio-to').value.trim()),
+      ]);
+      showToast('Twilio saved ✓');
     });
 
     document.getElementById('save-email-cfg').addEventListener('click', async function() {
