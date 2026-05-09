@@ -137,6 +137,24 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       }).catch(() => {});
     }
 
+    // Twilio SMS to organizer
+    if (cfg.twilio_account_sid && cfg.twilio_auth_token && cfg.twilio_from && cfg.twilio_to && b.rsvp === 'yes') {
+      const msg = `🎉 ${b.name} signed up for ${potluck?.title}${b.dish ? ` — bringing ${b.dish}` : ''}${b.guestCount && parseInt(b.guestCount) > 1 ? ` (+${parseInt(b.guestCount) - 1})` : ''}`;
+      const auth = btoa(`${cfg.twilio_account_sid}:${cfg.twilio_auth_token}`);
+      fetch(`https://api.twilio.com/2010-04-01/Accounts/${cfg.twilio_account_sid}/Messages.json`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          From: cfg.twilio_from,
+          To: cfg.twilio_to,
+          Body: msg,
+        }).toString(),
+      }).catch(() => {});
+    }
+
     // Zapier webhook
     if (cfg.webhook_url?.startsWith('http')) {
       fetch(cfg.webhook_url, {

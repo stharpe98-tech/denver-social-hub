@@ -52,6 +52,36 @@ export const POST: APIRoute = async ({ request }) => {
         .bind(b.title,b.description,b.date_label,b.time_label,b.location,b.location_detail,b.status,b.template??'warm',b.locked?1:0,b.organizer_email??'',b.event_date??null,b.cover_photo??null,b.id).run();
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
     }
+    if (action === 'duplicate') {
+      const sourceId = parseInt(b.id);
+      if (!sourceId) return new Response(JSON.stringify({ ok: false, error: 'missing_id' }), { status: 400 });
+      const src: any = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(sourceId).first();
+      if (!src) return new Response(JSON.stringify({ ok: false, error: 'not_found' }), { status: 404 });
+      const ins = await db.prepare(`
+        INSERT INTO potlucks (title,description,date_label,time_label,location,location_detail,status,template,locked,organizer_email,event_date,cover_photo)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+      `).bind(
+        (b.new_title ?? src.title ?? '') + (b.new_title ? '' : ' (Copy)'),
+        src.description ?? '',
+        '', '', // intentionally clear date/time labels — duplicates need fresh dates
+        src.location ?? '',
+        src.location_detail ?? '',
+        'upcoming',
+        src.template ?? 'warm',
+        0, // unlock the copy even if source is locked
+        src.organizer_email ?? '',
+        null, // clear event_date so reminders don't fire on the old date
+        src.cover_photo ?? null,
+      ).run();
+      const newId = ins.meta.last_row_id;
+      // Copy slots (no claims, no reminder state)
+      await db.prepare(`
+        INSERT INTO potluck_slots (potluck_id, category, suggestion, max_claims, sort_order, slot_time)
+        SELECT ?, category, suggestion, max_claims, sort_order, slot_time
+        FROM potluck_slots WHERE potluck_id = ?
+      `).bind(newId, sourceId).run();
+      return new Response(JSON.stringify({ ok: true, id: newId }), { headers: { 'Content-Type': 'application/json' } });
+    }
     if (action === 'delete_rsvp') {
       await db.prepare(`DELETE FROM potluck_rsvp WHERE id=?`).bind(b.id).run();
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
