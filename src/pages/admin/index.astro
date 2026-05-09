@@ -1,16 +1,9 @@
 ---
 import AdminBase from '../../layouts/AdminBase.astro';
+import { getOrgSession } from '../../lib/admin-auth';
 
-const cookie = Astro.request.headers.get('cookie') || '';
-const userMatch = cookie.match(/dsn_user=([^;]+)/);
-let isAdmin = false;
-if (userMatch) {
-  try {
-    const user = JSON.parse(decodeURIComponent(userMatch[1]));
-    isAdmin = user.email === 'stharpe98@gmail.com';
-  } catch {}
-}
-if (isAdmin) return Astro.redirect('/admin/dashboard');
+// If a valid org session already exists, skip the magic-link UI.
+if (getOrgSession(Astro)) return Astro.redirect('/admin/dashboard');
 ---
 <AdminBase title="Admin — Denver Social" centered={true}>
 <style>
@@ -147,7 +140,7 @@ if (isAdmin) return Astro.redirect('/admin/dashboard');
 
       <!-- STEP 1: Email -->
       <div id="stepEmail">
-        <h2 class="login-step-title">Welcome <em>back,</em><br>Seth.</h2>
+        <h2 class="login-step-title">Welcome <em>back.</em></h2>
         <p class="login-step-sub">Enter your email and we'll send a 6-digit code to your inbox.</p>
         <div class="form-card">
           <label class="form-label">Email Address</label>

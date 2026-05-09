@@ -5,16 +5,17 @@ export const prerender = false;
 
 if (Astro.request.method === 'POST') {
   try {
-    const { code, email } = await Astro.request.json();
+    const { code, email } = await Astro.request.json() as { code?: string; email?: string };
     if (!code || !email) {
       return new Response(JSON.stringify({ error: 'Code and email required' }), { status: 400 });
     }
+    const normalized = email.trim().toLowerCase();
     const db = getDB();
     if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
 
     const row: any = await db.prepare(
       `SELECT * FROM magic_tokens WHERE token = ? AND email = ?`
-    ).bind(code.toString(), email.trim().toLowerCase()).first();
+    ).bind(code.toString(), normalized).first();
 
     if (!row) {
       return new Response(JSON.stringify({ error: 'Incorrect code. Try again.' }), { status: 400 });
@@ -24,13 +25,23 @@ if (Astro.request.method === 'POST') {
       return new Response(JSON.stringify({ error: 'Code expired. Request a new one.' }), { status: 400 });
     }
 
+    // Look up the organizer to build a session cookie matching /api/auth shape.
+    const org: any = await db.prepare(
+      `SELECT id, name, email, plan FROM organizers WHERE LOWER(email) = ? AND approved_for_potlucks = 1`
+    ).bind(normalized).first();
+    if (!org) {
+      return new Response(JSON.stringify({ error: 'No approved admin account for this email.' }), { status: 403 });
+    }
+
     await db.prepare(`DELETE FROM magic_tokens WHERE token = ?`).bind(code).run();
-    const val = encodeURIComponent(JSON.stringify({ email: row.email, name: 'Seth', admin: true }));
+    const sessionVal = encodeURIComponent(JSON.stringify({
+      id: org.id, name: org.name, email: org.email, plan: org.plan,
+    }));
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: {
-        'Set-Cookie': `dsn_user=${val}; Path=/; Max-Age=604800; SameSite=Lax`,
+        'Set-Cookie': `dsn_org=${sessionVal}; Path=/; Max-Age=${60*60*24*30}; HttpOnly; SameSite=Lax`,
         'Content-Type': 'application/json',
       },
     });
