@@ -1,4 +1,5 @@
 ---
+import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
 const db = getDB();
 const { id } = Astro.params;
@@ -29,7 +30,7 @@ const claimed = slots.filter((s:any) => s.claimed_by).length;
 const total = slots.length;
 const pct = total > 0 ? Math.round((claimed/total)*100) : 0;
 const attending = signups.length;
-const colors = ['#f77f00','#7c3aed','#0ea5e9','#16a34a','#ec4899','#f59e0b','#c2410c'];
+const colors = ['#0EA5E9','#7c3aed','#0ea5e9','#16a34a','#ec4899','#f59e0b','#0284C7'];
 
 // Group slots by category
 const cats: Record<string, any[]> = {};
@@ -38,24 +39,14 @@ slots.forEach((s:any) => {
   cats[s.category].push(s);
 });
 ---
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <meta name="robots" content="noindex"/>
-  <title>{potluck.title}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-  <style is:global>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: #f7f5f2; color: #1c1917; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
-    body { padding-bottom: 40px; -webkit-overflow-scrolling: touch; }
+<Base title={potluck.title} description={potluck.description ?? `Sign up for ${potluck.title}`}>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<style is:inline>
 
     /* Hero */
     .hero { position: relative; overflow: hidden; }
     .hero-img { width: 100%; height: 200px; object-fit: cover; display: block; }
-    .hero-img-placeholder { width: 100%; height: 200px; background: linear-gradient(135deg,#fff8f0,#fef3e0); }
+    .hero-img-placeholder { width: 100%; height: 200px; background: linear-gradient(135deg,#F0F9FF,#E0F2FE); }
     .hero-body { background: #fff; border-bottom: 1px solid #e4ddd4; padding: 20px; }
     .hero-inner { max-width: 600px; margin: 0 auto; }
     .back { font-size: 13px; color: #a09890; text-decoration: none; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 4px; }
@@ -66,9 +57,9 @@ slots.forEach((s:any) => {
     /* Progress */
     .progress-wrap { margin-bottom: 14px; }
     .progress-top { display: flex; justify-content: space-between; font-size: 13px; color: #57524c; margin-bottom: 6px; }
-    .progress-top strong { color: #f77f00; }
+    .progress-top strong { color: #0EA5E9; }
     .progress-bar { height: 8px; background: #f0ede8; border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #c2410c, #f77f00); border-radius: 4px; transition: width 0.4s; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #0284C7, #0EA5E9); border-radius: 4px; transition: width 0.4s; }
 
     /* Attendee avatars */
     .avatars { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
@@ -86,7 +77,7 @@ slots.forEach((s:any) => {
     /* View toggle */
     .view-toggle { display: inline-flex; background: #fff; border: 1px solid #e4ddd4; border-radius: 10px; padding: 3px; margin-bottom: 16px; }
     .vt-btn { background: transparent; border: none; padding: 7px 18px; font-size: 13px; font-weight: 600; color: #a09890; border-radius: 7px; cursor: pointer; font-family: 'DM Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
-    .vt-btn.active { background: linear-gradient(135deg, #c2410c, #f77f00); color: #fff; }
+    .vt-btn.active { background: linear-gradient(135deg, #0284C7, #0EA5E9); color: #fff; }
 
     /* Grid view */
     .grid-wrap { background: #fff; border: 1.5px solid #e4ddd4; border-radius: 14px; overflow-x: auto; }
@@ -99,14 +90,14 @@ slots.forEach((s:any) => {
     .g-cat { font-size: 11px; color: #a09890; font-weight: 400; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
     .g-prog { font-size: 13px; color: #6b5040; }
     .g-action { text-align: right; }
-    .g-signup-btn { padding: 8px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #c2410c, #f77f00); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .g-signup-btn { padding: 8px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #0284C7, #0EA5E9); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
     .g-signup-btn:hover { opacity: 0.9; }
     .g-claimed { font-size: 13px; color: #16a34a; font-weight: 600; white-space: nowrap; }
     .g-empty { text-align: center; color: #a09890; padding: 30px; font-style: italic; }
 
     /* Category dropdowns */
     .cat-block { margin-bottom: 12px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 14px; overflow: hidden; }
-    .cat-block[open] { border-color: #fcd5a0; }
+    .cat-block[open] { border-color: #7DD3FC; }
     .cat-title { font-size: 13px; font-weight: 700; color: #57524c; text-transform: uppercase; letter-spacing: 1px; padding: 16px 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; user-select: none; }
     .cat-title::-webkit-details-marker { display: none; }
     .cat-title:hover { background: #fffaf2; }
@@ -119,37 +110,37 @@ slots.forEach((s:any) => {
 
     /* Item rows */
     .item { background: #fff; border: 1.5px solid #e4ddd4; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
-    .item[data-id]:active { background: #fff8ec; border-color: #f77f00; }
+    .item[data-id]:active { background: #F0F9FF; border-color: #0EA5E9; }
     .item.claimed { border-color: #86efac; background: #f0fdf4; cursor: default; }
     .item-name { flex: 1; font-size: 15px; font-weight: 500; color: #1c1917; }
     .item.claimed .item-name { color: #15803d; }
     .item-who { font-size: 13px; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 5px; }
     .item-who::before { content: '✓'; font-size: 14px; }
-    .claim-btn { flex-shrink: 0; padding: 8px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg,#c2410c,#f77f00); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+    .claim-btn { flex-shrink: 0; padding: 8px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg,#0284C7,#0EA5E9); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
     .claim-btn:active { opacity: 0.85; transform: scale(0.97); }
 
     /* Inline claim form */
-    .claim-form { display: none; background: #fff8ec; border: 1.5px solid #f77f00; border-radius: 12px; padding: 16px; margin-bottom: 8px; }
+    .claim-form { display: none; background: #F0F9FF; border: 1.5px solid #0EA5E9; border-radius: 12px; padding: 16px; margin-bottom: 8px; }
     .claim-form.open { display: block; }
-    .claim-form-title { font-size: 14px; font-weight: 600; color: #c2410c; margin-bottom: 12px; }
+    .claim-form-title { font-size: 14px; font-weight: 600; color: #0284C7; margin-bottom: 12px; }
     .claim-input { width: 100%; padding: 11px 13px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 9px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; margin-bottom: 10px; -webkit-appearance: none; }
-    .claim-input:focus { border-color: #f77f00; }
+    .claim-input:focus { border-color: #0EA5E9; }
     .claim-input::placeholder { color: #c0b8b0; }
     .claim-row { display: flex; gap: 8px; align-items: center; }
-    .claim-submit { flex: 1; padding: 12px; border-radius: 9px; border: none; background: linear-gradient(135deg,#c2410c,#f77f00); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .claim-submit { flex: 1; padding: 12px; border-radius: 9px; border: none; background: linear-gradient(135deg,#0284C7,#0EA5E9); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; }
     .claim-cancel { padding: 12px 16px; border-radius: 9px; border: 1.5px solid #e4ddd4; background: transparent; color: #8a7a70; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; }
     .claim-guest-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
     .g-btn { width: 38px; height: 38px; border-radius: 8px; border: 1.5px solid #e4ddd4; background: #fff; font-size: 18px; font-weight: 600; color: #57524c; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .g-count { flex: 1; text-align: center; font-size: 20px; font-weight: 700; color: #1c1917; }
     .g-note { font-size: 12px; color: #a09890; white-space: nowrap; }
     .claim-email { width: 100%; padding: 11px 13px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 9px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; margin-bottom: 10px; -webkit-appearance: none; }
-    .claim-email:focus { border-color: #f77f00; }
+    .claim-email:focus { border-color: #0EA5E9; }
     .claim-email::placeholder { color: #c0b8b0; }
     .claim-hint { font-size: 11px; color: #a09890; margin-bottom: 10px; line-height: 1.5; }
 
     /* Custom dish */
     .custom-block { background: #fff; border: 1.5px dashed #e4ddd4; border-radius: 12px; padding: 14px 16px; margin-top: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-    .custom-block:active { background: #fff8ec; border-color: #f77f00; }
+    .custom-block:active { background: #F0F9FF; border-color: #0EA5E9; }
     .custom-icon { font-size: 22px; flex-shrink: 0; }
     .custom-text { font-size: 14px; color: #8a7a70; }
     .custom-text strong { color: #1c1917; display: block; }
@@ -162,7 +153,7 @@ slots.forEach((s:any) => {
     /* Tabs */
     .tabs { display: flex; border-bottom: 1px solid #e4ddd4; margin-bottom: 20px; }
     .tab { flex: 1; padding: 11px; font-size: 13px; font-weight: 600; color: #a09890; cursor: pointer; border: none; border-bottom: 2px solid transparent; background: none; font-family: 'DM Sans', sans-serif; }
-    .tab.active { color: #f77f00; border-bottom-color: #f77f00; }
+    .tab.active { color: #0EA5E9; border-bottom-color: #0EA5E9; }
     .panel { display: none; } .panel.active { display: block; }
 
     /* Who's coming */
@@ -170,13 +161,11 @@ slots.forEach((s:any) => {
     .coming-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0; }
     .coming-name { font-size: 15px; font-weight: 500; color: #1c1917; }
     .coming-dish { font-size: 13px; color: #8a7a70; margin-top: 1px; }
-    .coming-guests { font-size: 12px; color: #c2410c; font-weight: 500; margin-left: auto; flex-shrink: 0; }
+    .coming-guests { font-size: 12px; color: #0284C7; font-weight: 500; margin-left: auto; flex-shrink: 0; }
 
     .empty { text-align: center; padding: 40px; color: #a09890; font-style: italic; font-size: 14px; }
     .hidden { display: none !important; }
-  </style>
-</head>
-<body>
+</style>
 
   <!-- HERO -->
   <div class="hero">
@@ -394,11 +383,11 @@ slots.forEach((s:any) => {
         <div style="font-size:11px;font-weight:700;color:#a09890;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Stay in touch</div>
         <div id="cc-rows" style="font-size:14px;color:#1c1917;line-height:1.9"></div>
       </div>
-      <div id="confirm-pay" style="background:#fff8ec;border:1.5px solid #fcd5a0;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:none">
+      <div id="confirm-pay" style="background:#F0F9FF;border:1.5px solid #7DD3FC;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:none">
         <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Want to chip in?</div>
         <div id="cp-rows" style="font-size:14px;line-height:1.8"></div>
       </div>
-      <button id="confirm-ok" style="width:100%;padding:13px;background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;font-size:15px;font-weight:600;border:none;border-radius:10px;cursor:pointer;font-family:inherit">Got it</button>
+      <button id="confirm-ok" style="width:100%;padding:13px;background:linear-gradient(135deg,#0284C7,#0EA5E9);color:#fff;font-size:15px;font-weight:600;border:none;border-radius:10px;cursor:pointer;font-family:inherit">Got it</button>
     </div>
   </div>
 
@@ -539,7 +528,7 @@ slots.forEach((s:any) => {
 
         if (!name) {
           var nameField = itemId ? document.getElementById('name-' + itemId) : document.getElementById('custom-name');
-          nameField.style.borderColor = '#f77f00';
+          nameField.style.borderColor = '#0EA5E9';
           nameField.focus();
           return;
         }
@@ -584,16 +573,16 @@ slots.forEach((s:any) => {
       document.getElementById('confirm-title').textContent = "You're in, " + firstName + "!";
       var ccRows = [];
       if (contact.phone) ccRows.push('<div>📞 ' + escHtml(contact.phone) + '</div>');
-      if (contact.discord_url) ccRows.push('<div>💬 <a href="' + escHtml(contact.discord_url) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">Join Discord</a>' + (contact.discord ? ' · ' + escHtml(contact.discord) : '') + '</div>');
+      if (contact.discord_url) ccRows.push('<div>💬 <a href="' + escHtml(contact.discord_url) + '" target="_blank" rel="noopener" style="color:#0284C7;text-decoration:none;font-weight:600">Join Discord</a>' + (contact.discord ? ' · ' + escHtml(contact.discord) : '') + '</div>');
       else if (contact.discord) ccRows.push('<div>💬 ' + escHtml(contact.discord) + '</div>');
       if (ccRows.length > 0) {
         document.getElementById('cc-rows').innerHTML = ccRows.join('');
         document.getElementById('confirm-contact').style.display = 'block';
       }
       var cpRows = [];
-      if (contact.venmo) cpRows.push('<div>💸 Venmo: <a href="https://venmo.com/' + escHtml(String(contact.venmo).replace(/^@/, '')) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">' + escHtml(contact.venmo) + '</a></div>');
-      if (contact.cashapp_handle) cpRows.push('<div>💵 Cash App: <a href="https://cash.app/' + escHtml(String(contact.cashapp_handle).replace(/^\$/, '$')) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">' + escHtml(contact.cashapp_handle) + '</a></div>');
-      if (contact.stripe_link) cpRows.push('<div>💳 <a href="' + escHtml(contact.stripe_link) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">Pay with card</a></div>');
+      if (contact.venmo) cpRows.push('<div>💸 Venmo: <a href="https://venmo.com/' + escHtml(String(contact.venmo).replace(/^@/, '')) + '" target="_blank" rel="noopener" style="color:#0284C7;text-decoration:none;font-weight:600">' + escHtml(contact.venmo) + '</a></div>');
+      if (contact.cashapp_handle) cpRows.push('<div>💵 Cash App: <a href="https://cash.app/' + escHtml(String(contact.cashapp_handle).replace(/^\$/, '$')) + '" target="_blank" rel="noopener" style="color:#0284C7;text-decoration:none;font-weight:600">' + escHtml(contact.cashapp_handle) + '</a></div>');
+      if (contact.stripe_link) cpRows.push('<div>💳 <a href="' + escHtml(contact.stripe_link) + '" target="_blank" rel="noopener" style="color:#0284C7;text-decoration:none;font-weight:600">Pay with card</a></div>');
       if (cpRows.length > 0) {
         document.getElementById('cp-rows').innerHTML = cpRows.join('');
         document.getElementById('confirm-pay').style.display = 'block';
@@ -607,5 +596,4 @@ slots.forEach((s:any) => {
       location.reload();
     });
   </script>
-</body>
-</html>
+</Base>
