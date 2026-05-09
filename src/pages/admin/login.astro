@@ -42,6 +42,11 @@ if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'
       <div class="field"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••"/></div>
       <button class="submit" id="login-btn">Sign in →</button>
       <div class="err" id="l-err"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0;font-size:11px;color:#a09890;text-transform:uppercase;letter-spacing:1px">
+        <div style="flex:1;height:1px;background:#e4ddd4"></div>or<div style="flex:1;height:1px;background:#e4ddd4"></div>
+      </div>
+      <button class="submit" id="passkey-btn" style="background:#1c1917">🔑 Sign in with passkey</button>
+      <div class="err" id="pk-err"></div>
       <div style="text-align:center;margin-top:14px;font-size:13px;color:#a09890">
         Forgot your password? <a href="/admin" style="color:#c2410c;font-weight:600;text-decoration:none">Email me a code instead</a>
       </div>
@@ -75,6 +80,38 @@ if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'
       var data = await res.json();
       if (data.ok) { location.href = '/admin/dashboard'; }
       else { document.getElementById('r-err').textContent = data.error || 'Could not create account'; document.getElementById('r-err').style.display='block'; btn.textContent='Create account →'; btn.disabled=false; }
+    });
+  </script>
+
+  <script>
+    import { startAuthentication } from '@simplewebauthn/browser';
+
+    document.getElementById('passkey-btn')?.addEventListener('click', async () => {
+      const errEl = document.getElementById('pk-err');
+      errEl.style.display = 'none';
+      const emailEl = document.getElementById('l-email');
+      const email = emailEl ? emailEl.value.trim() : '';
+      try {
+        const optsRes = await fetch('/api/passkey/auth-options', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        if (!optsRes.ok) throw new Error('options_failed');
+        const opts = await optsRes.json();
+
+        const assertion = await startAuthentication({ optionsJSON: opts });
+
+        const verifyRes = await fetch('/api/passkey/auth-verify', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ response: assertion }),
+        });
+        const data = await verifyRes.json();
+        if (!data.ok) throw new Error(data.error || 'verify_failed');
+        location.href = '/admin/dashboard';
+      } catch (e) {
+        errEl.textContent = 'Passkey sign-in failed: ' + (e.message || 'unknown');
+        errEl.style.display = 'block';
+      }
     });
   </script>
 </body>

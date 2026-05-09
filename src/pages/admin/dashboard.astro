@@ -97,6 +97,17 @@ try {
       <a href="/potlucks/1/poster" class="nav-card"><span class="nav-icon">🖼</span><span class="nav-label">Poster</span></a>
     </div>
 
+    <!-- Passkeys -->
+    <div style="margin-bottom:28px">
+      <div class="sec-label">Passkeys (sign in with Face ID / Touch ID)</div>
+      <div class="profile-section">
+        <div id="passkey-list" style="font-size:13px;color:#57524c;margin-bottom:12px">Loading…</div>
+        <button class="save-btn" id="add-passkey-btn">+ Add a passkey</button>
+        <div class="settings-hint" style="font-size:12px;color:#a09890;margin-top:10px">Once enrolled, you can sign in from /admin without a password by tapping "Sign in with passkey".</div>
+        <div id="passkey-err" style="font-size:13px;color:#dc2626;margin-top:10px;display:none"></div>
+      </div>
+    </div>
+
     <!-- White label / profile -->
     <div style="margin-bottom:28px">
       <div class="sec-label">Your Profile & Branding</div>
@@ -254,6 +265,69 @@ try {
         showToast('Deleted');
       });
     });
+  </script>
+
+  <script>
+    // Bundled by Astro (NOT is:inline) so we can import from npm.
+    import { startRegistration } from '@simplewebauthn/browser';
+
+    async function refreshPasskeyList() {
+      const listEl = document.getElementById('passkey-list');
+      if (!listEl) return;
+      try {
+        const res = await fetch('/api/passkey/manage');
+        const data = await res.json();
+        const passkeys = data.passkeys || [];
+        if (passkeys.length === 0) {
+          listEl.innerHTML = '<em style="color:#a09890">No passkeys yet — tap below to add one.</em>';
+          return;
+        }
+        listEl.innerHTML = passkeys.map((pk) => {
+          const label = pk.device_label || 'Unnamed device';
+          const date = new Date(pk.created_at).toLocaleDateString();
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0ede8">
+            <div><strong>🔑 ${label}</strong><div style="font-size:11px;color:#a09890">added ${date}</div></div>
+            <button class="del-btn" data-pk-id="${pk.id}">Remove</button>
+          </div>`;
+        }).join('');
+        listEl.querySelectorAll('[data-pk-id]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Remove this passkey?')) return;
+            await fetch('/api/passkey/manage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id: parseInt(btn.getAttribute('data-pk-id')) }) });
+            refreshPasskeyList();
+          });
+        });
+      } catch {
+        listEl.textContent = 'Failed to load passkeys.';
+      }
+    }
+
+    document.getElementById('add-passkey-btn')?.addEventListener('click', async () => {
+      const errEl = document.getElementById('passkey-err');
+      errEl.style.display = 'none';
+      try {
+        const optsRes = await fetch('/api/passkey/register-options', { method: 'POST' });
+        if (!optsRes.ok) throw new Error('options_failed');
+        const opts = await optsRes.json();
+
+        const label = prompt('Name this device (e.g. "MacBook", "iPhone"):', '') || '';
+        const attResp = await startRegistration({ optionsJSON: opts });
+
+        const verifyRes = await fetch('/api/passkey/register-verify', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ response: attResp, deviceLabel: label }),
+        });
+        const data = await verifyRes.json();
+        if (!data.ok) throw new Error(data.error || 'verify_failed');
+        showToast('Passkey added ✓');
+        refreshPasskeyList();
+      } catch (e) {
+        errEl.textContent = 'Couldn\'t add passkey: ' + (e.message || 'unknown error');
+        errEl.style.display = 'block';
+      }
+    });
+
+    refreshPasskeyList();
   </script>
 </body>
 </html>
