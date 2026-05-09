@@ -148,6 +148,8 @@ if (getOrgSession(Astro)) return Astro.redirect('/admin/dashboard');
           <button id="sendBtn" class="form-btn">Send My Code →</button>
           <div id="sendError" class="form-error"></div>
         </div>
+        <button id="passkeyBtn" class="form-btn" style="background:linear-gradient(135deg,#0F1117,#1c1917);box-shadow:0 0 24px rgba(255,255,255,0.05);margin-bottom:16px">🔑 Sign in with passkey</button>
+        <div id="passkeyError" class="form-error"></div>
         <div class="form-footer">Only authorized admins can access this area.</div>
       </div>
 
@@ -177,6 +179,36 @@ if (getOrgSession(Astro)) return Astro.redirect('/admin/dashboard');
     </div>
   </div>
 </div>
+
+<script>
+  // Passkey auth — uses bundled @simplewebauthn/browser
+  import { startAuthentication } from '@simplewebauthn/browser';
+
+  document.getElementById('passkeyBtn')?.addEventListener('click', async () => {
+    const errEl = document.getElementById('passkeyError') as HTMLElement;
+    errEl.style.display = 'none';
+    const emailVal = (document.getElementById('emailInput') as HTMLInputElement | null)?.value.trim() || '';
+    try {
+      const optsRes = await fetch('/api/passkey/auth-options', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailVal }),
+      });
+      if (!optsRes.ok) throw new Error('options_failed');
+      const opts = await optsRes.json();
+      const assertion = await startAuthentication({ optionsJSON: opts });
+      const verifyRes = await fetch('/api/passkey/auth-verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ response: assertion }),
+      });
+      const data = await verifyRes.json() as any;
+      if (!data.ok) throw new Error(data.error || 'verify_failed');
+      window.location.href = '/admin/dashboard';
+    } catch (e: any) {
+      errEl.textContent = 'Passkey sign-in failed: ' + (e?.message || 'unknown');
+      errEl.style.display = 'block';
+    }
+  });
+</script>
 
 <script>
   let currentEmail = '';
