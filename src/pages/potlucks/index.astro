@@ -1,4 +1,5 @@
 ---
+import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
 const db = getDB();
 let potlucks: any[] = [];
@@ -16,151 +17,131 @@ try {
 const upcoming = potlucks.filter((p:any) => p.status === 'upcoming');
 const past = potlucks.filter((p:any) => p.status !== 'upcoming');
 ---
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Potlucks · Denver Social Community</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
-  <style is:global>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: #f7f5f2; color: #1c1917; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
-    body { padding-bottom: 90px; -webkit-overflow-scrolling: touch; }
+<Base title="Potlucks" description="Community potlucks across Denver — bring a dish, meet your neighbors.">
 
-    .hub-hero { background: linear-gradient(160deg,#fff8f0,#fef3e0,#fff8f0); border-bottom: 1px solid #e4ddd4; padding: 40px 20px 32px; position: relative; overflow: hidden; }
-    .hub-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%,#f77f0022,transparent 70%); pointer-events: none; }
-    .hub-hi { max-width: 600px; margin: 0 auto; position: relative; z-index: 1; }
-    .hub-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(28px,7vw,40px); color: #1c1917; margin-bottom: 6px; }
-    .hub-hero p { font-size: 14px; color: #8a6a40; font-style: italic; }
-
-    .hub-page { max-width: 600px; margin: 0 auto; padding: 24px 16px; }
-
-    .hub-sec { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #8a7a70; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-    .hub-sec::after { content: ''; flex: 1; height: 1px; background: #1a1a0a; }
-
-    .hub-card { background: #ffffff; border: 1px solid #e4ddd4; border-radius: 16px; padding: 18px; margin-bottom: 12px; text-decoration: none; display: block; transition: border-color 0.15s; -webkit-tap-highlight-color: transparent; }
-    .hub-card:active { border-color: #f77f00; }
-    .hub-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
-    .hub-card-title { font-family: 'Playfair Display', serif; font-size: 18px; color: #1c1917; margin-bottom: 4px; }
-    .hub-card-meta { font-size: 13px; color: #8a7a70; line-height: 1.7; }
-    .hub-status { padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
-    .hub-s-up { background: rgba(247,127,0,0.15); border: 1px solid rgba(247,127,0,0.3); color: #92400e; }
-    .hub-s-past { background: #1a1a1a; border: 1px solid #2a2a2a; color: #a09890; }
-    .hub-stats { display: flex; gap: 16px; flex-wrap: wrap; }
-    .hub-stat { font-size: 13px; color: #8a7a70; }
-    .hub-stat strong { color: #8a6a40; }
-
-    .hub-empty { text-align: center; padding: 32px 16px; color: #a09890; font-style: italic; font-size: 14px; }
-
-    .hub-suggest { margin-top: 36px; padding-top: 28px; border-top: 1px solid #1a1a0a; }
-    .hub-suggest-title { font-family: 'Playfair Display', serif; font-size: 20px; color: #8a6a40; margin-bottom: 6px; }
-    .hub-suggest-sub { font-size: 13px; color: #a09890; margin-bottom: 20px; font-style: italic; }
-
-    .hub-field { margin-bottom: 14px; }
-    .hub-field label { display: block; font-size: 12px; font-weight: 600; color: #8a7a70; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
-    .hub-input { width: 100%; padding: 12px 14px; background: #ffffff; border: 1.5px solid #e4ddd4; border-radius: 10px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; transition: border-color 0.15s; -webkit-appearance: none; }
-    .hub-input:focus { border-color: #f77f00; }
-    .hub-input::placeholder { color: #a09890; }
-    .hub-textarea { width: 100%; padding: 12px 14px; background: #ffffff; border: 1.5px solid #e4ddd4; border-radius: 10px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; resize: vertical; min-height: 72px; -webkit-appearance: none; }
-    .hub-textarea:focus { border-color: #f77f00; }
-    .hub-textarea::placeholder { color: #a09890; }
-
-    .hub-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    @media(max-width: 400px) { .hub-row2 { grid-template-columns: 1fr; } }
-
-    .hub-submit { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(135deg,#c2410c,#f77f00); color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 4px; box-shadow: 0 4px 16px rgba(247,127,0,0.2); -webkit-tap-highlight-color: transparent; }
-    .hub-success { background: #0d2e1a; border: 1px solid #166534; border-radius: 10px; padding: 14px 18px; color: #4ade80; font-size: 14px; margin-top: 12px; display: none; }
-
-    .hub-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #f7f5f2; border-top: 1px solid #1a1a1a; display: flex; justify-content: space-around; padding: 8px 0 max(8px, env(safe-area-inset-bottom)); z-index: 100; }
-    .hub-nav a { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; color: #a09890; font-size: 10px; font-weight: 500; padding: 4px 12px; -webkit-tap-highlight-color: transparent; }
-    .hub-nav a.active { color: #f77f00; }
-    .hub-nav-icon { font-size: 20px; }
-  </style>
-</head>
-<body>
-  <div class="hub-hero">
+  <section class="hub-hero">
+    <div class="hub-glow"></div>
     <div class="hub-hi">
+      <span class="hub-eyebrow">Community · No ads · No fees</span>
       <h1>🍽 Potlucks</h1>
-      <p>Community food events — show up, eat well, meet people</p>
+      <p>Bring a dish, meet your neighbors, eat well.</p>
     </div>
-  </div>
+  </section>
 
   <div class="hub-page">
     {upcoming.length > 0 ? (
-      <div style="margin-bottom:32px">
-        <div class="hub-sec">Upcoming</div>
-        {upcoming.map((p:any) => (
-          <a href={`/potlucks/${p.id}`} class="hub-card">
-            <div class="hub-card-top">
-              <div>
-                <div class="hub-card-title">{p.title}</div>
-                <div class="hub-card-meta">
-                  {p.date_label && <span>📅 {p.date_label}{p.time_label ? ` · ${p.time_label}` : ''}<br/></span>}
-                  {p.location && <span>📍 {p.location}{p.location_detail ? ` · ${p.location_detail}` : ''}</span>}
+      <div style="margin-bottom:var(--space-7)">
+        <div class="hub-sec"><span class="tag tag-blue">Upcoming</span></div>
+        <div class="hub-list">
+          {upcoming.map((p:any) => (
+            <a href={`/potlucks/${p.id}`} class="hub-card">
+              <div class="hub-card-top">
+                <div class="hub-card-main">
+                  <div class="hub-card-title">{p.title}</div>
+                  <div class="hub-card-meta">
+                    {p.date_label && <div>📅 {p.date_label}{p.time_label ? ` · ${p.time_label}` : ''}</div>}
+                    {p.location && <div>📍 {p.location}{p.location_detail ? ` · ${p.location_detail}` : ''}</div>}
+                  </div>
                 </div>
+                <span class="tag tag-green">Open</span>
               </div>
-              <span class="hub-status hub-s-up">Upcoming</span>
-            </div>
-            <div class="hub-stats">
-              <div class="hub-stat">👥 <strong>{p.attendee_count || 0}</strong> signed up</div>
-              <div class="hub-stat">🍽 <strong>{p.dish_count || 0}</strong> dishes claimed</div>
-            </div>
-          </a>
-        ))}
+              <div class="hub-stats">
+                <div class="hub-stat">👥 <strong>{p.attendee_count || 0}</strong> signed up</div>
+                <div class="hub-stat">🍽 <strong>{p.dish_count || 0}</strong> dishes claimed</div>
+              </div>
+            </a>
+          ))}
+        </div>
       </div>
     ) : (
       <div class="hub-empty">No upcoming potlucks — suggest one below!</div>
     )}
 
     {past.length > 0 && (
-      <div style="margin-bottom:32px">
-        <div class="hub-sec">Past</div>
-        {past.map((p:any) => (
-          <a href={`/potlucks/${p.id}`} class="hub-card">
-            <div class="hub-card-top">
-              <div>
-                <div class="hub-card-title" style="color:#8a7a70">{p.title}</div>
-                <div class="hub-card-meta">{p.date_label} · {p.location}</div>
+      <div style="margin-bottom:var(--space-7)">
+        <div class="hub-sec"><span class="tag tag-blue" style="background:var(--surface);color:var(--text-faint)">Past</span></div>
+        <div class="hub-list">
+          {past.map((p:any) => (
+            <a href={`/potlucks/${p.id}`} class="hub-card hub-card-past">
+              <div class="hub-card-top">
+                <div class="hub-card-main">
+                  <div class="hub-card-title">{p.title}</div>
+                  <div class="hub-card-meta">{p.date_label} · {p.location}</div>
+                </div>
+                <span class="tag" style="background:var(--surface);color:var(--text-faint)">Past</span>
               </div>
-              <span class="hub-status hub-s-past">Past</span>
-            </div>
-            <div class="hub-stats">
-              <div class="hub-stat">👥 <strong>{p.attendee_count || 0}</strong> attended</div>
-              <div class="hub-stat">🍽 <strong>{p.dish_count || 0}</strong> dishes</div>
-            </div>
-          </a>
-        ))}
+              <div class="hub-stats">
+                <div class="hub-stat">👥 <strong>{p.attendee_count || 0}</strong> attended</div>
+                <div class="hub-stat">🍽 <strong>{p.dish_count || 0}</strong> dishes</div>
+              </div>
+            </a>
+          ))}
+        </div>
       </div>
     )}
 
     <div class="hub-suggest">
-      <div class="hub-suggest-title">Got an idea for a potluck?</div>
-      <div class="hub-suggest-sub">Submit it — if approved it'll show up here.</div>
-
-      <div class="hub-field"><label>Title *</label><input type="text" id="s-title" class="hub-input" placeholder="e.g. Fall Harvest Potluck"/></div>
-      <div class="hub-field"><label>Description</label><textarea id="s-desc" class="hub-textarea" placeholder="What's the vibe?"></textarea></div>
-      <div class="hub-row2">
-        <div class="hub-field"><label>Date</label><input type="text" id="s-date" class="hub-input" placeholder="Oct 18th"/></div>
-        <div class="hub-field"><label>Time</label><input type="text" id="s-time" class="hub-input" placeholder="1pm–5pm"/></div>
-        <div class="hub-field"><label>Location</label><input type="text" id="s-loc" class="hub-input" placeholder="City Park"/></div>
-        <div class="hub-field"><label>Detail</label><input type="text" id="s-locdetail" class="hub-input" placeholder="Near the pavilion"/></div>
+      <div class="hub-suggest-head">
+        <h2>Got an idea for a potluck?</h2>
+        <p>Submit it — if approved it'll show up here.</p>
       </div>
-      <button class="hub-submit" id="suggest-btn">Submit idea →</button>
+
+      <div class="hub-field"><label>Title *</label><input type="text" id="s-title" class="input" placeholder="e.g. Fall Harvest Potluck"/></div>
+      <div class="hub-field"><label>Description</label><textarea id="s-desc" class="input" style="resize:vertical;min-height:84px" placeholder="What's the vibe?"></textarea></div>
+      <div class="hub-row2">
+        <div class="hub-field"><label>Date</label><input type="text" id="s-date" class="input" placeholder="Oct 18th"/></div>
+        <div class="hub-field"><label>Time</label><input type="text" id="s-time" class="input" placeholder="1pm–5pm"/></div>
+        <div class="hub-field"><label>Location</label><input type="text" id="s-loc" class="input" placeholder="City Park"/></div>
+        <div class="hub-field"><label>Detail</label><input type="text" id="s-locdetail" class="input" placeholder="Near the pavilion"/></div>
+      </div>
+      <button class="btn-cta" id="suggest-btn" style="width:100%;margin-top:var(--space-2)">Submit idea →</button>
       <div class="hub-success" id="suggest-ok">✅ Submitted! We'll review it and post it if approved.</div>
     </div>
   </div>
 
-  <nav class="hub-nav">
-    <a href="/"><span class="hub-nav-icon">🏠</span>Home</a>
-    <a href="/events"><span class="hub-nav-icon">📅</span>Events</a>
-    <a href="/potlucks" class="active"><span class="hub-nav-icon">🍽</span>Potlucks</a>
-    <a href="/recs"><span class="hub-nav-icon">⭐</span>Recs</a>
-  </nav>
+  <style>
+    .hub-hero { position: relative; overflow: hidden; padding: var(--space-7) var(--space-5) var(--space-6); background: linear-gradient(135deg, #FFFFFF 0%, #E0F2FE 50%, #D1FAE5 100%); border-bottom: 1px solid var(--border); }
+    .hub-glow { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(14,165,233,0.10), transparent 70%); pointer-events: none; }
+    .hub-hi { position: relative; max-width: 720px; margin: 0 auto; text-align: center; z-index: 1; }
+    .hub-eyebrow { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); padding: 5px 12px; background: var(--accent-dim); border-radius: 999px; margin-bottom: var(--space-3); }
+    .hub-hero h1 { font-family: var(--font-display); font-size: clamp(32px, 6vw, 48px); color: var(--text); margin-bottom: 8px; font-weight: 800; letter-spacing: -0.02em; }
+    .hub-hero p { font-size: 16px; color: var(--text-sec); }
+
+    .hub-page { max-width: 720px; margin: 0 auto; padding: var(--space-6) var(--space-5); }
+
+    .hub-sec { margin-bottom: var(--space-3); }
+
+    .hub-list { display: flex; flex-direction: column; gap: var(--space-3); }
+    .hub-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-4); box-shadow: var(--card-shadow); text-decoration: none; display: block; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; -webkit-tap-highlight-color: transparent; }
+    .hub-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
+    .hub-card-past:hover { transform: none; }
+    .hub-card-past .hub-card-title { color: var(--text-sec); }
+    .hub-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); margin-bottom: var(--space-3); }
+    .hub-card-main { min-width: 0; flex: 1; }
+    .hub-card-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--text); margin-bottom: 6px; letter-spacing: -0.01em; }
+    .hub-card-meta { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
+    .hub-stats { display: flex; gap: var(--space-4); flex-wrap: wrap; padding-top: var(--space-3); border-top: 1px solid var(--border); }
+    .hub-stat { font-size: 13px; color: var(--text-sec); }
+    .hub-stat strong { color: var(--text); font-weight: 700; }
+
+    .hub-empty { text-align: center; padding: var(--space-6); color: var(--text-faint); font-size: 14px; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); margin-bottom: var(--space-7); }
+
+    .hub-suggest { padding-top: var(--space-6); border-top: 1px solid var(--border); }
+    .hub-suggest-head h2 { font-family: var(--font-display); font-size: 24px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.01em; }
+    .hub-suggest-head p { color: var(--text-sec); font-size: 14px; margin-bottom: var(--space-4); }
+
+    .hub-field { margin-bottom: var(--space-3); }
+    .hub-field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-sec); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .hub-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+    @media(max-width: 460px) { .hub-row2 { grid-template-columns: 1fr; } }
+
+    .hub-success { background: var(--tag-bg2); border: 1px solid var(--mint); border-radius: 10px; padding: 12px 16px; color: var(--tag-text2); font-size: 14px; margin-top: var(--space-3); display: none; font-weight: 500; }
+  </style>
 
   <script is:inline>
     document.getElementById('suggest-btn').addEventListener('click', async function() {
       var title = document.getElementById('s-title').value.trim();
-      if (!title) { document.getElementById('s-title').style.borderColor = '#f87171'; return; }
+      if (!title) { document.getElementById('s-title').style.borderColor = 'var(--red)'; return; }
       var body = {
         action: 'suggest',
         title: title,
@@ -174,10 +155,8 @@ const past = potlucks.filter((p:any) => p.status !== 'upcoming');
       var data = await res.json();
       if (data.ok) {
         document.getElementById('suggest-ok').style.display = 'block';
-        ['s-title','s-date','s-time','s-loc','s-locdetail'].forEach(function(id) { document.getElementById(id).value = ''; });
-        document.getElementById('s-desc').value = '';
+        ['s-title','s-desc','s-date','s-time','s-loc','s-locdetail'].forEach(function(id) { document.getElementById(id).value = ''; });
       }
     });
   </script>
-</body>
-</html>
+</Base>
