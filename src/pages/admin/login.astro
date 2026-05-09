@@ -42,6 +42,9 @@ if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'
       <div class="field"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••"/></div>
       <button class="submit" id="login-btn">Sign in →</button>
       <div class="err" id="l-err"></div>
+      <div style="text-align:center;margin-top:14px;font-size:13px;color:#a09890">
+        Forgot your password? <a href="/admin" style="color:#c2410c;font-weight:600;text-decoration:none">Email me a code instead</a>
+      </div>
     </div>
     <div class="panel" id="panel-register">
       <div class="field"><label>Your Name / Org Name</label><input type="text" id="r-name" placeholder="Denver Social Community"/></div>
