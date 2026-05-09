@@ -38,6 +38,15 @@ if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'
       <button class="tab" onclick="switchTab('register')">Create Account</button>
     </div>
     <div class="panel active" id="panel-login">
+      <div id="pin-banner" style="display:none;background:#fff8ec;border:1.5px solid #fcd5a0;border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Trusted device</div>
+        <div style="font-size:13px;color:#57524c;margin-bottom:10px">Welcome back, <strong id="pin-greeting">friend</strong>. Enter your PIN to sign in.</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="pin-input" placeholder="••••" autocomplete="off" style="flex:1;padding:11px 13px;background:#fff;border:1.5px solid #fcd5a0;border-radius:10px;font-size:18px;font-family:'JetBrains Mono',monospace;letter-spacing:8px;text-align:center;outline:none"/>
+          <button class="submit" id="pin-submit-btn" style="padding:11px 20px">→</button>
+        </div>
+        <div class="err" id="pin-err"></div>
+      </div>
       <div class="field"><label>Email</label><input type="email" id="l-email" placeholder="you@example.com"/></div>
       <div class="field"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••"/></div>
       <button class="submit" id="login-btn">Sign in →</button>
@@ -85,6 +94,42 @@ if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'
 
   <script>
     import { startAuthentication } from '@simplewebauthn/browser';
+
+    // Show the PIN banner if this browser is a trusted device
+    fetch('/api/pin/check').then(r => r.json()).then((data) => {
+      if (data.trusted) {
+        const banner = document.getElementById('pin-banner');
+        if (banner) banner.style.display = 'block';
+        const greeting = document.getElementById('pin-greeting');
+        if (greeting && data.name) greeting.textContent = data.name.split(' ')[0];
+        const input = document.getElementById('pin-input');
+        if (input) input.focus();
+      }
+    }).catch(() => {});
+
+    async function submitPin() {
+      const errEl = document.getElementById('pin-err');
+      errEl.style.display = 'none';
+      const pin = document.getElementById('pin-input').value.trim();
+      if (!/^\d{4,8}$/.test(pin)) {
+        errEl.textContent = 'Enter 4–8 digits.'; errEl.style.display = 'block'; return;
+      }
+      const res = await fetch('/api/pin/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
+      const data = await res.json();
+      if (data.ok) {
+        location.href = '/admin/dashboard';
+      } else if (data.error === 'too_many_attempts') {
+        errEl.textContent = 'Too many wrong attempts — device removed. Sign in another way to re-enroll.'; errEl.style.display = 'block';
+        document.getElementById('pin-banner').style.display = 'none';
+      } else if (data.error === 'wrong_pin') {
+        errEl.textContent = `Wrong PIN. ${data.attempts_remaining ?? '?'} attempts left.`; errEl.style.display = 'block';
+        document.getElementById('pin-input').value = '';
+      } else {
+        errEl.textContent = data.error || 'Sign-in failed.'; errEl.style.display = 'block';
+      }
+    }
+    document.getElementById('pin-submit-btn')?.addEventListener('click', submitPin);
+    document.getElementById('pin-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitPin(); });
 
     document.getElementById('passkey-btn')?.addEventListener('click', async () => {
       const errEl = document.getElementById('pk-err');
