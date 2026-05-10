@@ -1,18 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#A78BFA"/>
-      <stop offset="50%" stop-color="#818CF8"/>
-      <stop offset="100%" stop-color="#38BDF8"/>
+    <linearGradient id="fg" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0EA5E9"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <linearGradient id="fg2" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="60%" stop-color="#0EA5E9"/>
     </linearGradient>
   </defs>
-  <rect width="32" height="32" rx="8" fill="#0f0f14"/>
+
+  <!-- White rounded square background -->
+  <rect width="32" height="32" rx="7" fill="#FFFFFF"/>
+  <rect width="32" height="32" rx="7" fill="none" stroke="#E5E7EB" stroke-width="0.5"/>
+
   <!-- Mountain peaks -->
-  <polygon points="6,22 12,10 18,22" fill="url(#g)" opacity="0.6"/>
-  <polygon points="14,22 21,8 28,22" fill="url(#g)"/>
-  <!-- Ground line -->
-  <rect x="4" y="22" width="24" height="2" rx="1" fill="url(#g)" opacity="0.4"/>
-  <!-- Star/sparkle -->
-  <circle cx="24" cy="10" r="1.2" fill="#38BDF8"/>
-  <circle cx="24" cy="10" r="2.5" fill="#38BDF8" opacity="0.15"/>
+  <path d="M5 24 L11.5 8 L18 24 Z" fill="url(#fg)" opacity="0.45"/>
+  <path d="M13 24 L20 9 L27 24 Z" fill="url(#fg2)"/>
+
+  <!-- Sun/connection -->
+  <circle cx="24" cy="9" r="2.5" fill="#0EA5E9"/>
+  <circle cx="24" cy="9" r="4" fill="#0EA5E9" opacity="0.12"/>
+
+  <!-- Ground -->
+  <rect x="4" y="24" width="24" height="2" rx="1" fill="url(#fg)" opacity="0.25"/>
 </svg>

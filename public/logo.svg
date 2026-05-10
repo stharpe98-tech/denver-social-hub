@@ -1,19 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none">
   <defs>
-    <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#A78BFA"/>
-      <stop offset="50%" stop-color="#818CF8"/>
-      <stop offset="100%" stop-color="#38BDF8"/>
+    <linearGradient id="brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0EA5E9"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <linearGradient id="peak-grad" x1="0%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#0EA5E9"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="peak-grad2" x1="0%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
     </linearGradient>
   </defs>
-  <!-- Icon mark -->
-  <rect width="32" height="32" rx="8" fill="#0f0f14"/>
-  <polygon points="6,22 12,10 18,22" fill="url(#lg)" opacity="0.6"/>
-  <polygon points="14,22 21,8 28,22" fill="url(#lg)"/>
-  <rect x="4" y="22" width="24" height="2" rx="1" fill="url(#lg)" opacity="0.4"/>
-  <circle cx="24" cy="10" r="1.2" fill="#38BDF8"/>
-  <circle cx="24" cy="10" r="2.5" fill="#38BDF8" opacity="0.15"/>
-  <!-- Wordmark: "Denver Social" -->
-  <text x="40" y="21" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="14" fill="#e8ecf4" letter-spacing="0.3">Denver</text>
-  <text x="102" y="21" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="14" fill="url(#lg)" letter-spacing="0.3">Social</text>
+
+  <!-- Icon mark: overlapping people silhouettes forming a mountain/community shape -->
+  <g>
+    <!-- Mountain/community shape -->
+    <!-- Back peak (lighter) -->
+    <path d="M6 30 L15 10 L24 30 Z" fill="url(#peak-grad)" opacity="0.5"/>
+    <!-- Front peak (bolder) -->
+    <path d="M14 30 L22 12 L30 30 Z" fill="url(#peak-grad2)"/>
+    <!-- Sun/connection dot -->
+    <circle cx="27" cy="11" r="3" fill="#0EA5E9" opacity="0.9"/>
+    <circle cx="27" cy="11" r="5" fill="#0EA5E9" opacity="0.12"/>
+    <!-- Ground line -->
+    <rect x="4" y="30" width="28" height="2.5" rx="1.25" fill="url(#brand-grad)" opacity="0.3"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="42" y="23" font-family="'Outfit', system-ui, sans-serif" font-size="16" font-weight="800" letter-spacing="-0.5" fill="#111827">Denver</text>
+  <text x="110" y="23" font-family="'Outfit', system-ui, sans-serif" font-size="16" font-weight="800" letter-spacing="-0.5" fill="url(#brand-grad)">Social</text>
+
+  <!-- Tagline (subtle) -->
+  <text x="42" y="35" font-family="'Inter', system-ui, sans-serif" font-size="7" font-weight="500" letter-spacing="1.5" fill="#9CA3AF" text-transform="uppercase">REAL PEOPLE · SMALL GROUPS</text>
 </svg>
