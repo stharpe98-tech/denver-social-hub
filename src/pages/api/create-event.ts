@@ -1,6 +1,42 @@
 import type { APIContext } from 'astro';
 import { getDB } from '../../lib/db';
 
+async function notifyAdmin(db: D1Database, eventTitle: string, submittedBy: string) {
+  try {
+    const cfgRows = await db.prepare("SELECT key, value FROM config").all();
+    const cfg: Record<string, string> = {};
+    (cfgRows.results ?? []).forEach((r: any) => { cfg[r.key] = r.value; });
+    if (!cfg.resend_api_key) return;
+
+    const fromEmail = cfg.from_email || 'Denver Social Hub <hello@denversocialhub.com>';
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${cfg.resend_api_key}`,
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: ['stharpe98@gmail.com'],
+        subject: `New event posted: ${eventTitle}`,
+        html: `
+          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:0 auto;padding:40px 24px;">
+            <h2 style="font-size:20px;font-weight:800;margin-bottom:8px;color:#1a1a1a">New Event on Denver Social Hub</h2>
+            <p style="color:#666;font-size:15px;margin-bottom:24px;">A new event was just posted:</p>
+            <div style="background:#f8f6f4;border-radius:12px;padding:20px;margin-bottom:24px;">
+              <p style="font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 8px;">${eventTitle}</p>
+              <p style="font-size:14px;color:#666;margin:0;">Posted by: ${submittedBy}</p>
+            </div>
+            <a href="https://denversocialhub.com/events" style="display:inline-block;background:#c2410c;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">View Events</a>
+          </div>
+        `,
+      }),
+    });
+  } catch {
+    // Non-blocking — don't fail the event creation if notification fails
+  }
+}
+
 export const prerender = false;
 
 export async function POST({ request, cookies }: APIContext) {
@@ -10,11 +46,6 @@ export async function POST({ request, cookies }: APIContext) {
 
   if (!user) {
     return new Response(JSON.stringify({ error: 'You must be logged in to create an event.' }), { status: 401 });
-  }
-
-  // Only admins can create events directly — everyone else goes through /api/suggest
-  if (user.role !== 'admin') {
-    return new Response(JSON.stringify({ error: 'Only admins can create events directly. Please submit a suggestion instead.' }), { status: 403 });
   }
 
   const db = getDB();
@@ -54,7 +85,7 @@ export async function POST({ request, cookies }: APIContext) {
       'Large (15+)': 20,
       'Any size': 15,
     };
-    const spots = sizeMap[group_size] || 12;
+    const spots = sizeMap[group_size] || null; // null = unlimited spots
 
     // Parse suggested_date into month display
     const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
@@ -85,6 +116,9 @@ export async function POST({ request, cookies }: APIContext) {
       eventLink,
       phone
     ).run();
+
+    // Notify Seth about new event (non-blocking)
+    notifyAdmin(db, title.trim(), submittedBy);
 
     return new Response(JSON.stringify({ ok: true, created: true }));
   } catch (e: any) {

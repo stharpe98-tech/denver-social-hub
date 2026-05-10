@@ -37,9 +37,10 @@ try {
 if (!event) return Astro.redirect("/events");
 
 const typeLabel: Record<string,string> = { dinner:"dinner",game_night:"game_night",outdoor:"outdoor",brewery:"brewery",coffee:"coffee",arts:"arts",music:"music",social:"social",other:"event" };
-const spotsLeft = Math.max(0, (parseInt(event.spots) || 12) - rsvps.length);
-const isFull = spotsLeft === 0;
-const fillPct = Math.min(100, Math.round(rsvps.length / (parseInt(event.spots) || 12) * 100));
+const totalSpots = event.spots ? parseInt(event.spots) : null; // null = unlimited
+const spotsLeft = totalSpots !== null ? Math.max(0, totalSpots - rsvps.length) : Infinity;
+const isFull = totalSpots !== null && spotsLeft === 0;
+const fillPct = totalSpots !== null ? Math.min(100, Math.round(rsvps.length / totalSpots * 100)) : Math.min(50, rsvps.length * 5);
 
 // Karma gate check
 const userKarma = user?.karma || 0;
@@ -105,8 +106,8 @@ if (mo && d !== '00') {
         <span class="di-label">spots</span>
         <span class="di-value">
           <span class="di-fill-bar"><span class="di-fill" style={`width:${fillPct}%`}></span></span>
-          {rsvps.length}/{event.spots || 12}
-          {spotsLeft <= 3 && spotsLeft > 0 && <span class="di-hot">({spotsLeft} left!)</span>}
+          {totalSpots !== null ? `${rsvps.length}/${totalSpots}` : `${rsvps.length} going`}
+          {totalSpots !== null && spotsLeft <= 3 && spotsLeft > 0 && <span class="di-hot">({spotsLeft} left!)</span>}
           {isFull && <span class="di-full">(full — join waitlist)</span>}
         </span>
       </div>

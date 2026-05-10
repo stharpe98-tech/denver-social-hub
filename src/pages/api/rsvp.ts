@@ -78,8 +78,8 @@ export const POST = async ({ request, cookies }: { request: Request; cookies: an
 
     // New RSVP
     const confirmedCount: any = await db.prepare("SELECT COUNT(*) as c FROM event_rsvps WHERE event_id=? AND waitlist_position IS NULL").bind(event_id).first();
-    const spots = parseInt(event.spots) || 12;
-    const isFull = (confirmedCount?.c || 0) >= spots;
+    const spots = event.spots ? parseInt(event.spots) : null; // null = unlimited
+    const isFull = spots !== null && (confirmedCount?.c || 0) >= spots;
 
     if (action === 'waitlist' || isFull) {
       // Add to waitlist
