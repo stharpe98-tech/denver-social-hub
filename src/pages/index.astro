@@ -4,7 +4,6 @@ import { getDB } from '../lib/db';
 
 const db = getDB();
 let upcomingEvents: any[] = [];
-let suggestions: any[] = [];
 let memberCount = 0;
 let eventCount = 0;
 let upcomingPotluck: any = null;
@@ -138,89 +137,6 @@ const typeLabel: Record<string, string> = {
     </section>
   )}
 
-  <!-- COMMUNITY VOTES -->
-  <section class="page-wrap">
-    <div class="sec-head">
-      <span class="sec-tag tag tag-green">What people want</span>
-      <h2>What's next</h2>
-      <p class="sec-sub">Community suggests, community votes. Top picks become real events.</p>
-    </div>
-
-    <div class="vote-list">
-      {(suggestions.length > 0 ? suggestions : [
-        { id: 0, title: 'Korean BBQ Night', description: 'Cook-your-own meat, Federal Blvd', votes: 41 },
-        { id: 0, title: 'Red Rocks Sunrise Yoga', description: 'Early morning yoga + coffee after', votes: 34 },
-        { id: 0, title: 'Board Game Tournament', description: 'Catan bracket at Tabletop Tap', votes: 27 },
-      ]).map((s: any, i: number) => (
-        <div class="vi" style={`--tint: ${['#0EA5E9','#10B981','#F59E0B','#0284C7'][i % 4]}`}>
-          <div class="vi-rank">{i + 1}</div>
-          <div class="vi-info">
-            <div class="vi-title">{s.title}</div>
-            {s.description && <div class="vi-desc">{s.description}</div>}
-          </div>
-          <div class="vi-bar"><div class="vi-fill" style={`width:${Math.min(100, (s.votes || 0) * 3)}%`}></div></div>
-          <div class="vi-count">{s.votes || 0}</div>
-          <button class="vi-up" data-id={s.id}>▲</button>
-        </div>
-      ))}
-    </div>
-  </section>
-
-  <!-- HOW IT WORKS -->
-  <section class="page-wrap">
-    <div class="sec-head">
-      <span class="sec-tag tag tag-blue">Three steps</span>
-      <h2>How it works</h2>
-    </div>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <h4>Sign in</h4>
-        <p>Reddit account, 10 seconds. We read karma + age. We never post.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <h4>Find your thing</h4>
-        <p>Browse potlucks, dinners, hikes, game nights. RSVP to lock your spot.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <h4>Show up</h4>
-        <p>QR check-in at the door. Reliable shows = trust score = priority on the next one.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- TRUST -->
-  <section class="page-wrap">
-    <div class="sec-head">
-      <span class="sec-tag tag tag-green">Why it works</span>
-      <h2>Built on trust</h2>
-      <p class="sec-sub">Identity gates and reliability scores keep events safe and small.</p>
-    </div>
-    <div class="trust-grid">
-      <div class="trust-card">
-        <div class="tc-icon">⬆</div>
-        <h4>Karma = trust</h4>
-        <p>Events can require minimum karma to RSVP. Higher karma unlocks more events.</p>
-      </div>
-      <div class="trust-card">
-        <div class="tc-icon">✓</div>
-        <h4>Reliability badge</h4>
-        <p>Check in via QR. Show up consistently and earn priority for the next one.</p>
-      </div>
-      <div class="trust-card">
-        <div class="tc-icon">📍</div>
-        <h4>Address hidden</h4>
-        <p>Locations are revealed only to confirmed RSVPs who meet the gate.</p>
-      </div>
-      <div class="trust-card">
-        <div class="tc-icon">⏳</div>
-        <h4>Account age</h4>
-        <p>Some events require older accounts. No throwaway signups.</p>
-      </div>
-    </div>
-  </section>
 
   <!-- FINAL CTA -->
   <section class="final-cta">
@@ -328,37 +244,6 @@ const typeLabel: Record<string, string> = {
     .ev-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-sec); }
     .ev-meta-dot { width: 3px; height: 3px; background: var(--border); border-radius: 50%; }
 
-    /* VOTE LIST */
-    .vote-list { display: flex; flex-direction: column; gap: var(--space-2); }
-    .vi { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); background: color-mix(in srgb, var(--tint, var(--accent)) 6%, #fff); border: 1px solid var(--border); border-radius: var(--radius); transition: border-color 0.15s; }
-    .vi:hover { border-color: var(--border-hover); }
-    .vi-rank { width: 28px; height: 28px; background: var(--bg); color: var(--text-sec); font-weight: 700; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; border: 1px solid var(--border); }
-    .vi-info { flex: 1; min-width: 0; }
-    .vi-title { font-weight: 600; color: var(--text); font-size: 15px; }
-    .vi-desc { font-size: 13px; color: var(--text-sec); margin-top: 2px; }
-    .vi-bar { width: 80px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
-    .vi-fill { height: 100%; background: var(--tint, var(--accent)); border-radius: 3px; }
-    .vi-count { font-weight: 700; color: var(--text); font-size: 14px; min-width: 30px; text-align: right; }
-    .vi-up { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; cursor: pointer; color: var(--text-sec); font-size: 13px; transition: all 0.15s; }
-    .vi-up:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
-    @media(max-width: 580px) {
-      .vi-bar { display: none; }
-      .vi-desc { display: none; }
-    }
-
-    /* STEPS */
-    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4); }
-    .step { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-5); box-shadow: var(--card-shadow); }
-    .step-num { width: 36px; height: 36px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 18px; margin-bottom: var(--space-3); }
-    .step h4 { font-family: var(--font-display); font-size: 17px; font-weight: 700; margin-bottom: 6px; }
-    .step p { color: var(--text-sec); font-size: 14px; line-height: 1.55; }
-
-    /* TRUST GRID */
-    .trust-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); }
-    .trust-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-4); box-shadow: var(--card-shadow); }
-    .tc-icon { width: 40px; height: 40px; background: var(--accent-dim); color: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: var(--space-3); }
-    .trust-card h4 { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-    .trust-card p { color: var(--text-sec); font-size: 13px; line-height: 1.55; }
 
     /* FINAL CTA */
     .final-cta { background: linear-gradient(135deg, #E0F2FE, #D1FAE5); margin-top: var(--space-7); }
@@ -367,16 +252,4 @@ const typeLabel: Record<string, string> = {
     .final-cta p { color: var(--text-sec); font-size: 16px; margin-bottom: var(--space-5); }
   </style>
 
-  <script>
-    document.querySelectorAll('.vi-up').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        if (!id || id === '0') return;
-        try {
-          await fetch('/api/recs-vote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: parseInt(id) }) });
-          location.reload();
-        } catch {}
-      });
-    });
-  </script>
 </Base>
