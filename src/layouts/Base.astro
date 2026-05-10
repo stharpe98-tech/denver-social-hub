@@ -26,8 +26,7 @@ const redditName = user?.reddit_username || user?.name;
   <header class="site-header">
     <div class="site-header-inner">
       <a href="/" class="site-logo">
-        <span class="site-logo-icon" aria-hidden="true">🌆</span>
-        <span class="site-logo-text">Denver Social</span>
+        <img src="/logo.svg" alt="Denver Social" class="site-logo-img" />
       </a>
 
       <nav class="site-nav">
@@ -176,11 +175,9 @@ const redditName = user?.reddit_username || user?.name;
   }
   .site-logo:hover { opacity: 0.85; }
   .site-logo:active { opacity: 0.7; }
-  .site-logo-icon { font-size: 22px; }
-  .site-logo-text {
-    font-family: var(--font-display);
-    font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
-    color: var(--text);
+  .site-logo-img {
+    height: 28px; width: auto;
+    display: block;
   }
 
   .site-nav { display: flex; gap: var(--space-1); align-items: center; margin-left: var(--space-3); }

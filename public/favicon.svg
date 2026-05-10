@@ -2,9 +2,17 @@
   <defs>
     <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="50%" stop-color="#818CF8"/>
       <stop offset="100%" stop-color="#38BDF8"/>
     </linearGradient>
   </defs>
-  <rect width="32" height="32" rx="8" fill="url(#g)"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="16" fill="white">DS</text>
+  <rect width="32" height="32" rx="8" fill="#0f0f14"/>
+  <!-- Mountain peaks -->
+  <polygon points="6,22 12,10 18,22" fill="url(#g)" opacity="0.6"/>
+  <polygon points="14,22 21,8 28,22" fill="url(#g)"/>
+  <!-- Ground line -->
+  <rect x="4" y="22" width="24" height="2" rx="1" fill="url(#g)" opacity="0.4"/>
+  <!-- Star/sparkle -->
+  <circle cx="24" cy="10" r="1.2" fill="#38BDF8"/>
+  <circle cx="24" cy="10" r="2.5" fill="#38BDF8" opacity="0.15"/>
 </svg>

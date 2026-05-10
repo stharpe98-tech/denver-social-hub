@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" fill="none">
+  <defs>
+    <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="50%" stop-color="#818CF8"/>
+      <stop offset="100%" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+  <!-- Icon mark -->
+  <rect width="32" height="32" rx="8" fill="#0f0f14"/>
+  <polygon points="6,22 12,10 18,22" fill="url(#lg)" opacity="0.6"/>
+  <polygon points="14,22 21,8 28,22" fill="url(#lg)"/>
+  <rect x="4" y="22" width="24" height="2" rx="1" fill="url(#lg)" opacity="0.4"/>
+  <circle cx="24" cy="10" r="1.2" fill="#38BDF8"/>
+  <circle cx="24" cy="10" r="2.5" fill="#38BDF8" opacity="0.15"/>
+  <!-- Wordmark: "Denver Social" -->
+  <text x="40" y="21" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="14" fill="#e8ecf4" letter-spacing="0.3">Denver</text>
+  <text x="102" y="21" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="14" fill="url(#lg)" letter-spacing="0.3">Social</text>
+</svg>
