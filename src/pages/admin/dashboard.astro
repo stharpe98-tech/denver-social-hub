@@ -97,6 +97,37 @@ try {
       <a href="/potlucks/1/poster" class="nav-card"><span class="nav-icon">🖼</span><span class="nav-label">Poster</span></a>
     </div>
 
+    {showApprovalUI && (
+      <div style="margin-bottom:28px">
+        <div class="sec-label">Backup & Restore (super-admin)</div>
+        <div class="profile-section">
+          <div style="font-size:13px;color:#57524c;margin-bottom:12px;line-height:1.6">
+            Download a single JSON file containing every table in the database
+            (events, sign-ups, organizers, passkeys, config secrets, everything).
+            Save it somewhere safe — anyone with this file can restore your full site.
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <a href="/api/admin/backup" class="save-btn" style="text-decoration:none;display:inline-block">⬇ Download backup</a>
+            <a href="https://github.com/stharpe98-tech/denver-social-hub/archive/refs/heads/main.zip" class="del-btn" style="text-decoration:none;display:inline-block">⬇ Download source code</a>
+          </div>
+
+          <div style="margin-top:18px;padding-top:18px;border-top:1px solid #f0ede8">
+            <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:6px">⚠ Restore (destructive)</div>
+            <div style="font-size:12px;color:#a09890;margin-bottom:10px;line-height:1.6">
+              Choose a backup JSON file. Drops + recreates every table in the file.
+              Tables not in the backup are kept (uncheck "wipe first" if you want to merge).
+            </div>
+            <input type="file" id="restore-file" accept="application/json" style="margin-bottom:10px"/>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#57524c;margin-bottom:10px">
+              <input type="checkbox" id="restore-wipe"/> Wipe all tables first (full reset)
+            </label>
+            <button class="del-btn" id="restore-btn" style="background:#fef2f2;color:#dc2626;border-color:#fca5a5">Restore from file</button>
+            <div id="restore-status" style="font-size:13px;margin-top:10px;display:none"></div>
+          </div>
+        </div>
+      </div>
+    )}
+
     <!-- Passkeys -->
     <div style="margin-bottom:28px">
       <div class="sec-label">Passkeys (sign in with Face ID / Touch ID)</div>
@@ -413,6 +444,44 @@ try {
     });
 
     refreshPinList();
+
+    // ── Backup / Restore ──
+    document.getElementById('restore-btn')?.addEventListener('click', async () => {
+      const fileEl = document.getElementById('restore-file');
+      const statusEl = document.getElementById('restore-status');
+      const file = fileEl.files?.[0];
+      if (!file) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#dc2626';
+        statusEl.textContent = 'Pick a backup file first.';
+        return;
+      }
+      const wipe = document.getElementById('restore-wipe').checked;
+      if (!confirm(`Restore from "${file.name}"? This will drop + recreate every table in the backup.${wipe ? ' Plus wipe ALL existing tables first.' : ''} There is no undo.`)) return;
+
+      statusEl.style.display = 'block';
+      statusEl.style.color = '#57524c';
+      statusEl.textContent = 'Reading file…';
+      const text = await file.text();
+      let payload;
+      try { payload = JSON.parse(text); } catch {
+        statusEl.style.color = '#dc2626';
+        statusEl.textContent = 'File isn\'t valid JSON.';
+        return;
+      }
+
+      statusEl.textContent = 'Uploading…';
+      const url = `/api/admin/restore?confirm=yes${wipe ? '&action=wipe_first' : ''}`;
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (data.ok) {
+        statusEl.style.color = '#16a34a';
+        statusEl.textContent = `✓ Restored ${data.tables_recreated} tables, ${data.rows_inserted} rows.`;
+      } else {
+        statusEl.style.color = '#dc2626';
+        statusEl.textContent = `Restore had errors: ${(data.errors || []).join('; ') || data.error || 'unknown'}`;
+      }
+    });
   </script>
 </body>
 </html>
