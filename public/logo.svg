@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 42" fill="none">
   <defs>
     <linearGradient id="brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#0EA5E9"/>
@@ -14,24 +14,34 @@
     </linearGradient>
   </defs>
 
-  <!-- Icon mark: overlapping people silhouettes forming a mountain/community shape -->
+  <!-- Icon mark -->
   <g>
-    <!-- Mountain/community shape -->
-    <!-- Back peak (lighter) -->
-    <path d="M6 30 L15 10 L24 30 Z" fill="url(#peak-grad)" opacity="0.5"/>
-    <!-- Front peak (bolder) -->
-    <path d="M14 30 L22 12 L30 30 Z" fill="url(#peak-grad2)"/>
-    <!-- Sun/connection dot -->
-    <circle cx="27" cy="11" r="3" fill="#0EA5E9" opacity="0.9"/>
-    <circle cx="27" cy="11" r="5" fill="#0EA5E9" opacity="0.12"/>
-    <!-- Ground line -->
-    <rect x="4" y="30" width="28" height="2.5" rx="1.25" fill="url(#brand-grad)" opacity="0.3"/>
+    <path d="M5 32 L13 11 L21 32 Z" fill="url(#peak-grad)" opacity="0.45"/>
+    <path d="M14 32 L22 13 L30 32 Z" fill="url(#peak-grad2)"/>
+    <circle cx="27" cy="11" r="2.8" fill="#0EA5E9" opacity="0.9"/>
+    <circle cx="27" cy="11" r="4.5" fill="#0EA5E9" opacity="0.1"/>
+    <rect x="3" y="32" width="29" height="2.5" rx="1.25" fill="url(#brand-grad)" opacity="0.25"/>
   </g>
 
-  <!-- Wordmark -->
-  <text x="42" y="23" font-family="'Outfit', system-ui, sans-serif" font-size="16" font-weight="800" letter-spacing="-0.5" fill="#111827">Denver</text>
-  <text x="110" y="23" font-family="'Outfit', system-ui, sans-serif" font-size="16" font-weight="800" letter-spacing="-0.5" fill="url(#brand-grad)">Social</text>
+  <!-- Wordmark: hand-lettered feel with slight tilts -->
+  <g font-family="'Outfit', system-ui, sans-serif" font-weight="800" font-size="19">
+    <!-- "Denver" — dark, slightly bouncy -->
+    <text x="40" y="24" fill="#111827" transform="rotate(-1.5, 40, 24)">D</text>
+    <text x="54" y="24.5" fill="#111827" transform="rotate(1, 54, 24)">e</text>
+    <text x="65" y="23.5" fill="#111827" transform="rotate(-0.8, 65, 23)">n</text>
+    <text x="78" y="24.8" fill="#111827" transform="rotate(1.2, 78, 24)">v</text>
+    <text x="90" y="23.8" fill="#111827" transform="rotate(-1, 90, 24)">e</text>
+    <text x="101" y="24.2" fill="#111827" transform="rotate(0.8, 101, 24)">r</text>
 
-  <!-- Tagline (subtle) -->
-  <text x="42" y="35" font-family="'Inter', system-ui, sans-serif" font-size="7" font-weight="500" letter-spacing="1.5" fill="#9CA3AF" text-transform="uppercase">REAL PEOPLE · SMALL GROUPS</text>
+    <!-- "Social" — gradient, bouncy -->
+    <text x="118" y="24.5" fill="url(#brand-grad)" transform="rotate(1.2, 118, 24)">S</text>
+    <text x="131" y="23.5" fill="url(#brand-grad)" transform="rotate(-1.5, 131, 24)">o</text>
+    <text x="143" y="24.8" fill="url(#brand-grad)" transform="rotate(0.8, 143, 24)">c</text>
+    <text x="154" y="23.2" fill="url(#brand-grad)" transform="rotate(-1, 154, 24)">i</text>
+    <text x="160" y="24.5" fill="url(#brand-grad)" transform="rotate(1.5, 160, 24)">a</text>
+    <text x="172" y="23.8" fill="url(#brand-grad)" transform="rotate(-0.7, 172, 24)">l</text>
+  </g>
+
+  <!-- Tagline: playful -->
+  <text x="41" y="37" font-family="'Inter', system-ui, sans-serif" font-size="7" font-weight="500" letter-spacing="1.2" fill="#9CA3AF">REAL PEOPLE · SMALL GROUPS</text>
 </svg>
