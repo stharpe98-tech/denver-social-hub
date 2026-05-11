@@ -13,42 +13,48 @@ let rsvps: any[] = [];
 let waitlist: any[] = [];
 let comments: any[] = [];
 let bringItems: any[] = [];
-let myRsvp = false;
-let myWaitlist = false;
+let myRsvp: any = null;
+let myWaitlistEntry: any = null;
 
 try {
   if (db && id) {
     event = await db.prepare("SELECT * FROM events WHERE id=?").bind(id).first();
-    const r = await db.prepare("SELECT r.*, m.reddit_username, m.karma, m.reliability_score, m.check_in_count FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL AND (r.status IS NULL OR r.status != 'not_going') ORDER BY r.created_at").bind(id).all();
+    const r = await db.prepare(
+      "SELECT r.*, m.reddit_username, m.karma, m.reliability_score, m.check_in_count FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL AND (r.status IS NULL OR r.status != 'not_going') ORDER BY r.created_at"
+    ).bind(id).all();
     rsvps = r?.results || [];
-    const w = await db.prepare("SELECT r.*, m.reddit_username, m.karma FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NOT NULL ORDER BY r.waitlist_position").bind(id).all();
+    const w = await db.prepare(
+      "SELECT r.*, m.reddit_username, m.karma FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NOT NULL ORDER BY r.waitlist_position"
+    ).bind(id).all();
     waitlist = w?.results || [];
     const c = await db.prepare("SELECT * FROM comments WHERE event_id=? ORDER BY created_at ASC").bind(id).all();
     comments = c?.results || [];
     const bi = await db.prepare("SELECT * FROM bring_items WHERE event_id=? ORDER BY id ASC").bind(id).all();
     bringItems = bi?.results || [];
     if (user) {
-      myRsvp = rsvps.some((r:any) => r.member_email === user.email);
-      myWaitlist = waitlist.some((w:any) => w.member_email === user.email);
+      myRsvp = rsvps.find((r: any) => r.member_email === user.email) || null;
+      myWaitlistEntry = waitlist.find((w: any) => w.member_email === user.email) || null;
     }
   }
 } catch (err) { console.error('Event detail error:', err); }
 
 if (!event) return Astro.redirect("/events");
 
-const typeLabel: Record<string,string> = { dinner:"dinner",game_night:"game_night",outdoor:"outdoor",brewery:"brewery",coffee:"coffee",arts:"arts",music:"music",social:"social",other:"event" };
-const totalSpots = event.spots ? parseInt(event.spots) : null; // null = unlimited
+// Derived data
+const totalSpots = event.spots ? parseInt(event.spots) : null;
 const spotsLeft = totalSpots !== null ? Math.max(0, totalSpots - rsvps.length) : Infinity;
 const isFull = totalSpots !== null && spotsLeft === 0;
-const fillPct = totalSpots !== null ? Math.min(100, Math.round(rsvps.length / totalSpots * 100)) : Math.min(50, rsvps.length * 5);
+const fillPct = totalSpots !== null ? Math.min(100, Math.round(rsvps.length / totalSpots * 100)) : Math.min(60, rsvps.length * 8);
 
-// Karma gate check
+// Karma gate
 const userKarma = user?.karma || 0;
-const userAccountAge = user?.reddit_account_created ? Math.floor((Date.now() - new Date(user.reddit_account_created).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+const userAccountAge = user?.reddit_account_created
+  ? Math.floor((Date.now() - new Date(user.reddit_account_created).getTime()) / (1000 * 60 * 60 * 24))
+  : 0;
 const meetsKarmaGate = (!event.karma_min || userKarma >= event.karma_min) && (!event.account_age_min || userAccountAge >= event.account_age_min);
 const showLocation = myRsvp && meetsKarmaGate;
 
-// Build threaded comments
+// Threaded comments
 const rootComments = comments.filter((c: any) => !c.parent_id);
 const childMap: Record<string, any[]> = {};
 comments.forEach((c: any) => {
@@ -58,177 +64,308 @@ comments.forEach((c: any) => {
   }
 });
 
-// Calendar link
-const monthMap: Record<string,string> = {JAN:"01",FEB:"02",MAR:"03",APR:"04",MAY:"05",JUN:"06",JUL:"07",AUG:"08",SEP:"09",OCT:"10",NOV:"11",DEC:"12"};
-const mo = monthMap[(event.event_month||'').toUpperCase()];
-const d = (event.event_day||'').padStart(2,'0');
+// Google Calendar link
+const monthMap: Record<string, string> = { JAN: "01", FEB: "02", MAR: "03", APR: "04", MAY: "05", JUN: "06", JUL: "07", AUG: "08", SEP: "09", OCT: "10", NOV: "11", DEC: "12" };
+const mo = monthMap[(event.event_month || '').toUpperCase()];
+const d = (event.event_day || '').padStart(2, '0');
 const yr = new Date().getFullYear();
 let googleCalUrl = '';
 if (mo && d !== '00') {
   const start = `${yr}${mo}${d}`;
-  const end = `${yr}${mo}${String(parseInt(d)+1).padStart(2,'0')}`;
-  googleCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(event.title)}&dates=${start}/${end}&location=${encodeURIComponent(event.location||event.zone||'Denver')}&details=${encodeURIComponent('Denver events.hub — '+event.description)}`;
+  const end = `${yr}${mo}${String(parseInt(d) + 1).padStart(2, '0')}`;
+  googleCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(event.title)}&dates=${start}/${end}&location=${encodeURIComponent(event.location || event.zone || 'Denver')}&details=${encodeURIComponent('Denver Social — ' + event.description)}`;
 }
+
+// Unclaimed bring items (for the picker)
+const unclaimedItems = bringItems.filter((bi: any) => !bi.claimed_by_user_id);
+const hasUnclaimedItems = unclaimedItems.length > 0;
+
+// Type emoji map
+const typeEmoji: Record<string, string> = { dinner: '🍽', game_night: '🎲', outdoor: '🏔', brewery: '🍺', coffee: '☕', arts: '🎨', music: '🎵', social: '🎉', potluck: '🥘', other: '📌' };
+const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game Night', outdoor: 'Outdoor', brewery: 'Brewery', coffee: 'Coffee', arts: 'Arts', music: 'Music', social: 'Social', potluck: 'Potluck', other: 'Event' };
 ---
+
 <Base title={event.title}>
-<div class="det">
-  <!-- LEFT COLUMN -->
-  <div class="det-left">
-    <!-- Event header -->
-    <div class="det-header">
-      <div class="det-breadcrumb">
-        <a href="/events">&larr; events</a>
-        <span class="det-bc-sep">/</span>
-        <span>{typeLabel[event.event_type] || 'event'}</span>
-      </div>
-      <h1 class="det-title">{event.title}</h1>
-      <div class="det-tags">
-        <span class="tag tag-blue">{typeLabel[event.event_type] || 'event'}</span>
-        {event.karma_min > 0 && <span class="tag tag-yellow">requires {event.karma_min}+ karma</span>}
-        {event.account_age_min > 0 && <span class="tag tag-yellow">{event.account_age_min}d+ account</span>}
+<main class="ev">
+  <!-- Back link -->
+  <a href="/events" class="ev-back">← Back to events</a>
+
+  <!-- Hero header -->
+  <div class="ev-hero">
+    <span class="ev-emoji">{typeEmoji[event.event_type] || '📌'}</span>
+    <h1 class="ev-title">{event.title}</h1>
+    <div class="ev-tags">
+      <span class="tag tag-blue">{typeLabel[event.event_type] || 'Event'}</span>
+      {event.karma_min > 0 && <span class="tag tag-yellow">🔒 {event.karma_min}+ karma</span>}
+      {event.account_age_min > 0 && <span class="tag tag-yellow">🔒 {event.account_age_min}d+ account</span>}
+    </div>
+  </div>
+
+  <!-- Info cards row -->
+  <div class="ev-info-grid">
+    <div class="ev-info-card">
+      <span class="ev-info-icon">📅</span>
+      <div class="ev-info-detail">
+        <span class="ev-info-label">When</span>
+        <span class="ev-info-value">{event.event_month} {event.event_day}{event.end_date ? ` – ${event.end_date}` : ''}</span>
       </div>
     </div>
-
-    <!-- Info grid -->
-    <div class="det-info">
-      <div class="di-row">
-        <span class="di-label">when</span>
-        <span class="di-value">{event.event_month} {event.event_day}{event.end_date ? ` — ${event.end_date}` : ''}</span>
-      </div>
-      <div class="di-row">
-        <span class="di-label">where</span>
-        <span class="di-value">
+    <div class="ev-info-card">
+      <span class="ev-info-icon">📍</span>
+      <div class="ev-info-detail">
+        <span class="ev-info-label">Where</span>
+        <span class="ev-info-value">
           {showLocation && event.location ? event.location : (event.zone || 'Denver')}
-          {!showLocation && event.location && <span class="di-locked"> (RSVP to reveal address)</span>}
+          {!showLocation && event.location && <span class="ev-locked">RSVP to see address</span>}
         </span>
       </div>
-      <div class="di-row">
-        <span class="di-label">spots</span>
-        <span class="di-value">
-          <span class="di-fill-bar"><span class="di-fill" style={`width:${fillPct}%`}></span></span>
-          {totalSpots !== null ? `${rsvps.length}/${totalSpots}` : `${rsvps.length} going`}
-          {totalSpots !== null && spotsLeft <= 3 && spotsLeft > 0 && <span class="di-hot">({spotsLeft} left!)</span>}
-          {isFull && <span class="di-full">(full — join waitlist)</span>}
-        </span>
-      </div>
-      {event.price_cap && event.price_cap !== 'Free' && event.price_cap !== '$0' && (
-        <div class="di-row">
-          <span class="di-label">cost</span>
-          <span class="di-value">{event.price_cap}</span>
-        </div>
-      )}
-      {event.host_name && (
-        <div class="di-row">
-          <span class="di-label">host</span>
-          <span class="di-value">{event.host_name}{event.contact_phone && myRsvp ? ` · ${event.contact_phone}` : ''}</span>
-        </div>
-      )}
     </div>
-
-    {event.description && (
-      <div class="det-desc">
-        <h3 class="det-sec-title">// description</h3>
-        <p>{event.description}</p>
+    <div class="ev-info-card">
+      <span class="ev-info-icon">👥</span>
+      <div class="ev-info-detail">
+        <span class="ev-info-label">Spots</span>
+        <span class="ev-info-value">
+          {totalSpots !== null ? `${rsvps.length} / ${totalSpots}` : `${rsvps.length} going`}
+          {totalSpots !== null && spotsLeft <= 3 && spotsLeft > 0 && <span class="ev-hot"> · {spotsLeft} left!</span>}
+          {isFull && <span class="ev-full"> · Full</span>}
+        </span>
+        {totalSpots !== null && (
+          <div class="ev-fill-track"><div class="ev-fill-bar" style={`width:${fillPct}%`}></div></div>
+        )}
       </div>
-    )}
-
-    <!-- Karma gate warning -->
-    {user && !meetsKarmaGate && (
-      <div class="det-gate">
-        <span class="det-gate-icon">🔒</span>
-        <div>
-          <strong>Karma gate active</strong>
-          <p>This event requires {event.karma_min ? `${event.karma_min}+ karma` : ''}{event.karma_min && event.account_age_min ? ' and ' : ''}{event.account_age_min ? `${event.account_age_min}+ day old account` : ''}. Your karma: {userKarma}.</p>
+    </div>
+    {event.host_name && (
+      <div class="ev-info-card">
+        <span class="ev-info-icon">🙋</span>
+        <div class="ev-info-detail">
+          <span class="ev-info-label">Host</span>
+          <span class="ev-info-value">{event.host_name}{event.contact_phone && myRsvp ? ` · ${event.contact_phone}` : ''}</span>
         </div>
       </div>
     )}
-
-    <!-- RSVP / Waitlist actions -->
-    <div class="det-actions">
-      {!user ? (
-        <a href={`/login?next=/events/${id}`} class="btn btn-primary">sign in to rsvp</a>
-      ) : myRsvp ? (
-        <div class="det-confirmed">
-          <span class="det-confirmed-icon">✓</span>
-          <span>You're in!</span>
-          {googleCalUrl && <a href={googleCalUrl} target="_blank" rel="noopener" class="det-cal-link">+ add to calendar</a>}
+    {event.price_cap && event.price_cap !== 'Free' && event.price_cap !== '$0' && (
+      <div class="ev-info-card">
+        <span class="ev-info-icon">💰</span>
+        <div class="ev-info-detail">
+          <span class="ev-info-label">Cost</span>
+          <span class="ev-info-value">{event.price_cap}</span>
         </div>
-      ) : myWaitlist ? (
-        <div class="det-waitlisted">
-          <span>You're on the waitlist</span>
-          <span class="det-wl-pos">Position #{waitlist.findIndex((w:any) => w.member_email === user.email) + 1}</span>
-        </div>
-      ) : !meetsKarmaGate ? (
-        <button class="btn btn-ghost" disabled>karma gate: locked</button>
-      ) : isFull ? (
-        <form method="POST" action="/api/rsvp" style="display:inline">
-          <input type="hidden" name="event_id" value={id} />
-          <input type="hidden" name="action" value="waitlist" />
-          <button type="submit" class="btn btn-ghost">join waitlist ({waitlist.length} ahead)</button>
-        </form>
-      ) : (
-        <div class="rsvp-form-wrap" id="rsvp-form-wrap">
-          <button class="btn btn-primary" id="rsvp-expand-btn">rsvp — claim your spot</button>
-          <form id="rsvp-detail-form" class="rsvp-detail-form" style="display:none">
-            <input type="hidden" name="event_id" value={id} />
+      </div>
+    )}
+  </div>
 
-            <div class="rsvp-field">
-              <label class="rsvp-label">Your name</label>
-              <input type="text" name="display_name" class="rsvp-input" placeholder="First name or nickname" required />
-            </div>
-
-            <div class="rsvp-field">
-              <label class="rsvp-label">How many (including you)?</label>
-              <select name="party_size" class="rsvp-select">
-                <option value="1">Just me</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5+</option>
-              </select>
-            </div>
-
-            {(() => {
-              const unclaimed = bringItems.filter((bi: any) => !bi.claimed_by_user_id);
-              if (unclaimed.length === 0) return null;
-              return (
-                <div class="rsvp-field rsvp-bring-section">
-                  <label class="rsvp-label">Bringing something? (optional)</label>
-                  <div class="rsvp-bring-list">
-                    {unclaimed.map((bi: any) => (
-                      <label class="rsvp-bring-option">
-                        <input type="checkbox" name="claim_items" value={bi.id} class="rsvp-bring-cb" />
-                        <span class="rsvp-bring-name">{bi.item_name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            <button type="submit" class="btn btn-primary btn-full">Confirm RSVP</button>
-          </form>
-        </div>
-      )}
+  <!-- Description -->
+  {event.description && (
+    <div class="ev-section">
+      <p class="ev-desc">{event.description}</p>
     </div>
+  )}
 
-    <!-- Bring a Thing -->
-    {bringItems.length > 0 && (
-      <div class="det-bring">
-        <h3 class="det-sec-title">// bring a thing</h3>
-        <div class="bring-list">
-          {bringItems.map((item: any) => (
-            <div class:list={["bring-item", { claimed: !!item.claimed_by_user_id }]}>
-              <span class="bring-check">{item.claimed_by_user_id ? '✓' : '○'}</span>
-              <span class="bring-name">{item.item_name}</span>
-              {item.claimed_by_name && <span class="bring-who">{item.claimed_by_name}</span>}
-              {!item.claimed_by_user_id && user && myRsvp && (
-                <form method="POST" action="/api/bring-claim" style="display:inline">
+  <!-- Karma gate warning -->
+  {user && !meetsKarmaGate && (
+    <div class="ev-gate">
+      <div class="ev-gate-icon">🔒</div>
+      <div>
+        <strong>This event has a karma gate</strong>
+        <p>Requires {event.karma_min ? `${event.karma_min}+ karma` : ''}{event.karma_min && event.account_age_min ? ' and ' : ''}{event.account_age_min ? `a ${event.account_age_min}+ day old account` : ''}. Your karma: {userKarma}.</p>
+      </div>
+    </div>
+  )}
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- RSVP SECTION — The main action area    -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="ev-rsvp-section" id="rsvp-section">
+
+    {/* Not logged in */}
+    {!user && (
+      <a href={`/login?next=/events/${id}`} class="ev-rsvp-card ev-rsvp-login">
+        <span class="ev-rsvp-cta-text">Sign in to RSVP</span>
+        <span class="ev-rsvp-sub">It only takes a sec →</span>
+      </a>
+    )}
+
+    {/* Already RSVP'd — show confirmed state + bring items picker */}
+    {user && myRsvp && (
+      <div class="ev-rsvp-confirmed">
+        <div class="ev-rsvp-confirmed-top">
+          <span class="ev-check">✓</span>
+          <div>
+            <strong>You're in!</strong>
+            <span class="ev-rsvp-meta">
+              {googleCalUrl && <a href={googleCalUrl} target="_blank" rel="noopener" class="ev-cal-link">📅 Add to calendar</a>}
+              <button class="ev-cancel-btn" id="cancel-rsvp-btn" data-event-id={id}>Cancel RSVP</button>
+            </span>
+          </div>
+        </div>
+
+        {/* Bring items — claimable after RSVP */}
+        {hasUnclaimedItems && (
+          <div class="ev-bring-picker" id="bring-picker-confirmed">
+            <p class="ev-bring-prompt">Want to bring something?</p>
+            <div class="ev-bring-options">
+              {unclaimedItems.map((item: any) => (
+                <form method="POST" action="/api/bring-claim" class="ev-bring-claim-form">
                   <input type="hidden" name="item_id" value={item.id} />
                   <input type="hidden" name="event_id" value={id} />
-                  <button type="submit" class="bring-claim-btn">claim</button>
+                  <button type="submit" class="ev-bring-option">
+                    <span class="ev-bring-circle">○</span>
+                    <span class="ev-bring-name">{item.item_name}</span>
+                    <span class="ev-bring-action">Claim →</span>
+                  </button>
                 </form>
-              )}
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* On waitlist */}
+    {user && !myRsvp && myWaitlistEntry && (
+      <div class="ev-rsvp-waitlisted">
+        <span class="ev-wl-badge">⏳</span>
+        <div>
+          <strong>You're on the waitlist</strong>
+          <span class="ev-wl-pos">Position #{waitlist.findIndex((w: any) => w.member_email === user.email) + 1} of {waitlist.length}</span>
+        </div>
+        <button class="ev-cancel-btn" id="cancel-waitlist-btn" data-event-id={id}>Leave waitlist</button>
+      </div>
+    )}
+
+    {/* Karma gate blocks RSVP */}
+    {user && !myRsvp && !myWaitlistEntry && !meetsKarmaGate && (
+      <div class="ev-rsvp-locked">
+        <span>🔒</span>
+        <span>Karma gate — you need more karma to RSVP</span>
+      </div>
+    )}
+
+    {/* Event is full — join waitlist */}
+    {user && !myRsvp && !myWaitlistEntry && meetsKarmaGate && isFull && (
+      <div class="ev-rsvp-card ev-rsvp-waitlist-cta" id="waitlist-cta">
+        <span class="ev-rsvp-cta-text">Event's full — join the waitlist</span>
+        <span class="ev-rsvp-sub">{waitlist.length} ahead of you</span>
+        <button class="ev-rsvp-btn ev-rsvp-btn-waitlist" id="join-waitlist-btn" data-event-id={id}>Join waitlist</button>
+      </div>
+    )}
+
+    {/* Open to RSVP — the big moment */}
+    {user && !myRsvp && !myWaitlistEntry && meetsKarmaGate && !isFull && (
+      <div class="ev-rsvp-card" id="rsvp-card">
+        {/* Step 1: The big button */}
+        <div id="rsvp-step1">
+          <button class="ev-rsvp-btn" id="rsvp-go-btn" data-event-id={id}>
+            I'm in! 🎉
+          </button>
+          <span class="ev-rsvp-sub">{spotsLeft !== Infinity ? `${spotsLeft} spots left` : `${rsvps.length} going so far`}</span>
+        </div>
+
+        {/* Step 2: Pick bring items (hidden initially, shown after RSVP) */}
+        <div id="rsvp-step2" style="display:none">
+          <div class="ev-step2-header">
+            <span class="ev-check">✓</span>
+            <strong>You're in!</strong>
+          </div>
+
+          {hasUnclaimedItems ? (
+            <div class="ev-bring-picker">
+              <p class="ev-bring-prompt">Want to bring something to share?</p>
+              <div class="ev-bring-options" id="step2-bring-list">
+                {unclaimedItems.map((item: any) => (
+                  <label class="ev-bring-option ev-bring-option-check">
+                    <input type="checkbox" class="ev-bring-cb" value={item.id} />
+                    <span class="ev-bring-circle">○</span>
+                    <span class="ev-bring-name">{item.item_name}</span>
+                  </label>
+                ))}
+              </div>
+              <div class="ev-bring-actions">
+                <button class="ev-bring-save" id="save-picks-btn" data-event-id={id}>Save my picks</button>
+                <button class="ev-bring-skip" id="skip-picks-btn">Skip for now</button>
+              </div>
+            </div>
+          ) : (
+            <div class="ev-step2-done">
+              <p>See you there! 🎉</p>
+              <button class="ev-bring-skip" id="done-btn">Got it</button>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- BRING LIST (full view for everyone)    -->
+  <!-- ═══════════════════════════════════════ -->
+  {bringItems.length > 0 && (
+    <div class="ev-section">
+      <h2 class="ev-section-title">🍽 What's being brought</h2>
+      <div class="ev-bring-list">
+        {bringItems.map((item: any) => (
+          <div class:list={["ev-bring-row", { claimed: !!item.claimed_by_user_id }]}>
+            <span class="ev-bring-status">{item.claimed_by_user_id ? '✓' : '○'}</span>
+            <span class="ev-bring-item-name">{item.item_name}</span>
+            {item.claimed_by_name ? (
+              <span class="ev-bring-claimer">{item.claimed_by_name}</span>
+            ) : (
+              <span class="ev-bring-unclaimed">Unclaimed</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- GUEST LIST                              -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="ev-section">
+    <h2 class="ev-section-title">👋 Who's coming ({rsvps.length})</h2>
+    {rsvps.length > 0 ? (
+      <div class="ev-guests">
+        {rsvps.map((r: any) => {
+          const name = r.member_name || (r.reddit_username ? `u/${r.reddit_username}` : 'Guest');
+          const initial = name.replace(/^u\//, '')[0]?.toUpperCase() || '?';
+          const claimed = bringItems.filter((bi: any) => bi.claimed_by_name === (r.member_name || r.reddit_username));
+          let bringingText = '';
+          if (claimed.length > 0) {
+            bringingText = claimed.map((bi: any) => bi.item_name).join(', ');
+          } else if (r.bringing) {
+            try {
+              const b = JSON.parse(r.bringing);
+              const items = Array.isArray(b) ? b : Object.values(b).flat().filter(Boolean);
+              if (items.length > 0) bringingText = items.join(', ');
+            } catch { bringingText = r.bringing; }
+          }
+          return (
+            <div class="ev-guest">
+              <div class="ev-guest-avatar">{initial}</div>
+              <div class="ev-guest-info">
+                <span class="ev-guest-name">
+                  {name}
+                  {(r.party_size || 1) > 1 && <span class="ev-guest-plus">+{(r.party_size || 1) - 1}</span>}
+                </span>
+                {bringingText && <span class="ev-guest-bringing">Bringing {bringingText}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    ) : (
+      <p class="ev-empty">No RSVPs yet — be the first!</p>
+    )}
+
+    {/* Waitlist */}
+    {waitlist.length > 0 && (
+      <div class="ev-waitlist-section">
+        <h3 class="ev-waitlist-title">Waitlist ({waitlist.length})</h3>
+        <div class="ev-waitlist">
+          {waitlist.map((w: any, i: number) => (
+            <div class="ev-wl-person">
+              <span class="ev-wl-num">#{i + 1}</span>
+              <span>{w.reddit_username ? `u/${w.reddit_username}` : w.member_name}</span>
             </div>
           ))}
         </div>
@@ -236,388 +373,735 @@ if (mo && d !== '00') {
     )}
   </div>
 
-  <!-- RIGHT COLUMN -->
-  <div class="det-right">
-    <!-- Tabs -->
-    <div class="det-tabs">
-      <button class="det-tab active" data-tab="guests">guests ({rsvps.length})</button>
-      <button class="det-tab" data-tab="thread">thread ({comments.length})</button>
-      {waitlist.length > 0 && <button class="det-tab" data-tab="waitlist">waitlist ({waitlist.length})</button>}
-    </div>
+  <!-- ═══════════════════════════════════════ -->
+  <!-- THREAD / COMMENTS                       -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="ev-section">
+    <h2 class="ev-section-title">💬 Thread ({comments.length})</h2>
 
-    <!-- Guests panel -->
-    <div class="det-panel" id="panel-guests">
-      {rsvps.length > 0 ? (
-        <div class="guest-list">
-          {rsvps.map((r: any) => (
-            <div class="guest">
-              <div class="guest-avatar">{(r.member_name || r.reddit_username || '?')[0].toUpperCase()}</div>
-              <div class="guest-info">
-                <span class="guest-name">
-                  {r.member_name || (r.reddit_username ? `u/${r.reddit_username}` : 'Guest')}
-                  {(r.party_size || 1) > 1 && <span class="guest-plus">+{(r.party_size || 1) - 1}</span>}
-                </span>
-                {(() => {
-                  // Show claimed items from bring_items table
-                  const claimed = bringItems.filter((bi: any) => bi.claimed_by_name === (r.member_name || r.reddit_username));
-                  if (claimed.length > 0) {
-                    return <span class="guest-bringing">bringing {claimed.map((bi: any) => bi.item_name).join(', ')}</span>;
-                  }
-                  // Fallback: legacy bringing field
-                  if (r.bringing) {
-                    try {
-                      const b = JSON.parse(r.bringing);
-                      const items = Array.isArray(b) ? b : Object.values(b).flat().filter(Boolean);
-                      return items.length > 0 ? <span class="guest-bringing">bringing {items.join(', ')}</span> : null;
-                    } catch { return <span class="guest-bringing">bringing {r.bringing}</span>; }
-                  }
-                  return null;
-                })()}
-              </div>
+    {user && (
+      <form method="POST" action="/api/comments" class="ev-comment-form">
+        <input type="hidden" name="event_id" value={id} />
+        <textarea name="body" rows="2" placeholder="Ask a question or leave a comment..." class="input ev-comment-input"></textarea>
+        <button type="submit" class="ev-comment-submit">Post</button>
+      </form>
+    )}
+
+    {rootComments.length > 0 ? (
+      <div class="ev-comments">
+        {rootComments.map((c: any) => (
+          <div class="ev-comment">
+            <div class="ev-comment-header">
+              <span class="ev-comment-author">{c.author_name || `user_${c.user_id}`}</span>
+              {c.author_karma > 0 && <span class="ev-comment-karma">{c.author_karma} karma</span>}
+              <span class="ev-comment-time">{new Date(c.created_at).toLocaleDateString()}</span>
             </div>
-          ))}
-        </div>
-      ) : (
-        <p class="det-empty">No RSVPs yet. Be the first!</p>
-      )}
-    </div>
+            <p class="ev-comment-body">{c.body}</p>
+            <div class="ev-comment-actions">
+              <span class="ev-votes">
+                <button class="ev-vote" data-id={c.id} data-dir="up">▲</button>
+                <span class="ev-score">{(c.upvotes || 0) - (c.downvotes || 0)}</span>
+                <button class="ev-vote" data-id={c.id} data-dir="down">▼</button>
+              </span>
+              <button class="ev-reply-btn" data-parent={c.id}>Reply</button>
+            </div>
 
-    <!-- Thread panel (megathread) -->
-    <div class="det-panel" id="panel-thread" style="display:none">
-      {user && (
-        <form method="POST" action="/api/comments" class="thread-form">
-          <input type="hidden" name="event_id" value={id} />
-          <textarea name="body" rows="2" placeholder="Ask a question or leave a comment..." class="input" style="border-radius:8px;resize:vertical;font-size:13px"></textarea>
-          <button type="submit" class="btn btn-primary" style="font-size:12px;padding:8px 16px">post</button>
-        </form>
-      )}
-      {rootComments.length > 0 ? (
-        <div class="thread-list">
-          {rootComments.map((c: any) => (
-            <div class="thread-comment">
-              <div class="tc-header">
-                <span class="tc-author">{c.author_name || `user_${c.user_id}`}</span>
-                {c.author_karma > 0 && <span class="tc-karma">{c.author_karma} karma</span>}
-                <span class="tc-time">{new Date(c.created_at).toLocaleDateString()}</span>
-              </div>
-              <p class="tc-body">{c.body}</p>
-              <div class="tc-actions">
-                <span class="tc-votes">
-                  <button class="tc-vote-btn" data-id={c.id} data-dir="up">▲</button>
-                  <span class="tc-score">{(c.upvotes||0) - (c.downvotes||0)}</span>
-                  <button class="tc-vote-btn" data-id={c.id} data-dir="down">▼</button>
-                </span>
-                <button class="tc-reply-btn" data-parent={c.id}>reply</button>
-              </div>
-              {childMap[c.id] && childMap[c.id].map((reply: any) => (
-                <div class="thread-reply">
-                  <div class="tc-header">
-                    <span class="tc-author">{reply.author_name || `user_${reply.user_id}`}</span>
-                    <span class="tc-time">{new Date(reply.created_at).toLocaleDateString()}</span>
-                  </div>
-                  <p class="tc-body">{reply.body}</p>
-                  <div class="tc-actions">
-                    <span class="tc-votes">
-                      <button class="tc-vote-btn">▲</button>
-                      <span class="tc-score">{(reply.upvotes||0) - (reply.downvotes||0)}</span>
-                      <button class="tc-vote-btn">▼</button>
-                    </span>
-                  </div>
+            {/* Replies */}
+            {childMap[c.id] && childMap[c.id].map((reply: any) => (
+              <div class="ev-reply">
+                <div class="ev-comment-header">
+                  <span class="ev-comment-author">{reply.author_name || `user_${reply.user_id}`}</span>
+                  <span class="ev-comment-time">{new Date(reply.created_at).toLocaleDateString()}</span>
                 </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p class="det-empty">No comments yet. Start the conversation!</p>
-      )}
-    </div>
-
-    <!-- Waitlist panel -->
-    <div class="det-panel" id="panel-waitlist" style="display:none">
-      {waitlist.length > 0 ? (
-        <div class="guest-list">
-          {waitlist.map((w: any, i: number) => (
-            <div class="guest">
-              <div class="guest-pos">#{i + 1}</div>
-              <div class="guest-info">
-                <span class="guest-name">{w.reddit_username ? `u/${w.reddit_username}` : w.member_name}</span>
+                <p class="ev-comment-body">{reply.body}</p>
+                <div class="ev-comment-actions">
+                  <span class="ev-votes">
+                    <button class="ev-vote">▲</button>
+                    <span class="ev-score">{(reply.upvotes || 0) - (reply.downvotes || 0)}</span>
+                    <button class="ev-vote">▼</button>
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p class="det-empty">Waitlist is empty.</p>
-      )}
-    </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    ) : (
+      <p class="ev-empty">No comments yet — start the conversation!</p>
+    )}
   </div>
-</div>
+</main>
 </Base>
 
 <style is:inline>
-  .det {
-    max-width: 1100px; margin: 0 auto; padding: 24px;
-    display: grid; grid-template-columns: 1fr 380px; gap: 24px;
+  /* ═══════════════════════════════════════════
+     EVENT DETAIL PAGE — Clean & Fun
+     Single-column, Partiful-fun + SignUpGenius-clean
+     ═══════════════════════════════════════════ */
+
+  .ev {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 20px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
   }
 
-  /* LEFT */
-  .det-left { display: flex; flex-direction: column; gap: 20px; }
-  .det-breadcrumb {
-    font-family: var(--mono); font-size: 12px; color: var(--text-faint);
-    display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+  /* Back link */
+  .ev-back {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-sec);
+    transition: color 0.15s;
+    align-self: flex-start;
   }
-  .det-breadcrumb a { color: var(--text-sec); text-decoration: none; }
-  .det-breadcrumb a:hover { color: var(--accent); }
-  .det-bc-sep { opacity: .4; }
-  .det-title { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 10px; }
-  .det-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ev-back:hover { color: var(--accent); }
 
-  /* Info grid */
-  .det-info {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  /* ── Hero ── */
+  .ev-hero { text-align: center; padding: 8px 0 4px; }
+  .ev-emoji { font-size: 48px; display: block; margin-bottom: 12px; }
+  .ev-title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 12px;
+    color: var(--text);
   }
-  .di-row { display: flex; align-items: center; gap: 12px; }
-  .di-label {
-    font-family: var(--mono); font-size: 11px; font-weight: 600;
-    color: var(--text-faint); min-width: 56px; text-align: right;
-  }
-  .di-value { font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .di-locked { font-family: var(--mono); font-size: 11px; color: var(--yellow); }
-  .di-fill-bar { width: 64px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; display: inline-block; }
-  .di-fill { height: 100%; border-radius: 2px; background: var(--green); display: block; }
-  .di-hot { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 600; }
-  .di-full { font-family: var(--mono); font-size: 11px; color: var(--red); }
+  .ev-tags { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
 
-  /* Description */
-  .det-desc { }
-  .det-sec-title { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text-faint); margin-bottom: 8px; }
-  .det-desc p { font-size: 14px; color: var(--text-sec); line-height: 1.7; }
-
-  /* Karma gate */
-  .det-gate {
-    display: flex; gap: 12px; align-items: flex-start;
-    padding: 14px 16px; background: var(--yellow-dim);
-    border: 1px solid rgba(255,217,61,0.2); border-radius: 8px;
+  /* ── Info grid ── */
+  .ev-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
-  .det-gate-icon { font-size: 20px; flex-shrink: 0; }
-  .det-gate strong { font-family: var(--mono); font-size: 13px; color: var(--yellow); display: block; margin-bottom: 4px; }
-  .det-gate p { font-size: 12px; color: var(--text-sec); }
-
-  /* Actions */
-  .det-actions { }
-  .det-confirmed {
-    display: flex; align-items: center; gap: 10px;
-    padding: 14px 16px; background: var(--green-dim);
-    border: 1px solid rgba(0,210,106,0.2); border-radius: 8px;
-    font-family: var(--mono); font-size: 14px; color: var(--green); font-weight: 700;
+  .ev-info-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: border-color 0.15s;
   }
-  .det-confirmed-icon { font-size: 18px; }
-  .det-cal-link { font-size: 12px; color: var(--blue); margin-left: auto; }
-  .det-waitlisted {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 16px; background: var(--yellow-dim);
-    border: 1px solid rgba(255,217,61,0.2); border-radius: 8px;
-    font-family: var(--mono); font-size: 13px; color: var(--yellow);
-  }
-  .det-wl-pos { font-weight: 700; }
+  .ev-info-card:hover { border-color: var(--border-hover); }
+  .ev-info-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .ev-info-detail { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .ev-info-label { font-size: 11px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.5px; }
+  .ev-info-value { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.4; }
+  .ev-locked { display: block; font-size: 11px; color: var(--yellow); font-weight: 500; margin-top: 2px; }
+  .ev-hot { color: var(--accent); font-weight: 600; }
+  .ev-full { color: var(--red); font-weight: 600; }
+  .ev-fill-track { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+  .ev-fill-bar { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.4s ease; }
 
-  /* RSVP detail form */
-  .rsvp-detail-form {
+  @media (max-width: 480px) {
+    .ev-info-grid { grid-template-columns: 1fr; }
+    .ev-title { font-size: 26px; }
+  }
+
+  /* ── Description ── */
+  .ev-desc { font-size: 15px; color: var(--text-sec); line-height: 1.7; }
+
+  /* ── Sections ── */
+  .ev-section { }
+  .ev-section-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: var(--text);
+  }
+
+  /* ── Karma gate ── */
+  .ev-gate {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 16px;
+    background: var(--yellow-dim);
+    border: 1px solid rgba(217, 119, 6, 0.2);
+    border-radius: 12px;
+  }
+  .ev-gate-icon { font-size: 24px; flex-shrink: 0; }
+  .ev-gate strong { font-size: 14px; font-weight: 700; color: var(--text); display: block; margin-bottom: 4px; }
+  .ev-gate p { font-size: 13px; color: var(--text-sec); line-height: 1.5; }
+
+  /* ═══════════════════════════════════════
+     RSVP SECTION
+     ═══════════════════════════════════════ */
+  .ev-rsvp-section { }
+
+  /* RSVP card (the big interactive area) */
+  .ev-rsvp-card {
+    text-align: center;
+    padding: 28px 24px;
+    border-radius: 16px;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-dim);
+    transition: box-shadow 0.2s;
+  }
+  .ev-rsvp-card:hover { box-shadow: 0 0 0 6px var(--accent-dim), 0 8px 24px rgba(14, 165, 233, 0.12); }
+  .ev-rsvp-login {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+  }
+  .ev-rsvp-cta-text { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--text); }
+  .ev-rsvp-sub { font-size: 13px; color: var(--text-sec); margin-top: 4px; }
+
+  /* The big RSVP button */
+  .ev-rsvp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 16px 32px;
+    border: none;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--cta-bg);
+    color: var(--cta-text);
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+  }
+  .ev-rsvp-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4);
+  }
+  .ev-rsvp-btn:active { transform: translateY(0); }
+  .ev-rsvp-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .ev-rsvp-btn-waitlist {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    box-shadow: none;
+    font-size: 16px;
+    padding: 14px 24px;
     margin-top: 12px;
-    display: flex; flex-direction: column; gap: 12px;
-    padding: 16px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 10px;
   }
-  .rsvp-field { display: flex; flex-direction: column; gap: 4px; }
-  .rsvp-label { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px; }
-  .rsvp-select, .rsvp-input {
-    padding: 10px 12px; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--text); font-size: 14px; outline: none;
-    transition: border-color .2s;
+  .ev-rsvp-btn-waitlist:hover {
+    background: var(--surface-hover);
+    box-shadow: var(--card-shadow);
   }
-  .rsvp-select:focus, .rsvp-input:focus { border-color: var(--accent); }
-  .rsvp-bring-section { margin-top: 4px; }
-  .rsvp-bring-list { display: flex; flex-direction: column; gap: 6px; }
-  .rsvp-bring-option {
-    display: flex; align-items: center; gap: 10px; cursor: pointer;
-    padding: 10px 12px; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 6px; transition: border-color .2s, background .2s;
-  }
-  .rsvp-bring-option:hover { border-color: var(--accent); background: var(--accent-dim); }
-  .rsvp-bring-cb { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
-  .rsvp-bring-name { font-size: 14px; color: var(--text); }
+  .ev-rsvp-waitlist-cta { border-color: var(--border); box-shadow: none; }
 
-  /* Bring a Thing */
-  .det-bring { }
-  .bring-list { display: flex; flex-direction: column; gap: 6px; }
-  .bring-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 6px; font-size: 13px;
+  /* Confirmed state */
+  .ev-rsvp-confirmed {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid var(--green);
+    background: var(--bg);
+    box-shadow: 0 0 0 4px var(--green-dim);
   }
-  .bring-item.claimed { opacity: .6; }
-  .bring-check { font-family: var(--mono); font-size: 14px; color: var(--text-faint); }
-  .bring-item.claimed .bring-check { color: var(--green); }
-  .bring-name { flex: 1; color: var(--text); }
-  .bring-who { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
-  .bring-claim-btn {
-    font-family: var(--mono); font-size: 11px; font-weight: 600;
-    padding: 4px 10px; border-radius: 4px; border: 1px solid var(--accent);
-    background: var(--accent-dim); color: var(--accent); cursor: pointer;
-    transition: all .2s;
+  .ev-rsvp-confirmed-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px;
+    background: var(--green-dim);
   }
-  .bring-claim-btn:hover { background: var(--accent); color: #fff; }
-
-  /* RIGHT COLUMN */
-  .det-right {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; overflow: hidden; position: sticky; top: 68px;
-    max-height: calc(100vh - 84px); display: flex; flex-direction: column;
-  }
-
-  /* Tabs */
-  .det-tabs {
-    display: flex; border-bottom: 1px solid var(--border);
-  }
-  .det-tab {
-    flex: 1; padding: 12px; text-align: center;
-    font-family: var(--mono); font-size: 12px; font-weight: 600;
-    color: var(--text-faint); background: none; border: none;
-    cursor: pointer; transition: all .2s;
-    border-bottom: 2px solid transparent;
-  }
-  .det-tab:hover { color: var(--text-sec); }
-  .det-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--accent-dim); }
-
-  /* Panels */
-  .det-panel { padding: 16px; overflow-y: auto; flex: 1; }
-  .det-empty { font-size: 13px; color: var(--text-faint); text-align: center; padding: 24px 0; }
-
-  /* Guest list */
-  .guest-list { display: flex; flex-direction: column; gap: 6px; }
-  .guest {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 10px; border-radius: 6px;
-    transition: background .2s;
-  }
-  .guest:hover { background: var(--surface-hover); }
-  .guest-avatar {
-    width: 32px; height: 32px; border-radius: 6px;
-    background: var(--accent-dim); color: var(--accent);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--mono); font-size: 13px; font-weight: 700;
+  .ev-check {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--green);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
     flex-shrink: 0;
   }
-  .guest-pos {
-    font-family: var(--mono); font-size: 12px; color: var(--text-faint);
-    min-width: 28px; text-align: center;
+  .ev-rsvp-confirmed-top strong { font-size: 16px; color: var(--text); }
+  .ev-rsvp-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+    font-size: 13px;
   }
-  .guest-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-  .guest-name { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
-  .guest-plus { font-size: 11px; color: var(--accent); background: var(--accent-dim); padding: 1px 5px; border-radius: 3px; }
-  .guest-meta { font-size: 12px; color: var(--text-faint); }
-  .guest-bringing { display: block; font-size: 11px; color: var(--text-sec); line-height: 1.5; margin-top: 2px; }
-  .guest-karma { font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
+  .ev-cal-link { color: var(--accent); font-weight: 500; text-decoration: none; }
+  .ev-cal-link:hover { text-decoration: underline; }
+  .ev-cancel-btn {
+    font-size: 12px;
+    color: var(--text-faint);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .ev-cancel-btn:hover { color: var(--red); }
 
-  /* Thread */
-  .thread-form { display: flex; gap: 8px; margin-bottom: 16px; align-items: flex-end; }
-  .thread-form textarea { flex: 1; }
-  .thread-list { display: flex; flex-direction: column; gap: 12px; }
-  .thread-comment {
-    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  /* Waitlisted state */
+  .ev-rsvp-waitlisted {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    background: var(--yellow-dim);
+    border: 1px solid rgba(217, 119, 6, 0.2);
   }
-  .tc-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  .tc-author { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); }
-  .tc-karma { font-family: var(--mono); font-size: 10px; color: var(--accent); background: var(--accent-dim); padding: 1px 5px; border-radius: 3px; }
-  .tc-time { font-family: var(--mono); font-size: 10px; color: var(--text-faint); margin-left: auto; }
-  .tc-body { font-size: 13px; color: var(--text-sec); line-height: 1.6; margin-bottom: 6px; }
-  .tc-actions { display: flex; align-items: center; gap: 12px; }
-  .tc-votes { display: flex; align-items: center; gap: 4px; }
-  .tc-vote-btn {
-    width: 20px; height: 20px; border-radius: 4px; border: none;
-    background: transparent; color: var(--text-faint); font-size: 10px;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    font-family: var(--mono); transition: all .15s;
+  .ev-wl-badge { font-size: 24px; flex-shrink: 0; }
+  .ev-rsvp-waitlisted strong { font-size: 14px; color: var(--text); display: block; }
+  .ev-wl-pos { font-size: 13px; color: var(--text-sec); }
+  .ev-rsvp-waitlisted .ev-cancel-btn { margin-left: auto; }
+
+  /* Locked state */
+  .ev-rsvp-locked {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--text-sec);
   }
-  .tc-vote-btn:hover { color: var(--accent); background: var(--accent-dim); }
-  .tc-score { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text-sec); min-width: 16px; text-align: center; }
-  .tc-reply-btn {
-    font-family: var(--mono); font-size: 11px; color: var(--text-faint);
-    background: none; border: none; cursor: pointer;
-    transition: color .2s;
+
+  /* Step 2 header */
+  .ev-step2-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 16px;
   }
-  .tc-reply-btn:hover { color: var(--accent); }
-  .thread-reply {
-    margin-left: 24px; padding-left: 12px;
+  .ev-step2-header strong { font-family: var(--font-display); font-size: 20px; color: var(--text); }
+  .ev-step2-done {
+    padding: 8px 0;
+  }
+  .ev-step2-done p { font-size: 16px; color: var(--text-sec); margin-bottom: 12px; }
+
+  /* ── Bring items picker ── */
+  .ev-bring-picker { padding: 16px 20px 20px; }
+  .ev-bring-prompt { font-size: 14px; font-weight: 600; color: var(--text-sec); margin-bottom: 10px; }
+  .ev-bring-options { display: flex; flex-direction: column; gap: 6px; }
+  .ev-bring-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+    text-align: left;
+    font-family: var(--font);
+    font-size: 14px;
+    color: var(--text);
+  }
+  .ev-bring-option:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .ev-bring-circle { font-size: 16px; color: var(--text-faint); flex-shrink: 0; }
+  .ev-bring-name { flex: 1; font-weight: 500; }
+  .ev-bring-action { font-size: 12px; color: var(--accent); font-weight: 600; opacity: 0; transition: opacity 0.15s; }
+  .ev-bring-option:hover .ev-bring-action { opacity: 1; }
+  .ev-bring-option-check { }
+  .ev-bring-cb {
+    width: 18px; height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .ev-bring-option-check .ev-bring-circle { display: none; }
+  .ev-bring-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .ev-bring-save {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--cta-bg);
+    color: var(--cta-text);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ev-bring-save:hover { box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); transform: translateY(-1px); }
+  .ev-bring-skip {
+    padding: 12px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--bg);
+    color: var(--text-sec);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ev-bring-skip:hover { background: var(--surface); }
+  .ev-bring-claim-form { display: contents; }
+
+  /* ── Full bring list ── */
+  .ev-bring-list { display: flex; flex-direction: column; gap: 4px; }
+  .ev-bring-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: background 0.15s;
+  }
+  .ev-bring-row:hover { background: var(--surface); }
+  .ev-bring-status { font-size: 14px; color: var(--text-faint); width: 20px; text-align: center; flex-shrink: 0; }
+  .ev-bring-row.claimed .ev-bring-status { color: var(--green); }
+  .ev-bring-item-name { flex: 1; color: var(--text); font-weight: 500; }
+  .ev-bring-claimer { font-size: 12px; color: var(--accent); font-weight: 500; }
+  .ev-bring-unclaimed { font-size: 12px; color: var(--text-faint); font-style: italic; }
+
+  /* ═══════════════════════════════════════
+     GUEST LIST
+     ═══════════════════════════════════════ */
+  .ev-guests { display: flex; flex-direction: column; gap: 4px; }
+  .ev-guest {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    transition: background 0.15s;
+  }
+  .ev-guest:hover { background: var(--surface); }
+  .ev-guest-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .ev-guest-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .ev-guest-name { font-size: 14px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .ev-guest-plus { font-size: 11px; color: var(--accent); background: var(--accent-dim); padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+  .ev-guest-bringing { font-size: 12px; color: var(--text-sec); }
+  .ev-empty { font-size: 14px; color: var(--text-faint); text-align: center; padding: 24px 0; }
+
+  /* Waitlist */
+  .ev-waitlist-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .ev-waitlist-title { font-size: 14px; font-weight: 600; color: var(--text-sec); margin-bottom: 10px; }
+  .ev-waitlist { display: flex; flex-direction: column; gap: 4px; }
+  .ev-wl-person { display: flex; align-items: center; gap: 10px; padding: 8px 12px; font-size: 14px; color: var(--text-sec); }
+  .ev-wl-num { font-size: 12px; font-weight: 600; color: var(--text-faint); min-width: 28px; }
+
+  /* ═══════════════════════════════════════
+     THREAD / COMMENTS
+     ═══════════════════════════════════════ */
+  .ev-comment-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    align-items: flex-end;
+  }
+  .ev-comment-input { flex: 1; border-radius: 10px; resize: vertical; font-size: 14px; }
+  .ev-comment-submit {
+    padding: 10px 18px;
+    background: var(--cta-bg);
+    color: var(--cta-text);
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .ev-comment-submit:hover { box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3); }
+
+  .ev-comments { display: flex; flex-direction: column; gap: 16px; }
+  .ev-comment {
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ev-comment:last-child { border-bottom: none; }
+  .ev-comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .ev-comment-author { font-size: 13px; font-weight: 700; color: var(--text); }
+  .ev-comment-karma { font-size: 10px; color: var(--accent); background: var(--accent-dim); padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+  .ev-comment-time { font-size: 11px; color: var(--text-faint); margin-left: auto; }
+  .ev-comment-body { font-size: 14px; color: var(--text-sec); line-height: 1.6; margin-bottom: 8px; }
+  .ev-comment-actions { display: flex; align-items: center; gap: 12px; }
+  .ev-votes { display: flex; align-items: center; gap: 4px; }
+  .ev-vote {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-faint);
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .ev-vote:hover { color: var(--accent); background: var(--accent-dim); }
+  .ev-score { font-size: 12px; font-weight: 700; color: var(--text-sec); min-width: 16px; text-align: center; }
+  .ev-reply-btn {
+    font-size: 12px;
+    color: var(--text-faint);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+  .ev-reply-btn:hover { color: var(--accent); }
+
+  .ev-reply {
+    margin-left: 24px;
+    padding-left: 14px;
     border-left: 2px solid var(--border);
-    margin-top: 8px;
+    margin-top: 12px;
   }
 
-  /* RESPONSIVE */
-  @media (max-width: 768px) {
-    .det { grid-template-columns: 1fr; padding: 16px; }
-    .det-right { position: static; max-height: none; }
-    .det-title { font-size: 22px; }
+  /* ── Loading spinner for RSVP button ── */
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .ev-rsvp-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .ev-rsvp-btn.loading::after {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-left: 8px;
   }
 </style>
 
 <script is:inline>
-  // Tab switching
-  document.querySelectorAll('.det-tab').forEach(function(tab) {
-    tab.addEventListener('click', function() {
-      document.querySelectorAll('.det-tab').forEach(function(t) { t.classList.remove('active'); });
-      document.querySelectorAll('.det-panel').forEach(function(p) { p.style.display = 'none'; });
-      tab.classList.add('active');
-      var panelId = 'panel-' + tab.getAttribute('data-tab');
-      var panel = document.getElementById(panelId);
-      if (panel) panel.style.display = 'block';
-    });
-  });
-
-  // RSVP form expand + submit
   (function() {
-    var expandBtn = document.getElementById('rsvp-expand-btn');
-    var form = document.getElementById('rsvp-detail-form');
-    if (!expandBtn || !form) return;
+    // ── RSVP: "I'm in!" button (Step 1 → Step 2) ──
+    var rsvpBtn = document.getElementById('rsvp-go-btn');
+    if (rsvpBtn) {
+      rsvpBtn.addEventListener('click', async function() {
+        var eventId = rsvpBtn.getAttribute('data-event-id');
+        rsvpBtn.classList.add('loading');
+        rsvpBtn.textContent = 'Saving…';
+        rsvpBtn.disabled = true;
 
-    expandBtn.addEventListener('click', function() {
-      expandBtn.style.display = 'none';
-      form.style.display = 'flex';
+        try {
+          var res = await fetch('/api/rsvp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: eventId, action: 'rsvp', status: 'going', party_size: 1 })
+          });
+          var data = await res.json();
+
+          if (data.rsvped) {
+            // Success! Show Step 2
+            var step1 = document.getElementById('rsvp-step1');
+            var step2 = document.getElementById('rsvp-step2');
+            var card = document.getElementById('rsvp-card');
+            if (step1) step1.style.display = 'none';
+            if (step2) step2.style.display = 'block';
+            // Change card border to green
+            if (card) {
+              card.style.borderColor = 'var(--green)';
+              card.style.boxShadow = '0 0 0 4px var(--green-dim)';
+            }
+          } else if (data.waitlisted) {
+            window.location.reload();
+          } else if (data.error === 'login_required') {
+            window.location.href = '/login?next=/events/' + eventId;
+          } else if (data.error) {
+            alert('Could not RSVP: ' + data.error);
+            rsvpBtn.classList.remove('loading');
+            rsvpBtn.textContent = "I'm in! 🎉";
+            rsvpBtn.disabled = false;
+          }
+        } catch (err) {
+          alert('Something went wrong. Please try again.');
+          rsvpBtn.classList.remove('loading');
+          rsvpBtn.textContent = "I'm in! 🎉";
+          rsvpBtn.disabled = false;
+        }
+      });
+    }
+
+    // ── Step 2: Save picked items ──
+    var saveBtn = document.getElementById('save-picks-btn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async function() {
+        var eventId = saveBtn.getAttribute('data-event-id');
+        var checkboxes = document.querySelectorAll('#step2-bring-list .ev-bring-cb:checked');
+        var ids = [];
+        checkboxes.forEach(function(cb) { ids.push(cb.value); });
+
+        if (ids.length === 0) {
+          window.location.reload();
+          return;
+        }
+
+        saveBtn.textContent = 'Saving…';
+        saveBtn.disabled = true;
+
+        // Claim each item individually via bring-claim API
+        try {
+          for (var i = 0; i < ids.length; i++) {
+            var fd = new FormData();
+            fd.append('item_id', ids[i]);
+            fd.append('event_id', eventId);
+            await fetch('/api/bring-claim', { method: 'POST', body: fd, redirect: 'manual' });
+          }
+          window.location.reload();
+        } catch (err) {
+          alert('Something went wrong claiming items.');
+          saveBtn.textContent = 'Save my picks';
+          saveBtn.disabled = false;
+        }
+      });
+    }
+
+    // ── Step 2: Skip button ──
+    var skipBtn = document.getElementById('skip-picks-btn');
+    if (skipBtn) {
+      skipBtn.addEventListener('click', function() {
+        window.location.reload();
+      });
+    }
+
+    // ── Done button (when no bring items) ──
+    var doneBtn = document.getElementById('done-btn');
+    if (doneBtn) {
+      doneBtn.addEventListener('click', function() {
+        window.location.reload();
+      });
+    }
+
+    // ── Cancel RSVP ──
+    var cancelBtn = document.getElementById('cancel-rsvp-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', async function() {
+        if (!confirm('Cancel your RSVP?')) return;
+        var eventId = cancelBtn.getAttribute('data-event-id');
+        try {
+          await fetch('/api/rsvp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: eventId })
+          });
+          window.location.reload();
+        } catch (err) {
+          alert('Something went wrong.');
+        }
+      });
+    }
+
+    // ── Cancel waitlist ──
+    var cancelWlBtn = document.getElementById('cancel-waitlist-btn');
+    if (cancelWlBtn) {
+      cancelWlBtn.addEventListener('click', async function() {
+        if (!confirm('Leave the waitlist?')) return;
+        var eventId = cancelWlBtn.getAttribute('data-event-id');
+        try {
+          await fetch('/api/rsvp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: eventId })
+          });
+          window.location.reload();
+        } catch (err) {
+          alert('Something went wrong.');
+        }
+      });
+    }
+
+    // ── Join waitlist ──
+    var joinWlBtn = document.getElementById('join-waitlist-btn');
+    if (joinWlBtn) {
+      joinWlBtn.addEventListener('click', async function() {
+        var eventId = joinWlBtn.getAttribute('data-event-id');
+        joinWlBtn.textContent = 'Joining…';
+        joinWlBtn.disabled = true;
+        try {
+          await fetch('/api/rsvp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: eventId, action: 'waitlist' })
+          });
+          window.location.reload();
+        } catch (err) {
+          alert('Something went wrong.');
+          joinWlBtn.textContent = 'Join waitlist';
+          joinWlBtn.disabled = false;
+        }
+      });
+    }
+
+    // ── Vote buttons ──
+    document.querySelectorAll('.ev-vote[data-id]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var commentId = btn.getAttribute('data-id');
+        var dir = btn.getAttribute('data-dir');
+        try {
+          await fetch('/api/comments/vote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment_id: commentId, direction: dir })
+          });
+          window.location.reload();
+        } catch (err) {}
+      });
     });
 
-    form.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      var fd = new FormData(form);
-      // Collect checked bring-item IDs
-      var claimIds = [];
-      form.querySelectorAll('input[name="claim_items"]:checked').forEach(function(cb) {
-        claimIds.push(cb.value);
+    // ── Reply buttons ──
+    document.querySelectorAll('.ev-reply-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var parentId = btn.getAttribute('data-parent');
+        var comment = btn.closest('.ev-comment');
+        if (!comment) return;
+
+        // Don't add duplicate reply forms
+        if (comment.querySelector('.ev-reply-form')) return;
+
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/api/comments';
+        form.className = 'ev-reply-form';
+        form.style.cssText = 'margin-left:24px;padding-left:14px;border-left:2px solid var(--border);margin-top:12px;display:flex;gap:8px;align-items:flex-end';
+        form.innerHTML =
+          '<input type="hidden" name="event_id" value="' + document.querySelector('input[name="event_id"]')?.value + '">' +
+          '<input type="hidden" name="parent_id" value="' + parentId + '">' +
+          '<textarea name="body" rows="2" placeholder="Write a reply…" class="input" style="flex:1;border-radius:8px;resize:vertical;font-size:13px"></textarea>' +
+          '<button type="submit" style="padding:8px 14px;background:var(--cta-bg);color:var(--cta-text);border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Reply</button>';
+        comment.appendChild(form);
+        form.querySelector('textarea').focus();
       });
-      var body = {
-        event_id: fd.get('event_id'),
-        action: 'rsvp',
-        status: 'going',
-        party_size: fd.get('party_size'),
-        display_name: (fd.get('display_name') || '').trim(),
-        bringing: '',
-        claim_item_ids: claimIds
-      };
-      try {
-        var res = await fetch('/api/rsvp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        var data = await res.json();
-        if (data.rsvped) {
-          window.location.reload();
-        } else if (data.error) {
-          alert(data.error);
-        }
-      } catch (err) {
-        alert('Something went wrong. Try again.');
-      }
     });
   })();
 </script>
