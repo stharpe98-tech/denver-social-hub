@@ -1,0 +1,154 @@
+---
+import Base from '../../layouts/Base.astro';
+
+const cookie = Astro.cookies.get('dsn_user')?.value;
+let user: any = null;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+if (!user) return Astro.redirect('/login?next=' + encodeURIComponent('/events/new'));
+---
+<Base title="Create an event" description="Plan a small-group event in Denver — dinner, hike, game night, whatever.">
+  <div class="ne-wrap">
+    <div class="ne-card">
+      <a href="/events" class="ne-back">← Events</a>
+      <h1>Plan an event.</h1>
+      <p class="ne-sub">Anything — a dinner, hike, game night, brewery hop. Other locals will see it and RSVP.</p>
+
+      <form id="ne-form">
+        <label class="ne-label">What are you hosting? <span class="opt">*</span></label>
+        <input type="text" id="ne-title" class="ne-input" placeholder="Sunset hike at Mount Falcon" required maxlength="120"/>
+
+        <label class="ne-label">Describe it</label>
+        <textarea id="ne-desc" class="ne-input ne-textarea" rows="3" placeholder="What should people expect? Pace, vibe, anything to bring."></textarea>
+
+        <div class="ne-grid">
+          <div>
+            <label class="ne-label">Type</label>
+            <select id="ne-type" class="ne-input">
+              <option value="dinner">🍽 Dinner</option>
+              <option value="game_night">🎲 Game night</option>
+              <option value="outdoor">🌲 Outdoors / hike</option>
+              <option value="brewery">🍺 Brewery</option>
+              <option value="coffee">☕ Coffee</option>
+              <option value="arts">🎨 Arts / culture</option>
+              <option value="music">🎵 Music / concert</option>
+              <option value="social">🥂 Social / mixer</option>
+              <option value="sports_outing">⚾ Sports event</option>
+              <option value="active">🏃 Active / fitness</option>
+              <option value="food_trucks">🌮 Food trucks</option>
+              <option value="other">✨ Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="ne-label">Spots <span class="opt">(0 = unlimited)</span></label>
+            <input type="number" id="ne-spots" class="ne-input" placeholder="12" min="0" max="200" value="12"/>
+          </div>
+        </div>
+
+        <div class="ne-grid">
+          <div>
+            <label class="ne-label">Month <span class="opt">*</span></label>
+            <select id="ne-month" class="ne-input">
+              <option value="JAN">Jan</option><option value="FEB">Feb</option><option value="MAR">Mar</option>
+              <option value="APR">Apr</option><option value="MAY">May</option><option value="JUN">Jun</option>
+              <option value="JUL">Jul</option><option value="AUG">Aug</option><option value="SEP">Sep</option>
+              <option value="OCT">Oct</option><option value="NOV">Nov</option><option value="DEC">Dec</option>
+            </select>
+          </div>
+          <div>
+            <label class="ne-label">Day <span class="opt">*</span></label>
+            <input type="number" id="ne-day" class="ne-input" placeholder="18" min="1" max="31"/>
+          </div>
+        </div>
+
+        <label class="ne-label">Neighborhood / area</label>
+        <input type="text" id="ne-loc" class="ne-input" placeholder="RiNo, Cherry Creek, Capitol Hill…"/>
+
+        <label class="ne-label">Venue <span class="opt">(optional)</span></label>
+        <input type="text" id="ne-venue" class="ne-input" placeholder="Larimer Lounge"/>
+
+        <div class="ne-grid">
+          <div>
+            <label class="ne-label">Budget</label>
+            <select id="ne-budget" class="ne-input">
+              <option>Free</option>
+              <option>$1–10</option>
+              <option>$10–25</option>
+              <option>$25–50</option>
+              <option>$50+</option>
+            </select>
+          </div>
+          <div>
+            <label class="ne-label">Contact phone <span class="opt">(optional)</span></label>
+            <input type="tel" id="ne-phone" class="ne-input" placeholder="(720) 555-1234"/>
+          </div>
+        </div>
+
+        <label class="ne-label">Link <span class="opt">(Discord, signup, anything)</span></label>
+        <input type="text" id="ne-link" class="ne-input" placeholder="https://…"/>
+
+        <button type="submit" id="ne-submit" class="btn-cta ne-submit">Post the event →</button>
+        <div id="ne-err" class="ne-err"></div>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    .ne-wrap { max-width: 600px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-8); }
+    .ne-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--card-shadow-lg); padding: var(--space-6) var(--space-5); }
+    .ne-back { font-size: 13px; color: var(--text-sec); display: inline-block; margin-bottom: var(--space-3); }
+    .ne-back:hover { color: var(--text); }
+    .ne-card h1 { font-family: var(--font-display); font-size: clamp(28px, 4vw, 34px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 8px; }
+    .ne-sub { color: var(--text-sec); font-size: 15px; margin-bottom: var(--space-5); line-height: 1.55; }
+    .ne-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px; margin: var(--space-3) 0 6px; }
+    .ne-label .opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-faint); }
+    .ne-input { width: 100%; padding: 11px 13px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; font-size: 15px; color: var(--text); font-family: var(--font); outline: none; transition: border-color 0.15s, box-shadow 0.15s; -webkit-appearance: none; }
+    .ne-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .ne-input.invalid { border-color: var(--red); }
+    .ne-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+    .ne-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+    .ne-submit { width: 100%; padding: 14px; font-size: 15px; margin-top: var(--space-4); }
+    .ne-err { font-size: 13px; color: var(--red); margin-top: 10px; display: none; text-align: center; }
+    .ne-err.show { display: block; }
+  </style>
+
+  <script is:inline>
+    document.getElementById('ne-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var err = document.getElementById('ne-err');
+      err.className = 'ne-err';
+      var title = document.getElementById('ne-title').value.trim();
+      if (!title) { document.getElementById('ne-title').classList.add('invalid'); err.textContent = 'Pick a title.'; err.className = 'ne-err show'; return; }
+      document.getElementById('ne-title').classList.remove('invalid');
+      var day = document.getElementById('ne-day').value.trim();
+      if (!day) { document.getElementById('ne-day').classList.add('invalid'); err.textContent = 'Pick a day of the month.'; err.className = 'ne-err show'; return; }
+      document.getElementById('ne-day').classList.remove('invalid');
+
+      var btn = document.getElementById('ne-submit'); var orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Posting…';
+      var body = {
+        title: title,
+        description: document.getElementById('ne-desc').value.trim(),
+        type: document.getElementById('ne-type').value,
+        event_month: document.getElementById('ne-month').value,
+        event_day: day,
+        location: document.getElementById('ne-loc').value.trim(),
+        venue: document.getElementById('ne-venue').value.trim(),
+        budget: document.getElementById('ne-budget').value,
+        spots: document.getElementById('ne-spots').value.trim() || null,
+        link: document.getElementById('ne-link').value.trim(),
+        contact_phone: document.getElementById('ne-phone').value.trim(),
+      };
+      try {
+        var res = await fetch('/api/create-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        var data = await res.json();
+        if (data.ok || data.created) { location.href = '/events'; return; }
+        err.textContent = data.error || 'Could not post — try again.';
+        err.className = 'ne-err show';
+      } catch {
+        err.textContent = 'Network problem — try again.';
+        err.className = 'ne-err show';
+      }
+      btn.disabled = false; btn.textContent = orig;
+    });
+  </script>
+</Base>

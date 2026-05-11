@@ -1,0 +1,108 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Help" description="How Denver Social works — for attendees and organizers.">
+  <div class="hp-wrap">
+    <header class="hp-header">
+      <h1>How it works</h1>
+      <p class="hp-sub">Short answers for both attendees and organizers. Email <a href="mailto:stharpe98@gmail.com">stharpe98@gmail.com</a> if something's missing.</p>
+    </header>
+
+    <section class="hp-sec">
+      <h2>For attendees</h2>
+      <details class="hp-q">
+        <summary>How do I join an event?</summary>
+        <p>Find one on <a href="/events">/events</a> or <a href="/potlucks">/potlucks</a>, tap it, and hit RSVP. Most events need a free Reddit, Discord, or email sign-in so organizers know who's coming.</p>
+      </details>
+      <details class="hp-q">
+        <summary>Do I need to bring anything?</summary>
+        <p>It depends on the event. The event page tells you. Potlucks ask you to claim an item — pick whatever fits your kitchen.</p>
+      </details>
+      <details class="hp-q">
+        <summary>I RSVP'd. Can I cancel?</summary>
+        <p>Yes — go to <a href="/me">My account</a> and tap the event, or use the cancel link in your confirmation email. Please cancel early so the spot can go to someone on the waitlist.</p>
+      </details>
+      <details class="hp-q">
+        <summary>What's "karma"? Why does it gate some events?</summary>
+        <p>Reddit karma is a rough trust signal. Some events require a minimum karma or account age to keep things safe and reduce no-shows. Most events have no gate.</p>
+      </details>
+      <details class="hp-q">
+        <summary>Where are events held?</summary>
+        <p>Across Denver — RiNo, Cap Hill, Cheesman, Cherry Creek, the foothills. Specific addresses are shared with confirmed RSVPs only.</p>
+      </details>
+      <details class="hp-q">
+        <summary>I can't see an event's full address.</summary>
+        <p>You'll see it once you RSVP and (if the organizer set a gate) meet the karma/account-age minimum. Privacy keeps casual venues safe.</p>
+      </details>
+    </section>
+
+    <section class="hp-sec">
+      <h2>For organizers</h2>
+      <details class="hp-q">
+        <summary>How do I post an event?</summary>
+        <p>Sign in, then go to <a href="/events/new">/events/new</a>. Fill out the form. Your event is live immediately. Email confirmations and SMS notifications fire automatically if the site has Resend and Twilio configured.</p>
+      </details>
+      <details class="hp-q">
+        <summary>Can I run a potluck?</summary>
+        <p>Potluck-style sign-up sheets (with claimable items) need approved-organizer access. <a href="mailto:stharpe98@gmail.com">Email Seth</a> and we'll flip your account on.</p>
+      </details>
+      <details class="hp-q">
+        <summary>How do I cap attendance?</summary>
+        <p>Set a "spots" number when you post. Once it fills, new RSVPs go to a waitlist. If someone cancels, the top of the waitlist gets promoted automatically.</p>
+      </details>
+      <details class="hp-q">
+        <summary>How do reminders work?</summary>
+        <p>If the organizer has Resend configured, attendees get a reminder email the day before the event (potlucks) or on the day of (events). SMS reminders are coming.</p>
+      </details>
+      <details class="hp-q">
+        <summary>I need to edit or cancel.</summary>
+        <p>Go to your event page from <a href="/me">/me</a>. You can edit details inline or mark the event as past. Attendees get an email update if you change time or location.</p>
+      </details>
+      <details class="hp-q">
+        <summary>What if someone's a no-show?</summary>
+        <p>Mark them as a no-show from your event's dashboard. Repeated no-shows lower a member's reliability score and gate them out of future capped events.</p>
+      </details>
+    </section>
+
+    <section class="hp-sec">
+      <h2>Privacy &amp; safety</h2>
+      <details class="hp-q">
+        <summary>Who can see my email or phone?</summary>
+        <p>Only the organizer of the event you signed up for. We don't share it across events and we don't sell anything to advertisers.</p>
+      </details>
+      <details class="hp-q">
+        <summary>What if I feel unsafe at an event?</summary>
+        <p>Step away and let us know. Read our <a href="/conduct">Code of conduct</a> — we'll remove anyone who violates it.</p>
+      </details>
+      <details class="hp-q">
+        <summary>How do I delete my account?</summary>
+        <p>Sign in, go to <a href="/profile">/profile</a>, scroll to "Delete account". Removes your member record and any RSVPs.</p>
+      </details>
+    </section>
+
+    <div class="hp-foot">
+      Still stuck? Email <a href="mailto:stharpe98@gmail.com">stharpe98@gmail.com</a> or DM <code>@godtminilegs</code> on Discord.
+    </div>
+  </div>
+
+  <style>
+    .hp-wrap { max-width: 720px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-8); }
+    .hp-header { text-align: center; margin-bottom: var(--space-6); }
+    .hp-header h1 { font-family: var(--font-display); font-size: clamp(28px, 5vw, 38px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 8px; }
+    .hp-sub { color: var(--text-sec); font-size: 15px; line-height: 1.55; max-width: 480px; margin: 0 auto; }
+    .hp-sub a { color: var(--accent); font-weight: 600; }
+    .hp-sec { margin-bottom: var(--space-6); }
+    .hp-sec h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: var(--space-3); letter-spacing: -0.01em; }
+    .hp-q { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; }
+    .hp-q summary { padding: 14px 16px; font-size: 15px; font-weight: 600; color: var(--text); cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .hp-q summary::-webkit-details-marker { display: none; }
+    .hp-q summary::after { content: '+'; color: var(--text-faint); font-size: 22px; font-weight: 400; flex-shrink: 0; }
+    .hp-q[open] summary::after { content: '−'; }
+    .hp-q[open] summary { border-bottom: 1px solid var(--border); }
+    .hp-q p { padding: 12px 16px 16px; color: var(--text-sec); font-size: 14px; line-height: 1.65; }
+    .hp-q a { color: var(--accent); font-weight: 600; }
+    .hp-foot { text-align: center; padding: var(--space-5) var(--space-4); border-top: 1px solid var(--border); color: var(--text-sec); font-size: 14px; margin-top: var(--space-6); }
+    .hp-foot a { color: var(--accent); font-weight: 600; }
+    .hp-foot code { background: var(--surface); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  </style>
+</Base>

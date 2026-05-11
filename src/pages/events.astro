@@ -66,13 +66,58 @@ function fillPct(ev: any): number {
     )}
   </div>
 
-  <!-- Filter strip -->
+  <!-- Search + filter strip -->
+  <div class="ev-search-row">
+    <input type="search" id="eventSearch" class="ev-search-input" placeholder="Search events…" autocomplete="off"/>
+  </div>
   <div class="ev-filters" id="filterStrip">
     <button class="fpill active" data-type="all">all</button>
     {allTypes.map(t => (
       <button class="fpill" data-type={t}>{typeLabel[t] || t}</button>
     ))}
   </div>
+
+  <style is:inline>
+    .ev-search-row { margin: 0 0 12px; }
+    .ev-search-input {
+      width: 100%; padding: 12px 16px;
+      background: var(--bg, #fff);
+      border: 1px solid var(--border, #e5e7eb);
+      border-radius: 999px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      -webkit-appearance: none;
+    }
+    .ev-search-input:focus {
+      border-color: var(--accent, #0EA5E9);
+      box-shadow: 0 0 0 3px var(--accent-dim, rgba(14,165,233,0.10));
+    }
+    .ec.hidden { display: none !important; }
+  </style>
+
+  <script is:inline>
+    (function() {
+      var input = document.getElementById('eventSearch');
+      if (!input) return;
+      function applyFilter() {
+        var q = input.value.trim().toLowerCase();
+        var activePill = document.querySelector('.fpill.active');
+        var activeType = activePill ? activePill.getAttribute('data-type') : 'all';
+        document.querySelectorAll('#eventGrid .ec').forEach(function(card) {
+          var matchesType = (activeType === 'all' || card.getAttribute('data-type') === activeType);
+          var matchesQuery = !q || (card.textContent || '').toLowerCase().indexOf(q) !== -1;
+          card.classList.toggle('hidden', !(matchesType && matchesQuery));
+        });
+      }
+      input.addEventListener('input', applyFilter);
+      // Re-run after pill clicks too (the existing pill JS may not know about search)
+      document.querySelectorAll('.fpill').forEach(function(btn) {
+        btn.addEventListener('click', function() { setTimeout(applyFilter, 0); });
+      });
+    })();
+  </script>
 
   <!-- Event grid -->
   {events.length > 0 ? (
