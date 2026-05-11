@@ -52,7 +52,7 @@ export async function POST({ request, cookies }: APIContext) {
   if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
 
   try {
-    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone } = await request.json() as any;
+    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day } = await request.json() as any;
 
     if (!title || !title.trim()) {
       return new Response(JSON.stringify({ error: 'Title is required' }), { status: 400 });
@@ -78,19 +78,20 @@ export async function POST({ request, cookies }: APIContext) {
     };
     const priceCap = budgetMap[budget] || 'Free';
 
-    // Map group size to spots
+    // Map group size to spots (or use raw spots number if provided)
     const sizeMap: Record<string, number> = {
       'Small (4–6)': 6,
       'Medium (8–12)': 12,
       'Large (15+)': 20,
       'Any size': 15,
     };
-    const spots = sizeMap[group_size] || null; // null = unlimited spots
+    const spots = rawSpots ? parseInt(rawSpots) || null : (sizeMap[group_size] || null); // null = unlimited spots
 
-    // Parse suggested_date into month display
+    // Parse month/day — use direct fields if provided, else fall back to suggested_date
     const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
     const now = new Date();
-    const eventMonth = monthNames[now.getMonth()] || 'TBD';
+    const eventMonth = (event_month || '').trim().toUpperCase() || monthNames[now.getMonth()] || 'TBD';
+    const eventDay = (event_day || '').trim();
 
     // Build description with venue and link if provided
     let fullDesc = desc;
@@ -109,7 +110,7 @@ export async function POST({ request, cookies }: APIContext) {
       finalLocation,
       zone,
       eventMonth,
-      suggested_date || 'TBD',
+      eventDay || suggested_date || 'TBD',
       spots,
       priceCap,
       submittedBy,

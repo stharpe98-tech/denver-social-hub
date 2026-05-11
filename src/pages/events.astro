@@ -119,14 +119,60 @@ function fillPct(ev: any): number {
       <h3>Post an event</h3>
       <button class="cp-close" id="createClose">&times;</button>
     </div>
-    <form method="POST" action="/api/create-event" class="cp-form">
+
+    <!-- Template picker -->
+    <div class="cp-templates" id="templatePicker">
+      <p class="cp-templates-label">Start from a template</p>
+      <div class="cp-tpl-grid">
+        <button class="cp-tpl" data-tpl="dinner">
+          <span class="cp-tpl-icon">🍽️</span>
+          <span class="cp-tpl-name">Dinner</span>
+        </button>
+        <button class="cp-tpl" data-tpl="game_night">
+          <span class="cp-tpl-icon">🎲</span>
+          <span class="cp-tpl-name">Game Night</span>
+        </button>
+        <button class="cp-tpl" data-tpl="arts">
+          <span class="cp-tpl-icon">🎨</span>
+          <span class="cp-tpl-name">Arts / Pottery</span>
+        </button>
+        <button class="cp-tpl" data-tpl="brewery">
+          <span class="cp-tpl-icon">🍺</span>
+          <span class="cp-tpl-name">Brewery</span>
+        </button>
+        <button class="cp-tpl" data-tpl="outdoor">
+          <span class="cp-tpl-icon">🥾</span>
+          <span class="cp-tpl-name">Outdoor</span>
+        </button>
+        <button class="cp-tpl" data-tpl="coffee">
+          <span class="cp-tpl-icon">☕</span>
+          <span class="cp-tpl-name">Coffee</span>
+        </button>
+        <button class="cp-tpl" data-tpl="bowling">
+          <span class="cp-tpl-icon">🎳</span>
+          <span class="cp-tpl-name">Bowling</span>
+        </button>
+        <button class="cp-tpl" data-tpl="social">
+          <span class="cp-tpl-icon">🎉</span>
+          <span class="cp-tpl-name">Social</span>
+        </button>
+        <button class="cp-tpl" data-tpl="blank">
+          <span class="cp-tpl-icon">✏️</span>
+          <span class="cp-tpl-name">Blank</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Form (hidden until template picked) -->
+    <form method="POST" action="/api/create-event" class="cp-form" id="createForm" style="display:none">
+      <button type="button" class="cp-back" id="backToTemplates">← pick a different template</button>
       <div class="cp-row">
         <label class="cp-label">title</label>
-        <input type="text" name="title" required placeholder="Korean BBQ Night" class="input" />
+        <input type="text" name="title" id="cpTitle" required placeholder="Korean BBQ Night" class="input" />
       </div>
       <div class="cp-row">
         <label class="cp-label">type</label>
-        <select name="event_type" class="input">
+        <select name="event_type" id="cpType" class="input">
           <option value="dinner">dinner</option>
           <option value="outdoor">outdoor</option>
           <option value="game_night">game night</option>
@@ -141,26 +187,26 @@ function fillPct(ev: any): number {
       <div class="cp-row-half">
         <div class="cp-row">
           <label class="cp-label">month</label>
-          <input type="text" name="event_month" placeholder="MAY" class="input" />
+          <input type="text" name="event_month" id="cpMonth" placeholder="MAY" class="input" />
         </div>
         <div class="cp-row">
           <label class="cp-label">day</label>
-          <input type="text" name="event_day" placeholder="15" class="input" />
+          <input type="text" name="event_day" id="cpDay" placeholder="15" class="input" />
         </div>
       </div>
       <div class="cp-row">
         <label class="cp-label">neighborhood</label>
-        <input type="text" name="zone" placeholder="RiNo, LoHi, etc." class="input" />
+        <input type="text" name="zone" id="cpZone" placeholder="RiNo, LoHi, etc." class="input" />
       </div>
       <div class="cp-row">
         <label class="cp-label">spots</label>
-        <input type="number" name="spots" value="12" class="input" />
+        <input type="number" name="spots" id="cpSpots" placeholder="leave blank for unlimited" class="input" />
       </div>
       <div class="cp-row">
         <label class="cp-label">description</label>
-        <textarea name="description" rows="3" placeholder="What's the plan?" class="input" style="border-radius:8px;resize:vertical"></textarea>
+        <textarea name="description" id="cpDesc" rows="3" placeholder="What's the plan?" class="input" style="border-radius:8px;resize:vertical"></textarea>
       </div>
-      <button type="submit" class="btn btn-primary" style="width:100%">Submit for review</button>
+      <button type="submit" class="btn btn-primary" style="width:100%">Post event</button>
     </form>
   </div>
 
@@ -254,10 +300,38 @@ function fillPct(ev: any): number {
   .cp-label { font-family: var(--mono); font-size: 11px; color: var(--text-faint); font-weight: 600; display: block; margin-bottom: 4px; }
   .cp-row-half { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
+  /* Templates */
+  .cp-templates-label {
+    font-family: var(--mono); font-size: 11px; color: var(--text-faint);
+    font-weight: 600; margin-bottom: 10px;
+  }
+  .cp-tpl-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .cp-tpl {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 14px 8px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg, #0a0a0a);
+    cursor: pointer; transition: all .2s;
+  }
+  .cp-tpl:hover {
+    border-color: var(--accent); background: var(--surface);
+    transform: translateY(-1px);
+  }
+  .cp-tpl-icon { font-size: 22px; }
+  .cp-tpl-name { font-family: var(--mono); font-size: 10px; color: var(--text-sec); font-weight: 600; }
+  .cp-back {
+    background: none; border: none; color: var(--text-faint); font-family: var(--mono);
+    font-size: 11px; cursor: pointer; padding: 0; margin-bottom: 12px;
+    transition: color .2s;
+  }
+  .cp-back:hover { color: var(--accent); }
+
   @media (max-width: 640px) {
     .ev-grid { grid-template-columns: 1fr; }
     .ev-header { flex-direction: column; gap: 12px; }
     .create-panel { left: 12px; right: 12px; width: auto; bottom: 72px; }
+    .cp-tpl-grid { grid-template-columns: repeat(3, 1fr); }
   }
 </style>
 
@@ -290,10 +364,88 @@ function fillPct(ev: any): number {
     createBtn.addEventListener('click', function(e) {
       e.preventDefault();
       createPanel.style.display = createPanel.style.display === 'none' ? 'block' : 'none';
+      // Reset to template picker
+      document.getElementById('templatePicker').style.display = 'block';
+      document.getElementById('createForm').style.display = 'none';
     });
   }
   if (createClose && createPanel) {
     createClose.addEventListener('click', function() { createPanel.style.display = 'none'; });
+  }
+
+  // Event templates
+  var templates = {
+    dinner: { title: '', type: 'dinner', desc: 'Trying a new spot — come hungry.', spots: 8, zone: '' },
+    game_night: { title: 'Board Game Night', type: 'game_night', desc: 'Bring your favorites or play ours. All skill levels welcome.', spots: 10, zone: '' },
+    arts: { title: 'Pottery / Paint Night', type: 'arts', desc: 'Guided session — no experience needed. Materials included.', spots: 8, zone: '' },
+    brewery: { title: 'Brewery Hang', type: 'brewery', desc: 'Casual drinks and conversation. No agenda, just vibes.', spots: '', zone: '' },
+    outdoor: { title: '', type: 'outdoor', desc: 'Getting outside. Details on meetup point coming soon.', spots: '', zone: '' },
+    coffee: { title: 'Coffee & Conversation', type: 'coffee', desc: 'Low-key morning meetup. Grab a drink, meet new people.', spots: 6, zone: '' },
+    bowling: { title: 'Bowling Night', type: 'bowling', desc: 'Lanes reserved. Beginners and pros welcome.', spots: 12, zone: '' },
+    social: { title: '', type: 'social', desc: '', spots: '', zone: '' },
+    blank: { title: '', type: 'other', desc: '', spots: '', zone: '' }
+  };
+
+  var tplButtons = document.querySelectorAll('.cp-tpl');
+  var tplPicker = document.getElementById('templatePicker');
+  var createForm = document.getElementById('createForm');
+  var backToTpl = document.getElementById('backToTemplates');
+
+  tplButtons.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var key = btn.getAttribute('data-tpl');
+      var tpl = templates[key] || templates.blank;
+      document.getElementById('cpTitle').value = tpl.title;
+      document.getElementById('cpType').value = tpl.type;
+      document.getElementById('cpDesc').value = tpl.desc;
+      document.getElementById('cpSpots').value = tpl.spots;
+      document.getElementById('cpZone').value = tpl.zone;
+      tplPicker.style.display = 'none';
+      createForm.style.display = 'flex';
+      if (!tpl.title) document.getElementById('cpTitle').focus();
+    });
+  });
+
+  if (backToTpl) {
+    backToTpl.addEventListener('click', function() {
+      createForm.style.display = 'none';
+      tplPicker.style.display = 'block';
+    });
+  }
+
+  // Form submit via JSON
+  if (createForm) {
+    createForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var submitBtn = createForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Posting...';
+      try {
+        var res = await fetch('/api/create-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: document.getElementById('cpTitle').value,
+            type: document.getElementById('cpType').value,
+            description: document.getElementById('cpDesc').value,
+            spots: document.getElementById('cpSpots').value || '',
+            location: document.getElementById('cpZone').value,
+            event_month: document.getElementById('cpMonth').value || '',
+            event_day: document.getElementById('cpDay').value || '',
+          })
+        });
+        var data = await res.json();
+        if (data.ok) {
+          window.location.reload();
+        } else {
+          alert(data.error || 'Something went wrong');
+        }
+      } catch {
+        alert('Network error — try again');
+      }
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Post event';
+    });
   }
 </script>
 

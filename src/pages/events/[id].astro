@@ -188,6 +188,24 @@ if (mo && d !== '00') {
               </select>
             </div>
 
+            {(() => {
+              const unclaimed = bringItems.filter((bi: any) => !bi.claimed_by_user_id);
+              if (unclaimed.length === 0) return null;
+              return (
+                <div class="rsvp-field rsvp-bring-section">
+                  <label class="rsvp-label">Bringing something? (optional)</label>
+                  <div class="rsvp-bring-list">
+                    {unclaimed.map((bi: any) => (
+                      <label class="rsvp-bring-option">
+                        <input type="checkbox" name="claim_items" value={bi.id} class="rsvp-bring-cb" />
+                        <span class="rsvp-bring-name">{bi.item_name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             <button type="submit" class="btn btn-primary btn-full">Confirm RSVP</button>
           </form>
         </div>
@@ -419,6 +437,16 @@ if (mo && d !== '00') {
     transition: border-color .2s;
   }
   .rsvp-select:focus, .rsvp-input:focus { border-color: var(--accent); }
+  .rsvp-bring-section { margin-top: 4px; }
+  .rsvp-bring-list { display: flex; flex-direction: column; gap: 6px; }
+  .rsvp-bring-option {
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    padding: 10px 12px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; transition: border-color .2s, background .2s;
+  }
+  .rsvp-bring-option:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .rsvp-bring-cb { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .rsvp-bring-name { font-size: 14px; color: var(--text); }
 
   /* Bring a Thing */
   .det-bring { }
@@ -561,13 +589,19 @@ if (mo && d !== '00') {
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
       var fd = new FormData(form);
+      // Collect checked bring-item IDs
+      var claimIds = [];
+      form.querySelectorAll('input[name="claim_items"]:checked').forEach(function(cb) {
+        claimIds.push(cb.value);
+      });
       var body = {
         event_id: fd.get('event_id'),
         action: 'rsvp',
         status: 'going',
         party_size: fd.get('party_size'),
         display_name: (fd.get('display_name') || '').trim(),
-        bringing: ''
+        bringing: '',
+        claim_item_ids: claimIds
       };
       try {
         var res = await fetch('/api/rsvp', {
