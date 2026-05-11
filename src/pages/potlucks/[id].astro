@@ -13,13 +13,12 @@ try {
     potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(id).first();
     if (potluck?.locked) return Astro.redirect('/potlucks');
 
-    // Slots with claim counts (aggregated)
+    // Slots with claim counts (match on category, not dish text)
     const s = await db.prepare(`
       SELECT ps.id, ps.suggestion, ps.category, ps.sort_order, ps.max_claims,
-        COUNT(pr.id) as claim_count,
-        GROUP_CONCAT(pr.name, ', ') as claimed_names
+        COUNT(pr.id) as claim_count
       FROM potluck_slots ps
-      LEFT JOIN potluck_rsvp pr ON LOWER(pr.dish)=LOWER(ps.suggestion)
+      LEFT JOIN potluck_rsvp pr ON pr.dish_category=ps.category
         AND pr.potluck_id=ps.potluck_id AND pr.rsvp='yes'
       WHERE ps.potluck_id=?
       GROUP BY ps.id
@@ -48,6 +47,16 @@ for (const s of slots) {
   if (!slotGroups[cat]) { slotGroups[cat] = []; slotGroupKeys.push(cat); }
   slotGroups[cat].push(s);
 }
+
+// Group RSVPs by dish_category for SignUpGenius-style sheet
+const rsvpsByCategory: Record<string, {name: string, dish: string}[]> = {};
+for (const s of signups) {
+  const cat = (s as any).dish_category || '';
+  if (!cat) continue;
+  if (!rsvpsByCategory[cat]) rsvpsByCategory[cat] = [];
+  rsvpsByCategory[cat].push({ name: (s as any).name, dish: (s as any).dish });
+}
+const totalWithDishes = signups.filter((s: any) => s.dish).length;
 ---
 <Base title={potluck.title} description={potluck.description ?? `Sign up for ${potluck.title}`}>
 
@@ -172,44 +181,39 @@ for (const s of slots) {
   .pk-cta:active { transform: scale(0.98); }
   .pk-cta:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-  /* Step 2 — Slot Picker */
+  /* Step 2 — Category Picker */
   #step2 { display: none; }
   .pk-pick-intro { font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-3); line-height: 1.5; }
 
-  .pk-slot-cat {
-    font-size: 11px; font-weight: 700; color: var(--text-faint);
-    text-transform: uppercase; letter-spacing: 1.2px;
-    margin-top: var(--space-3); margin-bottom: var(--space-2);
+  .pk-cat-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    margin-bottom: var(--space-3);
   }
-  .pk-slot-cat:first-child { margin-top: 0; }
-  .pk-slot-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 14px; margin-bottom: 6px;
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 10px; cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+  @media (max-width: 500px) { .pk-cat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .pk-cat-card {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; padding: 14px 8px;
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: 12px; cursor: pointer;
+    font-family: var(--font); transition: border-color 0.15s, background 0.15s, transform 0.1s;
   }
-  .pk-slot-item:hover { border-color: var(--accent); background: var(--bg); }
-  .pk-slot-item.selected { border-color: var(--green); background: rgba(16, 185, 129, 0.06); }
-  .pk-slot-item.full { opacity: 0.45; cursor: default; }
-  .pk-slot-item.full:hover { border-color: var(--border); background: var(--surface); }
-  .pk-slot-item input[type="radio"] {
-    width: 18px; height: 18px; accent-color: var(--green);
-    cursor: pointer; flex-shrink: 0;
+  .pk-cat-card:hover { border-color: var(--accent); background: var(--bg); transform: translateY(-1px); }
+  .pk-cat-card.selected { border-color: var(--green); background: rgba(16, 185, 129, 0.06); }
+  .pk-cat-card.full { opacity: 0.4; cursor: default; }
+  .pk-cat-card.full:hover { border-color: var(--border); background: var(--surface); transform: none; }
+  .pk-cat-emoji { font-size: 28px; }
+  .pk-cat-name { font-size: 13px; font-weight: 600; color: var(--text); text-align: center; line-height: 1.2; }
+  .pk-cat-status { font-size: 11px; font-weight: 600; }
+  .pk-cat-status.open { color: var(--green); }
+  .pk-cat-status.full { color: var(--text-faint); }
+
+  .pk-dish-wrap { margin-bottom: var(--space-3); }
+  .pk-dish-label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--text-sec); margin-bottom: 6px;
   }
-  .pk-slot-item.full input[type="radio"] { cursor: default; }
-  .pk-slot-item .name { flex: 1; font-size: 14px; color: var(--text); font-weight: 500; }
-  .pk-slot-item .progress {
-    font-size: 12px; color: var(--text-faint); font-weight: 600;
-    white-space: nowrap;
-  }
-  .pk-slot-item .progress.has-claims { color: var(--green); }
-  .pk-slot-item .badge {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.5px; padding: 2px 8px; border-radius: 999px;
-  }
-  .pk-slot-item .badge.open { color: var(--accent); background: var(--accent-dim); }
-  .pk-slot-item .badge.full { color: var(--text-faint); background: var(--surface-hover); }
+  .pk-dish-label .opt { font-weight: 400; color: var(--text-faint); }
+  /* (old slot-item radio styles removed — now using category cards) */
 
   .pk-step2-btns { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
   .pk-skip {
@@ -243,35 +247,51 @@ for (const s of slots) {
     border-bottom: 2px solid var(--surface);
   }
 
-  /* ── Sign-up sheet (view) ──────────────────────────── */
-  .pk-sheet-cat {
-    font-size: 11px; font-weight: 700; color: var(--text-faint);
-    text-transform: uppercase; letter-spacing: 1.5px;
-    margin-top: var(--space-3); margin-bottom: var(--space-2);
-    display: flex; align-items: center; gap: 8px;
+  /* ── Sign-up sheet (SignUpGenius style) ────────────── */
+  .pk-sug-group {
+    margin-bottom: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
   }
-  .pk-sheet-cat::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-  .pk-sheet-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 14px; margin-bottom: 6px;
-    border-radius: 10px;
+  .pk-sug-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
   }
-  .pk-sheet-item.open {
-    background: var(--surface); border: 1.5px dashed var(--border);
+  .pk-sug-emoji { font-size: 20px; }
+  .pk-sug-cat {
+    font-family: var(--font-display); font-size: 15px; font-weight: 700;
+    color: var(--text); flex: 1;
   }
-  .pk-sheet-item.taken {
-    background: rgba(16, 185, 129, 0.04);
-    border: 1px solid rgba(16, 185, 129, 0.12);
+  .pk-sug-spots {
+    font-size: 12px; font-weight: 600; color: var(--green);
+    background: rgba(16, 185, 129, 0.08); border-radius: 999px;
+    padding: 3px 10px;
   }
-  .pk-sheet-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text); }
-  .pk-sheet-who { font-size: 13px; color: var(--green); font-weight: 600; }
-  .pk-sheet-badge {
-    font-size: 11px; font-weight: 700; color: var(--accent);
-    background: var(--accent-dim); border-radius: 999px;
-    padding: 2px 10px;
+  .pk-sug-spots.full { color: var(--text-faint); background: var(--surface-hover); }
+  .pk-sug-people { padding: 4px 0; }
+  .pk-sug-person {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--surface-hover);
   }
-  .pk-sheet-progress {
-    font-size: 11px; color: var(--text-faint); font-weight: 600;
+  .pk-sug-person:last-child { border-bottom: none; }
+  .pk-sug-check {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(16, 185, 129, 0.1); color: var(--green);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .pk-sug-pname { font-size: 14px; font-weight: 600; color: var(--text); }
+  .pk-sug-dish {
+    margin-left: auto; font-size: 13px; color: var(--text-sec);
+    font-style: italic;
+  }
+  .pk-sug-empty {
+    padding: 14px 16px;
+    font-size: 13px; color: var(--text-faint); font-style: italic;
   }
 
   /* ── Who's coming ───────────────────────────────────── */
@@ -403,8 +423,8 @@ for (const s of slots) {
     <div class="pk-stat-label">{guestTotal === 1 ? 'person' : 'people'} coming</div>
   </div>
   <div class="pk-stat">
-    <div class="pk-stat-num">{totalClaimed}/{slots.length}</div>
-    <div class="pk-stat-label">items claimed</div>
+    <div class="pk-stat-num">{totalWithDishes}</div>
+    <div class="pk-stat-label">dishes signed up</div>
   </div>
 </div>
 
@@ -455,46 +475,47 @@ for (const s of slots) {
       <div class="pk-error" id="step1-err"></div>
     </div>
 
-    <!-- STEP 2: Pick what to bring (SignUpGenius-style) -->
+    <!-- STEP 2: Pick a category + say what you're bringing -->
     <div id="step2">
       <div class="pk-step-label">Step 2</div>
       <div class="pk-step-title">What would you like to bring? 🥘</div>
-      <p class="pk-pick-intro">Pick an item from the list below, or skip if you're just coming to hang out!</p>
+      <p class="pk-pick-intro">Pick a category, then tell us what you're bringing — or skip if you're just coming to hang out!</p>
 
-      <div id="slot-picker">
-        {slotGroupKeys.map((cat) => {
-          const items = slotGroups[cat];
+      <div id="cat-picker" class="pk-cat-grid">
+        {slots.map((slot: any) => {
+          const isFull = slot.max_claims < 900 && slot.claim_count >= slot.max_claims;
+          const spotsLeft = slot.max_claims < 900 ? slot.max_claims - slot.claim_count : null;
+          const catEmoji = (slot.category || '').match(/^(\p{Emoji_Presentation}|\p{Emoji}️)/u)?.[0] || '🍽️';
+          const catLabel = (slot.category || '').replace(/^(\p{Emoji_Presentation}|\p{Emoji}️)\s*/u, '');
           return (
-            <>
-              <div class="pk-slot-cat">{cat}</div>
-              {items.map((item: any) => {
-                const isFull = item.max_claims < 900 && item.claim_count >= item.max_claims;
-                const spotsLeft = item.max_claims < 900 ? item.max_claims - item.claim_count : null;
-                return (
-                  <label class={`pk-slot-item ${isFull ? 'full' : ''}`}>
-                    <input type="radio" name="slot-pick" value={item.suggestion}
-                      data-category={item.category} disabled={isFull} />
-                    <span class="name">{item.suggestion}</span>
-                    {isFull ? (
-                      <span class="badge full">Full</span>
-                    ) : item.claim_count > 0 ? (
-                      <span class={`progress has-claims`}>
-                        {spotsLeft !== null ? `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left` : 'Open'}
-                      </span>
-                    ) : (
-                      <span class="badge open">Needed</span>
-                    )}
-                  </label>
-                );
-              })}
-            </>
+            <button
+              type="button"
+              class={`pk-cat-card ${isFull ? 'full' : ''}`}
+              data-category={slot.category}
+              disabled={isFull}
+            >
+              <span class="pk-cat-emoji">{catEmoji}</span>
+              <span class="pk-cat-name">{catLabel}</span>
+              {isFull ? (
+                <span class="pk-cat-status full">Full</span>
+              ) : spotsLeft !== null ? (
+                <span class="pk-cat-status open">{spotsLeft} spot{spotsLeft !== 1 ? 's' : ''}</span>
+              ) : (
+                <span class="pk-cat-status open">Open</span>
+              )}
+            </button>
           );
         })}
       </div>
 
+      <div id="dish-input-wrap" class="pk-dish-wrap" style="display:none">
+        <label class="pk-dish-label">What are you bringing? <span class="opt">(e.g. "Spinach dip", "Brownies")</span></label>
+        <input type="text" class="pk-input" id="f-dish" placeholder="Type what you're bringing…" autocomplete="off"/>
+      </div>
+
       <div class="pk-step2-btns">
         <button class="pk-skip" id="skip-btn">Just showing up</button>
-        <button class="pk-save" id="save-btn">Sign up with this item 🎉</button>
+        <button class="pk-save" id="save-btn" disabled>Sign me up 🎉</button>
       </div>
       <div class="pk-error" id="step2-err"></div>
     </div>
@@ -511,35 +532,37 @@ for (const s of slots) {
     <div class="pk-manage-err" id="m-lookup-err"></div>
   </div>
 
-  <!-- ── SIGN-UP SHEET ───────────────────────────────── -->
-  <div class="pk-section-title">
-    Sign-up sheet ({totalClaimed}/{slots.length} items claimed)
-  </div>
-  {slotGroupKeys.map((cat) => {
-    const items = slotGroups[cat];
+  <!-- ── SIGN-UP SHEET (SignUpGenius style) ────────────── -->
+  <div class="pk-section-title">What everyone's bringing</div>
+  {slots.map((slot: any) => {
+    const catEmoji = (slot.category || '').match(/^(\p{Emoji_Presentation}|\p{Emoji}️)/u)?.[0] || '🍽️';
+    const catLabel = (slot.category || '').replace(/^(\p{Emoji_Presentation}|\p{Emoji}️)\s*/u, '');
+    const people = rsvpsByCategory[slot.category] || [];
+    const spotsLeft = slot.max_claims < 900 ? slot.max_claims - slot.claim_count : null;
     return (
-      <>
-        <div class="pk-sheet-cat"><span>{cat}</span></div>
-        {items.map((item: any) => {
-          const isFull = item.max_claims < 900 && item.claim_count >= item.max_claims;
-          return item.claim_count > 0 ? (
-            <div class="pk-sheet-item taken">
-              <span style="font-size:16px">✅</span>
-              <span class="pk-sheet-name">{item.suggestion}</span>
-              <span class="pk-sheet-who">{item.claimed_names}</span>
-              {item.max_claims < 900 && item.claim_count < item.max_claims && (
-                <span class="pk-sheet-progress">{item.max_claims - item.claim_count} more needed</span>
-              )}
+      <div class="pk-sug-group">
+        <div class="pk-sug-header">
+          <span class="pk-sug-emoji">{catEmoji}</span>
+          <span class="pk-sug-cat">{catLabel}</span>
+          {spotsLeft !== null && spotsLeft > 0 && (
+            <span class="pk-sug-spots">{spotsLeft} spot{spotsLeft !== 1 ? 's' : ''} open</span>
+          )}
+          {spotsLeft !== null && spotsLeft <= 0 && (
+            <span class="pk-sug-spots full">Full</span>
+          )}
+        </div>
+        <div class="pk-sug-people">
+          {people.length > 0 ? people.map((p) => (
+            <div class="pk-sug-person">
+              <span class="pk-sug-check">✓</span>
+              <span class="pk-sug-pname">{p.name}</span>
+              <span class="pk-sug-dish">{p.dish}</span>
             </div>
-          ) : (
-            <div class="pk-sheet-item open">
-              <span style="font-size:16px">⬜</span>
-              <span class="pk-sheet-name">{item.suggestion}</span>
-              <span class="pk-sheet-badge">Needed</span>
-            </div>
-          );
-        })}
-      </>
+          )) : (
+            <div class="pk-sug-empty">Be the first to sign up!</div>
+          )}
+        </div>
+      </div>
     );
   })}
 
@@ -619,16 +642,19 @@ for (const s of slots) {
     $('rsvp-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
-  // ── Highlight selected slot ──────────────────────────
-  var slotRadios = document.querySelectorAll('#slot-picker input[type="radio"]');
-  slotRadios.forEach(function (radio) {
-    radio.addEventListener('change', function () {
-      document.querySelectorAll('.pk-slot-item').forEach(function (el) {
-        el.classList.remove('selected');
-      });
-      if (radio.checked) {
-        radio.closest('.pk-slot-item').classList.add('selected');
-      }
+  // ── Category card picker ─────────────────────────────
+  var selectedCategory = '';
+  var catCards = document.querySelectorAll('.pk-cat-card');
+  catCards.forEach(function (card) {
+    card.addEventListener('click', function () {
+      if (card.disabled) return;
+      catCards.forEach(function (c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+      selectedCategory = card.getAttribute('data-category') || '';
+      $('dish-input-wrap').style.display = 'block';
+      $('f-dish').focus();
+      $('save-btn').disabled = false;
+      $('step2-err').classList.remove('show');
     });
   });
 
@@ -637,16 +663,22 @@ for (const s of slots) {
     submitRsvp('', '');
   });
 
-  // ── Save pick → submit with chosen slot ─────────────
+  // ── Save pick → submit with category + dish text ────
   $('save-btn').addEventListener('click', function () {
-    var selected = document.querySelector('#slot-picker input[type="radio"]:checked');
-    if (!selected) {
-      $('step2-err').textContent = 'Pick an item from the list, or tap "Just showing up".';
+    if (!selectedCategory) {
+      $('step2-err').textContent = 'Pick a category first, or tap "Just showing up".';
       $('step2-err').classList.add('show');
       return;
     }
+    var dish = val('f-dish');
+    if (!dish) {
+      $('step2-err').textContent = 'Tell us what you\'re bringing! (e.g. "Brownies", "Chips & salsa")';
+      $('step2-err').classList.add('show');
+      $('f-dish').focus();
+      return;
+    }
     $('step2-err').classList.remove('show');
-    submitRsvp(selected.value, selected.getAttribute('data-category') || '');
+    submitRsvp(dish, selectedCategory);
   });
 
   // ── Submit to API ────────────────────────────────────
