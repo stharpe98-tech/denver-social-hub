@@ -42,6 +42,14 @@ function looksLikeOrg(cookieVal: string | undefined): boolean {
   } catch { return false; }
 }
 
+function looksLikeMember(cookieVal: string | undefined): boolean {
+  if (!cookieVal) return false;
+  try {
+    const parsed = JSON.parse(decodeURIComponent(cookieVal));
+    return typeof parsed?.id !== 'undefined' || typeof parsed?.email === 'string';
+  } catch { return false; }
+}
+
 function looksLikeAdminMember(cookieVal: string | undefined): boolean {
   if (!cookieVal) return false;
   try {
@@ -56,11 +64,13 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
 
   if (pathAlwaysAllowed(path)) return next();
 
-  // Admin / organizer sessions skip the gate
+  // Any signed-in user (organizer or member) skips the gate. The point
+  // of the coming-soon splash is to gate the *public*, not the people
+  // who already have accounts.
   const orgCookie = ctx.cookies.get('dsn_org')?.value;
   if (looksLikeOrg(orgCookie)) return next();
   const userCookie = ctx.cookies.get('dsn_user')?.value;
-  if (looksLikeAdminMember(userCookie)) return next();
+  if (looksLikeMember(userCookie)) return next();
 
   // Check the config flag. If unreachable or 'off', let the request through.
   const db = (ctx.locals as any)?.runtime?.env?.DB as D1Database | undefined;

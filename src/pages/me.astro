@@ -1,0 +1,174 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDB } from '../lib/db';
+
+const cookie = Astro.cookies.get('dsn_user')?.value;
+let user: any = null;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+if (!user) return Astro.redirect('/login?next=' + encodeURIComponent('/me'));
+
+const db = getDB();
+let upcomingRsvps: any[] = [];
+let pastRsvps: any[] = [];
+let myEvents: any[] = [];
+let myPotluckRsvps: any[] = [];
+
+try {
+  if (db) {
+    // Events the user has RSVP'd to
+    const rsvpRes = await db.prepare(`
+      SELECT e.id, e.title, e.event_type, e.event_month, e.event_day, e.location, e.zone, e.is_past, r.party_size, r.status
+      FROM event_rsvps r JOIN events e ON r.event_id = e.id
+      WHERE r.member_email = ? ORDER BY r.rowid DESC LIMIT 50
+    `).bind(user.email).all();
+    const rsvps = (rsvpRes.results ?? []) as any[];
+    upcomingRsvps = rsvps.filter(r => !r.is_past);
+    pastRsvps = rsvps.filter(r => r.is_past);
+
+    // Events the user posted (matched by submitted_by name; loose but works)
+    const ownedRes = await db.prepare(
+      "SELECT id, title, event_type, event_month, event_day, location, zone, rsvp_count, spots, is_past FROM events WHERE submitted_by = ? ORDER BY id DESC LIMIT 20"
+    ).bind(user.name || '').all();
+    myEvents = (ownedRes.results ?? []) as any[];
+
+    // Potlucks the user signed up for
+    const ptRes = await db.prepare(`
+      SELECT p.id, p.title, p.date_label, p.location, p.status, r.dish
+      FROM potluck_rsvp r JOIN potlucks p ON r.potluck_id = p.id
+      WHERE LOWER(r.email) = LOWER(?) AND r.rsvp = 'yes'
+      ORDER BY r.id DESC LIMIT 20
+    `).bind(user.email).all();
+    myPotluckRsvps = (ptRes.results ?? []) as any[];
+  }
+} catch (e) { console.error(e); }
+
+const firstName = (user.name || user.reddit_username || user.discord_username || 'friend').split(' ')[0];
+const typeLabel: Record<string, string> = { dinner: '🍽 Dinner', game_night: '🎲 Games', outdoor: '🌲 Outdoors', brewery: '🍺 Brewery', coffee: '☕ Coffee', arts: '🎨 Arts', music: '🎵 Music', social: '🥂 Social', group_tickets: '🎟 Tickets', camping: '🏕 Camping', sports_outing: '⚾ Sports', bowling: '🎳 Bowling', active: '🏃 Active', casino: '🎰 Casino', food_trucks: '🌮 Food', other: '✨ Event' };
+---
+<Base title="My account" description="Your upcoming RSVPs and events.">
+  <div class="me-wrap">
+    <header class="me-header">
+      <div class="me-avatar">{firstName[0]?.toUpperCase() ?? '?'}</div>
+      <div>
+        <h1>Hey {firstName}.</h1>
+        <p class="me-sub">{upcomingRsvps.length + myPotluckRsvps.length} upcoming · {myEvents.length} {myEvents.length === 1 ? 'event you posted' : 'events you posted'}</p>
+      </div>
+      <a href="/events/new" class="btn-cta me-new">+ Plan an event</a>
+    </header>
+
+    <section class="me-sec">
+      <h2>Upcoming RSVPs</h2>
+      {(upcomingRsvps.length === 0 && myPotluckRsvps.length === 0) ? (
+        <div class="me-empty">
+          Nothing on your calendar yet.
+          <a href="/events">Browse events</a> or <a href="/potlucks">find a potluck</a>.
+        </div>
+      ) : (
+        <div class="me-list">
+          {upcomingRsvps.map((ev:any) => (
+            <a href={`/events/${ev.id}`} class="me-row">
+              <span class="me-row-tag">{typeLabel[ev.event_type] ?? '✨ Event'}</span>
+              <div class="me-row-main">
+                <div class="me-row-title">{ev.title}</div>
+                <div class="me-row-meta">📅 {ev.event_month} {ev.event_day} · 📍 {ev.zone || ev.location || 'Denver'}{ev.party_size > 1 ? ` · +${ev.party_size - 1}` : ''}</div>
+              </div>
+              <span class="me-arrow">›</span>
+            </a>
+          ))}
+          {myPotluckRsvps.map((p:any) => (
+            <a href={`/potlucks/${p.id}`} class="me-row">
+              <span class="me-row-tag tag-green">🍽 Potluck</span>
+              <div class="me-row-main">
+                <div class="me-row-title">{p.title}</div>
+                <div class="me-row-meta">{p.date_label}{p.location ? ` · 📍 ${p.location}` : ''}{p.dish ? ` · bringing ${p.dish}` : ''}</div>
+              </div>
+              <span class="me-arrow">›</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </section>
+
+    {myEvents.length > 0 && (
+      <section class="me-sec">
+        <h2>Events you've posted</h2>
+        <div class="me-list">
+          {myEvents.map((ev:any) => (
+            <a href={`/events/${ev.id}`} class="me-row">
+              <span class="me-row-tag">{typeLabel[ev.event_type] ?? '✨ Event'}</span>
+              <div class="me-row-main">
+                <div class="me-row-title">{ev.title}{ev.is_past ? ' · past' : ''}</div>
+                <div class="me-row-meta">📅 {ev.event_month} {ev.event_day} · {ev.rsvp_count || 0}{ev.spots ? `/${ev.spots}` : ''} RSVPs</div>
+              </div>
+              <span class="me-arrow">›</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    {pastRsvps.length > 0 && (
+      <section class="me-sec">
+        <h2>Past events you attended</h2>
+        <div class="me-list">
+          {pastRsvps.slice(0, 10).map((ev:any) => (
+            <a href={`/events/${ev.id}`} class="me-row me-row-faded">
+              <span class="me-row-tag">{typeLabel[ev.event_type] ?? '✨ Event'}</span>
+              <div class="me-row-main">
+                <div class="me-row-title">{ev.title}</div>
+                <div class="me-row-meta">{ev.event_month} {ev.event_day} · {ev.zone || ev.location}</div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <section class="me-sec">
+      <h2>Account</h2>
+      <div class="me-list">
+        <a href="/profile" class="me-row">
+          <span class="me-row-tag">👤</span>
+          <div class="me-row-main">
+            <div class="me-row-title">Profile &amp; preferences</div>
+            <div class="me-row-meta">Update your name, bio, and notification settings.</div>
+          </div>
+          <span class="me-arrow">›</span>
+        </a>
+        <a href="/api/logout" class="me-row">
+          <span class="me-row-tag">🚪</span>
+          <div class="me-row-main">
+            <div class="me-row-title">Sign out</div>
+            <div class="me-row-meta">{user.email}</div>
+          </div>
+          <span class="me-arrow">›</span>
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <style>
+    .me-wrap { max-width: 720px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-8); }
+    .me-header { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-6); flex-wrap: wrap; }
+    .me-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 22px; font-weight: 800; flex-shrink: 0; }
+    .me-header h1 { font-family: var(--font-display); font-size: clamp(24px, 4vw, 30px); font-weight: 800; letter-spacing: -0.02em; }
+    .me-sub { font-size: 13px; color: var(--text-sec); margin-top: 2px; }
+    .me-new { margin-left: auto; }
+    @media (max-width: 500px) { .me-new { margin-left: 0; width: 100%; padding: 12px; } }
+
+    .me-sec { margin-bottom: var(--space-6); }
+    .me-sec h2 { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: var(--space-3); letter-spacing: -0.01em; }
+    .me-list { display: flex; flex-direction: column; gap: 8px; }
+    .me-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
+    .me-row:hover { transform: translateY(-1px); box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
+    .me-row-faded { opacity: 0.7; }
+    .me-row-tag { font-size: 12px; font-weight: 600; padding: 4px 10px; background: var(--tag-bg); color: var(--tag-text); border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+    .me-row-tag.tag-green { background: var(--tag-bg2); color: var(--tag-text2); }
+    .me-row-main { flex: 1; min-width: 0; }
+    .me-row-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .me-row-meta { font-size: 13px; color: var(--text-sec); }
+    .me-arrow { font-size: 22px; color: var(--text-faint); flex-shrink: 0; }
+    .me-empty { padding: var(--space-5); border: 1px dashed var(--border); border-radius: var(--radius); text-align: center; color: var(--text-faint); font-size: 14px; }
+    .me-empty a { color: var(--accent); font-weight: 600; }
+  </style>
+</Base>
