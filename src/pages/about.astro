@@ -34,17 +34,12 @@ function getInitials(name: string): string {
 }
 
 const faqs = [
-  { q:"Wait, this is actually free?", a:"Yep. No catch. No \"premium tier\" coming later. No guy in a suit is going to upsell you. We just like hanging out." },
-  { q:"I don't know anyone — is that weird?", a:"That's literally the point. Most people show up solo. Within 20 minutes you'll forget you came alone. It goes away fast because the groups are small and nobody's performing." },
-  { q:"Is it safe? What about creeps?", a:"Locations are hidden until you RSVP, every event has a host, and if someone makes you uncomfortable they're out. We keep it chill but we don't tolerate people being weird. More details on our safety page at /conduct." },
-  { q:"Is this a dating thing?", a:"It's a friendship thing. If you meet someone and something happens naturally, that's life. But don't show up treating it like a singles event — people can tell, and it makes things weird." },
-  { q:"How much does stuff cost?", a:"Depends on the event. A lot are free — hikes, park hangs, coffee walks. Dinners are usually $20–35 per person. Price is always shown upfront so there's no surprises." },
-  { q:"Can I suggest my own event?", a:"Yes! Hit \"Post Event\" on the events page. Your idea goes to moderation and if it's a fit, it goes live. You don't need permission to have a good idea." },
-  { q:"Do I need Discord?", a:"Nope. You can browse events, RSVP, and show up using just the website. Discord is where the community hangs between events — last-minute plans, polls, voice chats. It's fun but not required." },
-  { q:"What if I RSVP and can't make it?", a:"Just cancel so someone else can grab the spot. Life happens. Just don't ghost repeatedly or we'll start taking it personally." },
-  { q:"What's the age range?", a:"Most members are mid-20s to mid-30s, but we don't have an age requirement. If you're looking for chill people to do stuff with in Denver, you'll fit in." },
-  { q:"I'm neurodivergent / have social anxiety — will I fit in?", a:"Yes. You can be quiet, leave early, skip the small talk, or ask a million questions — all fine. A lot of us are awkward. That's kind of the point. More on our safety page at /conduct." },
-  { q:"I live in the suburbs — is this just a downtown thing?", a:"Nope. We've got members in Lakewood, Aurora, Golden, Arvada, Littleton — all over. Events happen across the metro. We try to mix up locations so it's not always the same neighborhood." },
+  { q: "Is this actually free?", a: "Yep. No fees, no premium tier, no upsell." },
+  { q: "I don't know anyone — is that weird?", a: "Most people show up solo. Groups are capped at 6–12 so you actually meet everyone." },
+  { q: "Is it safe? What about creeps?", a: "Locations stay hidden until you RSVP, every event has a host, and we remove anyone who makes others uncomfortable. More on our /conduct page." },
+  { q: "How much does an event cost?", a: "Some are free (hikes, park hangs, coffee). Dinners run $20–35 a head. Price is always shown upfront." },
+  { q: "Can I post my own event?", a: "Yes — hit \"Plan an event\" from /events. You don't need permission to have a good idea." },
+  { q: "What if I RSVP and can't make it?", a: "Just cancel so someone else can grab the spot. Life happens — don't ghost repeatedly." },
 ];
 const content = await getContent();
 ---
@@ -87,15 +82,9 @@ const content = await getContent();
       </div>
     </div>
     <div class="about-story-body">
-      <h2>Real talk</h2>
-      <p>I moved to Denver and realized I had zero friends here. Like, none. My social life was me and my couch watching the same Netflix show for the third time.</p>
-      <p>Every time I tried to fix it, it sucked — bars were too loud, meetup groups had 400 people standing around awkwardly, and bumble BFF felt like a job interview. "So... what do you do for fun?" Please stop.</p>
-      <p>All I wanted was a few people to grab dinner with on a Tuesday. That's it. Not a cult. Not a networking event. Just dinner.</p>
-      <h2>So I just... started inviting people</h2>
-      <p>I booked a table for 8 at a random restaurant in RiNo and posted it. Strangers showed up. Nobody was weird about it. Well — one guy talked about his kombucha business for 20 minutes, but we survived.</p>
-      <p>People kept asking "when's the next one?" — so I kept doing it. Then we added bowling (I'm terrible). Then hikes. Then pottery (surprisingly fun, shockingly messy). Now there's like 80+ of us and it still feels small because we cap every event at 12 people.</p>
-      <h2>The only rules</h2>
-      <p>Don't be a creep. Show up if you say you will. Don't try to sell anyone crypto at the dinner table. That's basically it. Everyone's welcome and everyone's here at their own risk — same as any meetup. Just don't ruin it for other people and we're good.</p>
+      <p>I moved to Denver and had zero friends here. Bars were too loud, meetup groups had 400 people standing around awkwardly, and bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
+      <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking "when's the next one?" — so we kept going. Bowling, hikes, pottery, game nights. There's 80+ of us now and it still feels small because every event is capped at 12.</p>
+      <p>The only rules: don't be a creep, show up if you say you will, don't pitch crypto at dinner. That's it.</p>
     </div>
   </section>
 
@@ -161,56 +150,6 @@ const content = await getContent();
         <div class="about-step-text">
           <h3>Actually show up</h3>
           <p>That's the whole thing. You walk in, there's 8 people at a table, and within 20 minutes you're laughing about something dumb. No icebreakers. No name tags.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- TRUST -->
-  <section class="about-trust">
-    <div class="about-section-tag">The vibe</div>
-    <h2 class="about-section-h2">How we <em>roll.</em></h2>
-    <div class="about-trust-grid">
-      <div class="about-trust-item">
-        <div class="about-trust-icon">✓</div>
-        <div>
-          <strong>Open to everyone</strong>
-          <p>No application, no gatekeeping. All ages, backgrounds, and neighborhoods across the Denver metro.</p>
-        </div>
-      </div>
-      <div class="about-trust-item">
-        <div class="about-trust-icon">✓</div>
-        <div>
-          <strong>Intentionally small</strong>
-          <p>6–12 people max. Small enough that you actually talk to people instead of standing in a crowd.</p>
-        </div>
-      </div>
-      <div class="about-trust-item">
-        <div class="about-trust-icon shield">🛡️</div>
-        <div>
-          <strong>We look out for each other</strong>
-          <p>Locations hidden until RSVP. If someone makes you uncomfortable, they're gone. <a href="/conduct" class="about-trust-link">Safety details →</a></p>
-        </div>
-      </div>
-      <div class="about-trust-item">
-        <div class="about-trust-icon">✓</div>
-        <div>
-          <strong>No pressure</strong>
-          <p>Try one event, try ten. No commitment, no guilt. Plenty of sober-friendly events too — not everything's at a bar.</p>
-        </div>
-      </div>
-      <div class="about-trust-item">
-        <div class="about-trust-icon">✓</div>
-        <div>
-          <strong>Your privacy matters</strong>
-          <p>Your email is never shown to other members. Only your first name and neighborhood are visible. We don't sell data — we don't even collect much.</p>
-        </div>
-      </div>
-      <div class="about-trust-item">
-        <div class="about-trust-icon">✓</div>
-        <div>
-          <strong>You can host too</strong>
-          <p>Suggest an event idea from the events page. If it's a fit, we'll make it happen. This is your community, not just ours.</p>
         </div>
       </div>
     </div>
