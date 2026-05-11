@@ -64,17 +64,50 @@ const errorMsg = errorParam ? (errorMessages[errorParam] || "Something went wron
         </div>
       )}
 
-      <a href={`/api/auth/reddit?next=${encodeURIComponent(next)}`} class="reddit-btn">
-        <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true">
-          <path d="M10 0C4.478 0 0 4.478 0 10c0 5.522 4.478 10 10 10s10-4.478 10-10C20 4.478 15.522 0 10 0zm5.8 11.6c.04.2.06.4.06.6 0 2.94-3.42 5.32-7.64 5.32S.58 15.14.58 12.2c0-.22.02-.44.06-.64a1.44 1.44 0 01-.58-1.16c0-.8.64-1.44 1.44-1.44.38 0 .72.14.98.38 1.3-.92 3.1-1.52 5.1-1.58l.98-4.56c.02-.1.08-.18.16-.22.08-.04.18-.06.28-.04l3.24.68c.18-.38.56-.64 1-.64.62 0 1.12.5 1.12 1.12s-.5 1.12-1.12 1.12-1.12-.5-1.12-1.12l-2.9-.6-.86 4.06c1.94.08 3.68.68 4.94 1.56.26-.22.6-.36.96-.36.8 0 1.44.64 1.44 1.44 0 .48-.24.9-.6 1.16zM6.6 11.2c-.62 0-1.12.5-1.12 1.12s.5 1.12 1.12 1.12 1.12-.5 1.12-1.12-.5-1.12-1.12-1.12zm6.8 0c-.62 0-1.12.5-1.12 1.12s.5 1.12 1.12 1.12 1.12-.5 1.12-1.12-.5-1.12-1.12-1.12zm-6.34 3.56c-.12-.12-.12-.32 0-.44s.32-.12.44 0c.58.58 1.52.86 2.5.86s1.92-.28 2.5-.86c.12-.12.32-.12.44 0s.12.32 0 .44c-.7.7-1.78 1.04-2.94 1.04s-2.24-.34-2.94-1.04z"/>
-        </svg>
-        <span>Continue with Reddit</span>
-      </a>
+      <div class="auth-methods">
+        <a href={`/api/auth/reddit?next=${encodeURIComponent(next)}`} class="oauth-btn oauth-reddit">
+          <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
+            <path d="M10 0C4.478 0 0 4.478 0 10c0 5.522 4.478 10 10 10s10-4.478 10-10C20 4.478 15.522 0 10 0zm5.8 11.6c.04.2.06.4.06.6 0 2.94-3.42 5.32-7.64 5.32S.58 15.14.58 12.2c0-.22.02-.44.06-.64a1.44 1.44 0 01-.58-1.16c0-.8.64-1.44 1.44-1.44.38 0 .72.14.98.38 1.3-.92 3.1-1.52 5.1-1.58l.98-4.56c.02-.1.08-.18.16-.22.08-.04.18-.06.28-.04l3.24.68c.18-.38.56-.64 1-.64.62 0 1.12.5 1.12 1.12s-.5 1.12-1.12 1.12-1.12-.5-1.12-1.12l-2.9-.6-.86 4.06c1.94.08 3.68.68 4.94 1.56.26-.22.6-.36.96-.36.8 0 1.44.64 1.44 1.44 0 .48-.24.9-.6 1.16zM6.6 11.2c-.62 0-1.12.5-1.12 1.12s.5 1.12 1.12 1.12 1.12-.5 1.12-1.12-.5-1.12-1.12-1.12zm6.8 0c-.62 0-1.12.5-1.12 1.12s.5 1.12 1.12 1.12 1.12-.5 1.12-1.12-.5-1.12-1.12-1.12zm-6.34 3.56c-.12-.12-.12-.32 0-.44s.32-.12.44 0c.58.58 1.52.86 2.5.86s1.92-.28 2.5-.86c.12-.12.32-.12.44 0s.12.32 0 .44c-.7.7-1.78 1.04-2.94 1.04s-2.24-.34-2.94-1.04z"/>
+          </svg>
+          <span>Continue with Reddit</span>
+        </a>
+
+        <a href={`/api/auth/discord?next=${encodeURIComponent(next)}`} class="oauth-btn oauth-discord">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+            <path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.07.07 0 0 0-.073.035c-.21.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.65 12.65 0 0 0-.617-1.249.077.077 0 0 0-.073-.035A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+          </svg>
+          <span>Continue with Discord</span>
+        </a>
+
+        <div class="auth-divider"><span>or</span></div>
+
+        <button type="button" class="oauth-btn oauth-email" id="email-toggle">
+          <span aria-hidden="true">✉</span>
+          <span>Continue with email</span>
+        </button>
+
+        <div class="email-form" id="email-form" hidden>
+          <div id="email-step-1">
+            <label class="email-label">Email</label>
+            <input type="email" id="email-input" placeholder="you@example.com" class="email-input" autocomplete="email"/>
+            <button type="button" class="btn-cta email-send-btn" id="email-send-btn">Send me a code</button>
+            <div class="email-err" id="email-send-err"></div>
+          </div>
+          <div id="email-step-2" hidden>
+            <div class="email-sent">Code sent to <strong id="email-sent-to"></strong></div>
+            <label class="email-label">6-digit code</label>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="email-code" placeholder="••••••" class="email-input email-code-input" autocomplete="one-time-code"/>
+            <button type="button" class="btn-cta email-send-btn" id="email-verify-btn">Sign in</button>
+            <button type="button" class="email-back" id="email-back">← Use a different email</button>
+            <div class="email-err" id="email-verify-err"></div>
+          </div>
+        </div>
+      </div>
 
       <ul class="auth-perks">
         <li><span class="auth-perk-icon">✓</span> Takes about 10 seconds</li>
-        <li><span class="auth-perk-icon">✓</span> Read-only — we never post for you</li>
-        <li><span class="auth-perk-icon">✓</span> Your karma is your trust score</li>
+        <li><span class="auth-perk-icon">✓</span> We never post anywhere for you</li>
+        <li><span class="auth-perk-icon">✓</span> Reddit karma is used as a trust score for some events</li>
       </ul>
 
       {(memberCount > 0 || eventCount > 0) && (
@@ -142,22 +175,73 @@ const errorMsg = errorParam ? (errorMessages[errorParam] || "Something went wron
       background: var(--red); flex-shrink: 0;
     }
 
-    .reddit-btn {
+    .auth-methods { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-2); }
+    .oauth-btn {
       display: inline-flex; align-items: center; justify-content: center; gap: 10px;
       width: 100%;
-      padding: 14px 22px;
-      background: #FF4500; /* Reddit orange — kept on purpose */
-      color: #fff;
+      padding: 13px 20px;
       border-radius: var(--radius-pill);
       font-family: var(--font);
       font-size: 15px;
       font-weight: 600;
       text-decoration: none;
-      box-shadow: 0 1px 3px rgba(255,69,0,0.22);
+      border: none; cursor: pointer;
       transition: all 0.15s;
     }
-    .reddit-btn:hover { box-shadow: 0 6px 18px rgba(255,69,0,0.32); transform: translateY(-1px); }
-    .reddit-btn:active { transform: translateY(0); box-shadow: 0 1px 3px rgba(255,69,0,0.22); }
+    .oauth-reddit { background: #FF4500; color: #fff; box-shadow: 0 1px 3px rgba(255,69,0,0.22); }
+    .oauth-reddit:hover { box-shadow: 0 6px 18px rgba(255,69,0,0.32); transform: translateY(-1px); }
+    .oauth-discord { background: #5865F2; color: #fff; box-shadow: 0 1px 3px rgba(88,101,242,0.22); }
+    .oauth-discord:hover { box-shadow: 0 6px 18px rgba(88,101,242,0.32); transform: translateY(-1px); }
+    .oauth-email { background: var(--bg); color: var(--text); border: 1px solid var(--border); font-family: var(--font); }
+    .oauth-email:hover { border-color: var(--border-hover); background: var(--surface); }
+    .oauth-btn:active { transform: translateY(0); }
+
+    .auth-divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 4px 0;
+      font-size: 11px; color: var(--text-faint);
+      text-transform: uppercase; letter-spacing: 1.5px;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    .email-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-4);
+      margin-top: var(--space-2);
+      text-align: left;
+    }
+    .email-form[hidden] { display: none; }
+    .email-label {
+      display: block; font-size: 11px; font-weight: 700;
+      color: var(--text-sec); margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .email-input {
+      width: 100%; padding: 11px 13px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; font-size: 14px; color: var(--text);
+      font-family: var(--font); outline: none;
+      margin-bottom: 10px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .email-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .email-code-input { text-align: center; font-size: 22px; letter-spacing: 8px; font-weight: 600; }
+    .email-send-btn { width: 100%; padding: 12px; font-size: 14px; }
+    .email-sent { font-size: 13px; color: var(--text-sec); margin-bottom: 12px; text-align: center; }
+    .email-sent strong { color: var(--text); }
+    .email-back {
+      display: block; margin: 10px auto 0;
+      background: none; border: none; cursor: pointer;
+      font-size: 12px; color: var(--text-sec); font-family: var(--font);
+      text-decoration: underline; text-underline-offset: 3px;
+    }
+    .email-back:hover { color: var(--text); }
+    .email-err { font-size: 13px; color: var(--red); margin-top: 8px; display: none; }
+    .email-err.show { display: block; }
 
     .auth-perks {
       list-style: none; padding: 0;
@@ -222,4 +306,78 @@ const errorMsg = errorParam ? (errorMessages[errorParam] || "Something went wron
     .admin-hint { font-size: 12px; color: var(--text-faint); margin-top: 10px; }
     .admin-hint a { color: var(--accent); font-weight: 600; }
   </style>
+
+  <script is:inline define:vars={{ nextUrl: next }}>
+    var toggleBtn = document.getElementById('email-toggle');
+    var emailForm = document.getElementById('email-form');
+    var step1 = document.getElementById('email-step-1');
+    var step2 = document.getElementById('email-step-2');
+
+    function showErr(id, msg) {
+      var el = document.getElementById(id);
+      el.textContent = msg; el.classList.add('show');
+    }
+    function clearErr(id) {
+      var el = document.getElementById(id);
+      el.textContent = ''; el.classList.remove('show');
+    }
+
+    toggleBtn.addEventListener('click', function() {
+      emailForm.hidden = !emailForm.hidden;
+      if (!emailForm.hidden) document.getElementById('email-input').focus();
+    });
+
+    document.getElementById('email-back').addEventListener('click', function() {
+      step2.hidden = true; step1.hidden = false;
+      clearErr('email-send-err'); clearErr('email-verify-err');
+      document.getElementById('email-input').focus();
+    });
+
+    async function sendCode() {
+      var email = document.getElementById('email-input').value.trim();
+      if (!email || !email.includes('@')) { showErr('email-send-err', 'Enter a valid email.'); return; }
+      clearErr('email-send-err');
+      var btn = document.getElementById('email-send-btn');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        var res = await fetch('/api/auth/email-send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+        var data = await res.json();
+        if (!data.ok && data.error === 'email_not_configured') {
+          showErr('email-send-err', "Email sign-in isn't set up yet. Try Reddit or Discord.");
+          btn.disabled = false; btn.textContent = 'Send me a code'; return;
+        }
+        document.getElementById('email-sent-to').textContent = email;
+        step1.hidden = true; step2.hidden = false;
+        document.getElementById('email-code').focus();
+      } catch {
+        showErr('email-send-err', 'Could not send code. Try again.');
+      }
+      btn.disabled = false; btn.textContent = 'Send me a code';
+    }
+
+    async function verifyCode() {
+      var email = document.getElementById('email-input').value.trim();
+      var code = document.getElementById('email-code').value.trim();
+      if (!/^\d{6}$/.test(code)) { showErr('email-verify-err', 'Enter the 6-digit code.'); return; }
+      clearErr('email-verify-err');
+      var btn = document.getElementById('email-verify-btn');
+      btn.disabled = true; btn.textContent = 'Signing in…';
+      try {
+        var res = await fetch('/api/auth/email-verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, code, next: nextUrl }) });
+        var data = await res.json();
+        if (data.ok) { location.href = data.redirect || '/events'; return; }
+        if (data.error === 'wrong_code') showErr('email-verify-err', 'Wrong code. Try again.');
+        else if (data.error === 'expired') showErr('email-verify-err', 'Code expired — send a new one.');
+        else showErr('email-verify-err', 'Sign-in failed.');
+      } catch {
+        showErr('email-verify-err', 'Sign-in failed. Try again.');
+      }
+      btn.disabled = false; btn.textContent = 'Sign in';
+    }
+
+    document.getElementById('email-send-btn').addEventListener('click', sendCode);
+    document.getElementById('email-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') sendCode(); });
+    document.getElementById('email-verify-btn').addEventListener('click', verifyCode);
+    document.getElementById('email-code').addEventListener('keydown', function(e) { if (e.key === 'Enter') verifyCode(); });
+  </script>
 </Base>
