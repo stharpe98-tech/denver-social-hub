@@ -519,6 +519,20 @@ slots.forEach((s:any) => {
     document.getElementById('share-fb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
 
     // Tappable item rows — open inline form
+    // Defense-in-depth toggle for the category dropdowns: some browsers
+    // (older Safari, embedded webviews) won't fire the native <details>
+    // toggle when summary has flex children. This JS guarantees a tap
+    // anywhere in the summary toggles the parent details element.
+    document.querySelectorAll('details.cat-block > summary').forEach(function(s) {
+      s.addEventListener('click', function(e) {
+        var d = s.parentElement;
+        if (!d) return;
+        e.preventDefault();
+        if (d.hasAttribute('open')) d.removeAttribute('open');
+        else d.setAttribute('open', '');
+      });
+    });
+
     document.querySelectorAll('.item[data-id]').forEach(function(row) {
       row.addEventListener('click', function() {
         var id = row.dataset.id;
@@ -527,7 +541,8 @@ slots.forEach((s:any) => {
         var form = document.getElementById('form-' + id);
         if (form) {
           form.classList.add('open'); form.classList.remove('hidden');
-          document.getElementById('name-' + id).focus();
+          var firstInput = document.getElementById('first-' + id);
+          if (firstInput) firstInput.focus();
           form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       });
