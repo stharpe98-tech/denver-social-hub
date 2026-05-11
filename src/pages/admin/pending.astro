@@ -29,7 +29,7 @@ if (!session) return Astro.redirect('/admin/login');
       <div class="icon">⏳</div>
       <h1>Pending approval</h1>
       <p>Your account is registered, but potluck admin access requires approval from the site owner.</p>
-      <p>Reach out to <a href="mailto:stharpe98@gmail.com">stharpe98@gmail.com</a> to request access.</p>
+      <p><a href="/contact">Send us a message</a> to request access.</p>
       <div class="email">Signed in as <strong>{session.email}</strong></div>
       <button class="signout" id="signout">Sign out</button>
     </div>

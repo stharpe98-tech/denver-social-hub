@@ -56,7 +56,7 @@ if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'
         <div class="al-field"><label>Email</label><input type="email" id="r-email" autocomplete="email" placeholder="you@example.com"/></div>
         <div class="al-field"><label>Password</label><input type="password" id="r-pass" autocomplete="new-password" placeholder="Choose a password"/></div>
         <button class="btn-cta al-pw-btn" id="register-btn">Create account</button>
-        <div class="al-hint">Access to the potluck admin requires manual approval — once you register, ping stharpe98@gmail.com.</div>
+        <div class="al-hint">Access to the potluck admin requires manual approval — once you register, <a href="/contact" style="color:var(--accent)">contact us</a> to request access.</div>
         <div class="al-err" id="r-err"></div>
       </details>
     </div>
