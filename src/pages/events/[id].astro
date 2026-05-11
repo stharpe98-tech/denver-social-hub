@@ -19,7 +19,7 @@ let myWaitlist = false;
 try {
   if (db && id) {
     event = await db.prepare("SELECT * FROM events WHERE id=?").bind(id).first();
-    const r = await db.prepare("SELECT r.*, m.reddit_username, m.karma, m.reliability_score, m.check_in_count FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL ORDER BY r.created_at").bind(id).all();
+    const r = await db.prepare("SELECT r.*, m.reddit_username, m.karma, m.reliability_score, m.check_in_count FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL AND (r.status IS NULL OR r.status != 'not_going') ORDER BY r.created_at").bind(id).all();
     rsvps = r?.results || [];
     const w = await db.prepare("SELECT r.*, m.reddit_username, m.karma FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NOT NULL ORDER BY r.waitlist_position").bind(id).all();
     waitlist = w?.results || [];
@@ -167,11 +167,30 @@ if (mo && d !== '00') {
           <button type="submit" class="btn btn-ghost">join waitlist ({waitlist.length} ahead)</button>
         </form>
       ) : (
-        <form method="POST" action="/api/rsvp" style="display:inline">
-          <input type="hidden" name="event_id" value={id} />
-          <input type="hidden" name="action" value="rsvp" />
-          <button type="submit" class="btn btn-primary">rsvp — claim your spot</button>
-        </form>
+        <div class="rsvp-form-wrap" id="rsvp-form-wrap">
+          <button class="btn btn-primary" id="rsvp-expand-btn">rsvp — claim your spot</button>
+          <form id="rsvp-detail-form" class="rsvp-detail-form" style="display:none">
+            <input type="hidden" name="event_id" value={id} />
+
+            <div class="rsvp-field">
+              <label class="rsvp-label">Your name</label>
+              <input type="text" name="display_name" class="rsvp-input" placeholder="First name or nickname" required />
+            </div>
+
+            <div class="rsvp-field">
+              <label class="rsvp-label">How many (including you)?</label>
+              <select name="party_size" class="rsvp-select">
+                <option value="1">Just me</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5+</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full">Confirm RSVP</button>
+          </form>
+        </div>
       )}
     </div>
 
@@ -214,13 +233,29 @@ if (mo && d !== '00') {
         <div class="guest-list">
           {rsvps.map((r: any) => (
             <div class="guest">
-              <div class="guest-avatar">{(r.reddit_username || r.member_name || '?')[0].toUpperCase()}</div>
+              <div class="guest-avatar">{(r.member_name || r.reddit_username || '?')[0].toUpperCase()}</div>
               <div class="guest-info">
-                <span class="guest-name">{r.reddit_username ? `u/${r.reddit_username}` : r.member_name}</span>
-                {r.karma > 0 && <span class="guest-karma">{r.karma} karma</span>}
+                <span class="guest-name">
+                  {r.member_name || (r.reddit_username ? `u/${r.reddit_username}` : 'Guest')}
+                  {(r.party_size || 1) > 1 && <span class="guest-plus">+{(r.party_size || 1) - 1}</span>}
+                </span>
+                {(() => {
+                  // Show claimed items from bring_items table
+                  const claimed = bringItems.filter((bi: any) => bi.claimed_by_name === (r.member_name || r.reddit_username));
+                  if (claimed.length > 0) {
+                    return <span class="guest-bringing">bringing {claimed.map((bi: any) => bi.item_name).join(', ')}</span>;
+                  }
+                  // Fallback: legacy bringing field
+                  if (r.bringing) {
+                    try {
+                      const b = JSON.parse(r.bringing);
+                      const items = Array.isArray(b) ? b : Object.values(b).flat().filter(Boolean);
+                      return items.length > 0 ? <span class="guest-bringing">bringing {items.join(', ')}</span> : null;
+                    } catch { return <span class="guest-bringing">bringing {r.bringing}</span>; }
+                  }
+                  return null;
+                })()}
               </div>
-              {r.reliability_score > 0.7 && <span class="tag tag-green" style="font-size:10px">reliable</span>}
-              {r.checked_in && <span class="tag tag-blue" style="font-size:10px">checked in</span>}
             </div>
           ))}
         </div>
@@ -369,6 +404,22 @@ if (mo && d !== '00') {
   }
   .det-wl-pos { font-weight: 700; }
 
+  /* RSVP detail form */
+  .rsvp-detail-form {
+    margin-top: 12px;
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 16px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px;
+  }
+  .rsvp-field { display: flex; flex-direction: column; gap: 4px; }
+  .rsvp-label { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px; }
+  .rsvp-select, .rsvp-input {
+    padding: 10px 12px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 14px; outline: none;
+    transition: border-color .2s;
+  }
+  .rsvp-select:focus, .rsvp-input:focus { border-color: var(--accent); }
+
   /* Bring a Thing */
   .det-bring { }
   .bring-list { display: flex; flex-direction: column; gap: 6px; }
@@ -434,8 +485,11 @@ if (mo && d !== '00') {
     font-family: var(--mono); font-size: 12px; color: var(--text-faint);
     min-width: 28px; text-align: center;
   }
-  .guest-info { flex: 1; display: flex; flex-direction: column; }
-  .guest-name { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); }
+  .guest-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .guest-name { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .guest-plus { font-size: 11px; color: var(--accent); background: var(--accent-dim); padding: 1px 5px; border-radius: 3px; }
+  .guest-meta { font-size: 12px; color: var(--text-faint); }
+  .guest-bringing { display: block; font-size: 11px; color: var(--text-sec); line-height: 1.5; margin-top: 2px; }
   .guest-karma { font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
 
   /* Thread */
@@ -492,4 +546,44 @@ if (mo && d !== '00') {
       if (panel) panel.style.display = 'block';
     });
   });
+
+  // RSVP form expand + submit
+  (function() {
+    var expandBtn = document.getElementById('rsvp-expand-btn');
+    var form = document.getElementById('rsvp-detail-form');
+    if (!expandBtn || !form) return;
+
+    expandBtn.addEventListener('click', function() {
+      expandBtn.style.display = 'none';
+      form.style.display = 'flex';
+    });
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var fd = new FormData(form);
+      var body = {
+        event_id: fd.get('event_id'),
+        action: 'rsvp',
+        status: 'going',
+        party_size: fd.get('party_size'),
+        display_name: (fd.get('display_name') || '').trim(),
+        bringing: ''
+      };
+      try {
+        var res = await fetch('/api/rsvp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        var data = await res.json();
+        if (data.rsvped) {
+          window.location.reload();
+        } else if (data.error) {
+          alert(data.error);
+        }
+      } catch (err) {
+        alert('Something went wrong. Try again.');
+      }
+    });
+  })();
 </script>
