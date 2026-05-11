@@ -316,6 +316,8 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   .pk-guest-info { display: flex; flex-direction: column; min-width: 0; }
   .pk-guest-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; }
   .pk-guest-dish { font-size: 11px; color: var(--text-sec); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+  .pk-guest-plus { margin-left: auto; font-size: 12px; color: var(--accent); font-weight: 600; }
+  .pk-join-nudge { text-align: center; padding: var(--space-4); color: var(--text-sec); font-size: 14px; border: 1px dashed var(--border); border-radius: var(--radius); margin-top: var(--space-3); }
   .pk-empty { padding: var(--space-5); text-align: center; color: var(--text-faint); font-style: italic; }
 
   /* ── Manage RSVP section ───────────────────────────── */
@@ -438,8 +440,6 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   <!-- ── ACTIONS ────────────────────────────────────────── -->
   <div class="pk-actions" style="margin-top:var(--space-4)">
     <button class="pk-action-btn" id="copy-link">🔗 Copy link</button>
-    <a href={`/potlucks/${id}/poster`} class="pk-action-btn">🖼 Poster</a>
-    <a href={`/potlucks/manage/${id}`} class="pk-action-btn">⚙️ Manage</a>
   </div>
 
   <!-- ── RSVP CARD ──────────────────────────────────────── -->
@@ -453,11 +453,11 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
       <div class="pk-fields">
         <div class="pk-field">
           <label>First name *</label>
-          <input type="text" class="pk-input" id="f-first" placeholder="Jamie" autocomplete="given-name"/>
+          <input type="text" class="pk-input" id="f-first" placeholder="First name" autocomplete="given-name"/>
         </div>
         <div class="pk-field">
           <label>Last name <span class="opt">(optional)</span></label>
-          <input type="text" class="pk-input" id="f-last" placeholder="Doe" autocomplete="family-name"/>
+          <input type="text" class="pk-input" id="f-last" placeholder="Last initial" autocomplete="family-name"/>
         </div>
         <div class="pk-field">
           <label>Email <span class="opt">(for reminders)</span></label>
@@ -577,17 +577,22 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   {signups.length === 0 ? (
     <div class="pk-empty">Nobody's signed up yet — be the first!</div>
   ) : (
-    <div class="pk-guests-row">
-      {signups.filter((s: any) => parseInt(s.guest_count) > 0).map((s: any) => (
-        <div class="pk-guest">
-          <div class="pk-avatar">{(s.name || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</div>
-          <div class="pk-guest-info">
-            <div class="pk-guest-name">{(s.name || '').split(' ')[0]}{s.guest_count > 1 ? ` +${s.guest_count - 1}` : ''}</div>
-            {s.dish && <div class="pk-guest-dish">{s.dish}</div>}
+    <Fragment>
+      <div class="pk-guests-row">
+        {signups.map((s: any) => (
+          <div class="pk-guest">
+            <div class="pk-avatar">{(s.name || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</div>
+            <div class="pk-guest-info">
+              <div class="pk-guest-name">{(s.name || '').split(' ')[0]}{parseInt(s.guest_count) > 1 ? ` +${parseInt(s.guest_count) - 1}` : ''}</div>
+              {s.dish && <div class="pk-guest-dish">{s.dish}</div>}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+      {signups.length < 3 && (
+        <div class="pk-join-nudge">It's early — be one of the first to join!</div>
+      )}
+    </Fragment>
   )}
 </div>
 

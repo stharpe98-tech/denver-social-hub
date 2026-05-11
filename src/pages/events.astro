@@ -50,6 +50,16 @@ function fillPct(ev: any): number {
   const taken = rsvpCounts[ev.id] || 0;
   return Math.min(100, Math.round(taken / total * 100));
 }
+const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function fmtDate(ev: any): string {
+  const m = monthOrder[(ev.event_month || '').toUpperCase()];
+  const d = parseInt(ev.event_day) || 1;
+  if (m !== undefined) {
+    const dt = new Date(2026, m, d);
+    return `${dayNames[dt.getDay()]}, ${ev.event_month} ${ev.event_day}`;
+  }
+  return `${ev.event_month} ${ev.event_day}`;
+}
 ---
 <Base title="Browse Events">
 <div class="ev-page">
@@ -133,14 +143,14 @@ function fillPct(ev: any): number {
             <h3 class="ec-title">{ev.title}</h3>
             {ev.description && <p class="ec-desc">{ev.description.slice(0, 80)}</p>}
             <div class="ec-meta">
-              <span class="ec-date">{ev.event_month} {ev.event_day}</span>
+              <span class="ec-date">{fmtDate(ev)}</span>
               <span class="ec-dot"></span>
               <span>{ev.zone || ev.location || 'Denver'}</span>
             </div>
             <div class="ec-footer">
               <div class="ec-fill-wrap">
                 <div class="ec-fill-bar"><div class="ec-fill" style={`width:${fillPct(ev)}%`}></div></div>
-                <span class="ec-fill-text">{rsvpCounts[ev.id] || 0}/{ev.spots || 12}</span>
+                <span class="ec-fill-text">{rsvpCounts[ev.id] || 0} going</span>
               </div>
               {ev.host_name && <span class="ec-host">by {ev.host_name}</span>}
             </div>
