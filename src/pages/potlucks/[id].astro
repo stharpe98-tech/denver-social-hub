@@ -12,6 +12,8 @@ try {
   if (db && id) {
     potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(id).first();
     if (potluck?.locked) return Astro.redirect('/potlucks');
+
+    // Preset supply slots with claim counts
     const s = await db.prepare(`
       SELECT ps.id, ps.suggestion, ps.category, ps.sort_order, ps.max_claims,
         pr.name as claimed_by, pr.id as rsvp_id
@@ -22,36 +24,52 @@ try {
       ORDER BY ps.sort_order ASC
     `).bind(id).all();
     slots = s?.results ?? [];
+
+    // All sign-ups
     const r = await db.prepare(
-      `SELECT name, dish, guest_count FROM potluck_rsvp WHERE potluck_id=? AND rsvp='yes' ORDER BY created_at ASC`
+      `SELECT name, dish, dish_category, guest_count FROM potluck_rsvp WHERE potluck_id=? AND rsvp='yes' ORDER BY created_at ASC`
     ).bind(id).all();
     signups = r?.results ?? [];
   }
 } catch (e) { console.error(e); }
 if (!potluck) return Astro.redirect('/potlucks');
 
-const claimed = slots.filter((s: any) => s.claimed_by).length;
-const total = slots.length;
-const pct = total > 0 ? Math.round((claimed / total) * 100) : 0;
 const guestTotal = signups.reduce((sum: number, s: any) => sum + (parseInt(s.guest_count) || 1), 0);
+const bringingCount = signups.filter((s: any) => s.dish).length;
 
-// Group slots by category
-const groupedKeys: string[] = [];
-const grouped: Record<string, any[]> = {};
+// Separate supply slots (preset) from claimed status
+const slotNames = new Set(slots.map((s: any) => s.suggestion?.toLowerCase()));
+const supplyClaimed = slots.filter((s: any) => s.claimed_by).length;
+const supplyTotal = slots.length;
+
+// Group slots by category for display
+const slotGroupKeys: string[] = [];
+const slotGroups: Record<string, any[]> = {};
 for (const s of slots) {
-  const cat = s.category || 'Items';
-  if (!grouped[cat]) { grouped[cat] = []; groupedKeys.push(cat); }
-  grouped[cat].push(s);
+  const cat = s.category || 'Supplies';
+  if (!slotGroups[cat]) { slotGroups[cat] = []; slotGroupKeys.push(cat); }
+  slotGroups[cat].push(s);
 }
 
-// Unclaimed items for the picker
-const unclaimed = slots.filter((s: any) => !s.claimed_by);
+// Group food sign-ups by category (excluding supply slot claims)
+const foodCategories = ['Main Dishes', 'Sides & Salads', 'Desserts', 'Drinks', 'Snacks & Apps', 'Other'];
+const menuGroups: Record<string, any[]> = {};
+for (const s of signups) {
+  if (!s.dish) continue;
+  // Skip if this is a supply slot claim (already shown in supplies section)
+  if (slotNames.has(s.dish.toLowerCase())) continue;
+  const cat = s.dish_category || 'Other';
+  if (!menuGroups[cat]) menuGroups[cat] = [];
+  menuGroups[cat].push(s);
+}
+const menuKeys = foodCategories.filter(c => menuGroups[c]?.length > 0);
+const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.length, 0);
 ---
 <Base title={potluck.title} description={potluck.description ?? `Sign up for ${potluck.title}`}>
 
 <style>
   /* ── Layout ─────────────────────────────────────────── */
-  .pk { max-width: 600px; margin: 0 auto; padding: 0 var(--space-4) var(--space-8); }
+  .pk { max-width: 620px; margin: 0 auto; padding: 0 var(--space-4) var(--space-8); }
 
   /* ── Hero ────────────────────────────────────────────── */
   .pk-hero {
@@ -85,20 +103,20 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
     font-size: 15px; color: var(--text-sec); line-height: 1.6;
     max-width: 480px; margin: 0 auto;
   }
+  .pk-desc-detail { margin-top: 6px; font-size: 13px; }
 
-  /* ── Progress bar ───────────────────────────────────── */
-  .pk-prog { padding: var(--space-4) var(--space-4) 0; max-width: 600px; margin: 0 auto; }
-  .pk-prog-top {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 13px; color: var(--text-sec); margin-bottom: 6px;
+  /* ── Stats strip ────────────────────────────────────── */
+  .pk-stats {
+    display: flex; justify-content: center; gap: var(--space-5);
+    padding: var(--space-4) var(--space-4) 0;
+    max-width: 620px; margin: 0 auto;
   }
-  .pk-prog-top strong { color: var(--accent); font-weight: 700; }
-  .pk-prog-bar { height: 8px; background: var(--surface); border-radius: 4px; overflow: hidden; }
-  .pk-prog-fill {
-    height: 100%; border-radius: 4px;
-    background: linear-gradient(90deg, var(--accent), var(--green));
-    transition: width 0.6s ease;
+  .pk-stat { text-align: center; }
+  .pk-stat-num {
+    font-family: var(--font-display); font-size: 28px; font-weight: 800;
+    color: var(--accent);
   }
+  .pk-stat-label { font-size: 12px; color: var(--text-sec); margin-top: 2px; }
 
   /* ── RSVP card ──────────────────────────────────────── */
   .pk-rsvp {
@@ -122,7 +140,7 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
     color: var(--text); margin-bottom: var(--space-3);
   }
 
-  /* Step 1: info form */
+  /* Fields */
   .pk-fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-bottom: var(--space-3); }
   @media (max-width: 500px) { .pk-fields { grid-template-columns: 1fr; } }
   .pk-field label {
@@ -130,15 +148,16 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
     color: var(--text-sec); margin-bottom: 4px;
   }
   .pk-field label .opt { font-weight: 400; color: var(--text-faint); }
-  .pk-input {
+  .pk-input, .pk-select {
     width: 100%; padding: 11px 14px;
     background: var(--surface); border: 1.5px solid var(--border);
     border-radius: 10px; font-size: 15px; color: var(--text);
     font-family: var(--font); outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-  .pk-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .pk-input:focus, .pk-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
   .pk-input.invalid { border-color: #EF4444; }
+  .pk-select { appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
 
   .pk-guests {
     display: flex; align-items: center; gap: 8px;
@@ -156,7 +175,7 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
   .pk-guests .count { font-weight: 700; font-size: 16px; min-width: 24px; text-align: center; color: var(--text); }
   .pk-guests .note { font-size: 13px; color: var(--text-faint); }
 
-  /* CTA button */
+  /* CTA */
   .pk-cta {
     width: 100%; padding: 14px;
     border-radius: var(--radius-pill);
@@ -169,42 +188,52 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
   .pk-cta:hover { box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4); transform: translateY(-1px); }
   .pk-cta:active { transform: scale(0.98); }
   .pk-cta:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-  .pk-cta.loading { pointer-events: none; }
 
-  /* Step 2: item picker */
+  /* Step 2 */
   #step2 { display: none; }
   .pk-pick-intro { font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-3); line-height: 1.5; }
 
-  .pk-pick-cat {
-    font-size: 11px; font-weight: 700; color: var(--text-sec);
-    text-transform: uppercase; letter-spacing: 1.5px;
-    margin-top: var(--space-3); margin-bottom: var(--space-2);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .pk-pick-cat::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  /* Bring-a-dish row */
+  .pk-dish-row { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); }
+  .pk-dish-row .pk-select { flex: 0 0 160px; }
+  .pk-dish-row .pk-input { flex: 1; }
+  @media (max-width: 500px) { .pk-dish-row { flex-direction: column; } .pk-dish-row .pk-select { flex: none; } }
 
-  .pk-pick-item {
+  /* Supply claims */
+  .pk-supply-section { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+  .pk-supply-label {
+    font-size: 13px; font-weight: 700; color: var(--text-sec);
+    margin-bottom: var(--space-2); display: flex; align-items: center; gap: 6px;
+  }
+  .pk-supply-item {
     display: flex; align-items: center; gap: 12px;
-    padding: 12px 14px; margin-bottom: 6px;
+    padding: 10px 14px; margin-bottom: 6px;
     background: var(--surface); border: 1.5px solid var(--border);
     border-radius: 10px; cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
   }
-  .pk-pick-item:hover { border-color: var(--accent); background: var(--bg); }
-  .pk-pick-item input[type="checkbox"] {
+  .pk-supply-item:hover { border-color: var(--accent); background: var(--bg); }
+  .pk-supply-item.taken { opacity: 0.5; cursor: default; border-style: solid; }
+  .pk-supply-item.taken:hover { border-color: var(--border); background: var(--surface); }
+  .pk-supply-item input[type="checkbox"] {
     width: 18px; height: 18px; accent-color: var(--accent);
     cursor: pointer; flex-shrink: 0;
   }
-  .pk-pick-item span { font-size: 15px; color: var(--text); font-weight: 500; }
-
-  /* Custom dish input */
-  .pk-custom-row {
-    display: flex; gap: 8px; align-items: center;
-    margin-top: var(--space-3); margin-bottom: var(--space-3);
+  .pk-supply-item .name { font-size: 14px; color: var(--text); font-weight: 500; flex: 1; }
+  .pk-supply-item .who { font-size: 12px; color: var(--green); font-weight: 600; }
+  .pk-supply-item .badge {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; padding: 2px 8px; border-radius: 999px;
   }
-  .pk-custom-row input { flex: 1; }
-  .pk-custom-label { font-size: 13px; color: var(--text-sec); margin-bottom: 4px; font-weight: 600; }
+  .pk-supply-item .badge.open { color: var(--accent); background: var(--accent-dim); }
+  .pk-supply-item .badge.full { color: var(--text-faint); background: var(--surface-hover); }
+  .pk-supply-cat {
+    font-size: 11px; font-weight: 700; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    margin-top: var(--space-2); margin-bottom: var(--space-1);
+  }
 
+  /* Step 2 buttons */
   .pk-step2-btns { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
   .pk-skip {
     flex: 1; padding: 12px;
@@ -229,36 +258,46 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
   .pk-error { font-size: 13px; color: #EF4444; margin-top: var(--space-2); display: none; }
   .pk-error.show { display: block; }
 
-  /* ── Items list (view mode) ─────────────────────────── */
+  /* ── Section headings ──────────────────────────────── */
   .pk-section-title {
     font-family: var(--font-display); font-size: 18px; font-weight: 700;
     color: var(--text); margin-bottom: var(--space-3);
     padding-bottom: var(--space-2);
     border-bottom: 2px solid var(--surface);
   }
-  .pk-cat-label {
+
+  /* ── Menu (what people are bringing) ───────────────── */
+  .pk-menu-cat {
     font-size: 11px; font-weight: 700; color: var(--text-faint);
     text-transform: uppercase; letter-spacing: 1.5px;
     margin-top: var(--space-3); margin-bottom: var(--space-2);
+    display: flex; align-items: center; gap: 8px;
   }
+  .pk-menu-cat::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .pk-menu-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; margin-bottom: 6px;
+    background: rgba(16, 185, 129, 0.04);
+    border: 1px solid rgba(16, 185, 129, 0.12);
+    border-radius: 10px;
+  }
+  .pk-menu-dish { flex: 1; font-size: 15px; font-weight: 500; color: var(--text); }
+  .pk-menu-by { font-size: 13px; color: var(--green); font-weight: 600; }
 
+  /* ── Supplies list (view) ──────────────────────────── */
   .pk-slot {
     display: flex; align-items: center; gap: 12px;
-    padding: 12px 14px; margin-bottom: 6px;
+    padding: 10px 14px; margin-bottom: 6px;
     border-radius: 10px;
-    transition: background 0.15s;
   }
   .pk-slot.open {
     background: var(--surface); border: 1.5px dashed var(--border);
-    cursor: pointer;
   }
-  .pk-slot.open:hover { border-color: var(--accent); border-style: solid; }
   .pk-slot.taken {
-    background: rgba(16, 185, 129, 0.06);
-    border: 1.5px solid rgba(16, 185, 129, 0.2);
+    background: rgba(16, 185, 129, 0.04);
+    border: 1px solid rgba(16, 185, 129, 0.12);
   }
-  .pk-slot-icon { font-size: 18px; flex-shrink: 0; }
-  .pk-slot-name { flex: 1; font-size: 15px; font-weight: 500; color: var(--text); }
+  .pk-slot-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text); }
   .pk-slot-who { font-size: 13px; color: var(--green); font-weight: 600; }
   .pk-slot-badge {
     font-size: 11px; font-weight: 700; color: var(--accent);
@@ -358,16 +397,25 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
     {potluck.location && <span>📍 {potluck.location}</span>}
   </div>
   {potluck.description && <p class="pk-desc">{potluck.description}</p>}
-  {potluck.location_detail && <p class="pk-desc" style="margin-top:6px; font-size:13px;">{potluck.location_detail}</p>}
+  {potluck.location_detail && <p class="pk-desc pk-desc-detail">{potluck.location_detail}</p>}
 </section>
 
-<!-- ── PROGRESS ────────────────────────────────────────── -->
-<div class="pk-prog">
-  <div class="pk-prog-top">
-    <span><strong>{claimed}</strong> of {total} items claimed</span>
-    <span>{guestTotal} {guestTotal === 1 ? 'person' : 'people'} coming</span>
+<!-- ── STATS ──────────────────────────────────────────── -->
+<div class="pk-stats">
+  <div class="pk-stat">
+    <div class="pk-stat-num">{guestTotal}</div>
+    <div class="pk-stat-label">{guestTotal === 1 ? 'person' : 'people'} coming</div>
   </div>
-  <div class="pk-prog-bar"><div class="pk-prog-fill" style={`width:${pct}%`}></div></div>
+  <div class="pk-stat">
+    <div class="pk-stat-num">{bringingCount}</div>
+    <div class="pk-stat-label">bringing food</div>
+  </div>
+  {supplyTotal > 0 && (
+    <div class="pk-stat">
+      <div class="pk-stat-num">{supplyClaimed}/{supplyTotal}</div>
+      <div class="pk-stat-label">supplies claimed</div>
+    </div>
+  )}
 </div>
 
 <div class="pk">
@@ -416,69 +464,115 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
       <div class="pk-error" id="step1-err"></div>
     </div>
 
-    <!-- STEP 2: Pick what to bring -->
+    <!-- STEP 2: What are you bringing? -->
     <div id="step2">
       <div class="pk-step-label">Step 2</div>
-      <div class="pk-step-title">What can you bring? 🥘</div>
-      <p class="pk-pick-intro">Pick from the list or add your own — every bit helps!</p>
+      <div class="pk-step-title">What are you bringing? 🥘</div>
+      <p class="pk-pick-intro">Pick a category and tell us what you're making — or skip if you're just showing up!</p>
 
-      {groupedKeys.map((cat) => {
-        const items = grouped[cat].filter((i: any) => !i.claimed_by);
-        if (items.length === 0) return null;
-        return (
-          <>
-            <div class="pk-pick-cat"><span>{cat}</span></div>
-            {items.map((item: any) => (
-              <label class="pk-pick-item">
-                <input type="checkbox" value={item.suggestion} data-slot-id={item.id} />
-                <span>{item.suggestion}</span>
-              </label>
-            ))}
-          </>
-        );
-      })}
-
-      <div class="pk-custom-label" style="margin-top:var(--space-4)">Or add your own:</div>
-      <div class="pk-custom-row">
-        <input type="text" class="pk-input" id="f-custom-dish" placeholder="e.g. Cornbread, fruit punch…"/>
+      <!-- Category + dish input -->
+      <div class="pk-dish-row">
+        <select class="pk-select" id="f-category">
+          <option value="">Category…</option>
+          <option value="Main Dishes">🍖 Main Dishes</option>
+          <option value="Sides & Salads">🥗 Sides & Salads</option>
+          <option value="Desserts">🍰 Desserts</option>
+          <option value="Drinks">🥤 Drinks</option>
+          <option value="Snacks & Apps">🧀 Snacks & Apps</option>
+          <option value="Other">🎁 Other</option>
+        </select>
+        <input type="text" class="pk-input" id="f-dish" placeholder="e.g. Grandma's mac & cheese"/>
       </div>
 
+      <!-- Supply slots (if any exist) -->
+      {supplyTotal > 0 && (
+        <div class="pk-supply-section">
+          <div class="pk-supply-label">📦 Supplies & essentials needed</div>
+          {slotGroupKeys.map((cat) => {
+            const items = slotGroups[cat];
+            return (
+              <>
+                {slotGroupKeys.length > 1 && <div class="pk-supply-cat">{cat}</div>}
+                {items.map((item: any) => {
+                  const isTaken = !!item.claimed_by;
+                  return (
+                    <label class={`pk-supply-item ${isTaken ? 'taken' : ''}`}>
+                      <input type="checkbox" value={item.suggestion} data-slot="true"
+                        disabled={isTaken} />
+                      <span class="name">{item.suggestion}</span>
+                      {isTaken
+                        ? <span class="who">{item.claimed_by}</span>
+                        : <span class="badge open">Needed</span>
+                      }
+                    </label>
+                  );
+                })}
+              </>
+            );
+          })}
+        </div>
+      )}
+
       <div class="pk-step2-btns">
-        <button class="pk-skip" id="skip-btn">Skip for now</button>
-        <button class="pk-save" id="save-btn">Save my picks 🎉</button>
+        <button class="pk-skip" id="skip-btn">Just showing up</button>
+        <button class="pk-save" id="save-btn">Save & sign up 🎉</button>
       </div>
       <div class="pk-error" id="step2-err"></div>
     </div>
   </div>
 
-  <!-- ── WHAT'S NEEDED (full list) ──────────────────────── -->
-  <div class="pk-section-title">What's needed ({claimed}/{total} claimed)</div>
-  {groupedKeys.length === 0 ? (
-    <div class="pk-empty">No items listed yet — check back soon.</div>
-  ) : groupedKeys.map((cat) => {
-    const items = grouped[cat];
+  <!-- ── ON THE MENU (food write-ins) ─────────────────── -->
+  <div class="pk-section-title">On the menu ({menuTotal} {menuTotal === 1 ? 'dish' : 'dishes'})</div>
+  {menuTotal === 0 ? (
+    <div class="pk-empty">No dishes yet — sign up and be the first to add something!</div>
+  ) : menuKeys.map((cat) => {
+    const items = menuGroups[cat];
+    const emoji: Record<string, string> = { 'Main Dishes': '🍖', 'Sides & Salads': '🥗', 'Desserts': '🍰', 'Drinks': '🥤', 'Snacks & Apps': '🧀', 'Other': '🎁' };
     return (
       <>
-        <div class="pk-cat-label">{cat}</div>
-        {items.map((item: any) => item.claimed_by ? (
-          <div class="pk-slot taken">
-            <span class="pk-slot-icon">✅</span>
-            <span class="pk-slot-name">{item.suggestion}</span>
-            <span class="pk-slot-who">{item.claimed_by}</span>
-          </div>
-        ) : (
-          <div class="pk-slot open" data-scroll-signup="true">
-            <span class="pk-slot-icon">🔲</span>
-            <span class="pk-slot-name">{item.suggestion}</span>
-            <span class="pk-slot-badge">Open</span>
+        <div class="pk-menu-cat"><span>{emoji[cat] || '🍽️'} {cat}</span></div>
+        {items.map((item: any) => (
+          <div class="pk-menu-item">
+            <span class="pk-menu-dish">{item.dish}</span>
+            <span class="pk-menu-by">{item.name}</span>
           </div>
         ))}
       </>
     );
   })}
 
+  <!-- ── SUPPLIES STATUS ─────────────────────────────── -->
+  {supplyTotal > 0 && (
+    <>
+      <div class="pk-section-title" style="margin-top:var(--space-6)">
+        Supplies ({supplyClaimed}/{supplyTotal} claimed)
+      </div>
+      {slotGroupKeys.map((cat) => {
+        const items = slotGroups[cat];
+        return (
+          <>
+            {slotGroupKeys.length > 1 && <div class="pk-menu-cat"><span>{cat}</span></div>}
+            {items.map((item: any) => item.claimed_by ? (
+              <div class="pk-slot taken">
+                <span style="font-size:16px">✅</span>
+                <span class="pk-slot-name">{item.suggestion}</span>
+                <span class="pk-slot-who">{item.claimed_by}</span>
+              </div>
+            ) : (
+              <div class="pk-slot open">
+                <span style="font-size:16px">⬜</span>
+                <span class="pk-slot-name">{item.suggestion}</span>
+                <span class="pk-slot-badge">Needed</span>
+              </div>
+            ))}
+          </>
+        );
+      })}
+    </>
+  )}
+
   <!-- ── WHO'S COMING ─────────────────────────────────── -->
-  <div class="pk-section-title" style="margin-top:var(--space-6)">Who's coming ({signups.length})</div>
+  <div class="pk-section-title" style="margin-top:var(--space-6)">Who's coming ({guestTotal})</div>
   {signups.length === 0 ? (
     <div class="pk-empty">Nobody's signed up yet — be the first!</div>
   ) : signups.map((s: any) => (
@@ -539,7 +633,7 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
     $('g-note').textContent = guestNote(guestCount);
   });
 
-  // ── Step 1: Validate and show Step 2 ─────────────────
+  // ── Step 1 → Step 2 ─────────────────────────────────
   $('step1-btn').addEventListener('click', function () {
     var first = val('f-first');
     if (!first) {
@@ -548,51 +642,57 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
       return;
     }
     $('f-first').classList.remove('invalid');
-
-    // Hide step 1, show step 2
     $('step1').style.display = 'none';
     $('step2').style.display = 'block';
     $('rsvp-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
-  // ── Step 2: Skip (submit with no dish) ───────────────
+  // ── Skip → submit with no dish ──────────────────────
   $('skip-btn').addEventListener('click', function () {
-    submitRsvp('');
+    submitRsvp('', '', []);
   });
 
-  // ── Step 2: Save picks ───────────────────────────────
+  // ── Save picks ──────────────────────────────────────
   $('save-btn').addEventListener('click', function () {
-    // Gather checked items
-    var checked = document.querySelectorAll('#step2 input[type="checkbox"]:checked');
-    var dishes = [];
-    checked.forEach(function (cb) { dishes.push(cb.value); });
+    var dish = val('f-dish');
+    var category = val('f-category');
 
-    // Custom dish
-    var custom = val('f-custom-dish');
-    if (custom) dishes.push(custom);
+    // Gather checked supply slots
+    var supplyChecks = document.querySelectorAll('#step2 input[data-slot]:checked');
+    var supplies = [];
+    supplyChecks.forEach(function (cb) { supplies.push(cb.value); });
 
-    if (dishes.length === 0) {
-      // Nothing selected? Submit with no dish
-      submitRsvp('');
+    // If they typed a dish but didn't pick a category, nudge them
+    if (dish && !category) {
+      $('f-category').style.borderColor = '#EF4444';
+      $('f-category').focus();
+      return;
+    }
+    $('f-category').style.borderColor = '';
+
+    // Nothing at all? Submit with no dish
+    if (!dish && supplies.length === 0) {
+      submitRsvp('', '', []);
       return;
     }
 
-    // Submit first dish as primary, then additional claims
-    submitRsvp(dishes[0], dishes.slice(1));
+    submitRsvp(dish, category, supplies);
   });
 
   // ── Submit to API ────────────────────────────────────
-  function submitRsvp(dish, extraDishes) {
-    var btn = dish ? $('save-btn') : $('skip-btn');
+  function submitRsvp(dish, dishCategory, supplies) {
+    var btn = $('save-btn');
     var errId = 'step2-err';
     var origText = btn.textContent;
     btn.disabled = true;
+    $('skip-btn').disabled = true;
     btn.textContent = 'Saving…';
 
     var first = val('f-first');
     var last = val('f-last');
     var name = last ? first + ' ' + last : first;
 
+    // Primary RSVP (with food dish or empty)
     fetch('/api/potluck', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -601,36 +701,32 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
         name: name,
         email: val('f-email'),
         phone: val('f-phone'),
-        handle: '',
-        platforms: '',
+        handle: '', platforms: '',
         rsvp: 'yes',
         guestCount: String(guestCount),
         dish: dish || '',
-        dishCategory: '',
-        dietary: '',
-        notes: '',
-        utensils: false,
-        earlyArrive: false,
-        seating: false,
-        _gotcha: '',
-        _turnstile: '',
+        dishCategory: dishCategory || '',
+        dietary: '', notes: '',
+        utensils: false, earlyArrive: false, seating: false,
+        _gotcha: '', _turnstile: '',
       }),
     })
     .then(function (res) { return res.json(); })
     .then(function (data) {
       if (!data.ok) {
         $(errId).textContent = data.error === 'slot_full'
-          ? 'Someone just claimed that — refresh and try another!'
+          ? 'Someone just claimed that — try another!'
           : 'Something went wrong — try again.';
         $(errId).classList.add('show');
         btn.disabled = false;
+        $('skip-btn').disabled = false;
         btn.textContent = origText;
         return;
       }
 
-      // Submit extra dishes if any
-      if (extraDishes && extraDishes.length > 0) {
-        var promises = extraDishes.map(function (d) {
+      // Submit supply claims as separate RSVPs (guestCount 0 to avoid double-counting)
+      if (supplies.length > 0) {
+        var promises = supplies.map(function (s) {
           return fetch('/api/potluck', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -641,7 +737,7 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
               phone: val('f-phone'),
               handle: '', platforms: '',
               rsvp: 'yes', guestCount: '0',
-              dish: d, dishCategory: '',
+              dish: s, dishCategory: 'Supplies',
               dietary: '', notes: '',
               utensils: false, earlyArrive: false, seating: false,
               _gotcha: '', _turnstile: '',
@@ -659,6 +755,7 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
       $(errId).textContent = 'Network problem — try again.';
       $(errId).classList.add('show');
       btn.disabled = false;
+      $('skip-btn').disabled = false;
       btn.textContent = origText;
     });
   }
@@ -688,7 +785,6 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
       $('confirm-pay').style.display = 'block';
     }
 
-    // Show card success state
     $('rsvp-card').classList.add('success');
     $('confirm-overlay').classList.add('show');
   }
@@ -696,17 +792,6 @@ const unclaimed = slots.filter((s: any) => !s.claimed_by);
   $('confirm-ok').addEventListener('click', function () {
     $('confirm-overlay').classList.remove('show');
     location.reload();
-  });
-
-  // ── Open slot click → scroll to RSVP ─────────────────
-  document.querySelectorAll('[data-scroll-signup]').forEach(function (el) {
-    el.addEventListener('click', function () {
-      $('rsvp-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // If on step 1, focus the name field
-      if ($('step1').style.display !== 'none') {
-        setTimeout(function () { $('f-first').focus(); }, 400);
-      }
-    });
   });
 
   // ── Copy link ────────────────────────────────────────
