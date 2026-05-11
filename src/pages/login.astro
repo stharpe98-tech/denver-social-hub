@@ -8,12 +8,16 @@ const errorParam = Astro.url.searchParams.get("error");
 
 let memberCount = 0;
 let eventCount = 0;
+let emailLoginAvailable = false;
 try {
   if (db) {
     const mc: any = await db.prepare("SELECT COUNT(*) as c FROM members").first();
     memberCount = mc?.c || 0;
     const ec: any = await db.prepare("SELECT COUNT(*) as c FROM events WHERE is_past IS NULL OR is_past = 0").first();
     eventCount = ec?.c || 0;
+    // Only offer email magic-code if Resend is actually configured.
+    const cfg: any = await db.prepare("SELECT value FROM config WHERE key='resend_api_key'").first();
+    emailLoginAvailable = !!(cfg?.value && cfg.value.trim());
   }
 } catch {}
 
@@ -32,34 +36,38 @@ const errorMsg = errorParam ? (errorMessages[errorParam] || "Something went wron
   <div class="login-page">
     <div class="login-card">
       <h1 class="login-title">Join Denver Social Hub</h1>
-      <p class="login-sub">Enter your email to sign in or create an account. We'll send you a code — no password needed.</p>
+      <p class="login-sub">{emailLoginAvailable ? "Enter your email to sign in or create an account. We'll send you a code — no password needed." : "Sign in with Discord or Reddit. Takes about 10 seconds."}</p>
 
       {errorMsg && (
         <div class="login-error">{errorMsg}</div>
       )}
 
-      <!-- Step 1: Email input -->
-      <div id="step-email">
-        <label class="input-label" for="email-input">Email address</label>
-        <input type="email" id="email-input" class="input" placeholder="you@email.com" autocomplete="email" />
-        <p class="input-hint">Only used for login codes — we'll never share or spam your email.</p>
-        <button id="send-code-btn" class="btn btn-primary btn-full">Send me a code</button>
-      </div>
+      {emailLoginAvailable && (
+        <>
+          <!-- Step 1: Email input -->
+          <div id="step-email">
+            <label class="input-label" for="email-input">Email address</label>
+            <input type="email" id="email-input" class="input" placeholder="you@email.com" autocomplete="email" />
+            <p class="input-hint">Only used for login codes — we'll never share or spam your email.</p>
+            <button id="send-code-btn" class="btn btn-primary btn-full">Send me a code</button>
+          </div>
 
-      <!-- Step 2: Code verification (hidden initially) -->
-      <div id="step-code" style="display:none;">
-        <p class="code-sent-msg">Code sent to <strong id="sent-email"></strong></p>
-        <label class="input-label" for="code-input">6-digit code</label>
-        <input type="text" id="code-input" class="input input-code" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
-        <button id="verify-btn" class="btn btn-primary btn-full">Verify & sign in</button>
-        <button id="back-btn" class="btn btn-ghost btn-full">Use a different email</button>
-      </div>
+          <!-- Step 2: Code verification (hidden initially) -->
+          <div id="step-code" style="display:none;">
+            <p class="code-sent-msg">Code sent to <strong id="sent-email"></strong></p>
+            <label class="input-label" for="code-input">6-digit code</label>
+            <input type="text" id="code-input" class="input input-code" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
+            <button id="verify-btn" class="btn btn-primary btn-full">Verify & sign in</button>
+            <button id="back-btn" class="btn btn-ghost btn-full">Use a different email</button>
+          </div>
 
-      <div id="login-status" class="login-status"></div>
+          <div id="login-status" class="login-status"></div>
 
-      <div class="login-divider">
-        <span>or</span>
-      </div>
+          <div class="login-divider">
+            <span>or</span>
+          </div>
+        </>
+      )}
 
       <a href={`/api/auth/discord?next=${encodeURIComponent(next)}`} class="btn btn-discord btn-full">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
