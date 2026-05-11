@@ -1,11 +1,13 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
+
 const db = getDB();
 const { id } = Astro.params;
 let potluck: any = null;
 let slots: any[] = [];
 let signups: any[] = [];
+
 try {
   if (db && id) {
     potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(id).first();
@@ -20,682 +22,650 @@ try {
       ORDER BY ps.sort_order ASC
     `).bind(id).all();
     slots = s?.results ?? [];
-    const r = await db.prepare(`SELECT name, dish, guest_count FROM potluck_rsvp WHERE potluck_id=? AND rsvp='yes' ORDER BY created_at ASC`).bind(id).all();
+    const r = await db.prepare(
+      `SELECT name, dish, guest_count FROM potluck_rsvp WHERE potluck_id=? AND rsvp='yes' ORDER BY created_at ASC`
+    ).bind(id).all();
     signups = r?.results ?? [];
   }
-} catch(e) { console.error(e); }
+} catch (e) { console.error(e); }
 if (!potluck) return Astro.redirect('/potlucks');
 
-const claimed = slots.filter((s:any) => s.claimed_by).length;
+const claimed = slots.filter((s: any) => s.claimed_by).length;
 const total = slots.length;
-const pct = total > 0 ? Math.round((claimed/total)*100) : 0;
-const attending = signups.length;
-const colors = ['#0EA5E9','#7c3aed','#0ea5e9','#16a34a','#ec4899','#f59e0b','#0284C7'];
+const pct = total > 0 ? Math.round((claimed / total) * 100) : 0;
+const guestTotal = signups.reduce((sum: number, s: any) => sum + (parseInt(s.guest_count) || 1), 0);
 
-// Group slots by category
-const cats: Record<string, any[]> = {};
-slots.forEach((s:any) => {
-  if (!cats[s.category]) cats[s.category] = [];
-  cats[s.category].push(s);
-});
+// Group slots by category, preserving sort order. Categories appear in
+// the order their first item appears.
+const groupedKeys: string[] = [];
+const grouped: Record<string, any[]> = {};
+for (const s of slots) {
+  const cat = s.category || 'Items';
+  if (!grouped[cat]) { grouped[cat] = []; groupedKeys.push(cat); }
+  grouped[cat].push(s);
+}
 ---
 <Base title={potluck.title} description={potluck.description ?? `Sign up for ${potluck.title}`}>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<style is:inline>
 
-    /* Hero */
-    .hero { position: relative; overflow: hidden; }
-    .hero-img { width: 100%; height: 200px; object-fit: cover; display: block; }
-    .hero-img-placeholder { width: 100%; height: 200px; background: linear-gradient(135deg,#F0F9FF,#E0F2FE); }
-    .hero-body { background: #fff; border-bottom: 1px solid #e4ddd4; padding: 20px; }
-    .hero-inner { max-width: 600px; margin: 0 auto; }
-    .back { font-size: 13px; color: #a09890; text-decoration: none; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 4px; }
-    .event-title { font-family: 'Playfair Display', serif; font-size: clamp(22px,5vw,30px); color: #1c1917; margin-bottom: 10px; line-height: 1.2; }
-    .event-meta { font-size: 14px; color: #57524c; line-height: 2; margin-bottom: 14px; }
-    .event-meta span { display: inline-flex; align-items: center; gap: 6px; }
+<style>
+  .pot-hero { background: var(--bg); border-bottom: 1px solid var(--border); }
+  .pot-hero-img { width: 100%; height: 220px; object-fit: cover; display: block; }
+  .pot-hero-img-placeholder { width: 100%; height: 140px; background: linear-gradient(135deg, #F0F9FF, #E0F2FE, #D1FAE5); }
+  .pot-hero-body { max-width: 720px; margin: 0 auto; padding: var(--space-5) var(--space-4); }
+  .pot-back { font-size: 13px; color: var(--text-sec); display: inline-flex; align-items: center; gap: 4px; margin-bottom: var(--space-3); }
+  .pot-back:hover { color: var(--text); }
+  .pot-title { font-family: var(--font-display); font-size: clamp(26px, 5vw, 36px); font-weight: 800; color: var(--text); margin-bottom: 6px; letter-spacing: -0.02em; }
+  .pot-meta { display: flex; gap: var(--space-3); flex-wrap: wrap; font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-3); }
+  .pot-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .pot-desc { font-size: 14px; color: var(--text-sec); line-height: 1.6; margin-top: var(--space-2); }
 
-    /* Progress */
-    .progress-wrap { margin-bottom: 14px; }
-    .progress-top { display: flex; justify-content: space-between; font-size: 13px; color: #57524c; margin-bottom: 6px; }
-    .progress-top strong { color: #0EA5E9; }
-    .progress-bar { height: 8px; background: #f0ede8; border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #0284C7, #0EA5E9); border-radius: 4px; transition: width 0.4s; }
+  .pot-prog { padding: var(--space-3) 0; }
+  .pot-prog-top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-sec); margin-bottom: 6px; }
+  .pot-prog-top strong { color: var(--accent); font-weight: 700; }
+  .pot-prog-bar { height: 6px; background: var(--surface); border-radius: 3px; overflow: hidden; }
+  .pot-prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 3px; transition: width 0.4s; }
 
-    /* Attendee avatars */
-    .avatars { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-    .avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; border: 2px solid #f7f5f2; flex-shrink: 0; }
-    .avatar-more { background: #e4ddd4; color: #8a7a70; font-size: 11px; font-weight: 600; }
-    .avatars-text { font-size: 13px; color: #8a7a70; }
+  .pot-actions { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; margin-top: var(--space-3); }
+  .pot-link-btn { background: none; border: none; color: var(--text-sec); font-size: 13px; cursor: pointer; padding: 0; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; }
+  .pot-link-btn:hover { color: var(--text); }
 
-    /* Share row */
-    .share-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-    .share-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 8px; border: 1px solid #e4ddd4; background: #f7f5f2; color: #57524c; font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+  .pot-page { max-width: 720px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
 
-    /* Page */
-    .page { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
+  .pot-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: var(--space-4); }
+  .pot-tab { flex: 1; padding: 12px; border: none; background: none; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text-faint); cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; -webkit-tap-highlight-color: transparent; }
+  .pot-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-    /* View toggle */
-    .view-toggle { display: inline-flex; background: #fff; border: 1px solid #e4ddd4; border-radius: 10px; padding: 3px; margin-bottom: 16px; }
-    .vt-btn { background: transparent; border: none; padding: 7px 18px; font-size: 13px; font-weight: 600; color: #a09890; border-radius: 7px; cursor: pointer; font-family: 'DM Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
-    .vt-btn.active { background: linear-gradient(135deg, #0284C7, #0EA5E9); color: #fff; }
+  .pot-panel { display: none; }
+  .pot-panel.active { display: block; }
 
-    /* Grid view */
-    .grid-wrap { background: #fff; border: 1.5px solid #e4ddd4; border-radius: 14px; overflow-x: auto; }
-    .signup-grid { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .signup-grid th { text-align: left; padding: 12px 14px; font-size: 11px; font-weight: 700; color: #8a7a70; text-transform: uppercase; letter-spacing: 1px; background: #f7f5f2; border-bottom: 1.5px solid #e4ddd4; }
-    .signup-grid td { padding: 14px; border-bottom: 1px solid #f0ede8; vertical-align: middle; }
-    .signup-grid tr:last-child td { border-bottom: none; }
-    .g-time { font-weight: 600; color: #57524c; white-space: nowrap; }
-    .g-item { color: #1c1917; font-weight: 500; }
-    .g-cat { font-size: 11px; color: #a09890; font-weight: 400; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .g-prog { font-size: 13px; color: #6b5040; }
-    .g-action { text-align: right; }
-    .g-signup-btn { padding: 8px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #0284C7, #0EA5E9); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
-    .g-signup-btn:hover { opacity: 0.9; }
-    .g-claimed { font-size: 13px; color: #16a34a; font-weight: 600; white-space: nowrap; }
-    .g-empty { text-align: center; color: #a09890; padding: 30px; font-style: italic; }
+  .pot-cat { margin-bottom: var(--space-5); }
+  .pot-cat-title { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: var(--space-2); display: flex; align-items: center; gap: 8px; }
+  .pot-cat-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .pot-cat-count { font-weight: 500; font-size: 11px; color: var(--text-faint); text-transform: none; letter-spacing: 0; }
 
-    /* Category dropdowns */
-    .cat-block { margin-bottom: 12px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 14px; overflow: hidden; }
-    .cat-block[open] { border-color: #7DD3FC; }
-    /* IMPORTANT: keep <summary> as default display so iOS Safari's
-       click-to-toggle works. Flex lives on the inner row instead. */
-    .cat-title { cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; list-style: none; }
-    .cat-title::-webkit-details-marker { display: none; }
-    .cat-title::marker { content: ''; }
-    .cat-title-row { display: flex; align-items: center; gap: 12px; padding: 16px 18px; font-size: 13px; font-weight: 700; color: #57524c; text-transform: uppercase; letter-spacing: 1px; }
-    .cat-title:hover .cat-title-row { background: #fffaf2; }
-    .cat-block[open] .cat-title-row { border-bottom: 1px solid #f0ede8; background: #fffaf2; }
-    .cat-label { flex: 1; }
-    .cat-count { font-size: 11px; font-weight: 600; color: #a09890; letter-spacing: 0.5px; text-transform: none; }
-    .cat-chev { font-size: 16px; color: #a09890; transition: transform 0.2s; flex-shrink: 0; }
-    .cat-block[open] .cat-chev { transform: rotate(180deg); }
-    .cat-body { padding: 14px 14px 6px; }
+  .pot-item {
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 12px;
+    transition: border-color 0.15s, background 0.15s;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pot-item:hover { border-color: var(--accent); background: var(--surface); }
+  .pot-item:active { transform: scale(0.99); }
+  .pot-item.claimed { background: var(--tag-bg2); border-color: #6EE7B7; cursor: default; }
+  .pot-item.claimed:hover { transform: none; background: var(--tag-bg2); }
+  .pot-item-name { flex: 1; font-size: 15px; font-weight: 500; color: var(--text); }
+  .pot-item-who { font-size: 13px; color: var(--tag-text2); font-weight: 600; }
+  .pot-item-arrow { font-size: 20px; color: var(--text-faint); flex-shrink: 0; }
 
-    /* Item rows */
-    .item { background: #fff; border: 1.5px solid #e4ddd4; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
-    .item[data-id]:active { background: #F0F9FF; border-color: #0EA5E9; }
-    .item.claimed { border-color: #86efac; background: #f0fdf4; cursor: default; }
-    .item-name { flex: 1; font-size: 15px; font-weight: 500; color: #1c1917; }
-    .item.claimed .item-name { color: #15803d; }
-    .item-who { font-size: 13px; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 5px; }
-    .item-who::before { content: '✓'; font-size: 14px; }
-    .claim-btn { flex-shrink: 0; padding: 8px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg,#0284C7,#0EA5E9); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
-    .claim-btn:active { opacity: 0.85; transform: scale(0.97); }
+  /* Sign-up form (the centerpiece). Renders inline below the tapped item. */
+  .pot-form {
+    display: none;
+    background: linear-gradient(135deg, #F0F9FF, #ECFDF5);
+    border: 1.5px solid var(--accent);
+    border-radius: var(--radius);
+    padding: var(--space-4);
+    margin-bottom: var(--space-3);
+  }
+  .pot-form.open { display: block; }
+  .pot-form-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: var(--space-3); }
+  .pot-form-title span { color: var(--accent); }
 
-    /* Inline claim form */
-    .claim-form { display: none; background: #F0F9FF; border: 1.5px solid #0EA5E9; border-radius: 14px; padding: 18px; margin-bottom: 8px; }
-    .claim-form.open { display: block; }
-    .claim-form-title { font-size: 15px; font-weight: 700; color: #0284C7; margin-bottom: 14px; }
-    .claim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; margin-bottom: 12px; }
-    .claim-left, .claim-right { display: flex; flex-direction: column; }
-    @media(max-width: 640px) {
-      .claim-grid { grid-template-columns: 1fr; gap: 12px; }
-    }
-    .claim-label { display: block; font-size: 11px; font-weight: 700; color: #57524c; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; margin-top: 4px; }
-    .claim-label span { font-weight: 400; text-transform: none; letter-spacing: 0; color: #a09890; }
-    .claim-input { width: 100%; padding: 11px 13px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 9px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; margin-bottom: 10px; -webkit-appearance: none; transition: border-color 0.15s, box-shadow 0.15s; }
-    .claim-input:focus { border-color: #0EA5E9; box-shadow: 0 0 0 3px rgba(14,165,233,0.12); }
-    .claim-input::placeholder { color: #c0b8b0; }
-    .claim-textarea { resize: vertical; min-height: 60px; font-family: 'DM Sans', sans-serif; }
-    .claim-helpers { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-    .claim-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #1c1917; cursor: pointer; padding: 8px 10px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 8px; transition: border-color 0.15s; }
-    .claim-check:hover { border-color: #0EA5E9; }
-    .claim-check input[type=checkbox] { width: 16px; height: 16px; accent-color: #0EA5E9; cursor: pointer; }
-    .claim-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
-    .claim-submit { flex: 1; padding: 13px; border-radius: 9px; border: none; background: linear-gradient(135deg,#0284C7,#0EA5E9); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 3px rgba(14,165,233,0.25); transition: box-shadow 0.15s, transform 0.15s; }
-    .claim-submit:hover { box-shadow: 0 6px 18px rgba(14,165,233,0.35); transform: translateY(-1px); }
-    .claim-cancel { padding: 12px 16px; border-radius: 9px; border: 1.5px solid #e4ddd4; background: transparent; color: #8a7a70; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; }
-    .claim-guest-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .g-btn { width: 38px; height: 38px; border-radius: 8px; border: 1.5px solid #e4ddd4; background: #fff; font-size: 18px; font-weight: 600; color: #57524c; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .g-count { flex: 1; text-align: center; font-size: 20px; font-weight: 700; color: #1c1917; }
-    .g-note { font-size: 12px; color: #a09890; white-space: nowrap; }
-    .claim-email { width: 100%; padding: 11px 13px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 9px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; margin-bottom: 10px; -webkit-appearance: none; }
-    .claim-email:focus { border-color: #0EA5E9; }
-    .claim-email::placeholder { color: #c0b8b0; }
-    .claim-hint { font-size: 11px; color: #a09890; margin-bottom: 10px; line-height: 1.5; }
+  .pot-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-2); margin-bottom: var(--space-3); }
+  @media(min-width: 640px) { .pot-grid { grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-4); } }
 
-    /* Custom dish */
-    .custom-block { background: #fff; border: 1.5px dashed #e4ddd4; border-radius: 12px; padding: 14px 16px; margin-top: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-    .custom-block:active { background: #F0F9FF; border-color: #0EA5E9; }
-    .custom-icon { font-size: 22px; flex-shrink: 0; }
-    .custom-text { font-size: 14px; color: #8a7a70; }
-    .custom-text strong { color: #1c1917; display: block; }
+  .pot-field { display: flex; flex-direction: column; }
+  .pot-field label { font-size: 11px; font-weight: 700; color: var(--text-sec); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .pot-field label .opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-faint); }
+  .pot-input, .pot-textarea {
+    width: 100%; padding: 11px 13px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; font-size: 15px; color: var(--text);
+    font-family: var(--font); outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+  }
+  .pot-input:focus, .pot-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .pot-input.invalid { border-color: var(--red); }
+  .pot-textarea { resize: vertical; min-height: 60px; line-height: 1.45; }
 
-    /* Success toast */
-    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #15803d; color: #fff; padding: 12px 24px; border-radius: 100px; font-size: 14px; font-weight: 600; display: none; z-index: 999; box-shadow: 0 4px 20px rgba(0,0,0,0.2); white-space: nowrap; }
-    .toast.show { display: block; animation: slideup 0.2s ease; }
-    @keyframes slideup { from { transform: translateX(-50%) translateY(12px); opacity:0; } to { transform: translateX(-50%) translateY(0); opacity:1; } }
+  .pot-guests { display: flex; align-items: center; gap: 8px; }
+  .pot-guests button { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text-sec); font-size: 18px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .pot-guests button:hover { border-color: var(--accent); color: var(--accent); }
+  .pot-guests .pot-count { min-width: 28px; text-align: center; font-weight: 700; color: var(--text); }
+  .pot-guests .pot-note { font-size: 13px; color: var(--text-faint); }
 
-    /* Tabs */
-    .tabs { display: flex; border-bottom: 1px solid #e4ddd4; margin-bottom: 20px; }
-    .tab { flex: 1; padding: 11px; font-size: 13px; font-weight: 600; color: #a09890; cursor: pointer; border: none; border-bottom: 2px solid transparent; background: none; font-family: 'DM Sans', sans-serif; }
-    .tab.active { color: #0EA5E9; border-bottom-color: #0EA5E9; }
-    .panel { display: none; } .panel.active { display: block; }
+  .pot-helpers { display: flex; flex-direction: column; gap: 6px; }
+  .pot-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; cursor: pointer; transition: border-color 0.15s; }
+  .pot-check:hover { border-color: var(--accent); }
+  .pot-check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 
-    /* Who's coming */
-    .coming-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0ede8; }
-    .coming-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0; }
-    .coming-name { font-size: 15px; font-weight: 500; color: #1c1917; }
-    .coming-dish { font-size: 13px; color: #8a7a70; margin-top: 1px; }
-    .coming-guests { font-size: 12px; color: #0284C7; font-weight: 500; margin-left: auto; flex-shrink: 0; }
+  .pot-hint { font-size: 12px; color: var(--text-sec); margin: var(--space-2) 0 var(--space-3); padding: 8px 12px; background: var(--bg); border-radius: 8px; border-left: 3px solid var(--accent); }
 
-    .empty { text-align: center; padding: 40px; color: #a09890; font-style: italic; font-size: 14px; }
-    .hidden { display: none !important; }
+  .pot-form-row { display: flex; gap: 8px; }
+  .pot-submit {
+    flex: 1; padding: 13px; border-radius: 12px; border: none;
+    background: var(--cta-bg); color: var(--cta-text);
+    font-family: var(--font); font-size: 15px; font-weight: 600;
+    cursor: pointer; box-shadow: 0 1px 3px rgba(14,165,233,0.25);
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+  .pot-submit:hover { box-shadow: 0 6px 18px rgba(14,165,233,0.35); transform: translateY(-1px); }
+  .pot-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+  .pot-cancel {
+    padding: 13px 18px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text-sec); cursor: pointer;
+    font-family: var(--font); font-size: 14px;
+  }
+  .pot-cancel:hover { border-color: var(--border-hover); color: var(--text); }
+
+  .pot-error { font-size: 13px; color: var(--red); margin-top: 6px; display: none; }
+  .pot-error.show { display: block; }
+
+  /* Custom dish CTA */
+  .pot-custom-cta {
+    width: 100%; padding: 16px;
+    background: var(--bg); border: 1.5px dashed var(--border);
+    border-radius: var(--radius); cursor: pointer;
+    font-family: var(--font); font-size: 14px; color: var(--text-sec);
+    text-align: left;
+    display: flex; align-items: center; gap: 12px;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pot-custom-cta:hover { border-color: var(--accent); color: var(--text); }
+  .pot-custom-cta-icon { font-size: 20px; }
+  .pot-custom-cta strong { display: block; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+
+  /* Who's coming */
+  .pot-coming-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--surface-hover); }
+  .pot-coming-row:last-child { border-bottom: none; }
+  .pot-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+  .pot-coming-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .pot-coming-dish { font-size: 12px; color: var(--text-sec); }
+  .pot-coming-plus { margin-left: auto; font-size: 12px; color: var(--accent); font-weight: 600; }
+  .pot-empty { padding: var(--space-5); text-align: center; color: var(--text-faint); font-style: italic; }
+
+  /* Toast + confirmation modal */
+  .pot-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--mint); color: #fff; padding: 12px 22px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.2); display: none; z-index: 1000; }
+  .pot-toast.show { display: block; }
+
+  .pot-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.55); align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
+  .pot-overlay.show { display: flex; }
+  .pot-overlay-card { background: var(--bg); border-radius: var(--radius-lg); max-width: 460px; width: 100%; padding: var(--space-5); box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .pot-overlay h2 { font-family: var(--font-display); font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+  .pot-overlay-sub { text-align: center; color: var(--text-sec); font-size: 14px; margin-bottom: var(--space-4); }
+  .pot-overlay-card .pot-block { background: var(--surface); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+  .pot-overlay-card .pot-block-label { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .pot-overlay-card .pot-block.pay { background: var(--tag-bg3); }
+  .pot-overlay-card .pot-block.pay .pot-block-label { color: var(--tag-text3); }
+  .pot-overlay-rows { font-size: 14px; color: var(--text); line-height: 1.7; }
+  .pot-overlay-rows a { color: var(--accent); font-weight: 600; }
+  .pot-overlay-ok { width: 100%; padding: 13px; border-radius: 12px; border: none; background: var(--cta-bg); color: var(--cta-text); font-family: var(--font); font-size: 15px; font-weight: 600; cursor: pointer; }
 </style>
 
-  <!-- HERO -->
-  <div class="hero">
-    {potluck.cover_photo
-      ? <img src={potluck.cover_photo} alt={potluck.title} class="hero-img"/>
-      : <div class="hero-img-placeholder"></div>
-    }
-    <div class="hero-body">
-      <div class="hero-inner">
-        <a href="/potlucks" class="back">← Potlucks</a>
-        <h1 class="event-title">{potluck.title}</h1>
-        <div class="event-meta">
-          {potluck.date_label && <span>📅 {potluck.date_label}{potluck.time_label ? ` · ${potluck.time_label}` : ''}</span>}
-          {potluck.location && <span style="margin-left:8px">📍 {potluck.location}{potluck.location_detail ? ` — ${potluck.location_detail}` : ''}</span>}
-        </div>
+<section class="pot-hero">
+  {potluck.cover_photo
+    ? <img src={potluck.cover_photo} alt={potluck.title} class="pot-hero-img" loading="eager"/>
+    : <div class="pot-hero-img-placeholder"></div>}
+  <div class="pot-hero-body">
+    <a href="/potlucks" class="pot-back">← All potlucks</a>
+    <h1 class="pot-title">{potluck.title}</h1>
+    <div class="pot-meta">
+      {potluck.date_label && <span>📅 {potluck.date_label}{potluck.time_label ? ` · ${potluck.time_label}` : ''}</span>}
+      {potluck.location && <span>📍 {potluck.location}{potluck.location_detail ? ` — ${potluck.location_detail}` : ''}</span>}
+    </div>
+    {potluck.description && <p class="pot-desc">{potluck.description}</p>}
 
-        {/* Progress */}
-        <div class="progress-wrap">
-          <div class="progress-top">
-            <span><strong>{claimed}</strong> of {total} items claimed</span>
-            <span>{attending} {attending === 1 ? 'person' : 'people'} coming</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style={`width:${pct}%`}></div>
-          </div>
-        </div>
-
-        {/* Avatars */}
-        {signups.length > 0 && (
-          <div class="avatars">
-            {signups.slice(0,6).map((s:any, i:number) => (
-              <div class="avatar" style={`background:${colors[i%7]}`} title={s.name}>
-                {(s.name||'?').split(' ').map((w:string)=>w[0]).join('').slice(0,2).toUpperCase()}
-              </div>
-            ))}
-            {signups.length > 6 && <div class="avatar avatar-more">+{signups.length - 6}</div>}
-            <span class="avatars-text">
-              {signups.length === 1 ? `${signups[0].name} is coming` :
-               `${signups[0].name} and ${signups.length - 1} other${signups.length > 2 ? 's' : ''} are coming`}
-            </span>
-          </div>
-        )}
-
-        <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
-          <button id="copy-btn" style="background:none;border:none;font-size:13px;color:#a09890;cursor:pointer;padding:0;font-family:inherit;display:flex;align-items:center;gap:4px">🔗 Copy link</button>
-          <span style="color:#e4ddd4">·</span>
-          <a href={`/potlucks/${id}/poster`} style="font-size:13px;color:#a09890;text-decoration:none">🖼 Poster</a>
-        </div>
+    <div class="pot-prog">
+      <div class="pot-prog-top">
+        <span><strong>{claimed}</strong> of {total} items claimed</span>
+        <span>{guestTotal} {guestTotal === 1 ? 'person' : 'people'} coming</span>
       </div>
+      <div class="pot-prog-bar"><div class="pot-prog-fill" style={`width:${pct}%`}></div></div>
+    </div>
+
+    <div class="pot-actions">
+      <button class="pot-link-btn" id="copy-link">🔗 Copy link</button>
+      <a href={`/potlucks/${id}/poster`} class="pot-link-btn">🖼 Poster</a>
     </div>
   </div>
+</section>
 
-  <div class="page">
-    <div class="tabs">
-      <button class="tab active" id="tab-list">Sign Up</button>
-      <button class="tab" id="tab-coming">Who's Coming ({signups.length})</button>
-    </div>
+<div class="pot-page">
+  <div class="pot-tabs">
+    <button class="pot-tab active" data-tab="signup">Sign up</button>
+    <button class="pot-tab" data-tab="coming">Who's coming ({signups.length})</button>
+  </div>
 
-    <div class="view-toggle" id="view-toggle">
-      <button class="vt-btn active" data-view="cards">Cards</button>
-      <button class="vt-btn" data-view="grid">Grid</button>
-    </div>
-
-    <!-- SIGN UP GRID (table view) -->
-    <div class="panel" id="panel-grid">
-      <div class="grid-wrap">
-        <table class="signup-grid">
-          <thead>
-            <tr>
-              <th style="width:130px">Time</th>
-              <th>Item</th>
-              <th style="width:110px">Progress</th>
-              <th style="width:120px"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {slots.map((s:any) => {
-              const filled = s.claimed_by ? 1 : 0;
-              const max = s.max_claims || 1;
-              return (
-                <tr>
-                  <td class="g-time">{s.slot_time || '—'}</td>
-                  <td class="g-item">{s.suggestion}{s.category && <div class="g-cat">{s.category}</div>}</td>
-                  <td class="g-prog">{filled} of {max} filled</td>
-                  <td class="g-action">
-                    {s.claimed_by
-                      ? <span class="g-claimed">✓ {s.claimed_by}</span>
-                      : <button class="g-signup-btn" data-id={s.id} data-dish={s.suggestion}>Sign up</button>
-                    }
-                  </td>
-                </tr>
-              );
-            })}
-            {slots.length === 0 && (
-              <tr><td colspan="4" class="g-empty">No items yet — check back soon!</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- SIGN UP LIST -->
-    <div class="panel active" id="panel-list">
-
-      {Object.entries(cats).map(([cat, items]) => {
-        const catTotal = items.length;
-        const catClaimed = items.filter((i:any) => i.claimed_by).length;
-        return (
-          <details class="cat-block">
-            <summary class="cat-title">
-              <div class="cat-title-row">
-                <span class="cat-label">{cat}</span>
-                <span class="cat-count">{catClaimed} of {catTotal} claimed</span>
-                <span class="cat-chev">⌄</span>
-              </div>
-            </summary>
-            <div class="cat-body">
-              {items.map((item:any) => item.claimed_by ? (
-                <div class="item claimed">
-                  <div class="item-name">{item.suggestion}</div>
-                  <div class="item-who">{item.claimed_by}</div>
-                </div>
-              ) : (
-                <div>
-                  <div class="item" id={`item-${item.id}`} data-id={item.id} data-dish={item.suggestion} style="cursor:pointer">
-                    <div class="item-name">{item.suggestion}</div>
-                    <span style="font-size:20px;color:#e4ddd4;flex-shrink:0">›</span>
-                  </div>
-                  <div class="claim-form" id={`form-${item.id}`}>
-                    <div class="claim-form-title">🙌 Bringing {item.suggestion}!</div>
-                    <div class="claim-grid">
-                      <div class="claim-left">
-                        <label class="claim-label">First name *</label>
-                        <input type="text" class="claim-input" id={`first-${item.id}`} placeholder="Jamie" autocomplete="given-name"/>
-                        <label class="claim-label">Last name <span>(optional)</span></label>
-                        <input type="text" class="claim-input" id={`last-${item.id}`} placeholder="Doe" autocomplete="family-name"/>
-                        <label class="claim-label">Email <span>(optional — for a reminder)</span></label>
-                        <input type="email" class="claim-input" id={`email-${item.id}`} placeholder="you@example.com"/>
-                        <label class="claim-label">Phone <span>(optional — for SMS updates)</span></label>
-                        <input type="tel" class="claim-input" id={`phone-${item.id}`} placeholder="(720) 555-1234"/>
-                        <label class="claim-label">How many coming?</label>
-                        <div class="claim-guest-row">
-                          <button type="button" class="g-btn" data-item={item.id} data-dir="-1">−</button>
-                          <div class="g-count" id={`gc-${item.id}`}>1</div>
-                          <button type="button" class="g-btn" data-item={item.id} data-dir="1">+</button>
-                          <div class="g-note" id={`gn-${item.id}`}>just me</div>
-                        </div>
-                      </div>
-                      <div class="claim-right">
-                        <label class="claim-label">Dietary / allergies <span>(optional)</span></label>
-                        <textarea class="claim-input claim-textarea" id={`dietary-${item.id}`} placeholder="vegan, nut allergy, gluten-free…"></textarea>
-                        <label class="claim-label">Anything else? <span>(optional)</span></label>
-                        <textarea class="claim-input claim-textarea" id={`notes-${item.id}`} placeholder="Notes for the organizer"></textarea>
-                        <label class="claim-label">How can you help?</label>
-                        <div class="claim-helpers">
-                          <label class="claim-check"><input type="checkbox" id={`utensils-${item.id}`}/> <span>🥄 Bring utensils/plates</span></label>
-                          <label class="claim-check"><input type="checkbox" id={`early-${item.id}`}/> <span>⏰ Arrive early to help set up</span></label>
-                          <label class="claim-check"><input type="checkbox" id={`seating-${item.id}`}/> <span>🪑 Bring chairs/blanket</span></label>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
-                    <div class="claim-row">
-                      <button class="claim-submit" data-id={item.id} data-dish={item.suggestion}>Claim it! 🎉</button>
-                      <button class="claim-cancel" data-id={item.id}>Cancel</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </details>
-        );
-      })}
-
-      <!-- Bring something else -->
-      <details class="cat-block">
-        <summary class="cat-title">
-          <div class="cat-title-row">
-            <span class="cat-label">Something else?</span>
-            <span class="cat-chev">⌄</span>
+  <!-- SIGN UP TAB -->
+  <div class="pot-panel active" id="panel-signup">
+    {groupedKeys.length === 0 ? (
+      <div class="pot-empty">No items listed yet — check back soon.</div>
+    ) : groupedKeys.map((cat) => {
+      const items = grouped[cat];
+      const catClaimed = items.filter((i:any) => i.claimed_by).length;
+      return (
+        <div class="pot-cat">
+          <div class="pot-cat-title">
+            <span>{cat}</span>
+            <span class="pot-cat-count">{catClaimed} of {items.length} claimed</span>
           </div>
-        </summary>
-        <div class="cat-body">
-        <div class="custom-block" id="custom-toggle" style="cursor:pointer">
-          <span class="custom-icon">✏️</span>
-          <div class="custom-text">
-            <strong>Bringing something else?</strong>
-            Tap to add it
-          </div>
-          <span style="font-size:20px;color:#e4ddd4;margin-left:auto">›</span>
-        </div>
-        <div class="claim-form hidden" id="custom-form">
-          <div class="claim-form-title">✏️ What are you bringing?</div>
-          <div class="claim-grid">
-            <div class="claim-left">
-              <label class="claim-label">What are you bringing? *</label>
-              <input type="text" class="claim-input" id="custom-dish" placeholder="e.g. Cornbread, fruit punch…" autocomplete="off"/>
-              <label class="claim-label">First name *</label>
-              <input type="text" class="claim-input" id="custom-first" placeholder="Jamie" autocomplete="given-name"/>
-              <label class="claim-label">Last name <span>(optional)</span></label>
-              <input type="text" class="claim-input" id="custom-last" placeholder="Doe" autocomplete="family-name"/>
-              <label class="claim-label">Email <span>(optional — for a reminder)</span></label>
-              <input type="email" class="claim-input" id="custom-email" placeholder="you@example.com"/>
-              <label class="claim-label">Phone <span>(optional — for SMS updates)</span></label>
-              <input type="tel" class="claim-input" id="custom-phone" placeholder="(720) 555-1234"/>
-              <label class="claim-label">How many coming?</label>
-              <div class="claim-guest-row">
-                <button type="button" class="g-btn" id="custom-minus">−</button>
-                <div class="g-count" id="custom-gc">1</div>
-                <button type="button" class="g-btn" id="custom-plus">+</button>
-                <div class="g-note" id="custom-gn">just me</div>
-              </div>
+          {items.map((item:any) => item.claimed_by ? (
+            <div class="pot-item claimed">
+              <div class="pot-item-name">{item.suggestion}</div>
+              <div class="pot-item-who">✓ {item.claimed_by}</div>
             </div>
-            <div class="claim-right">
-              <label class="claim-label">Dietary / allergies <span>(optional)</span></label>
-              <textarea class="claim-input claim-textarea" id="custom-dietary" placeholder="vegan, nut allergy, gluten-free…"></textarea>
-              <label class="claim-label">Anything else? <span>(optional)</span></label>
-              <textarea class="claim-input claim-textarea" id="custom-notes" placeholder="Notes for the organizer"></textarea>
-              <label class="claim-label">How can you help?</label>
-              <div class="claim-helpers">
-                <label class="claim-check"><input type="checkbox" id="custom-utensils"/> <span>🥄 Bring utensils/plates</span></label>
-                <label class="claim-check"><input type="checkbox" id="custom-early"/> <span>⏰ Arrive early to help set up</span></label>
-                <label class="claim-check"><input type="checkbox" id="custom-seating"/> <span>🪑 Bring chairs/blanket</span></label>
-              </div>
-            </div>
-          </div>
-          <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
-          <div class="claim-row">
-            <button class="claim-submit" id="custom-submit">I'm bringing it! 🎉</button>
-            <button class="claim-cancel" id="custom-cancel">Cancel</button>
-          </div>
-        </div>
-        </div>
-      </details>
-
-    </div>
-
-    <!-- WHO'S COMING -->
-    <div class="panel" id="panel-coming">
-      {signups.length === 0
-        ? <div class="empty">Nobody's signed up yet — be the first! 🙌</div>
-        : signups.map((s:any, i:number) => (
-          <div class="coming-row">
-            <div class="coming-avatar" style={`background:${colors[i%7]}`}>
-              {(s.name||'?').split(' ').map((w:string)=>w[0]).join('').slice(0,2).toUpperCase()}
-            </div>
+          ) : (
             <div>
-              <div class="coming-name">{s.name}</div>
-              <div class="coming-dish">{s.dish || 'Showing up 🎉'}</div>
+              <div class="pot-item" data-id={item.id} data-dish={item.suggestion}>
+                <div class="pot-item-name">{item.suggestion}</div>
+                <span class="pot-item-arrow">›</span>
+              </div>
+              <div class="pot-form" id={`form-${item.id}`}>
+                <div class="pot-form-title">Bringing <span>{item.suggestion}</span></div>
+                <div class="pot-grid">
+                  <div class="pot-field">
+                    <label>First name <span class="opt">*</span></label>
+                    <input type="text" class="pot-input" id={`first-${item.id}`} placeholder="Jamie" autocomplete="given-name"/>
+                  </div>
+                  <div class="pot-field">
+                    <label>Last name <span class="opt">(optional)</span></label>
+                    <input type="text" class="pot-input" id={`last-${item.id}`} placeholder="Doe" autocomplete="family-name"/>
+                  </div>
+                  <div class="pot-field">
+                    <label>Email <span class="opt">(for a reminder)</span></label>
+                    <input type="email" class="pot-input" id={`email-${item.id}`} placeholder="you@example.com" autocomplete="email"/>
+                  </div>
+                  <div class="pot-field">
+                    <label>Phone <span class="opt">(for SMS)</span></label>
+                    <input type="tel" class="pot-input" id={`phone-${item.id}`} placeholder="(720) 555-1234" autocomplete="tel"/>
+                  </div>
+                  <div class="pot-field">
+                    <label>How many coming?</label>
+                    <div class="pot-guests">
+                      <button type="button" data-id={item.id} data-dir="-1">−</button>
+                      <span class="pot-count" id={`gc-${item.id}`}>1</span>
+                      <button type="button" data-id={item.id} data-dir="1">+</button>
+                      <span class="pot-note" id={`gn-${item.id}`}>just me</span>
+                    </div>
+                  </div>
+                  <div class="pot-field">
+                    <label>How can you help?</label>
+                    <div class="pot-helpers">
+                      <label class="pot-check"><input type="checkbox" id={`utensils-${item.id}`}/> 🥄 Utensils / plates</label>
+                      <label class="pot-check"><input type="checkbox" id={`early-${item.id}`}/> ⏰ Arrive early</label>
+                      <label class="pot-check"><input type="checkbox" id={`seating-${item.id}`}/> 🪑 Chairs / blanket</label>
+                    </div>
+                  </div>
+                  <div class="pot-field" style="grid-column:1/-1">
+                    <label>Dietary / allergies <span class="opt">(optional)</span></label>
+                    <textarea class="pot-textarea" id={`dietary-${item.id}`} placeholder="vegan, nut allergy, gluten-free…"></textarea>
+                  </div>
+                  <div class="pot-field" style="grid-column:1/-1">
+                    <label>Notes for the organizer <span class="opt">(optional)</span></label>
+                    <textarea class="pot-textarea" id={`notes-${item.id}`} placeholder="Anything else we should know?"></textarea>
+                  </div>
+                </div>
+                <div class="pot-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
+                <div class="pot-form-row">
+                  <button class="pot-submit" data-id={item.id} data-dish={item.suggestion}>Claim it! 🎉</button>
+                  <button class="pot-cancel" data-id={item.id}>Cancel</button>
+                </div>
+                <div class="pot-error" id={`err-${item.id}`}></div>
+              </div>
             </div>
-            {s.guest_count > 1 && <div class="coming-guests">+{s.guest_count - 1}</div>}
+          ))}
+        </div>
+      );
+    })}
+
+    <!-- Custom dish -->
+    <div class="pot-cat">
+      <div class="pot-cat-title"><span>Bringing something else?</span></div>
+      <button type="button" class="pot-custom-cta" id="custom-toggle">
+        <span class="pot-custom-cta-icon">✏️</span>
+        <div>
+          <strong>Add your own dish</strong>
+          <span>Doesn't see what you want to bring? Add it here.</span>
+        </div>
+      </button>
+      <div class="pot-form" id="form-custom">
+        <div class="pot-form-title">What are you <span>bringing?</span></div>
+        <div class="pot-grid">
+          <div class="pot-field" style="grid-column:1/-1">
+            <label>What are you bringing? <span class="opt">*</span></label>
+            <input type="text" class="pot-input" id="custom-dish" placeholder="e.g. Cornbread, fruit punch…"/>
           </div>
-        ))
-      }
+          <div class="pot-field">
+            <label>First name <span class="opt">*</span></label>
+            <input type="text" class="pot-input" id="custom-first" placeholder="Jamie" autocomplete="given-name"/>
+          </div>
+          <div class="pot-field">
+            <label>Last name <span class="opt">(optional)</span></label>
+            <input type="text" class="pot-input" id="custom-last" placeholder="Doe" autocomplete="family-name"/>
+          </div>
+          <div class="pot-field">
+            <label>Email <span class="opt">(for a reminder)</span></label>
+            <input type="email" class="pot-input" id="custom-email" placeholder="you@example.com" autocomplete="email"/>
+          </div>
+          <div class="pot-field">
+            <label>Phone <span class="opt">(for SMS)</span></label>
+            <input type="tel" class="pot-input" id="custom-phone" placeholder="(720) 555-1234" autocomplete="tel"/>
+          </div>
+          <div class="pot-field">
+            <label>How many coming?</label>
+            <div class="pot-guests">
+              <button type="button" id="custom-minus">−</button>
+              <span class="pot-count" id="custom-count">1</span>
+              <button type="button" id="custom-plus">+</button>
+              <span class="pot-note" id="custom-note">just me</span>
+            </div>
+          </div>
+          <div class="pot-field">
+            <label>How can you help?</label>
+            <div class="pot-helpers">
+              <label class="pot-check"><input type="checkbox" id="custom-utensils"/> 🥄 Utensils / plates</label>
+              <label class="pot-check"><input type="checkbox" id="custom-early"/> ⏰ Arrive early</label>
+              <label class="pot-check"><input type="checkbox" id="custom-seating"/> 🪑 Chairs / blanket</label>
+            </div>
+          </div>
+          <div class="pot-field" style="grid-column:1/-1">
+            <label>Dietary / allergies <span class="opt">(optional)</span></label>
+            <textarea class="pot-textarea" id="custom-dietary" placeholder="vegan, nut allergy, gluten-free…"></textarea>
+          </div>
+          <div class="pot-field" style="grid-column:1/-1">
+            <label>Notes for the organizer <span class="opt">(optional)</span></label>
+            <textarea class="pot-textarea" id="custom-notes" placeholder="Anything else we should know?"></textarea>
+          </div>
+        </div>
+        <div class="pot-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
+        <div class="pot-form-row">
+          <button class="pot-submit" id="custom-submit">I'm bringing it! 🎉</button>
+          <button class="pot-cancel" id="custom-cancel">Cancel</button>
+        </div>
+        <div class="pot-error" id="err-custom"></div>
+      </div>
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
-
-  <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
-    <div style="background:#fff;border-radius:18px;max-width:440px;width:100%;padding:28px 26px;box-shadow:0 20px 60px rgba(0,0,0,0.25);font-family:'DM Sans',sans-serif">
-      <div style="font-size:36px;text-align:center;margin-bottom:6px">🎉</div>
-      <div id="confirm-title" style="font-size:22px;font-weight:700;text-align:center;margin-bottom:6px;color:#1c1917">You're in!</div>
-      <div id="confirm-sub" style="font-size:14px;text-align:center;color:#57524c;margin-bottom:20px">Confirmation email is on the way.</div>
-      <div id="confirm-contact" style="background:#f7f5f2;border-radius:12px;padding:16px 18px;margin-bottom:14px;display:none">
-        <div style="font-size:11px;font-weight:700;color:#a09890;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Stay in touch</div>
-        <div id="cc-rows" style="font-size:14px;color:#1c1917;line-height:1.9"></div>
+  <!-- WHO'S COMING TAB -->
+  <div class="pot-panel" id="panel-coming">
+    {signups.length === 0 ? (
+      <div class="pot-empty">Nobody's signed up yet — be the first!</div>
+    ) : signups.map((s: any) => (
+      <div class="pot-coming-row">
+        <div class="pot-avatar">{(s.name || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</div>
+        <div>
+          <div class="pot-coming-name">{s.name}</div>
+          <div class="pot-coming-dish">{s.dish || 'Just showing up 🎉'}</div>
+        </div>
+        {s.guest_count > 1 && <div class="pot-coming-plus">+{s.guest_count - 1}</div>}
       </div>
-      <div id="confirm-pay" style="background:#F0F9FF;border:1.5px solid #7DD3FC;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:none">
-        <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Want to chip in?</div>
-        <div id="cp-rows" style="font-size:14px;line-height:1.8"></div>
-      </div>
-      <button id="confirm-ok" style="width:100%;padding:13px;background:linear-gradient(135deg,#0284C7,#0EA5E9);color:#fff;font-size:15px;font-weight:600;border:none;border-radius:10px;cursor:pointer;font-family:inherit">Got it</button>
-    </div>
+    ))}
   </div>
+</div>
 
-  <script define:vars={{ potluckId: id }}>
+<div class="pot-toast" id="toast"></div>
+
+<div class="pot-overlay" id="confirm-overlay">
+  <div class="pot-overlay-card">
+    <div style="font-size:40px;text-align:center;margin-bottom:8px">🎉</div>
+    <h2 id="confirm-title">You're in!</h2>
+    <div class="pot-overlay-sub">Confirmation email is on the way.</div>
+    <div class="pot-block" id="confirm-contact" style="display:none">
+      <div class="pot-block-label">Stay in touch</div>
+      <div class="pot-overlay-rows" id="confirm-contact-rows"></div>
+    </div>
+    <div class="pot-block pay" id="confirm-pay" style="display:none">
+      <div class="pot-block-label">Want to chip in?</div>
+      <div class="pot-overlay-rows" id="confirm-pay-rows"></div>
+    </div>
+    <button class="pot-overlay-ok" id="confirm-ok">Got it</button>
+  </div>
+</div>
+
+<script is:inline define:vars={{ potluckId: id }}>
+  (function () {
     var guestCounts = {};
-
-    // Tabs
-    var currentSignupView = 'cards'; // remembers grid vs cards across tab switches
-    function showSignupView(v) {
-      currentSignupView = v;
-      document.querySelectorAll('.vt-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.view === v); });
-      document.getElementById('panel-list').classList.toggle('active', v === 'cards');
-      document.getElementById('panel-grid').classList.toggle('active', v === 'grid');
-    }
-    document.getElementById('tab-list').addEventListener('click', function() {
-      document.getElementById('tab-list').classList.add('active');
-      document.getElementById('tab-coming').classList.remove('active');
-      document.getElementById('panel-coming').classList.remove('active');
-      document.getElementById('view-toggle').style.display = '';
-      showSignupView(currentSignupView);
-    });
-    document.getElementById('tab-coming').addEventListener('click', function() {
-      document.getElementById('tab-coming').classList.add('active');
-      document.getElementById('tab-list').classList.remove('active');
-      document.getElementById('panel-coming').classList.add('active');
-      document.getElementById('panel-list').classList.remove('active');
-      document.getElementById('panel-grid').classList.remove('active');
-      document.getElementById('view-toggle').style.display = 'none';
-    });
-    document.querySelectorAll('.vt-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() { showSignupView(btn.dataset.view); });
-    });
-
-    // Grid → cards: clicking "Sign up" in the grid switches to cards view
-    // and opens that item's claim form so the existing inline form logic
-    // is the only place a sign-up actually happens.
-    document.querySelectorAll('.g-signup-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var itemId = btn.dataset.id;
-        showSignupView('cards');
-        // expand the parent <details> if collapsed, then open the item's form
-        var item = document.getElementById('item-' + itemId);
-        if (item) {
-          var details = item.closest('details');
-          if (details) details.open = true;
-          setTimeout(function() {
-            item.click();
-            item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 30);
-        }
-      });
-    });
-
-    // Share
-    var url = window.location.href;
-    document.getElementById('copy-btn').addEventListener('click', function() {
-      navigator.clipboard.writeText(url).then(function() {
-        showToast('Link copied! 🔗');
-      });
-    });
-    document.getElementById('share-fb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
-
-    // Tappable item rows — open inline form
-    // Defense-in-depth toggle for the category dropdowns: some browsers
-    // (older Safari, embedded webviews) won't fire the native <details>
-    // toggle when summary has flex children. This JS guarantees a tap
-    // anywhere in the summary toggles the parent details element.
-    document.querySelectorAll('details.cat-block > summary').forEach(function(s) {
-      s.addEventListener('click', function(e) {
-        var d = s.parentElement;
-        if (!d) return;
-        e.preventDefault();
-        if (d.hasAttribute('open')) d.removeAttribute('open');
-        else d.setAttribute('open', '');
-      });
-    });
-
-    document.querySelectorAll('.item[data-id]').forEach(function(row) {
-      row.addEventListener('click', function() {
-        var id = row.dataset.id;
-        // Close any other open forms
-        document.querySelectorAll('.claim-form').forEach(function(f) { f.classList.remove('open'); f.classList.add('hidden'); });
-        var form = document.getElementById('form-' + id);
-        if (form) {
-          form.classList.add('open'); form.classList.remove('hidden');
-          var firstInput = document.getElementById('first-' + id);
-          if (firstInput) firstInput.focus();
-          form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      });
-    });
-
-    // Cancel buttons
-    document.querySelectorAll('.claim-cancel').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var id = btn.dataset.id;
-        if (id) { var f = document.getElementById('form-' + id); if (f) { f.classList.remove('open'); f.classList.add('hidden'); } }
-        else { document.getElementById('custom-form').classList.remove('open'); document.getElementById('custom-form').classList.add('hidden'); }
-      });
-    });
-
-    // Guest count buttons
-    document.querySelectorAll('.g-btn[data-item]').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var itemId = btn.dataset.item;
-        if (!guestCounts[itemId]) guestCounts[itemId] = 1;
-        guestCounts[itemId] = Math.max(1, Math.min(10, guestCounts[itemId] + parseInt(btn.dataset.dir)));
-        document.getElementById('gc-' + itemId).textContent = String(guestCounts[itemId]);
-        document.getElementById('gn-' + itemId).textContent = guestCounts[itemId] === 1 ? 'just me' : 'me + ' + (guestCounts[itemId]-1) + ' other' + (guestCounts[itemId]>2?'s':'');
-      });
-    });
-
-    // Custom dish toggle
     var customCount = 1;
-    document.getElementById('custom-toggle').addEventListener('click', function() {
-      var f = document.getElementById('custom-form');
-      f.classList.toggle('hidden');
-      if (!f.classList.contains('hidden')) document.getElementById('custom-dish').focus();
-    });
-    document.getElementById('custom-minus').addEventListener('click', function() {
-      customCount = Math.max(1, customCount-1);
-      document.getElementById('custom-gc').textContent = String(customCount);
-      document.getElementById('custom-gn').textContent = customCount===1?'just me':'me + '+(customCount-1)+' other'+(customCount>2?'s':'');
-    });
-    document.getElementById('custom-plus').addEventListener('click', function() {
-      customCount = Math.min(10, customCount+1);
-      document.getElementById('custom-gc').textContent = String(customCount);
-      document.getElementById('custom-gn').textContent = customCount===1?'just me':'me + '+(customCount-1)+' other'+(customCount>2?'s':'');
-    });
-    document.getElementById('custom-cancel').addEventListener('click', function() {
-      document.getElementById('custom-form').classList.add('hidden');
-    });
 
-    // Submit claim
     function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
     function checked(id) { var el = document.getElementById(id); return !!(el && el.checked); }
 
-    document.querySelectorAll('.claim-submit').forEach(function(btn) {
-      btn.addEventListener('click', async function() {
-        var itemId = btn.dataset.id;
-        var dish = btn.dataset.dish;
-        var name, guests, email, phone, dietary, notes, utensils, earlyArrive, seating;
+    function closeAllForms() {
+      document.querySelectorAll('.pot-form').forEach(function (f) { f.classList.remove('open'); });
+    }
 
-        var first, last;
-        if (itemId) {
-          first = val('first-' + itemId);
-          last = val('last-' + itemId);
-          guests = guestCounts[itemId] || 1;
-          email = val('email-' + itemId);
-          phone = val('phone-' + itemId);
-          dietary = val('dietary-' + itemId);
-          notes = val('notes-' + itemId);
-          utensils = checked('utensils-' + itemId);
-          earlyArrive = checked('early-' + itemId);
-          seating = checked('seating-' + itemId);
-        } else {
-          // custom
-          dish = val('custom-dish');
-          first = val('custom-first');
-          last = val('custom-last');
-          guests = customCount;
-          email = val('custom-email');
-          phone = val('custom-phone');
-          dietary = val('custom-dietary');
-          notes = val('custom-notes');
-          utensils = checked('custom-utensils');
-          earlyArrive = checked('custom-early');
-          seating = checked('custom-seating');
-          if (!dish) { document.getElementById('custom-dish').focus(); return; }
-        }
-
-        if (!first) {
-          var firstField = itemId ? document.getElementById('first-' + itemId) : document.getElementById('custom-first');
-          firstField.style.borderColor = '#dc2626';
-          firstField.focus();
-          return;
-        }
-        name = last ? (first + ' ' + last) : first;
-
-        btn.disabled = true; btn.textContent = 'Saving…';
-
-        try {
-          var res = await fetch('/api/potluck', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              potluckId: String(potluckId), name, email, phone, handle: '',
-              platforms: '', rsvp: 'yes', guestCount: String(guests),
-              dish: dish, dishCategory: '', dietary: dietary, notes: notes,
-              utensils: utensils, earlyArrive: earlyArrive, seating: seating,
-              _gotcha: '', _turnstile: ''
-            })
-          });
-          var data = await res.json();
-          if (data.ok) {
-            showConfirmation(name.split(' ')[0], data.contact || {});
-          } else {
-            btn.disabled = false; btn.textContent = itemId ? 'Claim it! 🎉' : 'I\'m bringing it! 🎉';
-            showToast('Something went wrong — try again');
-          }
-        } catch(e) {
-          btn.disabled = false; btn.textContent = itemId ? 'Claim it! 🎉' : 'I\'m bringing it! 🎉';
-        }
+    // ── Tabs ─────────────────────────────────────────────────────────
+    document.querySelectorAll('.pot-tab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        var t = tab.dataset.tab;
+        document.querySelectorAll('.pot-tab').forEach(function (x) { x.classList.toggle('active', x.dataset.tab === t); });
+        document.getElementById('panel-signup').classList.toggle('active', t === 'signup');
+        document.getElementById('panel-coming').classList.toggle('active', t === 'coming');
       });
     });
 
-    function showToast(msg) {
-      var t = document.getElementById('toast');
-      t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(function() { t.classList.remove('show'); }, 2500);
+    // ── Item rows: tap to open inline form ──────────────────────────
+    document.querySelectorAll('.pot-item[data-id]').forEach(function (row) {
+      row.addEventListener('click', function () {
+        var id = row.dataset.id;
+        closeAllForms();
+        var form = document.getElementById('form-' + id);
+        if (!form) return;
+        form.classList.add('open');
+        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(function () {
+          var first = document.getElementById('first-' + id);
+          if (first) first.focus();
+        }, 250);
+      });
+    });
+
+    // ── Cancel buttons ──────────────────────────────────────────────
+    document.querySelectorAll('.pot-cancel').forEach(function (btn) {
+      btn.addEventListener('click', function () { closeAllForms(); });
+    });
+
+    // ── Custom dish toggle ──────────────────────────────────────────
+    document.getElementById('custom-toggle').addEventListener('click', function () {
+      closeAllForms();
+      var form = document.getElementById('form-custom');
+      form.classList.add('open');
+      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function () {
+        var dish = document.getElementById('custom-dish');
+        if (dish) dish.focus();
+      }, 250);
+    });
+
+    // ── Guest counters ──────────────────────────────────────────────
+    function guestNote(n) { return n === 1 ? 'just me' : '+ ' + (n - 1) + (n === 2 ? ' guest' : ' guests'); }
+
+    document.querySelectorAll('.pot-guests button[data-id]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.dataset.id;
+        var dir = parseInt(btn.dataset.dir);
+        var cur = guestCounts[id] || 1;
+        var next = Math.max(1, Math.min(20, cur + dir));
+        guestCounts[id] = next;
+        document.getElementById('gc-' + id).textContent = next;
+        document.getElementById('gn-' + id).textContent = guestNote(next);
+      });
+    });
+
+    document.getElementById('custom-minus').addEventListener('click', function () {
+      customCount = Math.max(1, customCount - 1);
+      document.getElementById('custom-count').textContent = customCount;
+      document.getElementById('custom-note').textContent = guestNote(customCount);
+    });
+    document.getElementById('custom-plus').addEventListener('click', function () {
+      customCount = Math.min(20, customCount + 1);
+      document.getElementById('custom-count').textContent = customCount;
+      document.getElementById('custom-note').textContent = guestNote(customCount);
+    });
+
+    // ── Submit ──────────────────────────────────────────────────────
+    function showErr(id, msg) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = msg; el.classList.add('show');
+    }
+    function clearErr(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = ''; el.classList.remove('show');
     }
 
-    function escHtml(s) { return String(s||'').replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+    function escHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
 
-    function showConfirmation(firstName, contact) {
-      document.getElementById('confirm-title').textContent = "You're in, " + firstName + "!";
+    function showConfirm(firstName, contact) {
+      document.getElementById('confirm-title').textContent = "You're in, " + firstName + '!';
       var ccRows = [];
       if (contact.phone) ccRows.push('<div>📞 ' + escHtml(contact.phone) + '</div>');
-      if (contact.discord_url) ccRows.push('<div>💬 <a href="' + escHtml(contact.discord_url) + '" target="_blank" rel="noopener" style="color:#0284C7;text-decoration:none;font-weight:600">Join Discord</a>' + (contact.discord ? ' · ' + escHtml(contact.discord) : '') + '</div>');
-      else if (contact.discord) ccRows.push('<div>💬 ' + escHtml(contact.discord) + '</div>');
-      if (ccRows.length > 0) {
-        document.getElementById('cc-rows').innerHTML = ccRows.join('');
+      if (contact.discord_url) {
+        ccRows.push('<div>💬 <a href="' + escHtml(contact.discord_url) + '" target="_blank" rel="noopener">Join Discord</a>' + (contact.discord ? ' · ' + escHtml(contact.discord) : '') + '</div>');
+      } else if (contact.discord) {
+        ccRows.push('<div>💬 ' + escHtml(contact.discord) + '</div>');
+      }
+      if (ccRows.length) {
+        document.getElementById('confirm-contact-rows').innerHTML = ccRows.join('');
         document.getElementById('confirm-contact').style.display = 'block';
       }
-      var cpRows = [];
-      if (contact.venmo) cpRows.push('<div>💸 Venmo: <a href="https://venmo.com/' + escHtml(String(contact.venmo).replace(/^@/, '')) + '" target="_blank" rel="noopener" style="color:#0284C7;text-decoration:none;font-weight:600">' + escHtml(contact.venmo) + '</a></div>');
-      if (contact.cashapp_handle) cpRows.push('<div>💵 Cash App: <a href="https://cash.app/' + escHtml(String(contact.cashapp_handle).replace(/^\$/, '$')) + '" target="_blank" rel="noopener" style="color:#0284C7;text-decoration:none;font-weight:600">' + escHtml(contact.cashapp_handle) + '</a></div>');
-      if (contact.stripe_link) cpRows.push('<div>💳 <a href="' + escHtml(contact.stripe_link) + '" target="_blank" rel="noopener" style="color:#0284C7;text-decoration:none;font-weight:600">Pay with card</a></div>');
-      if (cpRows.length > 0) {
-        document.getElementById('cp-rows').innerHTML = cpRows.join('');
+
+      var payRows = [];
+      if (contact.venmo) payRows.push('<div>💸 Venmo: <a href="https://venmo.com/' + escHtml(String(contact.venmo).replace(/^@/, '')) + '" target="_blank" rel="noopener">' + escHtml(contact.venmo) + '</a></div>');
+      if (contact.cashapp_handle) payRows.push('<div>💵 Cash App: <a href="https://cash.app/' + escHtml(String(contact.cashapp_handle).replace(/^\$/, '$')) + '" target="_blank" rel="noopener">' + escHtml(contact.cashapp_handle) + '</a></div>');
+      if (contact.stripe_link) payRows.push('<div>💳 <a href="' + escHtml(contact.stripe_link) + '" target="_blank" rel="noopener">Pay with card</a></div>');
+      if (payRows.length) {
+        document.getElementById('confirm-pay-rows').innerHTML = payRows.join('');
         document.getElementById('confirm-pay').style.display = 'block';
       }
-      var overlay = document.getElementById('confirm-overlay');
-      overlay.style.display = 'flex';
+
+      document.getElementById('confirm-overlay').classList.add('show');
     }
 
-    document.getElementById('confirm-ok').addEventListener('click', function() {
-      document.getElementById('confirm-overlay').style.display = 'none';
+    document.getElementById('confirm-ok').addEventListener('click', function () {
+      document.getElementById('confirm-overlay').classList.remove('show');
       location.reload();
     });
-  </script>
+
+    async function submit(opts) {
+      var btn = opts.btn;
+      var origText = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        var res = await fetch('/api/potluck', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            potluckId: String(potluckId),
+            name: opts.name,
+            email: opts.email,
+            phone: opts.phone,
+            handle: '',
+            platforms: '',
+            rsvp: 'yes',
+            guestCount: String(opts.guests),
+            dish: opts.dish,
+            dishCategory: '',
+            dietary: opts.dietary,
+            notes: opts.notes,
+            utensils: opts.utensils,
+            earlyArrive: opts.earlyArrive,
+            seating: opts.seating,
+            _gotcha: '',
+            _turnstile: '',
+          }),
+        });
+        var data = await res.json();
+        if (data.ok) {
+          showConfirm(opts.firstName, data.contact || {});
+          return;
+        }
+        if (data.error === 'slot_full') showErr(opts.errId, 'Someone just claimed this — refresh to see what else is open.');
+        else showErr(opts.errId, 'Something went wrong — try again.');
+      } catch {
+        showErr(opts.errId, 'Network problem — try again.');
+      }
+      btn.disabled = false; btn.textContent = origText;
+    }
+
+    document.querySelectorAll('.pot-submit[data-id]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.dataset.id;
+        var first = val('first-' + id);
+        if (!first) {
+          var f = document.getElementById('first-' + id);
+          if (f) { f.classList.add('invalid'); f.focus(); }
+          return;
+        }
+        document.getElementById('first-' + id).classList.remove('invalid');
+        var last = val('last-' + id);
+        var name = last ? first + ' ' + last : first;
+        clearErr('err-' + id);
+        submit({
+          btn: btn, errId: 'err-' + id,
+          name: name, firstName: first,
+          email: val('email-' + id),
+          phone: val('phone-' + id),
+          guests: guestCounts[id] || 1,
+          dish: btn.dataset.dish,
+          dietary: val('dietary-' + id),
+          notes: val('notes-' + id),
+          utensils: checked('utensils-' + id),
+          earlyArrive: checked('early-' + id),
+          seating: checked('seating-' + id),
+        });
+      });
+    });
+
+    document.getElementById('custom-submit').addEventListener('click', function () {
+      var dish = val('custom-dish');
+      if (!dish) {
+        var d = document.getElementById('custom-dish');
+        d.classList.add('invalid'); d.focus(); return;
+      }
+      document.getElementById('custom-dish').classList.remove('invalid');
+      var first = val('custom-first');
+      if (!first) {
+        var f = document.getElementById('custom-first');
+        f.classList.add('invalid'); f.focus(); return;
+      }
+      document.getElementById('custom-first').classList.remove('invalid');
+      var last = val('custom-last');
+      var name = last ? first + ' ' + last : first;
+      clearErr('err-custom');
+      submit({
+        btn: document.getElementById('custom-submit'), errId: 'err-custom',
+        name: name, firstName: first,
+        email: val('custom-email'),
+        phone: val('custom-phone'),
+        guests: customCount,
+        dish: dish,
+        dietary: val('custom-dietary'),
+        notes: val('custom-notes'),
+        utensils: checked('custom-utensils'),
+        earlyArrive: checked('custom-early'),
+        seating: checked('custom-seating'),
+      });
+    });
+
+    // ── Copy link ───────────────────────────────────────────────────
+    document.getElementById('copy-link').addEventListener('click', function () {
+      navigator.clipboard.writeText(location.href).then(function () {
+        var t = document.getElementById('toast');
+        t.textContent = 'Link copied ✓'; t.classList.add('show');
+        setTimeout(function () { t.classList.remove('show'); }, 1800);
+      }).catch(function () {});
+    });
+  })();
+</script>
 </Base>
