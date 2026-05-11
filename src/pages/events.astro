@@ -8,58 +8,126 @@ const cookie = Astro.cookies.get("dsn_user")?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 
 const db = getDB();
-let events: any[] = [];
+const now = new Date();
+const currentMonth = now.getMonth();
+const currentDay = now.getDate();
+const monthOrder: Record<string,number> = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const monthAbbrs = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const potluckMonthMap: Record<string,number> = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11,january:0,february:1,march:2,april:3,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
+
+// -- Unified card type --
+type Card = {
+  kind: 'event' | 'potluck';
+  id: number;
+  href: string;
+  title: string;
+  description: string;
+  type: string;
+  dateStr: string;
+  timeStr: string;
+  sortMonth: number;
+  sortDay: number;
+  location: string;
+  fillPct: number;
+  goingCount: number;
+  spotsLeft: number;
+  hostName: string;
+  karmaMin: number;
+  attendeeCount: number;
+  dishCount: number;
+};
+
+let cards: Card[] = [];
 let rsvpCounts: Record<number, number> = {};
+
 try {
   if (db) {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentDay = now.getDate();
-    const monthOrder: Record<string,number> = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+    // -- Query events --
     const allEvents = (await db.prepare("SELECT * FROM events WHERE is_past IS NULL OR is_past=0 ORDER BY id DESC").all())?.results || [];
-    events = allEvents.filter((e: any) => {
+    const counts = (await db.prepare("SELECT event_id, COUNT(*) as cnt FROM event_rsvps GROUP BY event_id").all())?.results || [];
+    counts.forEach((c: any) => { rsvpCounts[c.event_id] = c.cnt; });
+
+    const futureEvents = allEvents.filter((e: any) => {
       const m = monthOrder[(e.event_month || '').toUpperCase()];
       const d = parseInt(e.event_day) || 99;
       if (m === undefined) return true;
       if (m < currentMonth) return false;
       if (m === currentMonth && d < currentDay) return false;
       return true;
-    }).sort((a: any, b: any) => {
-      const ma = monthOrder[(a.event_month || '').toUpperCase()] ?? 99;
-      const mb = monthOrder[(b.event_month || '').toUpperCase()] ?? 99;
-      if (ma !== mb) return ma - mb;
-      return (parseInt(a.event_day) || 99) - (parseInt(b.event_day) || 99);
     });
-    const counts = (await db.prepare("SELECT event_id, COUNT(*) as cnt FROM event_rsvps GROUP BY event_id").all())?.results || [];
-    counts.forEach((c: any) => { rsvpCounts[c.event_id] = c.cnt; });
+
+    for (const ev of futureEvents) {
+      const sm = monthOrder[(ev.event_month || '').toUpperCase()] ?? 99;
+      const sd = parseInt(ev.event_day) || 99;
+      const total = parseInt(ev.spots) || 10;
+      const taken = rsvpCounts[ev.id] || 0;
+      const left = Math.max(0, total - taken);
+      const pct = Math.min(100, Math.round(taken / total * 100));
+      let ds = `${ev.event_month} ${ev.event_day}`;
+      if (sm !== 99) {
+        const dt = new Date(2026, sm, sd);
+        ds = `${dayNames[dt.getDay()]}, ${ev.event_month} ${ev.event_day}`;
+      }
+      cards.push({
+        kind: 'event', id: ev.id, href: `/events/${ev.id}`,
+        title: ev.title, description: ev.description || '',
+        type: ev.event_type || 'other',
+        dateStr: ds, timeStr: '',
+        sortMonth: sm, sortDay: sd,
+        location: ev.zone || ev.location || 'Denver',
+        fillPct: pct, goingCount: taken, spotsLeft: left,
+        hostName: ev.host_name || '', karmaMin: ev.karma_min || 0,
+        attendeeCount: 0, dishCount: 0,
+      });
+    }
+
+    // -- Query potlucks --
+    const potluckRows = (await db.prepare(`
+      SELECT p.*, COUNT(DISTINCT CASE WHEN r.rsvp='yes' THEN r.id END) as attendee_count,
+        COUNT(DISTINCT CASE WHEN r.rsvp='yes' AND r.dish!='' THEN LOWER(r.dish) END) as dish_count
+      FROM potlucks p LEFT JOIN potluck_rsvp r ON r.potluck_id=p.id
+      WHERE p.status = 'upcoming' GROUP BY p.id
+    `).all())?.results || [];
+
+    for (const p of potluckRows) {
+      const parts = (p.date_label || '').trim().split(/\s+/);
+      const monthStr = (parts[0] || '').toLowerCase().replace(/[^a-z]/g, '');
+      const dayStr = (parts[1] || '').replace(/\D/g, '');
+      const sm = potluckMonthMap[monthStr] ?? potluckMonthMap[monthStr.slice(0,3)] ?? 99;
+      const sd = parseInt(dayStr) || 99;
+      // Skip past potlucks
+      if (sm < currentMonth || (sm === currentMonth && sd < currentDay)) continue;
+      let ds = p.date_label || 'TBD';
+      if (sm !== 99 && sd !== 99) {
+        const dt = new Date(2026, sm, sd);
+        ds = `${dayNames[dt.getDay()]}, ${monthAbbrs[sm]} ${sd}`;
+      }
+      cards.push({
+        kind: 'potluck', id: p.id, href: `/potlucks/${p.id}`,
+        title: p.title, description: p.description || '',
+        type: 'potluck',
+        dateStr: ds, timeStr: p.time_label || '',
+        sortMonth: sm, sortDay: sd,
+        location: p.location || 'Denver',
+        fillPct: 0, goingCount: p.attendee_count || 0, spotsLeft: -1,
+        hostName: '', karmaMin: 0,
+        attendeeCount: p.attendee_count || 0, dishCount: p.dish_count || 0,
+      });
+    }
   }
-} catch {}
+} catch (err) { console.error('Events page query error:', err); }
+
+// Sort chronologically
+cards.sort((a, b) => {
+  if (a.sortMonth !== b.sortMonth) return a.sortMonth - b.sortMonth;
+  return a.sortDay - b.sortDay;
+});
 
 const typeLabel: Record<string,string> = { dinner:"dinner",game_night:"game_night",outdoor:"outdoor",brewery:"brewery",coffee:"coffee",arts:"arts",music:"music",social:"social",group_tickets:"tickets",camping:"camping",sports_outing:"sports",bowling:"bowling",active:"active",casino:"casino",food_trucks:"food",potluck:"potluck",other:"event" };
-const typeSet = new Set(events.map((e: any) => e.event_type).filter(Boolean));
+const typeSet = new Set(cards.map(c => c.type).filter(Boolean));
 const allTypes = Array.from(typeSet);
 const content = await getContent();
-
-function spotsLeft(ev: any): number {
-  const total = parseInt(ev.spots) || 10;
-  const taken = rsvpCounts[ev.id] || 0;
-  return Math.max(0, total - taken);
-}
-function fillPct(ev: any): number {
-  const total = parseInt(ev.spots) || 10;
-  const taken = rsvpCounts[ev.id] || 0;
-  return Math.min(100, Math.round(taken / total * 100));
-}
-const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-function fmtDate(ev: any): string {
-  const m = monthOrder[(ev.event_month || '').toUpperCase()];
-  const d = parseInt(ev.event_day) || 1;
-  if (m !== undefined) {
-    const dt = new Date(2026, m, d);
-    return `${dayNames[dt.getDay()]}, ${ev.event_month} ${ev.event_day}`;
-  }
-  return `${ev.event_month} ${ev.event_day}`;
-}
 ---
 <Base title="Browse Events">
 <div class="ev-page">
@@ -68,7 +136,7 @@ function fmtDate(ev: any): string {
   <div class="ev-header">
     <div class="ev-header-left">
       <span class="tag tag-orange">Events</span>
-      <h1 class="ev-h1">{events.length} events live</h1>
+      <h1 class="ev-h1">{cards.length} events live</h1>
       <p class="ev-sub">{content.events_subtitle || 'Small groups, real plans, no flakes.'}</p>
     </div>
     {user && (
@@ -130,29 +198,41 @@ function fmtDate(ev: any): string {
   </script>
 
   <!-- Event grid -->
-  {events.length > 0 ? (
+  {cards.length > 0 ? (
     <div class="ev-grid" id="eventGrid">
-      {events.map((ev: any) => (
-          <a href={`/events/${ev.id}`} class="ec" data-type={ev.event_type}>
+      {cards.map((c) => (
+          <a href={c.href} class="ec" data-type={c.type}>
             <div class="ec-top">
-              <span class="ec-type tag tag-blue">{typeLabel[ev.event_type] || 'event'}</span>
-              {ev.karma_min > 0 && <span class="tag tag-yellow">{ev.karma_min}+ karma</span>}
-              {spotsLeft(ev) <= 3 && spotsLeft(ev) > 0 && <span class="tag tag-orange">last {spotsLeft(ev)} spots</span>}
-              {spotsLeft(ev) === 0 && <span class="tag" style="background:rgba(255,71,87,0.12);color:#ff4757">Full</span>}
+              {c.kind === 'potluck' ? (
+                <span class="ec-type tag tag-green">🍽 potluck</span>
+              ) : (
+                <span class="ec-type tag tag-blue">{typeLabel[c.type] || 'event'}</span>
+              )}
+              {c.karmaMin >= 1 && <span class="tag tag-yellow">{c.karmaMin}+ karma</span>}
+              {(c.kind === 'event' && c.spotsLeft !== 0 && c.spotsLeft !== -1 && 4 > c.spotsLeft) && <span class="tag tag-orange">last {c.spotsLeft} spots</span>}
+              {c.kind === 'event' && c.spotsLeft === 0 && <span class="tag" style="background:rgba(255,71,87,0.12);color:#ff4757">Full</span>}
             </div>
-            <h3 class="ec-title">{ev.title}</h3>
-            {ev.description && <p class="ec-desc">{ev.description.slice(0, 80)}</p>}
+            <h3 class="ec-title">{c.title}</h3>
+            {c.description && <p class="ec-desc">{c.description.slice(0, 80)}</p>}
             <div class="ec-meta">
-              <span class="ec-date">{fmtDate(ev)}</span>
+              <span class="ec-date">{c.dateStr}{c.timeStr ? ` · ${c.timeStr}` : ''}</span>
               <span class="ec-dot"></span>
-              <span>{ev.zone || ev.location || 'Denver'}</span>
+              <span>{c.location}</span>
             </div>
             <div class="ec-footer">
-              <div class="ec-fill-wrap">
-                <div class="ec-fill-bar"><div class="ec-fill" style={`width:${fillPct(ev)}%`}></div></div>
-                <span class="ec-fill-text">{rsvpCounts[ev.id] || 0} going</span>
-              </div>
-              {ev.host_name && <span class="ec-host">by {ev.host_name}</span>}
+              {c.kind === 'potluck' ? (
+                <div class="ec-fill-wrap">
+                  <span class="ec-fill-text">👥 {c.attendeeCount} signed up · 🍽 {c.dishCount} dishes</span>
+                </div>
+              ) : (
+                <div class="ec-footer-inner">
+                  <div class="ec-fill-wrap">
+                    <div class="ec-fill-bar"><div class="ec-fill" style={`width:${c.fillPct}%`}></div></div>
+                    <span class="ec-fill-text">{c.goingCount} going</span>
+                  </div>
+                  {c.hostName && <span class="ec-host">by {c.hostName}</span>}
+                </div>
+              )}
             </div>
           </a>
       ))}
@@ -321,6 +401,7 @@ function fmtDate(ev: any): string {
   .ec-fill { height: 100%; border-radius: 2px; background: var(--green); transition: width .3s; }
   .ec-fill-text { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
   .ec-host { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+  .ec-footer-inner { display: flex; align-items: center; justify-content: space-between; width: 100%; }
 
   /* Empty state */
   .ev-empty { text-align: center; padding: 48px 24px; }

@@ -11,7 +11,7 @@ let signups: any[] = [];
 try {
   if (db && id) {
     potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(id).first();
-    if (potluck?.locked) return Astro.redirect('/potlucks');
+    if (potluck?.locked) return Astro.redirect('/events');
 
     // Slots with claim counts (match on category, not dish text)
     const s = await db.prepare(`
@@ -33,7 +33,7 @@ try {
     signups = r?.results ?? [];
   }
 } catch (e) { console.error(e); }
-if (!potluck) return Astro.redirect('/potlucks');
+if (!potluck) return Astro.redirect('/events');
 
 const guestTotal = signups.reduce((sum: number, s: any) => sum + (parseInt(s.guest_count) || 1), 0);
 const totalSlots = slots.reduce((sum: number, s: any) => sum + (s.max_claims < 900 ? s.max_claims : 1), 0);

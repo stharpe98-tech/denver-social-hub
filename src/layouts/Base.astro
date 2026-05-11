@@ -26,8 +26,7 @@ const redditName = user?.reddit_username || user?.name;
   <header class="site-header">
     <div class="site-header-inner">
       <nav class="site-nav site-nav-left">
-        <a href="/events"   class:list={["site-nav-link", { active: currentPath.startsWith("/events") }]}>Events</a>
-        <a href="/potlucks" class:list={["site-nav-link", { active: currentPath.startsWith("/potlucks") }]}>Community events</a>
+        <a href="/events" class:list={["site-nav-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
       </nav>
 
       <a href="/" class="site-logo" aria-label="Denver Social home">
@@ -70,7 +69,6 @@ const redditName = user?.reddit_username || user?.name;
       <div class="footer-col">
         <div class="footer-col-title">Explore</div>
         <a href="/events">Events</a>
-        <a href="/potlucks">Community events</a>
         <a href="/help">Help</a>
       </div>
       <div class="footer-col">
@@ -97,11 +95,11 @@ const redditName = user?.reddit_username || user?.name;
     <a href="/"        class:list={["mob-link", { active: currentPath === "/" }]}>
       <span class="mob-icon">🏠</span><span class="mob-label">Home</span>
     </a>
-    <a href="/events"  class:list={["mob-link", { active: currentPath.startsWith("/events") }]}>
+    <a href="/events"  class:list={["mob-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>
       <span class="mob-icon">📅</span><span class="mob-label">Events</span>
     </a>
-    <a href="/potlucks" class:list={["mob-link", { active: currentPath.startsWith("/potlucks") }]}>
-      <span class="mob-icon">🍽</span><span class="mob-label">Community</span>
+    <a href="/about" class:list={["mob-link", { active: currentPath.startsWith("/about") }]}>
+      <span class="mob-icon">ℹ️</span><span class="mob-label">About</span>
     </a>
     <a href="/me"    class:list={["mob-link", { active: currentPath === "/me" || currentPath === "/profile" }]}>
       <span class="mob-icon">👤</span><span class="mob-label">Me</span>
