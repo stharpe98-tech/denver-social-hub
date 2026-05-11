@@ -315,8 +315,10 @@ slots.forEach((s:any) => {
                     <div class="claim-form-title">🙌 Bringing {item.suggestion}!</div>
                     <div class="claim-grid">
                       <div class="claim-left">
-                        <label class="claim-label">Your name *</label>
-                        <input type="text" class="claim-input" id={`name-${item.id}`} placeholder="Jamie Doe"/>
+                        <label class="claim-label">First name *</label>
+                        <input type="text" class="claim-input" id={`first-${item.id}`} placeholder="Jamie" autocomplete="given-name"/>
+                        <label class="claim-label">Last name <span>(optional)</span></label>
+                        <input type="text" class="claim-input" id={`last-${item.id}`} placeholder="Doe" autocomplete="family-name"/>
                         <label class="claim-label">Email <span>(optional — for a reminder)</span></label>
                         <input type="email" class="claim-input" id={`email-${item.id}`} placeholder="you@example.com"/>
                         <label class="claim-label">Phone <span>(optional — for SMS updates)</span></label>
@@ -378,8 +380,10 @@ slots.forEach((s:any) => {
             <div class="claim-left">
               <label class="claim-label">What are you bringing? *</label>
               <input type="text" class="claim-input" id="custom-dish" placeholder="e.g. Cornbread, fruit punch…" autocomplete="off"/>
-              <label class="claim-label">Your name *</label>
-              <input type="text" class="claim-input" id="custom-name" placeholder="Jamie Doe"/>
+              <label class="claim-label">First name *</label>
+              <input type="text" class="claim-input" id="custom-first" placeholder="Jamie" autocomplete="given-name"/>
+              <label class="claim-label">Last name <span>(optional)</span></label>
+              <input type="text" class="claim-input" id="custom-last" placeholder="Doe" autocomplete="family-name"/>
               <label class="claim-label">Email <span>(optional — for a reminder)</span></label>
               <input type="email" class="claim-input" id="custom-email" placeholder="you@example.com"/>
               <label class="claim-label">Phone <span>(optional — for SMS updates)</span></label>
@@ -580,8 +584,10 @@ slots.forEach((s:any) => {
         var dish = btn.dataset.dish;
         var name, guests, email, phone, dietary, notes, utensils, earlyArrive, seating;
 
+        var first, last;
         if (itemId) {
-          name = val('name-' + itemId);
+          first = val('first-' + itemId);
+          last = val('last-' + itemId);
           guests = guestCounts[itemId] || 1;
           email = val('email-' + itemId);
           phone = val('phone-' + itemId);
@@ -593,7 +599,8 @@ slots.forEach((s:any) => {
         } else {
           // custom
           dish = val('custom-dish');
-          name = val('custom-name');
+          first = val('custom-first');
+          last = val('custom-last');
           guests = customCount;
           email = val('custom-email');
           phone = val('custom-phone');
@@ -605,12 +612,13 @@ slots.forEach((s:any) => {
           if (!dish) { document.getElementById('custom-dish').focus(); return; }
         }
 
-        if (!name) {
-          var nameField = itemId ? document.getElementById('name-' + itemId) : document.getElementById('custom-name');
-          nameField.style.borderColor = '#dc2626';
-          nameField.focus();
+        if (!first) {
+          var firstField = itemId ? document.getElementById('first-' + itemId) : document.getElementById('custom-first');
+          firstField.style.borderColor = '#dc2626';
+          firstField.focus();
           return;
         }
+        name = last ? (first + ' ' + last) : first;
 
         btn.disabled = true; btn.textContent = 'Saving…';
 
