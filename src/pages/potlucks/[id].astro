@@ -120,14 +120,27 @@ slots.forEach((s:any) => {
     .claim-btn:active { opacity: 0.85; transform: scale(0.97); }
 
     /* Inline claim form */
-    .claim-form { display: none; background: #F0F9FF; border: 1.5px solid #0EA5E9; border-radius: 12px; padding: 16px; margin-bottom: 8px; }
+    .claim-form { display: none; background: #F0F9FF; border: 1.5px solid #0EA5E9; border-radius: 14px; padding: 18px; margin-bottom: 8px; }
     .claim-form.open { display: block; }
-    .claim-form-title { font-size: 14px; font-weight: 600; color: #0284C7; margin-bottom: 12px; }
-    .claim-input { width: 100%; padding: 11px 13px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 9px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; margin-bottom: 10px; -webkit-appearance: none; }
-    .claim-input:focus { border-color: #0EA5E9; }
+    .claim-form-title { font-size: 15px; font-weight: 700; color: #0284C7; margin-bottom: 14px; }
+    .claim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; margin-bottom: 12px; }
+    .claim-left, .claim-right { display: flex; flex-direction: column; }
+    @media(max-width: 640px) {
+      .claim-grid { grid-template-columns: 1fr; gap: 12px; }
+    }
+    .claim-label { display: block; font-size: 11px; font-weight: 700; color: #57524c; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; margin-top: 4px; }
+    .claim-label span { font-weight: 400; text-transform: none; letter-spacing: 0; color: #a09890; }
+    .claim-input { width: 100%; padding: 11px 13px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 9px; color: #1c1917; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; margin-bottom: 10px; -webkit-appearance: none; transition: border-color 0.15s, box-shadow 0.15s; }
+    .claim-input:focus { border-color: #0EA5E9; box-shadow: 0 0 0 3px rgba(14,165,233,0.12); }
     .claim-input::placeholder { color: #c0b8b0; }
-    .claim-row { display: flex; gap: 8px; align-items: center; }
-    .claim-submit { flex: 1; padding: 12px; border-radius: 9px; border: none; background: linear-gradient(135deg,#0284C7,#0EA5E9); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .claim-textarea { resize: vertical; min-height: 60px; font-family: 'DM Sans', sans-serif; }
+    .claim-helpers { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .claim-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #1c1917; cursor: pointer; padding: 8px 10px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 8px; transition: border-color 0.15s; }
+    .claim-check:hover { border-color: #0EA5E9; }
+    .claim-check input[type=checkbox] { width: 16px; height: 16px; accent-color: #0EA5E9; cursor: pointer; }
+    .claim-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+    .claim-submit { flex: 1; padding: 13px; border-radius: 9px; border: none; background: linear-gradient(135deg,#0284C7,#0EA5E9); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 3px rgba(14,165,233,0.25); transition: box-shadow 0.15s, transform 0.15s; }
+    .claim-submit:hover { box-shadow: 0 6px 18px rgba(14,165,233,0.35); transform: translateY(-1px); }
     .claim-cancel { padding: 12px 16px; border-radius: 9px; border: 1.5px solid #e4ddd4; background: transparent; color: #8a7a70; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; }
     .claim-guest-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
     .g-btn { width: 38px; height: 38px; border-radius: 8px; border: 1.5px solid #e4ddd4; background: #fff; font-size: 18px; font-weight: 600; color: #57524c; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -294,14 +307,35 @@ slots.forEach((s:any) => {
                   </div>
                   <div class="claim-form" id={`form-${item.id}`}>
                     <div class="claim-form-title">🙌 Bringing {item.suggestion}!</div>
-                    <input type="text" class="claim-input" id={`name-${item.id}`} placeholder="Your name *"/>
-                    <div class="claim-guest-row">
-                      <button type="button" class="g-btn" data-item={item.id} data-dir="-1">−</button>
-                      <div class="g-count" id={`gc-${item.id}`}>1</div>
-                      <button type="button" class="g-btn" data-item={item.id} data-dir="1">+</button>
-                      <div class="g-note" id={`gn-${item.id}`}>just me</div>
+                    <div class="claim-grid">
+                      <div class="claim-left">
+                        <label class="claim-label">Your name *</label>
+                        <input type="text" class="claim-input" id={`name-${item.id}`} placeholder="Jamie Doe"/>
+                        <label class="claim-label">Email <span>(optional — for a reminder)</span></label>
+                        <input type="email" class="claim-input" id={`email-${item.id}`} placeholder="you@example.com"/>
+                        <label class="claim-label">Phone <span>(optional — for SMS updates)</span></label>
+                        <input type="tel" class="claim-input" id={`phone-${item.id}`} placeholder="(720) 555-1234"/>
+                        <label class="claim-label">How many coming?</label>
+                        <div class="claim-guest-row">
+                          <button type="button" class="g-btn" data-item={item.id} data-dir="-1">−</button>
+                          <div class="g-count" id={`gc-${item.id}`}>1</div>
+                          <button type="button" class="g-btn" data-item={item.id} data-dir="1">+</button>
+                          <div class="g-note" id={`gn-${item.id}`}>just me</div>
+                        </div>
+                      </div>
+                      <div class="claim-right">
+                        <label class="claim-label">Dietary / allergies <span>(optional)</span></label>
+                        <textarea class="claim-input claim-textarea" id={`dietary-${item.id}`} placeholder="vegan, nut allergy, gluten-free…"></textarea>
+                        <label class="claim-label">Anything else? <span>(optional)</span></label>
+                        <textarea class="claim-input claim-textarea" id={`notes-${item.id}`} placeholder="Notes for the organizer"></textarea>
+                        <label class="claim-label">How can you help?</label>
+                        <div class="claim-helpers">
+                          <label class="claim-check"><input type="checkbox" id={`utensils-${item.id}`}/> <span>🥄 Bring utensils/plates</span></label>
+                          <label class="claim-check"><input type="checkbox" id={`early-${item.id}`}/> <span>⏰ Arrive early to help set up</span></label>
+                          <label class="claim-check"><input type="checkbox" id={`seating-${item.id}`}/> <span>🪑 Bring chairs/blanket</span></label>
+                        </div>
+                      </div>
                     </div>
-                    <input type="email" class="claim-email" id={`email-${item.id}`} placeholder="Email (optional — for a reminder)"/>
                     <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
                     <div class="claim-row">
                       <button class="claim-submit" data-id={item.id} data-dish={item.suggestion}>Claim it! 🎉</button>
@@ -332,15 +366,37 @@ slots.forEach((s:any) => {
         </div>
         <div class="claim-form hidden" id="custom-form">
           <div class="claim-form-title">✏️ What are you bringing?</div>
-          <input type="text" class="claim-input" id="custom-dish" placeholder="e.g. Cornbread, fruit punch…" autocomplete="off"/>
-          <input type="text" class="claim-input" id="custom-name" placeholder="Your name *"/>
-          <div class="claim-guest-row">
-            <button type="button" class="g-btn" id="custom-minus">−</button>
-            <div class="g-count" id="custom-gc">1</div>
-            <button type="button" class="g-btn" id="custom-plus">+</button>
-            <div class="g-note" id="custom-gn">just me</div>
+          <div class="claim-grid">
+            <div class="claim-left">
+              <label class="claim-label">What are you bringing? *</label>
+              <input type="text" class="claim-input" id="custom-dish" placeholder="e.g. Cornbread, fruit punch…" autocomplete="off"/>
+              <label class="claim-label">Your name *</label>
+              <input type="text" class="claim-input" id="custom-name" placeholder="Jamie Doe"/>
+              <label class="claim-label">Email <span>(optional — for a reminder)</span></label>
+              <input type="email" class="claim-input" id="custom-email" placeholder="you@example.com"/>
+              <label class="claim-label">Phone <span>(optional — for SMS updates)</span></label>
+              <input type="tel" class="claim-input" id="custom-phone" placeholder="(720) 555-1234"/>
+              <label class="claim-label">How many coming?</label>
+              <div class="claim-guest-row">
+                <button type="button" class="g-btn" id="custom-minus">−</button>
+                <div class="g-count" id="custom-gc">1</div>
+                <button type="button" class="g-btn" id="custom-plus">+</button>
+                <div class="g-note" id="custom-gn">just me</div>
+              </div>
+            </div>
+            <div class="claim-right">
+              <label class="claim-label">Dietary / allergies <span>(optional)</span></label>
+              <textarea class="claim-input claim-textarea" id="custom-dietary" placeholder="vegan, nut allergy, gluten-free…"></textarea>
+              <label class="claim-label">Anything else? <span>(optional)</span></label>
+              <textarea class="claim-input claim-textarea" id="custom-notes" placeholder="Notes for the organizer"></textarea>
+              <label class="claim-label">How can you help?</label>
+              <div class="claim-helpers">
+                <label class="claim-check"><input type="checkbox" id="custom-utensils"/> <span>🥄 Bring utensils/plates</span></label>
+                <label class="claim-check"><input type="checkbox" id="custom-early"/> <span>⏰ Arrive early to help set up</span></label>
+                <label class="claim-check"><input type="checkbox" id="custom-seating"/> <span>🪑 Bring chairs/blanket</span></label>
+              </div>
+            </div>
           </div>
-          <input type="email" class="claim-email" id="custom-email" placeholder="Email (optional — for a reminder)"/>
           <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
           <div class="claim-row">
             <button class="claim-submit" id="custom-submit">I'm bringing it! 🎉</button>
@@ -507,28 +563,43 @@ slots.forEach((s:any) => {
     });
 
     // Submit claim
+    function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+    function checked(id) { var el = document.getElementById(id); return !!(el && el.checked); }
+
     document.querySelectorAll('.claim-submit').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var itemId = btn.dataset.id;
         var dish = btn.dataset.dish;
-        var name, guests, email;
+        var name, guests, email, phone, dietary, notes, utensils, earlyArrive, seating;
 
         if (itemId) {
-          name = document.getElementById('name-' + itemId).value.trim();
+          name = val('name-' + itemId);
           guests = guestCounts[itemId] || 1;
-          email = document.getElementById('email-' + itemId).value.trim();
+          email = val('email-' + itemId);
+          phone = val('phone-' + itemId);
+          dietary = val('dietary-' + itemId);
+          notes = val('notes-' + itemId);
+          utensils = checked('utensils-' + itemId);
+          earlyArrive = checked('early-' + itemId);
+          seating = checked('seating-' + itemId);
         } else {
           // custom
-          dish = document.getElementById('custom-dish').value.trim();
-          name = document.getElementById('custom-name').value.trim();
+          dish = val('custom-dish');
+          name = val('custom-name');
           guests = customCount;
-          email = document.getElementById('custom-email').value.trim();
+          email = val('custom-email');
+          phone = val('custom-phone');
+          dietary = val('custom-dietary');
+          notes = val('custom-notes');
+          utensils = checked('custom-utensils');
+          earlyArrive = checked('custom-early');
+          seating = checked('custom-seating');
           if (!dish) { document.getElementById('custom-dish').focus(); return; }
         }
 
         if (!name) {
           var nameField = itemId ? document.getElementById('name-' + itemId) : document.getElementById('custom-name');
-          nameField.style.borderColor = '#0EA5E9';
+          nameField.style.borderColor = '#dc2626';
           nameField.focus();
           return;
         }
@@ -540,10 +611,10 @@ slots.forEach((s:any) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              potluckId: String(potluckId), name, email, handle: '',
+              potluckId: String(potluckId), name, email, phone, handle: '',
               platforms: '', rsvp: 'yes', guestCount: String(guests),
-              dish: dish, dishCategory: '', dietary: '',
-              utensils: false, earlyArrive: false, seating: false,
+              dish: dish, dishCategory: '', dietary: dietary, notes: notes,
+              utensils: utensils, earlyArrive: earlyArrive, seating: seating,
               _gotcha: '', _turnstile: ''
             })
           });

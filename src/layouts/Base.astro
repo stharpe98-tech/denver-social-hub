@@ -54,6 +54,41 @@ const redditName = user?.reddit_username || user?.name;
 
   <slot />
 
+  <!-- Site footer -->
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="footer-col footer-brand-col">
+        <a href="/" class="footer-brand">
+          <span class="footer-brand-icon" aria-hidden="true">🌆</span>
+          <span class="footer-brand-name">Denver <span>Social</span></span>
+        </a>
+        <p class="footer-tagline">No ads, no algorithms. Just locals meeting locals.</p>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Explore</div>
+        <a href="/events">Events</a>
+        <a href="/potlucks">Potlucks</a>
+        <a href="/recs">Recs</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">About</div>
+        <a href="/about">About</a>
+        <a href="/conduct">Code of conduct</a>
+        <a href="/terms">Terms</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Stay in touch</div>
+        <a href="mailto:stharpe98@gmail.com">Email the organizer</a>
+        <a href="/login">Sign in</a>
+      </div>
+    </div>
+    <div class="site-footer-bottom">
+      <span>© {new Date().getFullYear()} Denver Social</span>
+      <span class="footer-dot">·</span>
+      <span>Made in Denver, CO 🏔</span>
+    </div>
+  </footer>
+
   <!-- Mobile bottom nav -->
   <nav class="mob-nav">
     <a href="/"        class:list={["mob-link", { active: currentPath === "/" }]}>
@@ -305,16 +340,47 @@ const redditName = user?.reddit_username || user?.name;
 
   /* Footer */
   .site-footer {
-    padding: var(--space-6) var(--space-5);
+    margin-top: var(--space-8);
+    background: var(--surface);
     border-top: 1px solid var(--border);
-    text-align: center;
-    margin-bottom: 72px;
+    padding: var(--space-7) var(--space-5) var(--space-5);
+    margin-bottom: 72px; /* room for mobile bottom nav */
   }
-  .site-footer-brand { font-family: var(--font-display); font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
-  .site-footer-brand span { color: var(--accent); }
-  .site-footer-text { font-size: 12px; color: var(--text-faint); }
+  .site-footer-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: grid; gap: var(--space-6);
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+  }
+  .footer-col { display: flex; flex-direction: column; gap: var(--space-2); }
+  .footer-col-title { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: var(--space-1); }
+  .footer-col a { font-size: 14px; color: var(--text-sec); transition: color 0.15s; }
+  .footer-col a:hover { color: var(--accent); }
+
+  .footer-brand { display: inline-flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+  .footer-brand-icon { font-size: 22px; }
+  .footer-brand-name { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+  .footer-brand-name span { color: var(--accent); }
+  .footer-tagline { font-size: 13px; color: var(--text-sec); line-height: 1.55; max-width: 280px; }
+
+  .site-footer-bottom {
+    max-width: 1100px; margin: var(--space-6) auto 0;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: var(--space-2);
+    font-size: 12px; color: var(--text-faint);
+    flex-wrap: wrap;
+  }
+  .footer-dot { color: var(--border-hover); }
 
   @media(min-width: 701px) {
     .site-footer { margin-bottom: 0; }
+  }
+  @media(max-width: 700px) {
+    .site-footer-inner { grid-template-columns: 1fr 1fr; }
+    .footer-brand-col { grid-column: 1 / -1; }
+  }
+  @media(max-width: 420px) {
+    .site-footer-inner { grid-template-columns: 1fr; }
+    .footer-brand-col { grid-column: auto; }
   }
 </style>
