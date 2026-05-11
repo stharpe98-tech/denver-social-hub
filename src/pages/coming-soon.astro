@@ -1,0 +1,163 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDB } from '../lib/db';
+
+const db = getDB();
+let launchDate: string | null = null;
+let teaser: string | null = null;
+try {
+  if (db) {
+    const rows = await db.prepare("SELECT key, value FROM config WHERE key IN ('launch_date','launch_teaser')").all();
+    const cfg: Record<string, string> = {};
+    (rows.results ?? []).forEach((r: any) => { cfg[r.key] = r.value; });
+    launchDate = cfg.launch_date || null;
+    teaser = cfg.launch_teaser || null;
+  }
+} catch {}
+---
+<Base title="Coming soon" description="Denver Social is launching soon — community events across Denver.">
+  <div class="cs-wrap">
+    <div class="cs-card">
+      <div class="cs-icon" aria-hidden="true">🌆</div>
+      <span class="cs-eyebrow">Denver Social</span>
+      <h1 class="cs-title">Something good is on the way.</h1>
+      <p class="cs-sub">
+        {teaser ?? 'Small-group events across Denver — potlucks, dinners, hikes, game nights. We\'re putting the finishing touches on it now.'}
+      </p>
+
+      {launchDate && (
+        <div class="cs-date">
+          <span class="cs-date-label">Launching</span>
+          <span class="cs-date-value">{launchDate}</span>
+        </div>
+      )}
+
+      <form id="notify-form" class="cs-form">
+        <label for="notify-email" class="cs-label">Want a heads-up when we open?</label>
+        <div class="cs-row">
+          <input type="email" id="notify-email" name="email" placeholder="you@email.com" autocomplete="email" required/>
+          <button type="submit" id="notify-btn">Notify me</button>
+        </div>
+        <div id="notify-result" class="cs-result"></div>
+      </form>
+
+      <a href="/login" class="cs-admin">Organizer? Sign in →</a>
+    </div>
+  </div>
+
+  <style>
+    .cs-wrap { min-height: calc(100vh - 64px - 220px); display: flex; align-items: center; justify-content: center; padding: var(--space-7) var(--space-4); }
+    .cs-card {
+      max-width: 560px; width: 100%;
+      background: linear-gradient(160deg, #FFFFFF 0%, #E0F2FE 60%, #D1FAE5 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--card-shadow-lg);
+      padding: var(--space-7) var(--space-5);
+      text-align: center;
+    }
+    .cs-icon { font-size: 56px; line-height: 1; margin-bottom: var(--space-3); }
+    .cs-eyebrow {
+      display: inline-block; padding: 4px 12px;
+      background: var(--accent-dim); color: var(--accent);
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 2px;
+      border-radius: 999px; margin-bottom: var(--space-3);
+    }
+    .cs-title {
+      font-family: var(--font-display);
+      font-size: clamp(28px, 5vw, 40px);
+      font-weight: 800; letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: var(--space-3);
+      line-height: 1.15;
+    }
+    .cs-sub {
+      color: var(--text-sec);
+      font-size: 16px; line-height: 1.6;
+      max-width: 440px; margin: 0 auto var(--space-5);
+    }
+    .cs-date {
+      display: inline-flex; flex-direction: column; align-items: center;
+      padding: var(--space-3) var(--space-5);
+      background: rgba(255,255,255,0.7);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: var(--space-5);
+    }
+    .cs-date-label { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1.5px; }
+    .cs-date-value { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--text); margin-top: 4px; }
+
+    .cs-form { max-width: 420px; margin: 0 auto var(--space-4); text-align: left; }
+    .cs-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-sec); margin-bottom: 8px; text-align: center; }
+    .cs-row { display: flex; gap: 8px; }
+    .cs-row input {
+      flex: 1; min-width: 0;
+      padding: 12px 14px;
+      background: #fff; border: 1px solid var(--border); border-radius: 999px;
+      font-family: var(--font); font-size: 14px; color: var(--text);
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .cs-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .cs-row button {
+      padding: 12px 22px;
+      background: var(--cta-bg); color: var(--cta-text);
+      border: none; border-radius: 999px;
+      font-family: var(--font); font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(14,165,233,0.25);
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .cs-row button:hover { box-shadow: 0 6px 18px rgba(14,165,233,0.35); transform: translateY(-1px); }
+    .cs-row button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .cs-result { font-size: 13px; margin-top: 10px; text-align: center; min-height: 18px; }
+    .cs-result.ok { color: var(--mint); }
+    .cs-result.err { color: var(--red); }
+
+    .cs-admin {
+      display: inline-block;
+      font-size: 13px; color: var(--text-faint);
+      text-decoration: underline; text-underline-offset: 3px;
+      margin-top: var(--space-3);
+    }
+    .cs-admin:hover { color: var(--text-sec); }
+  </style>
+
+  <script is:inline>
+    document.getElementById('notify-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var email = document.getElementById('notify-email').value.trim();
+      var btn = document.getElementById('notify-btn');
+      var out = document.getElementById('notify-result');
+      out.className = 'cs-result';
+      out.textContent = '';
+      if (!email.includes('@')) {
+        out.className = 'cs-result err';
+        out.textContent = 'Please enter a valid email.';
+        return;
+      }
+      btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Sending…';
+      try {
+        var res = await fetch('/api/launch-notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email }),
+        });
+        var data = await res.json();
+        if (data.ok) {
+          out.className = 'cs-result ok';
+          out.textContent = "We'll send you a note when we go live. Thanks!";
+          document.getElementById('notify-email').value = '';
+        } else {
+          out.className = 'cs-result err';
+          out.textContent = data.error || 'Could not save — try again.';
+        }
+      } catch {
+        out.className = 'cs-result err';
+        out.textContent = 'Network problem — try again.';
+      }
+      btn.disabled = false; btn.textContent = orig;
+    });
+  </script>
+</Base>
