@@ -1,47 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 42" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 38" fill="none">
   <defs>
     <linearGradient id="brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#0EA5E9"/>
       <stop offset="100%" stop-color="#10B981"/>
     </linearGradient>
-    <linearGradient id="peak-grad" x1="0%" y1="100%" x2="50%" y2="0%">
-      <stop offset="0%" stop-color="#0EA5E9"/>
-      <stop offset="100%" stop-color="#06B6D4"/>
-    </linearGradient>
-    <linearGradient id="peak-grad2" x1="0%" y1="100%" x2="50%" y2="0%">
-      <stop offset="0%" stop-color="#10B981"/>
-      <stop offset="100%" stop-color="#0EA5E9"/>
-    </linearGradient>
+    <radialGradient id="spark" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="60%" stop-color="#0EA5E9" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0.85"/>
+    </radialGradient>
   </defs>
 
-  <!-- Icon mark -->
+  <!-- Spark mark: a bright dot with rays -->
   <g>
-    <path d="M5 32 L13 11 L21 32 Z" fill="url(#peak-grad)" opacity="0.45"/>
-    <path d="M14 32 L22 13 L30 32 Z" fill="url(#peak-grad2)"/>
-    <circle cx="27" cy="11" r="2.8" fill="#0EA5E9" opacity="0.9"/>
-    <circle cx="27" cy="11" r="4.5" fill="#0EA5E9" opacity="0.1"/>
-    <rect x="3" y="32" width="29" height="2.5" rx="1.25" fill="url(#brand-grad)" opacity="0.25"/>
+    <circle cx="19" cy="19" r="6.5" fill="url(#spark)"/>
+    <!-- 6 rays -->
+    <line x1="19" y1="3" x2="19" y2="8.5" stroke="url(#brand-grad)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="19" y1="29.5" x2="19" y2="35" stroke="url(#brand-grad)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="3" y1="19" x2="8.5" y2="19" stroke="url(#brand-grad)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="29.5" y1="19" x2="35" y2="19" stroke="url(#brand-grad)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="8" y1="8" x2="11.5" y2="11.5" stroke="url(#brand-grad)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="26.5" y1="26.5" x2="30" y2="30" stroke="url(#brand-grad)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="30" y1="8" x2="26.5" y2="11.5" stroke="url(#brand-grad)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="11.5" y1="26.5" x2="8" y2="30" stroke="url(#brand-grad)" stroke-width="2.5" stroke-linecap="round"/>
   </g>
 
-  <!-- Wordmark: hand-lettered feel with slight tilts -->
-  <g font-family="'Outfit', system-ui, sans-serif" font-weight="800" font-size="19">
-    <!-- "Denver" — dark, slightly bouncy -->
-    <text x="40" y="24" fill="#111827" transform="rotate(-1.5, 40, 24)">D</text>
-    <text x="54" y="24.5" fill="#111827" transform="rotate(1, 54, 24)">e</text>
-    <text x="65" y="23.5" fill="#111827" transform="rotate(-0.8, 65, 23)">n</text>
-    <text x="78" y="24.8" fill="#111827" transform="rotate(1.2, 78, 24)">v</text>
-    <text x="90" y="23.8" fill="#111827" transform="rotate(-1, 90, 24)">e</text>
-    <text x="101" y="24.2" fill="#111827" transform="rotate(0.8, 101, 24)">r</text>
-
-    <!-- "Social" — gradient, bouncy -->
-    <text x="118" y="24.5" fill="url(#brand-grad)" transform="rotate(1.2, 118, 24)">S</text>
-    <text x="131" y="23.5" fill="url(#brand-grad)" transform="rotate(-1.5, 131, 24)">o</text>
-    <text x="143" y="24.8" fill="url(#brand-grad)" transform="rotate(0.8, 143, 24)">c</text>
-    <text x="154" y="23.2" fill="url(#brand-grad)" transform="rotate(-1, 154, 24)">i</text>
-    <text x="160" y="24.5" fill="url(#brand-grad)" transform="rotate(1.5, 160, 24)">a</text>
-    <text x="172" y="23.8" fill="url(#brand-grad)" transform="rotate(-0.7, 172, 24)">l</text>
-  </g>
-
-  <!-- Tagline: playful -->
-  <text x="41" y="37" font-family="'Inter', system-ui, sans-serif" font-size="7" font-weight="500" letter-spacing="1.2" fill="#9CA3AF">REAL PEOPLE · SMALL GROUPS</text>
+  <!-- Wordmark: clean Outfit, single weight, no rotation -->
+  <text x="43" y="25" font-family="'Outfit', system-ui, sans-serif" font-weight="800" font-size="22" letter-spacing="-0.5" fill="#111827">denver</text>
+  <text x="125" y="25" font-family="'Outfit', system-ui, sans-serif" font-weight="800" font-size="22" letter-spacing="-0.5" fill="url(#brand-grad)">social</text>
 </svg>
