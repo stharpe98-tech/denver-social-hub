@@ -27,7 +27,7 @@ const redditName = user?.reddit_username || user?.name;
     <div class="site-header-inner">
       <nav class="site-nav site-nav-left">
         <a href="/events"   class:list={["site-nav-link", { active: currentPath.startsWith("/events") }]}>Events</a>
-        <a href="/potlucks" class:list={["site-nav-link", { active: currentPath.startsWith("/potlucks") }]}>Potlucks</a>
+        <a href="/potlucks" class:list={["site-nav-link", { active: currentPath.startsWith("/potlucks") }]}>Community events</a>
       </nav>
 
       <a href="/" class="site-logo" aria-label="Denver Social home">
@@ -35,8 +35,8 @@ const redditName = user?.reddit_username || user?.name;
       </a>
 
       <nav class="site-nav site-nav-right">
-        <a href="/recs"  class:list={["site-nav-link", { active: currentPath === "/recs" }]}>Recs</a>
         <a href="/about" class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
+        <a href="/help"  class:list={["site-nav-link", { active: currentPath.startsWith("/help") }]}>Help</a>
       </nav>
 
       <div class="site-auth">
@@ -70,8 +70,8 @@ const redditName = user?.reddit_username || user?.name;
       <div class="footer-col">
         <div class="footer-col-title">Explore</div>
         <a href="/events">Events</a>
-        <a href="/potlucks">Potlucks</a>
-        <a href="/recs">Recs</a>
+        <a href="/potlucks">Community events</a>
+        <a href="/help">Help</a>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">About</div>
@@ -101,10 +101,10 @@ const redditName = user?.reddit_username || user?.name;
       <span class="mob-icon">📅</span><span class="mob-label">Events</span>
     </a>
     <a href="/potlucks" class:list={["mob-link", { active: currentPath.startsWith("/potlucks") }]}>
-      <span class="mob-icon">🍽</span><span class="mob-label">Potlucks</span>
+      <span class="mob-icon">🍽</span><span class="mob-label">Community</span>
     </a>
-    <a href="/recs"    class:list={["mob-link", { active: currentPath === "/recs" }]}>
-      <span class="mob-icon">⭐</span><span class="mob-label">Recs</span>
+    <a href="/me"    class:list={["mob-link", { active: currentPath === "/me" || currentPath === "/profile" }]}>
+      <span class="mob-icon">👤</span><span class="mob-label">Me</span>
     </a>
     {isAdmin && (
       <a href="/admin/dashboard" class:list={["mob-link", { active: currentPath.startsWith("/admin") }]}>
