@@ -8,16 +8,12 @@ const errorParam = Astro.url.searchParams.get("error");
 
 let memberCount = 0;
 let eventCount = 0;
-let emailLoginAvailable = false;
 try {
   if (db) {
     const mc: any = await db.prepare("SELECT COUNT(*) as c FROM members").first();
     memberCount = mc?.c || 0;
     const ec: any = await db.prepare("SELECT COUNT(*) as c FROM events WHERE is_past IS NULL OR is_past = 0").first();
     eventCount = ec?.c || 0;
-    // Only offer email magic-code if Resend is actually configured.
-    const cfg: any = await db.prepare("SELECT value FROM config WHERE key='resend_api_key'").first();
-    emailLoginAvailable = !!(cfg?.value && cfg.value.trim());
   }
 } catch {}
 
@@ -36,15 +32,13 @@ const errorMsg = errorParam ? (errorMessages[errorParam] || "Something went wron
   <div class="login-page">
     <div class="login-card">
       <h1 class="login-title">Join Denver Social Hub</h1>
-      <p class="login-sub">{emailLoginAvailable ? "Enter your email to sign in or create an account. We'll send you a code — no password needed." : "Sign in with Discord or Reddit. Takes about 10 seconds."}</p>
+      <p class="login-sub">Pick your favorite. Email sends you a 6-digit code, no password needed.</p>
 
       {errorMsg && (
         <div class="login-error">{errorMsg}</div>
       )}
 
-      {emailLoginAvailable && (
-        <>
-          <!-- Step 1: Email input -->
+      <!-- Step 1: Email input -->
           <div id="step-email">
             <label class="input-label" for="email-input">Email address</label>
             <input type="email" id="email-input" class="input" placeholder="you@email.com" autocomplete="email" />
@@ -63,11 +57,9 @@ const errorMsg = errorParam ? (errorMessages[errorParam] || "Something went wron
 
           <div id="login-status" class="login-status"></div>
 
-          <div class="login-divider">
-            <span>or</span>
-          </div>
-        </>
-      )}
+      <div class="login-divider">
+        <span>or</span>
+      </div>
 
       <a href={`/api/auth/discord?next=${encodeURIComponent(next)}`} class="btn btn-discord btn-full">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
@@ -293,10 +285,10 @@ const errorMsg = errorParam ? (errorMessages[errorParam] || "Something went wron
     setStatus('', '');
 
     try {
-      const res = await fetch('/api/auth/email', {
+      const res = await fetch('/api/auth/email-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'send_code', email })
+        body: JSON.stringify({ email })
       });
       const data = await res.json();
       if (data.ok) {
@@ -306,6 +298,8 @@ const errorMsg = errorParam ? (errorMessages[errorParam] || "Something went wron
         stepCode.style.display = 'block';
         setStatus('', '');
         codeInput.focus();
+      } else if (data.error === 'email_not_configured') {
+        setStatus("Email login isn't set up yet — try Discord or Reddit below.", 'error');
       } else {
         setStatus(data.error || 'Failed to send code.', 'error');
       }
@@ -327,15 +321,18 @@ const errorMsg = errorParam ? (errorMessages[errorParam] || "Something went wron
     setStatus('', '');
 
     try {
-      const res = await fetch('/api/auth/email', {
+      const res = await fetch('/api/auth/email-verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify_code', email: currentEmail, code })
+        body: JSON.stringify({ email: currentEmail, code, next: nextUrl })
       });
       const data = await res.json();
       if (data.ok) {
-        // Redirect — new users go to profile setup, existing users go to next
-        window.location.href = data.isNew ? '/profile/setup' : nextUrl;
+        window.location.href = data.redirect || nextUrl;
+      } else if (data.error === 'wrong_code') {
+        setStatus('Wrong code. Try again.', 'error');
+      } else if (data.error === 'expired') {
+        setStatus('Code expired — go back and request a new one.', 'error');
       } else {
         setStatus(data.error || 'Invalid code.', 'error');
       }
