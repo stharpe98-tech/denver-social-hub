@@ -13,7 +13,7 @@ try {
     potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(id).first();
     if (potluck?.locked) return Astro.redirect('/potlucks');
     const s = await db.prepare(`
-      SELECT ps.id, ps.suggestion, ps.category, ps.sort_order, ps.max_claims, ps.slot_time,
+      SELECT ps.id, ps.suggestion, ps.category, ps.sort_order, ps.max_claims,
         pr.name as claimed_by, pr.id as rsvp_id
       FROM potluck_slots ps
       LEFT JOIN potluck_rsvp pr ON LOWER(pr.dish)=LOWER(ps.suggestion)
@@ -35,8 +35,7 @@ const total = slots.length;
 const pct = total > 0 ? Math.round((claimed / total) * 100) : 0;
 const guestTotal = signups.reduce((sum: number, s: any) => sum + (parseInt(s.guest_count) || 1), 0);
 
-// Group slots by category, preserving sort order. Categories appear in
-// the order their first item appears.
+// Group slots by category
 const groupedKeys: string[] = [];
 const grouped: Record<string, any[]> = {};
 for (const s of slots) {
@@ -44,628 +43,681 @@ for (const s of slots) {
   if (!grouped[cat]) { grouped[cat] = []; groupedKeys.push(cat); }
   grouped[cat].push(s);
 }
+
+// Unclaimed items for the picker
+const unclaimed = slots.filter((s: any) => !s.claimed_by);
 ---
 <Base title={potluck.title} description={potluck.description ?? `Sign up for ${potluck.title}`}>
 
 <style>
-  .pot-hero { background: var(--bg); border-bottom: 1px solid var(--border); }
-  .pot-hero-img { width: 100%; height: 220px; object-fit: cover; display: block; }
-  .pot-hero-img-placeholder { width: 100%; height: 140px; background: linear-gradient(135deg, #F0F9FF, #E0F2FE, #D1FAE5); }
-  .pot-hero-body { max-width: 720px; margin: 0 auto; padding: var(--space-5) var(--space-4); }
-  .pot-back { font-size: 13px; color: var(--text-sec); display: inline-flex; align-items: center; gap: 4px; margin-bottom: var(--space-3); }
-  .pot-back:hover { color: var(--text); }
-  .pot-title { font-family: var(--font-display); font-size: clamp(26px, 5vw, 36px); font-weight: 800; color: var(--text); margin-bottom: 6px; letter-spacing: -0.02em; }
-  .pot-meta { display: flex; gap: var(--space-3); flex-wrap: wrap; font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-3); }
-  .pot-meta span { display: inline-flex; align-items: center; gap: 4px; }
-  .pot-desc { font-size: 14px; color: var(--text-sec); line-height: 1.6; margin-top: var(--space-2); }
+  /* ── Layout ─────────────────────────────────────────── */
+  .pk { max-width: 600px; margin: 0 auto; padding: 0 var(--space-4) var(--space-8); }
 
-  .pot-prog { padding: var(--space-3) 0; }
-  .pot-prog-top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-sec); margin-bottom: 6px; }
-  .pot-prog-top strong { color: var(--accent); font-weight: 700; }
-  .pot-prog-bar { height: 6px; background: var(--surface); border-radius: 3px; overflow: hidden; }
-  .pot-prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 3px; transition: width 0.4s; }
-
-  .pot-actions { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; margin-top: var(--space-3); }
-  .pot-link-btn { background: none; border: none; color: var(--text-sec); font-size: 13px; cursor: pointer; padding: 0; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; }
-  .pot-link-btn:hover { color: var(--text); }
-
-  .pot-page { max-width: 720px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
-
-  .pot-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: var(--space-4); }
-  .pot-tab { flex: 1; padding: 12px; border: none; background: none; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text-faint); cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; -webkit-tap-highlight-color: transparent; }
-  .pot-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-  .pot-panel { display: none; }
-  .pot-panel.active { display: block; }
-
-  .pot-cat { margin-bottom: var(--space-5); }
-  .pot-cat-title { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: var(--space-2); display: flex; align-items: center; gap: 8px; }
-  .pot-cat-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-  .pot-cat-count { font-weight: 500; font-size: 11px; color: var(--text-faint); text-transform: none; letter-spacing: 0; }
-
-  .pot-item {
-    background: var(--bg); border: 1.5px solid var(--border);
-    border-radius: var(--radius); padding: 14px 16px;
-    margin-bottom: 8px;
-    display: flex; align-items: center; gap: 12px;
-    transition: border-color 0.15s, background 0.15s;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
+  /* ── Hero ────────────────────────────────────────────── */
+  .pk-hero {
+    text-align: center;
+    padding: var(--space-6) var(--space-4) var(--space-5);
+    background: linear-gradient(160deg, #F0F9FF 0%, #ECFDF5 50%, #FEF3C7 100%);
+    border-bottom: 1px solid var(--border);
   }
-  .pot-item:hover { border-color: var(--accent); background: var(--surface); }
-  .pot-item:active { transform: scale(0.99); }
-  .pot-item.claimed { background: var(--tag-bg2); border-color: #6EE7B7; cursor: default; }
-  .pot-item.claimed:hover { transform: none; background: var(--tag-bg2); }
-  .pot-item-name { flex: 1; font-size: 15px; font-weight: 500; color: var(--text); }
-  .pot-item-who { font-size: 13px; color: var(--tag-text2); font-weight: 600; }
-  .pot-item-arrow { font-size: 20px; color: var(--text-faint); flex-shrink: 0; }
-
-  /* Sign-up form (the centerpiece). Renders inline below the tapped item. */
-  .pot-form {
-    display: none;
-    background: linear-gradient(135deg, #F0F9FF, #ECFDF5);
-    border: 1.5px solid var(--accent);
-    border-radius: var(--radius);
-    padding: var(--space-4);
+  .pk-emoji { font-size: 56px; margin-bottom: var(--space-2); }
+  .pk-title {
+    font-family: var(--font-display);
+    font-size: clamp(26px, 6vw, 38px);
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.03em;
+    margin-bottom: var(--space-2);
+    line-height: 1.15;
+  }
+  .pk-meta {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: var(--space-2);
+    font-size: 14px; color: var(--text-sec);
     margin-bottom: var(--space-3);
   }
-  .pot-form.open { display: block; }
-  .pot-form-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: var(--space-3); }
-  .pot-form-title span { color: var(--accent); }
-
-  .pot-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-2); margin-bottom: var(--space-3); }
-  @media(min-width: 640px) { .pot-grid { grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-4); } }
-
-  .pot-field { display: flex; flex-direction: column; }
-  .pot-field label { font-size: 11px; font-weight: 700; color: var(--text-sec); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .pot-field label .opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-faint); }
-  .pot-input, .pot-textarea {
-    width: 100%; padding: 11px 13px;
+  .pk-meta span {
+    display: inline-flex; align-items: center; gap: 4px;
     background: var(--bg); border: 1px solid var(--border);
+    border-radius: 999px; padding: 5px 12px;
+  }
+  .pk-desc {
+    font-size: 15px; color: var(--text-sec); line-height: 1.6;
+    max-width: 480px; margin: 0 auto;
+  }
+
+  /* ── Progress bar ───────────────────────────────────── */
+  .pk-prog { padding: var(--space-4) var(--space-4) 0; max-width: 600px; margin: 0 auto; }
+  .pk-prog-top {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; color: var(--text-sec); margin-bottom: 6px;
+  }
+  .pk-prog-top strong { color: var(--accent); font-weight: 700; }
+  .pk-prog-bar { height: 8px; background: var(--surface); border-radius: 4px; overflow: hidden; }
+  .pk-prog-fill {
+    height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--green));
+    transition: width 0.6s ease;
+  }
+
+  /* ── RSVP card ──────────────────────────────────────── */
+  .pk-rsvp {
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    margin-bottom: var(--space-5);
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .pk-rsvp.success {
+    border-color: var(--green);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+  }
+  .pk-step-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--accent); margin-bottom: var(--space-2);
+  }
+  .pk-step-title {
+    font-family: var(--font-display); font-size: 20px; font-weight: 700;
+    color: var(--text); margin-bottom: var(--space-3);
+  }
+
+  /* Step 1: info form */
+  .pk-fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-bottom: var(--space-3); }
+  @media (max-width: 500px) { .pk-fields { grid-template-columns: 1fr; } }
+  .pk-field label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: var(--text-sec); margin-bottom: 4px;
+  }
+  .pk-field label .opt { font-weight: 400; color: var(--text-faint); }
+  .pk-input {
+    width: 100%; padding: 11px 14px;
+    background: var(--surface); border: 1.5px solid var(--border);
     border-radius: 10px; font-size: 15px; color: var(--text);
     font-family: var(--font); outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
-    -webkit-appearance: none;
   }
-  .pot-input:focus, .pot-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-  .pot-input.invalid { border-color: var(--red); }
-  .pot-textarea { resize: vertical; min-height: 60px; line-height: 1.45; }
+  .pk-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .pk-input.invalid { border-color: #EF4444; }
 
-  .pot-guests { display: flex; align-items: center; gap: 8px; }
-  .pot-guests button { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text-sec); font-size: 18px; font-weight: 600; cursor: pointer; font-family: inherit; }
-  .pot-guests button:hover { border-color: var(--accent); color: var(--accent); }
-  .pot-guests .pot-count { min-width: 28px; text-align: center; font-weight: 700; color: var(--text); }
-  .pot-guests .pot-note { font-size: 13px; color: var(--text-faint); }
+  .pk-guests {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: var(--space-3);
+  }
+  .pk-guests-label { font-size: 13px; color: var(--text-sec); font-weight: 600; }
+  .pk-guests button {
+    width: 34px; height: 34px; border-radius: 8px;
+    border: 1.5px solid var(--border); background: var(--bg);
+    color: var(--text-sec); font-size: 18px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .pk-guests button:hover { border-color: var(--accent); color: var(--accent); }
+  .pk-guests .count { font-weight: 700; font-size: 16px; min-width: 24px; text-align: center; color: var(--text); }
+  .pk-guests .note { font-size: 13px; color: var(--text-faint); }
 
-  .pot-helpers { display: flex; flex-direction: column; gap: 6px; }
-  .pot-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; cursor: pointer; transition: border-color 0.15s; }
-  .pot-check:hover { border-color: var(--accent); }
-  .pot-check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
-
-  .pot-hint { font-size: 12px; color: var(--text-sec); margin: var(--space-2) 0 var(--space-3); padding: 8px 12px; background: var(--bg); border-radius: 8px; border-left: 3px solid var(--accent); }
-
-  .pot-form-row { display: flex; gap: 8px; }
-  .pot-submit {
-    flex: 1; padding: 13px; border-radius: 12px; border: none;
+  /* CTA button */
+  .pk-cta {
+    width: 100%; padding: 14px;
+    border-radius: var(--radius-pill);
+    border: none; cursor: pointer;
     background: var(--cta-bg); color: var(--cta-text);
-    font-family: var(--font); font-size: 15px; font-weight: 600;
-    cursor: pointer; box-shadow: 0 1px 3px rgba(14,165,233,0.25);
-    transition: box-shadow 0.15s, transform 0.15s;
+    font-family: var(--font-display); font-size: 17px; font-weight: 700;
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+    transition: box-shadow 0.2s, transform 0.15s;
   }
-  .pot-submit:hover { box-shadow: 0 6px 18px rgba(14,165,233,0.35); transform: translateY(-1px); }
-  .pot-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-  .pot-cancel {
-    padding: 13px 18px; border-radius: 12px; border: 1px solid var(--border);
-    background: var(--bg); color: var(--text-sec); cursor: pointer;
-    font-family: var(--font); font-size: 14px;
+  .pk-cta:hover { box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4); transform: translateY(-1px); }
+  .pk-cta:active { transform: scale(0.98); }
+  .pk-cta:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .pk-cta.loading { pointer-events: none; }
+
+  /* Step 2: item picker */
+  #step2 { display: none; }
+  .pk-pick-intro { font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-3); line-height: 1.5; }
+
+  .pk-pick-cat {
+    font-size: 11px; font-weight: 700; color: var(--text-sec);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    margin-top: var(--space-3); margin-bottom: var(--space-2);
+    display: flex; align-items: center; gap: 8px;
   }
-  .pot-cancel:hover { border-color: var(--border-hover); color: var(--text); }
+  .pk-pick-cat::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-  .pot-error { font-size: 13px; color: var(--red); margin-top: 6px; display: none; }
-  .pot-error.show { display: block; }
-
-  /* Custom dish CTA */
-  .pot-custom-cta {
-    width: 100%; padding: 16px;
-    background: var(--bg); border: 1.5px dashed var(--border);
-    border-radius: var(--radius); cursor: pointer;
-    font-family: var(--font); font-size: 14px; color: var(--text-sec);
-    text-align: left;
+  .pk-pick-item {
     display: flex; align-items: center; gap: 12px;
-    transition: all 0.15s;
-    -webkit-tap-highlight-color: transparent;
+    padding: 12px 14px; margin-bottom: 6px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 10px; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
   }
-  .pot-custom-cta:hover { border-color: var(--accent); color: var(--text); }
-  .pot-custom-cta-icon { font-size: 20px; }
-  .pot-custom-cta strong { display: block; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+  .pk-pick-item:hover { border-color: var(--accent); background: var(--bg); }
+  .pk-pick-item input[type="checkbox"] {
+    width: 18px; height: 18px; accent-color: var(--accent);
+    cursor: pointer; flex-shrink: 0;
+  }
+  .pk-pick-item span { font-size: 15px; color: var(--text); font-weight: 500; }
 
-  /* Who's coming */
-  .pot-coming-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--surface-hover); }
-  .pot-coming-row:last-child { border-bottom: none; }
-  .pot-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
-  .pot-coming-name { font-size: 14px; font-weight: 600; color: var(--text); }
-  .pot-coming-dish { font-size: 12px; color: var(--text-sec); }
-  .pot-coming-plus { margin-left: auto; font-size: 12px; color: var(--accent); font-weight: 600; }
-  .pot-empty { padding: var(--space-5); text-align: center; color: var(--text-faint); font-style: italic; }
+  /* Custom dish input */
+  .pk-custom-row {
+    display: flex; gap: 8px; align-items: center;
+    margin-top: var(--space-3); margin-bottom: var(--space-3);
+  }
+  .pk-custom-row input { flex: 1; }
+  .pk-custom-label { font-size: 13px; color: var(--text-sec); margin-bottom: 4px; font-weight: 600; }
 
-  /* Toast + confirmation modal */
-  .pot-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--mint); color: #fff; padding: 12px 22px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.2); display: none; z-index: 1000; }
-  .pot-toast.show { display: block; }
+  .pk-step2-btns { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
+  .pk-skip {
+    flex: 1; padding: 12px;
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border);
+    background: var(--bg); color: var(--text-sec);
+    font-family: var(--font); font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: border-color 0.15s;
+  }
+  .pk-skip:hover { border-color: var(--text-sec); color: var(--text); }
+  .pk-save {
+    flex: 2; padding: 12px;
+    border-radius: var(--radius-pill);
+    border: none; cursor: pointer;
+    background: var(--green); color: #fff;
+    font-family: var(--font-display); font-size: 15px; font-weight: 700;
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+  .pk-save:hover { box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); transform: translateY(-1px); }
+  .pk-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-  .pot-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.55); align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
-  .pot-overlay.show { display: flex; }
-  .pot-overlay-card { background: var(--bg); border-radius: var(--radius-lg); max-width: 460px; width: 100%; padding: var(--space-5); box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
-  .pot-overlay h2 { font-family: var(--font-display); font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 4px; }
-  .pot-overlay-sub { text-align: center; color: var(--text-sec); font-size: 14px; margin-bottom: var(--space-4); }
-  .pot-overlay-card .pot-block { background: var(--surface); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
-  .pot-overlay-card .pot-block-label { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-  .pot-overlay-card .pot-block.pay { background: var(--tag-bg3); }
-  .pot-overlay-card .pot-block.pay .pot-block-label { color: var(--tag-text3); }
-  .pot-overlay-rows { font-size: 14px; color: var(--text); line-height: 1.7; }
-  .pot-overlay-rows a { color: var(--accent); font-weight: 600; }
-  .pot-overlay-ok { width: 100%; padding: 13px; border-radius: 12px; border: none; background: var(--cta-bg); color: var(--cta-text); font-family: var(--font); font-size: 15px; font-weight: 600; cursor: pointer; }
+  .pk-error { font-size: 13px; color: #EF4444; margin-top: var(--space-2); display: none; }
+  .pk-error.show { display: block; }
+
+  /* ── Items list (view mode) ─────────────────────────── */
+  .pk-section-title {
+    font-family: var(--font-display); font-size: 18px; font-weight: 700;
+    color: var(--text); margin-bottom: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 2px solid var(--surface);
+  }
+  .pk-cat-label {
+    font-size: 11px; font-weight: 700; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    margin-top: var(--space-3); margin-bottom: var(--space-2);
+  }
+
+  .pk-slot {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; margin-bottom: 6px;
+    border-radius: 10px;
+    transition: background 0.15s;
+  }
+  .pk-slot.open {
+    background: var(--surface); border: 1.5px dashed var(--border);
+    cursor: pointer;
+  }
+  .pk-slot.open:hover { border-color: var(--accent); border-style: solid; }
+  .pk-slot.taken {
+    background: rgba(16, 185, 129, 0.06);
+    border: 1.5px solid rgba(16, 185, 129, 0.2);
+  }
+  .pk-slot-icon { font-size: 18px; flex-shrink: 0; }
+  .pk-slot-name { flex: 1; font-size: 15px; font-weight: 500; color: var(--text); }
+  .pk-slot-who { font-size: 13px; color: var(--green); font-weight: 600; }
+  .pk-slot-badge {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    background: var(--accent-dim); border-radius: 999px;
+    padding: 2px 10px;
+  }
+
+  /* ── Who's coming ───────────────────────────────────── */
+  .pk-guest {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--surface-hover);
+  }
+  .pk-guest:last-child { border-bottom: none; }
+  .pk-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--green));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; flex-shrink: 0;
+  }
+  .pk-guest-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .pk-guest-dish { font-size: 12px; color: var(--text-sec); }
+  .pk-guest-plus { margin-left: auto; font-size: 12px; color: var(--accent); font-weight: 600; }
+  .pk-empty { padding: var(--space-5); text-align: center; color: var(--text-faint); font-style: italic; }
+
+  /* ── Actions row ────────────────────────────────────── */
+  .pk-actions {
+    display: flex; gap: var(--space-3); justify-content: center;
+    margin-bottom: var(--space-5);
+  }
+  .pk-action-btn {
+    background: none; border: none; color: var(--text-sec);
+    font-size: 13px; cursor: pointer; padding: 0;
+    font-family: inherit; display: inline-flex;
+    align-items: center; gap: 4px;
+  }
+  .pk-action-btn:hover { color: var(--text); }
+
+  /* ── Toast ──────────────────────────────────────────── */
+  .pk-toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--green); color: #fff;
+    padding: 12px 24px; border-radius: 999px;
+    font-size: 14px; font-weight: 600;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: 1000; opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+  .pk-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* ── Confirmation overlay ───────────────────────────── */
+  .pk-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,23,42,0.55); z-index: 1000;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .pk-overlay.show { display: flex; }
+  .pk-overlay-card {
+    background: var(--bg); border-radius: var(--radius-lg);
+    max-width: 440px; width: 100%; padding: var(--space-5);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    text-align: center;
+  }
+  .pk-overlay-emoji { font-size: 48px; margin-bottom: var(--space-2); }
+  .pk-overlay h2 {
+    font-family: var(--font-display); font-size: 24px;
+    font-weight: 800; margin-bottom: 4px;
+  }
+  .pk-overlay-sub { color: var(--text-sec); font-size: 14px; margin-bottom: var(--space-4); }
+  .pk-overlay-block {
+    background: var(--surface); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 10px; text-align: left;
+  }
+  .pk-overlay-block-label {
+    font-size: 11px; font-weight: 700; color: var(--text-sec);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+  }
+  .pk-overlay-block.pay { background: #FEF3C7; }
+  .pk-overlay-block.pay .pk-overlay-block-label { color: #92400E; }
+  .pk-overlay-rows { font-size: 14px; color: var(--text); line-height: 1.7; }
+  .pk-overlay-rows a { color: var(--accent); font-weight: 600; }
+  .pk-overlay-ok {
+    width: 100%; padding: 13px; border-radius: var(--radius-pill);
+    border: none; background: var(--cta-bg); color: var(--cta-text);
+    font-family: var(--font-display); font-size: 15px; font-weight: 700;
+    cursor: pointer; margin-top: var(--space-3);
+  }
 </style>
 
-<section class="pot-hero">
-  {potluck.cover_photo
-    ? <img src={potluck.cover_photo} alt={potluck.title} class="pot-hero-img" loading="eager"/>
-    : <div class="pot-hero-img-placeholder"></div>}
-  <div class="pot-hero-body">
-    <a href="/potlucks" class="pot-back">← All potlucks</a>
-    <h1 class="pot-title">{potluck.title}</h1>
-    <div class="pot-meta">
-      {potluck.date_label && <span>📅 {potluck.date_label}{potluck.time_label ? ` · ${potluck.time_label}` : ''}</span>}
-      {potluck.location && <span>📍 {potluck.location}{potluck.location_detail ? ` — ${potluck.location_detail}` : ''}</span>}
-    </div>
-    {potluck.description && <p class="pot-desc">{potluck.description}</p>}
-
-    <div class="pot-prog">
-      <div class="pot-prog-top">
-        <span><strong>{claimed}</strong> of {total} items claimed</span>
-        <span>{guestTotal} {guestTotal === 1 ? 'person' : 'people'} coming</span>
-      </div>
-      <div class="pot-prog-bar"><div class="pot-prog-fill" style={`width:${pct}%`}></div></div>
-    </div>
-
-    <div class="pot-actions">
-      <button class="pot-link-btn" id="copy-link">🔗 Copy link</button>
-      <a href={`/potlucks/${id}/poster`} class="pot-link-btn">🖼 Poster</a>
-    </div>
+<!-- ── HERO ────────────────────────────────────────────── -->
+<section class="pk-hero">
+  <div class="pk-emoji">🍽️</div>
+  <h1 class="pk-title">{potluck.title}</h1>
+  <div class="pk-meta">
+    {potluck.date_label && <span>📅 {potluck.date_label}{potluck.time_label ? ` · ${potluck.time_label}` : ''}</span>}
+    {potluck.location && <span>📍 {potluck.location}</span>}
   </div>
+  {potluck.description && <p class="pk-desc">{potluck.description}</p>}
+  {potluck.location_detail && <p class="pk-desc" style="margin-top:6px; font-size:13px;">{potluck.location_detail}</p>}
 </section>
 
-<div class="pot-page">
-  <div class="pot-tabs">
-    <button class="pot-tab active" data-tab="signup">Sign up</button>
-    <button class="pot-tab" data-tab="coming">Who's coming ({signups.length})</button>
+<!-- ── PROGRESS ────────────────────────────────────────── -->
+<div class="pk-prog">
+  <div class="pk-prog-top">
+    <span><strong>{claimed}</strong> of {total} items claimed</span>
+    <span>{guestTotal} {guestTotal === 1 ? 'person' : 'people'} coming</span>
   </div>
-
-  <!-- SIGN UP TAB -->
-  <div class="pot-panel active" id="panel-signup">
-    {groupedKeys.length === 0 ? (
-      <div class="pot-empty">No items listed yet — check back soon.</div>
-    ) : groupedKeys.map((cat) => {
-      const items = grouped[cat];
-      const catClaimed = items.filter((i:any) => i.claimed_by).length;
-      return (
-        <div class="pot-cat">
-          <div class="pot-cat-title">
-            <span>{cat}</span>
-            <span class="pot-cat-count">{catClaimed} of {items.length} claimed</span>
-          </div>
-          {items.map((item:any) => item.claimed_by ? (
-            <div class="pot-item claimed">
-              <div class="pot-item-name">{item.suggestion}</div>
-              <div class="pot-item-who">✓ {item.claimed_by}</div>
-            </div>
-          ) : (
-            <div>
-              <div class="pot-item" data-id={item.id} data-dish={item.suggestion}>
-                <div class="pot-item-name">{item.suggestion}</div>
-                <span class="pot-item-arrow">›</span>
-              </div>
-              <div class="pot-form" id={`form-${item.id}`}>
-                <div class="pot-form-title">Bringing <span>{item.suggestion}</span></div>
-                <div class="pot-grid">
-                  <div class="pot-field">
-                    <label>First name <span class="opt">*</span></label>
-                    <input type="text" class="pot-input" id={`first-${item.id}`} placeholder="Jamie" autocomplete="given-name"/>
-                  </div>
-                  <div class="pot-field">
-                    <label>Last name <span class="opt">(optional)</span></label>
-                    <input type="text" class="pot-input" id={`last-${item.id}`} placeholder="Doe" autocomplete="family-name"/>
-                  </div>
-                  <div class="pot-field">
-                    <label>Email <span class="opt">(for a reminder)</span></label>
-                    <input type="email" class="pot-input" id={`email-${item.id}`} placeholder="you@example.com" autocomplete="email"/>
-                  </div>
-                  <div class="pot-field">
-                    <label>Phone <span class="opt">(for SMS)</span></label>
-                    <input type="tel" class="pot-input" id={`phone-${item.id}`} placeholder="(720) 555-1234" autocomplete="tel"/>
-                  </div>
-                  <div class="pot-field">
-                    <label>How many coming?</label>
-                    <div class="pot-guests">
-                      <button type="button" data-id={item.id} data-dir="-1">−</button>
-                      <span class="pot-count" id={`gc-${item.id}`}>1</span>
-                      <button type="button" data-id={item.id} data-dir="1">+</button>
-                      <span class="pot-note" id={`gn-${item.id}`}>just me</span>
-                    </div>
-                  </div>
-                  <div class="pot-field">
-                    <label>How can you help?</label>
-                    <div class="pot-helpers">
-                      <label class="pot-check"><input type="checkbox" id={`utensils-${item.id}`}/> 🥄 Utensils / plates</label>
-                      <label class="pot-check"><input type="checkbox" id={`early-${item.id}`}/> ⏰ Arrive early</label>
-                      <label class="pot-check"><input type="checkbox" id={`seating-${item.id}`}/> 🪑 Chairs / blanket</label>
-                    </div>
-                  </div>
-                  <div class="pot-field" style="grid-column:1/-1">
-                    <label>Dietary / allergies <span class="opt">(optional)</span></label>
-                    <textarea class="pot-textarea" id={`dietary-${item.id}`} placeholder="vegan, nut allergy, gluten-free…"></textarea>
-                  </div>
-                  <div class="pot-field" style="grid-column:1/-1">
-                    <label>Notes for the organizer <span class="opt">(optional)</span></label>
-                    <textarea class="pot-textarea" id={`notes-${item.id}`} placeholder="Anything else we should know?"></textarea>
-                  </div>
-                </div>
-                <div class="pot-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
-                <div class="pot-form-row">
-                  <button class="pot-submit" data-id={item.id} data-dish={item.suggestion}>Claim it! 🎉</button>
-                  <button class="pot-cancel" data-id={item.id}>Cancel</button>
-                </div>
-                <div class="pot-error" id={`err-${item.id}`}></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    })}
-
-    <!-- Custom dish -->
-    <div class="pot-cat">
-      <div class="pot-cat-title"><span>Bringing something else?</span></div>
-      <button type="button" class="pot-custom-cta" id="custom-toggle">
-        <span class="pot-custom-cta-icon">✏️</span>
-        <div>
-          <strong>Add your own dish</strong>
-          <span>Doesn't see what you want to bring? Add it here.</span>
-        </div>
-      </button>
-      <div class="pot-form" id="form-custom">
-        <div class="pot-form-title">What are you <span>bringing?</span></div>
-        <div class="pot-grid">
-          <div class="pot-field" style="grid-column:1/-1">
-            <label>What are you bringing? <span class="opt">*</span></label>
-            <input type="text" class="pot-input" id="custom-dish" placeholder="e.g. Cornbread, fruit punch…"/>
-          </div>
-          <div class="pot-field">
-            <label>First name <span class="opt">*</span></label>
-            <input type="text" class="pot-input" id="custom-first" placeholder="Jamie" autocomplete="given-name"/>
-          </div>
-          <div class="pot-field">
-            <label>Last name <span class="opt">(optional)</span></label>
-            <input type="text" class="pot-input" id="custom-last" placeholder="Doe" autocomplete="family-name"/>
-          </div>
-          <div class="pot-field">
-            <label>Email <span class="opt">(for a reminder)</span></label>
-            <input type="email" class="pot-input" id="custom-email" placeholder="you@example.com" autocomplete="email"/>
-          </div>
-          <div class="pot-field">
-            <label>Phone <span class="opt">(for SMS)</span></label>
-            <input type="tel" class="pot-input" id="custom-phone" placeholder="(720) 555-1234" autocomplete="tel"/>
-          </div>
-          <div class="pot-field">
-            <label>How many coming?</label>
-            <div class="pot-guests">
-              <button type="button" id="custom-minus">−</button>
-              <span class="pot-count" id="custom-count">1</span>
-              <button type="button" id="custom-plus">+</button>
-              <span class="pot-note" id="custom-note">just me</span>
-            </div>
-          </div>
-          <div class="pot-field">
-            <label>How can you help?</label>
-            <div class="pot-helpers">
-              <label class="pot-check"><input type="checkbox" id="custom-utensils"/> 🥄 Utensils / plates</label>
-              <label class="pot-check"><input type="checkbox" id="custom-early"/> ⏰ Arrive early</label>
-              <label class="pot-check"><input type="checkbox" id="custom-seating"/> 🪑 Chairs / blanket</label>
-            </div>
-          </div>
-          <div class="pot-field" style="grid-column:1/-1">
-            <label>Dietary / allergies <span class="opt">(optional)</span></label>
-            <textarea class="pot-textarea" id="custom-dietary" placeholder="vegan, nut allergy, gluten-free…"></textarea>
-          </div>
-          <div class="pot-field" style="grid-column:1/-1">
-            <label>Notes for the organizer <span class="opt">(optional)</span></label>
-            <textarea class="pot-textarea" id="custom-notes" placeholder="Anything else we should know?"></textarea>
-          </div>
-        </div>
-        <div class="pot-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
-        <div class="pot-form-row">
-          <button class="pot-submit" id="custom-submit">I'm bringing it! 🎉</button>
-          <button class="pot-cancel" id="custom-cancel">Cancel</button>
-        </div>
-        <div class="pot-error" id="err-custom"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- WHO'S COMING TAB -->
-  <div class="pot-panel" id="panel-coming">
-    {signups.length === 0 ? (
-      <div class="pot-empty">Nobody's signed up yet — be the first!</div>
-    ) : signups.map((s: any) => (
-      <div class="pot-coming-row">
-        <div class="pot-avatar">{(s.name || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</div>
-        <div>
-          <div class="pot-coming-name">{s.name}</div>
-          <div class="pot-coming-dish">{s.dish || 'Just showing up 🎉'}</div>
-        </div>
-        {s.guest_count > 1 && <div class="pot-coming-plus">+{s.guest_count - 1}</div>}
-      </div>
-    ))}
-  </div>
+  <div class="pk-prog-bar"><div class="pk-prog-fill" style={`width:${pct}%`}></div></div>
 </div>
 
-<div class="pot-toast" id="toast"></div>
+<div class="pk">
+  <!-- ── ACTIONS ────────────────────────────────────────── -->
+  <div class="pk-actions" style="margin-top:var(--space-4)">
+    <button class="pk-action-btn" id="copy-link">🔗 Copy link</button>
+    <a href={`/potlucks/${id}/poster`} class="pk-action-btn">🖼 Poster</a>
+  </div>
 
-<div class="pot-overlay" id="confirm-overlay">
-  <div class="pot-overlay-card">
-    <div style="font-size:40px;text-align:center;margin-bottom:8px">🎉</div>
+  <!-- ── RSVP CARD ──────────────────────────────────────── -->
+  <div class="pk-rsvp" id="rsvp-card">
+
+    <!-- STEP 1: Quick sign-up -->
+    <div id="step1">
+      <div class="pk-step-label">Step 1</div>
+      <div class="pk-step-title">Count me in! 🎉</div>
+
+      <div class="pk-fields">
+        <div class="pk-field">
+          <label>First name *</label>
+          <input type="text" class="pk-input" id="f-first" placeholder="Jamie" autocomplete="given-name"/>
+        </div>
+        <div class="pk-field">
+          <label>Last name <span class="opt">(optional)</span></label>
+          <input type="text" class="pk-input" id="f-last" placeholder="Doe" autocomplete="family-name"/>
+        </div>
+        <div class="pk-field">
+          <label>Email <span class="opt">(for reminders)</span></label>
+          <input type="email" class="pk-input" id="f-email" placeholder="you@example.com" autocomplete="email"/>
+        </div>
+        <div class="pk-field">
+          <label>Phone <span class="opt">(for SMS)</span></label>
+          <input type="tel" class="pk-input" id="f-phone" placeholder="(720) 555-1234" autocomplete="tel"/>
+        </div>
+      </div>
+
+      <div class="pk-guests">
+        <span class="pk-guests-label">How many?</span>
+        <button type="button" id="g-minus">−</button>
+        <span class="count" id="g-count">1</span>
+        <button type="button" id="g-plus">+</button>
+        <span class="note" id="g-note">just me</span>
+      </div>
+
+      <button class="pk-cta" id="step1-btn">I'm in! 🎉</button>
+      <div class="pk-error" id="step1-err"></div>
+    </div>
+
+    <!-- STEP 2: Pick what to bring -->
+    <div id="step2">
+      <div class="pk-step-label">Step 2</div>
+      <div class="pk-step-title">What can you bring? 🥘</div>
+      <p class="pk-pick-intro">Pick from the list or add your own — every bit helps!</p>
+
+      {groupedKeys.map((cat) => {
+        const items = grouped[cat].filter((i: any) => !i.claimed_by);
+        if (items.length === 0) return null;
+        return (
+          <>
+            <div class="pk-pick-cat"><span>{cat}</span></div>
+            {items.map((item: any) => (
+              <label class="pk-pick-item">
+                <input type="checkbox" value={item.suggestion} data-slot-id={item.id} />
+                <span>{item.suggestion}</span>
+              </label>
+            ))}
+          </>
+        );
+      })}
+
+      <div class="pk-custom-label" style="margin-top:var(--space-4)">Or add your own:</div>
+      <div class="pk-custom-row">
+        <input type="text" class="pk-input" id="f-custom-dish" placeholder="e.g. Cornbread, fruit punch…"/>
+      </div>
+
+      <div class="pk-step2-btns">
+        <button class="pk-skip" id="skip-btn">Skip for now</button>
+        <button class="pk-save" id="save-btn">Save my picks 🎉</button>
+      </div>
+      <div class="pk-error" id="step2-err"></div>
+    </div>
+  </div>
+
+  <!-- ── WHAT'S NEEDED (full list) ──────────────────────── -->
+  <div class="pk-section-title">What's needed ({claimed}/{total} claimed)</div>
+  {groupedKeys.length === 0 ? (
+    <div class="pk-empty">No items listed yet — check back soon.</div>
+  ) : groupedKeys.map((cat) => {
+    const items = grouped[cat];
+    return (
+      <>
+        <div class="pk-cat-label">{cat}</div>
+        {items.map((item: any) => item.claimed_by ? (
+          <div class="pk-slot taken">
+            <span class="pk-slot-icon">✅</span>
+            <span class="pk-slot-name">{item.suggestion}</span>
+            <span class="pk-slot-who">{item.claimed_by}</span>
+          </div>
+        ) : (
+          <div class="pk-slot open" data-scroll-signup="true">
+            <span class="pk-slot-icon">🔲</span>
+            <span class="pk-slot-name">{item.suggestion}</span>
+            <span class="pk-slot-badge">Open</span>
+          </div>
+        ))}
+      </>
+    );
+  })}
+
+  <!-- ── WHO'S COMING ─────────────────────────────────── -->
+  <div class="pk-section-title" style="margin-top:var(--space-6)">Who's coming ({signups.length})</div>
+  {signups.length === 0 ? (
+    <div class="pk-empty">Nobody's signed up yet — be the first!</div>
+  ) : signups.map((s: any) => (
+    <div class="pk-guest">
+      <div class="pk-avatar">{(s.name || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</div>
+      <div>
+        <div class="pk-guest-name">{s.name}</div>
+        <div class="pk-guest-dish">{s.dish || 'Just showing up 🎉'}</div>
+      </div>
+      {s.guest_count > 1 && <div class="pk-guest-plus">+{s.guest_count - 1}</div>}
+    </div>
+  ))}
+</div>
+
+<!-- Toast -->
+<div class="pk-toast" id="toast"></div>
+
+<!-- Confirmation overlay -->
+<div class="pk-overlay" id="confirm-overlay">
+  <div class="pk-overlay-card">
+    <div class="pk-overlay-emoji">🎉</div>
     <h2 id="confirm-title">You're in!</h2>
-    <div class="pot-overlay-sub">Confirmation email is on the way.</div>
-    <div class="pot-block" id="confirm-contact" style="display:none">
-      <div class="pot-block-label">Stay in touch</div>
-      <div class="pot-overlay-rows" id="confirm-contact-rows"></div>
+    <div class="pk-overlay-sub">Confirmation email is on the way.</div>
+    <div class="pk-overlay-block" id="confirm-contact" style="display:none">
+      <div class="pk-overlay-block-label">Stay in touch</div>
+      <div class="pk-overlay-rows" id="confirm-contact-rows"></div>
     </div>
-    <div class="pot-block pay" id="confirm-pay" style="display:none">
-      <div class="pot-block-label">Want to chip in?</div>
-      <div class="pot-overlay-rows" id="confirm-pay-rows"></div>
+    <div class="pk-overlay-block pay" id="confirm-pay" style="display:none">
+      <div class="pk-overlay-block-label">Want to chip in?</div>
+      <div class="pk-overlay-rows" id="confirm-pay-rows"></div>
     </div>
-    <button class="pot-overlay-ok" id="confirm-ok">Got it</button>
+    <button class="pk-overlay-ok" id="confirm-ok">Got it ✨</button>
   </div>
 </div>
 
 <script is:inline define:vars={{ potluckId: id }}>
-  (function () {
-    var guestCounts = {};
-    var customCount = 1;
+(function () {
+  var guestCount = 1;
 
-    function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
-    function checked(id) { var el = document.getElementById(id); return !!(el && el.checked); }
+  function $(id) { return document.getElementById(id); }
+  function val(id) { var el = $(id); return el ? el.value.trim() : ''; }
+  function guestNote(n) { return n === 1 ? 'just me' : '+ ' + (n - 1) + (n === 2 ? ' guest' : ' guests'); }
+  function escHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
 
-    function closeAllForms() {
-      document.querySelectorAll('.pot-form').forEach(function (f) { f.classList.remove('open'); });
+  // ── Guest counter ────────────────────────────────────
+  $('g-minus').addEventListener('click', function () {
+    guestCount = Math.max(1, guestCount - 1);
+    $('g-count').textContent = guestCount;
+    $('g-note').textContent = guestNote(guestCount);
+  });
+  $('g-plus').addEventListener('click', function () {
+    guestCount = Math.min(20, guestCount + 1);
+    $('g-count').textContent = guestCount;
+    $('g-note').textContent = guestNote(guestCount);
+  });
+
+  // ── Step 1: Validate and show Step 2 ─────────────────
+  $('step1-btn').addEventListener('click', function () {
+    var first = val('f-first');
+    if (!first) {
+      $('f-first').classList.add('invalid');
+      $('f-first').focus();
+      return;
+    }
+    $('f-first').classList.remove('invalid');
+
+    // Hide step 1, show step 2
+    $('step1').style.display = 'none';
+    $('step2').style.display = 'block';
+    $('rsvp-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // ── Step 2: Skip (submit with no dish) ───────────────
+  $('skip-btn').addEventListener('click', function () {
+    submitRsvp('');
+  });
+
+  // ── Step 2: Save picks ───────────────────────────────
+  $('save-btn').addEventListener('click', function () {
+    // Gather checked items
+    var checked = document.querySelectorAll('#step2 input[type="checkbox"]:checked');
+    var dishes = [];
+    checked.forEach(function (cb) { dishes.push(cb.value); });
+
+    // Custom dish
+    var custom = val('f-custom-dish');
+    if (custom) dishes.push(custom);
+
+    if (dishes.length === 0) {
+      // Nothing selected? Submit with no dish
+      submitRsvp('');
+      return;
     }
 
-    // ── Tabs ─────────────────────────────────────────────────────────
-    document.querySelectorAll('.pot-tab').forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        var t = tab.dataset.tab;
-        document.querySelectorAll('.pot-tab').forEach(function (x) { x.classList.toggle('active', x.dataset.tab === t); });
-        document.getElementById('panel-signup').classList.toggle('active', t === 'signup');
-        document.getElementById('panel-coming').classList.toggle('active', t === 'coming');
-      });
-    });
+    // Submit first dish as primary, then additional claims
+    submitRsvp(dishes[0], dishes.slice(1));
+  });
 
-    // ── Item rows: tap to open inline form ──────────────────────────
-    document.querySelectorAll('.pot-item[data-id]').forEach(function (row) {
-      row.addEventListener('click', function () {
-        var id = row.dataset.id;
-        closeAllForms();
-        var form = document.getElementById('form-' + id);
-        if (!form) return;
-        form.classList.add('open');
-        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(function () {
-          var first = document.getElementById('first-' + id);
-          if (first) first.focus();
-        }, 250);
-      });
-    });
+  // ── Submit to API ────────────────────────────────────
+  function submitRsvp(dish, extraDishes) {
+    var btn = dish ? $('save-btn') : $('skip-btn');
+    var errId = 'step2-err';
+    var origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
 
-    // ── Cancel buttons ──────────────────────────────────────────────
-    document.querySelectorAll('.pot-cancel').forEach(function (btn) {
-      btn.addEventListener('click', function () { closeAllForms(); });
-    });
+    var first = val('f-first');
+    var last = val('f-last');
+    var name = last ? first + ' ' + last : first;
 
-    // ── Custom dish toggle ──────────────────────────────────────────
-    document.getElementById('custom-toggle').addEventListener('click', function () {
-      closeAllForms();
-      var form = document.getElementById('form-custom');
-      form.classList.add('open');
-      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(function () {
-        var dish = document.getElementById('custom-dish');
-        if (dish) dish.focus();
-      }, 250);
-    });
-
-    // ── Guest counters ──────────────────────────────────────────────
-    function guestNote(n) { return n === 1 ? 'just me' : '+ ' + (n - 1) + (n === 2 ? ' guest' : ' guests'); }
-
-    document.querySelectorAll('.pot-guests button[data-id]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var id = btn.dataset.id;
-        var dir = parseInt(btn.dataset.dir);
-        var cur = guestCounts[id] || 1;
-        var next = Math.max(1, Math.min(20, cur + dir));
-        guestCounts[id] = next;
-        document.getElementById('gc-' + id).textContent = next;
-        document.getElementById('gn-' + id).textContent = guestNote(next);
-      });
-    });
-
-    document.getElementById('custom-minus').addEventListener('click', function () {
-      customCount = Math.max(1, customCount - 1);
-      document.getElementById('custom-count').textContent = customCount;
-      document.getElementById('custom-note').textContent = guestNote(customCount);
-    });
-    document.getElementById('custom-plus').addEventListener('click', function () {
-      customCount = Math.min(20, customCount + 1);
-      document.getElementById('custom-count').textContent = customCount;
-      document.getElementById('custom-note').textContent = guestNote(customCount);
-    });
-
-    // ── Submit ──────────────────────────────────────────────────────
-    function showErr(id, msg) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = msg; el.classList.add('show');
-    }
-    function clearErr(id) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = ''; el.classList.remove('show');
-    }
-
-    function escHtml(s) {
-      return String(s || '').replace(/[&<>"']/g, function (c) {
-        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-      });
-    }
-
-    function showConfirm(firstName, contact) {
-      document.getElementById('confirm-title').textContent = "You're in, " + firstName + '!';
-      var ccRows = [];
-      if (contact.phone) ccRows.push('<div>📞 ' + escHtml(contact.phone) + '</div>');
-      if (contact.discord_url) {
-        ccRows.push('<div>💬 <a href="' + escHtml(contact.discord_url) + '" target="_blank" rel="noopener">Join Discord</a>' + (contact.discord ? ' · ' + escHtml(contact.discord) : '') + '</div>');
-      } else if (contact.discord) {
-        ccRows.push('<div>💬 ' + escHtml(contact.discord) + '</div>');
-      }
-      if (ccRows.length) {
-        document.getElementById('confirm-contact-rows').innerHTML = ccRows.join('');
-        document.getElementById('confirm-contact').style.display = 'block';
-      }
-
-      var payRows = [];
-      if (contact.venmo) payRows.push('<div>💸 Venmo: <a href="https://venmo.com/' + escHtml(String(contact.venmo).replace(/^@/, '')) + '" target="_blank" rel="noopener">' + escHtml(contact.venmo) + '</a></div>');
-      if (contact.cashapp_handle) payRows.push('<div>💵 Cash App: <a href="https://cash.app/' + escHtml(String(contact.cashapp_handle).replace(/^\$/, '$')) + '" target="_blank" rel="noopener">' + escHtml(contact.cashapp_handle) + '</a></div>');
-      if (contact.stripe_link) payRows.push('<div>💳 <a href="' + escHtml(contact.stripe_link) + '" target="_blank" rel="noopener">Pay with card</a></div>');
-      if (payRows.length) {
-        document.getElementById('confirm-pay-rows').innerHTML = payRows.join('');
-        document.getElementById('confirm-pay').style.display = 'block';
+    fetch('/api/potluck', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        potluckId: String(potluckId),
+        name: name,
+        email: val('f-email'),
+        phone: val('f-phone'),
+        handle: '',
+        platforms: '',
+        rsvp: 'yes',
+        guestCount: String(guestCount),
+        dish: dish || '',
+        dishCategory: '',
+        dietary: '',
+        notes: '',
+        utensils: false,
+        earlyArrive: false,
+        seating: false,
+        _gotcha: '',
+        _turnstile: '',
+      }),
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (!data.ok) {
+        $(errId).textContent = data.error === 'slot_full'
+          ? 'Someone just claimed that — refresh and try another!'
+          : 'Something went wrong — try again.';
+        $(errId).classList.add('show');
+        btn.disabled = false;
+        btn.textContent = origText;
+        return;
       }
 
-      document.getElementById('confirm-overlay').classList.add('show');
-    }
-
-    document.getElementById('confirm-ok').addEventListener('click', function () {
-      document.getElementById('confirm-overlay').classList.remove('show');
-      location.reload();
-    });
-
-    async function submit(opts) {
-      var btn = opts.btn;
-      var origText = btn.textContent;
-      btn.disabled = true; btn.textContent = 'Saving…';
-      try {
-        var res = await fetch('/api/potluck', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            potluckId: String(potluckId),
-            name: opts.name,
-            email: opts.email,
-            phone: opts.phone,
-            handle: '',
-            platforms: '',
-            rsvp: 'yes',
-            guestCount: String(opts.guests),
-            dish: opts.dish,
-            dishCategory: '',
-            dietary: opts.dietary,
-            notes: opts.notes,
-            utensils: opts.utensils,
-            earlyArrive: opts.earlyArrive,
-            seating: opts.seating,
-            _gotcha: '',
-            _turnstile: '',
-          }),
+      // Submit extra dishes if any
+      if (extraDishes && extraDishes.length > 0) {
+        var promises = extraDishes.map(function (d) {
+          return fetch('/api/potluck', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              potluckId: String(potluckId),
+              name: name,
+              email: val('f-email'),
+              phone: val('f-phone'),
+              handle: '', platforms: '',
+              rsvp: 'yes', guestCount: '0',
+              dish: d, dishCategory: '',
+              dietary: '', notes: '',
+              utensils: false, earlyArrive: false, seating: false,
+              _gotcha: '', _turnstile: '',
+            }),
+          });
         });
-        var data = await res.json();
-        if (data.ok) {
-          showConfirm(opts.firstName, data.contact || {});
-          return;
-        }
-        if (data.error === 'slot_full') showErr(opts.errId, 'Someone just claimed this — refresh to see what else is open.');
-        else showErr(opts.errId, 'Something went wrong — try again.');
-      } catch {
-        showErr(opts.errId, 'Network problem — try again.');
+        Promise.all(promises).then(function () {
+          showConfirm(first, data.contact || {});
+        });
+      } else {
+        showConfirm(first, data.contact || {});
       }
-      btn.disabled = false; btn.textContent = origText;
+    })
+    .catch(function () {
+      $(errId).textContent = 'Network problem — try again.';
+      $(errId).classList.add('show');
+      btn.disabled = false;
+      btn.textContent = origText;
+    });
+  }
+
+  // ── Confirmation overlay ─────────────────────────────
+  function showConfirm(firstName, contact) {
+    $('confirm-title').textContent = "You're in, " + firstName + '!';
+
+    var ccRows = [];
+    if (contact.phone) ccRows.push('<div>📞 ' + escHtml(contact.phone) + '</div>');
+    if (contact.discord_url) {
+      ccRows.push('<div>💬 <a href="' + escHtml(contact.discord_url) + '" target="_blank" rel="noopener">Join Discord</a>' + (contact.discord ? ' · ' + escHtml(contact.discord) : '') + '</div>');
+    } else if (contact.discord) {
+      ccRows.push('<div>💬 ' + escHtml(contact.discord) + '</div>');
+    }
+    if (ccRows.length) {
+      $('confirm-contact-rows').innerHTML = ccRows.join('');
+      $('confirm-contact').style.display = 'block';
     }
 
-    document.querySelectorAll('.pot-submit[data-id]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var id = btn.dataset.id;
-        var first = val('first-' + id);
-        if (!first) {
-          var f = document.getElementById('first-' + id);
-          if (f) { f.classList.add('invalid'); f.focus(); }
-          return;
-        }
-        document.getElementById('first-' + id).classList.remove('invalid');
-        var last = val('last-' + id);
-        var name = last ? first + ' ' + last : first;
-        clearErr('err-' + id);
-        submit({
-          btn: btn, errId: 'err-' + id,
-          name: name, firstName: first,
-          email: val('email-' + id),
-          phone: val('phone-' + id),
-          guests: guestCounts[id] || 1,
-          dish: btn.dataset.dish,
-          dietary: val('dietary-' + id),
-          notes: val('notes-' + id),
-          utensils: checked('utensils-' + id),
-          earlyArrive: checked('early-' + id),
-          seating: checked('seating-' + id),
-        });
-      });
-    });
+    var payRows = [];
+    if (contact.venmo) payRows.push('<div>💸 Venmo: <a href="https://venmo.com/' + escHtml(String(contact.venmo).replace(/^@/, '')) + '" target="_blank" rel="noopener">' + escHtml(contact.venmo) + '</a></div>');
+    if (contact.cashapp_handle) payRows.push('<div>💵 Cash App: <a href="https://cash.app/' + escHtml(String(contact.cashapp_handle).replace(/^\$/, '$')) + '" target="_blank" rel="noopener">' + escHtml(contact.cashapp_handle) + '</a></div>');
+    if (contact.stripe_link) payRows.push('<div>💳 <a href="' + escHtml(contact.stripe_link) + '" target="_blank" rel="noopener">Pay with card</a></div>');
+    if (payRows.length) {
+      $('confirm-pay-rows').innerHTML = payRows.join('');
+      $('confirm-pay').style.display = 'block';
+    }
 
-    document.getElementById('custom-submit').addEventListener('click', function () {
-      var dish = val('custom-dish');
-      if (!dish) {
-        var d = document.getElementById('custom-dish');
-        d.classList.add('invalid'); d.focus(); return;
-      }
-      document.getElementById('custom-dish').classList.remove('invalid');
-      var first = val('custom-first');
-      if (!first) {
-        var f = document.getElementById('custom-first');
-        f.classList.add('invalid'); f.focus(); return;
-      }
-      document.getElementById('custom-first').classList.remove('invalid');
-      var last = val('custom-last');
-      var name = last ? first + ' ' + last : first;
-      clearErr('err-custom');
-      submit({
-        btn: document.getElementById('custom-submit'), errId: 'err-custom',
-        name: name, firstName: first,
-        email: val('custom-email'),
-        phone: val('custom-phone'),
-        guests: customCount,
-        dish: dish,
-        dietary: val('custom-dietary'),
-        notes: val('custom-notes'),
-        utensils: checked('custom-utensils'),
-        earlyArrive: checked('custom-early'),
-        seating: checked('custom-seating'),
-      });
-    });
+    // Show card success state
+    $('rsvp-card').classList.add('success');
+    $('confirm-overlay').classList.add('show');
+  }
 
-    // ── Copy link ───────────────────────────────────────────────────
-    document.getElementById('copy-link').addEventListener('click', function () {
-      navigator.clipboard.writeText(location.href).then(function () {
-        var t = document.getElementById('toast');
-        t.textContent = 'Link copied ✓'; t.classList.add('show');
-        setTimeout(function () { t.classList.remove('show'); }, 1800);
-      }).catch(function () {});
+  $('confirm-ok').addEventListener('click', function () {
+    $('confirm-overlay').classList.remove('show');
+    location.reload();
+  });
+
+  // ── Open slot click → scroll to RSVP ─────────────────
+  document.querySelectorAll('[data-scroll-signup]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      $('rsvp-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // If on step 1, focus the name field
+      if ($('step1').style.display !== 'none') {
+        setTimeout(function () { $('f-first').focus(); }, 400);
+      }
     });
-  })();
+  });
+
+  // ── Copy link ────────────────────────────────────────
+  $('copy-link').addEventListener('click', function () {
+    navigator.clipboard.writeText(location.href).then(function () {
+      var t = $('toast');
+      t.textContent = 'Link copied ✓';
+      t.classList.add('show');
+      setTimeout(function () { t.classList.remove('show'); }, 2000);
+    }).catch(function () {});
+  });
+})();
 </script>
 </Base>
