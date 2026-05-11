@@ -202,22 +202,55 @@ if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'
     document.getElementById('login-btn').addEventListener('click', async function() {
       clearErr('l-err');
       var btn = this; var orig = btn.textContent;
+      var email = (document.getElementById('l-email').value || '').trim();
+      var password = document.getElementById('l-pass').value || '';
+      if (!email || !password) {
+        showErr('l-err', 'Enter your email and password.');
+        return;
+      }
       btn.textContent = 'Signing in…'; btn.disabled = true;
-      var res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'login', email: document.getElementById('l-email').value, password: document.getElementById('l-pass').value }) });
-      var data = await res.json();
-      if (data.ok) { location.href = '/admin/dashboard'; return; }
-      showErr('l-err', data.error || 'Wrong email or password.');
+      try {
+        var res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'login', email: email, password: password }),
+        });
+        var data = await res.json();
+        if (data.ok) { location.href = '/admin/dashboard'; return; }
+        showErr('l-err', data.error || 'Wrong email or password.');
+      } catch (err) {
+        showErr('l-err', 'Could not reach the server. Check your connection and try again.');
+      }
       btn.textContent = orig; btn.disabled = false;
     });
 
     document.getElementById('register-btn').addEventListener('click', async function() {
       clearErr('r-err');
       var btn = this; var orig = btn.textContent;
+      var name = (document.getElementById('r-name').value || '').trim();
+      var email = (document.getElementById('r-email').value || '').trim();
+      var password = document.getElementById('r-pass').value || '';
+      if (!name || !email || !password) {
+        showErr('r-err', 'Fill in name, email, and password.');
+        return;
+      }
+      if (password.length < 6) {
+        showErr('r-err', 'Use at least 6 characters for the password.');
+        return;
+      }
       btn.textContent = 'Creating…'; btn.disabled = true;
-      var res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'register', name: document.getElementById('r-name').value, email: document.getElementById('r-email').value, password: document.getElementById('r-pass').value }) });
-      var data = await res.json();
-      if (data.ok) { location.href = '/admin/dashboard'; return; }
-      showErr('r-err', data.error || 'Could not create account.');
+      try {
+        var res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'register', name: name, email: email, password: password }),
+        });
+        var data = await res.json();
+        if (data.ok) { location.href = '/admin/dashboard'; return; }
+        showErr('r-err', data.error || 'Could not create the account.');
+      } catch (err) {
+        showErr('r-err', 'Could not reach the server. Try again.');
+      }
       btn.textContent = orig; btn.disabled = false;
     });
   </script>
@@ -284,8 +317,8 @@ if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'
         const data = await verifyRes.json();
         if (!data.ok) throw new Error(data.error || 'verify_failed');
         location.href = '/admin/dashboard';
-      } catch (e: any) {
-        showErr('pk-err', 'Passkey sign-in failed: ' + (e?.message || 'unknown'));
+      } catch (e) {
+        showErr('pk-err', 'Passkey sign-in failed: ' + ((e && e.message) || 'unknown'));
       }
     });
   </script>
