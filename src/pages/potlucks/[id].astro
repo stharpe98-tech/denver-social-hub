@@ -13,14 +13,16 @@ try {
     potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(id).first();
     if (potluck?.locked) return Astro.redirect('/potlucks');
 
-    // Preset supply slots with claim counts
+    // Slots with claim counts (aggregated)
     const s = await db.prepare(`
       SELECT ps.id, ps.suggestion, ps.category, ps.sort_order, ps.max_claims,
-        pr.name as claimed_by, pr.id as rsvp_id
+        COUNT(pr.id) as claim_count,
+        GROUP_CONCAT(pr.name, ', ') as claimed_names
       FROM potluck_slots ps
       LEFT JOIN potluck_rsvp pr ON LOWER(pr.dish)=LOWER(ps.suggestion)
         AND pr.potluck_id=ps.potluck_id AND pr.rsvp='yes'
       WHERE ps.potluck_id=?
+      GROUP BY ps.id
       ORDER BY ps.sort_order ASC
     `).bind(id).all();
     slots = s?.results ?? [];
@@ -35,35 +37,17 @@ try {
 if (!potluck) return Astro.redirect('/potlucks');
 
 const guestTotal = signups.reduce((sum: number, s: any) => sum + (parseInt(s.guest_count) || 1), 0);
-const bringingCount = signups.filter((s: any) => s.dish).length;
+const totalSlots = slots.reduce((sum: number, s: any) => sum + (s.max_claims < 900 ? s.max_claims : 1), 0);
+const totalClaimed = slots.reduce((sum: number, s: any) => sum + s.claim_count, 0);
 
-// Separate supply slots (preset) from claimed status
-const slotNames = new Set(slots.map((s: any) => s.suggestion?.toLowerCase()));
-const supplyClaimed = slots.filter((s: any) => s.claimed_by).length;
-const supplyTotal = slots.length;
-
-// Group slots by category for display
+// Group slots by category
 const slotGroupKeys: string[] = [];
 const slotGroups: Record<string, any[]> = {};
 for (const s of slots) {
-  const cat = s.category || 'Supplies';
+  const cat = s.category || 'Other';
   if (!slotGroups[cat]) { slotGroups[cat] = []; slotGroupKeys.push(cat); }
   slotGroups[cat].push(s);
 }
-
-// Group food sign-ups by category (excluding supply slot claims)
-const foodCategories = ['Main Dishes', 'Sides & Salads', 'Desserts', 'Drinks', 'Snacks & Apps', 'Other'];
-const menuGroups: Record<string, any[]> = {};
-for (const s of signups) {
-  if (!s.dish) continue;
-  // Skip if this is a supply slot claim (already shown in supplies section)
-  if (slotNames.has(s.dish.toLowerCase())) continue;
-  const cat = s.dish_category || 'Other';
-  if (!menuGroups[cat]) menuGroups[cat] = [];
-  menuGroups[cat].push(s);
-}
-const menuKeys = foodCategories.filter(c => menuGroups[c]?.length > 0);
-const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.length, 0);
 ---
 <Base title={potluck.title} description={potluck.description ?? `Sign up for ${potluck.title}`}>
 
@@ -157,7 +141,6 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
   }
   .pk-input:focus, .pk-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
   .pk-input.invalid { border-color: #EF4444; }
-  .pk-select { appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
 
   .pk-guests {
     display: flex; align-items: center; gap: 8px;
@@ -189,51 +172,45 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
   .pk-cta:active { transform: scale(0.98); }
   .pk-cta:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-  /* Step 2 */
+  /* Step 2 — Slot Picker */
   #step2 { display: none; }
   .pk-pick-intro { font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-3); line-height: 1.5; }
 
-  /* Bring-a-dish row */
-  .pk-dish-row { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); }
-  .pk-dish-row .pk-select { flex: 0 0 160px; }
-  .pk-dish-row .pk-input { flex: 1; }
-  @media (max-width: 500px) { .pk-dish-row { flex-direction: column; } .pk-dish-row .pk-select { flex: none; } }
-
-  /* Supply claims */
-  .pk-supply-section { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border); }
-  .pk-supply-label {
-    font-size: 13px; font-weight: 700; color: var(--text-sec);
-    margin-bottom: var(--space-2); display: flex; align-items: center; gap: 6px;
+  .pk-slot-cat {
+    font-size: 11px; font-weight: 700; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    margin-top: var(--space-3); margin-bottom: var(--space-2);
   }
-  .pk-supply-item {
+  .pk-slot-cat:first-child { margin-top: 0; }
+  .pk-slot-item {
     display: flex; align-items: center; gap: 12px;
-    padding: 10px 14px; margin-bottom: 6px;
+    padding: 12px 14px; margin-bottom: 6px;
     background: var(--surface); border: 1.5px solid var(--border);
     border-radius: 10px; cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
   }
-  .pk-supply-item:hover { border-color: var(--accent); background: var(--bg); }
-  .pk-supply-item.taken { opacity: 0.5; cursor: default; border-style: solid; }
-  .pk-supply-item.taken:hover { border-color: var(--border); background: var(--surface); }
-  .pk-supply-item input[type="checkbox"] {
-    width: 18px; height: 18px; accent-color: var(--accent);
+  .pk-slot-item:hover { border-color: var(--accent); background: var(--bg); }
+  .pk-slot-item.selected { border-color: var(--green); background: rgba(16, 185, 129, 0.06); }
+  .pk-slot-item.full { opacity: 0.45; cursor: default; }
+  .pk-slot-item.full:hover { border-color: var(--border); background: var(--surface); }
+  .pk-slot-item input[type="radio"] {
+    width: 18px; height: 18px; accent-color: var(--green);
     cursor: pointer; flex-shrink: 0;
   }
-  .pk-supply-item .name { font-size: 14px; color: var(--text); font-weight: 500; flex: 1; }
-  .pk-supply-item .who { font-size: 12px; color: var(--green); font-weight: 600; }
-  .pk-supply-item .badge {
+  .pk-slot-item.full input[type="radio"] { cursor: default; }
+  .pk-slot-item .name { flex: 1; font-size: 14px; color: var(--text); font-weight: 500; }
+  .pk-slot-item .progress {
+    font-size: 12px; color: var(--text-faint); font-weight: 600;
+    white-space: nowrap;
+  }
+  .pk-slot-item .progress.has-claims { color: var(--green); }
+  .pk-slot-item .badge {
     font-size: 10px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.5px; padding: 2px 8px; border-radius: 999px;
   }
-  .pk-supply-item .badge.open { color: var(--accent); background: var(--accent-dim); }
-  .pk-supply-item .badge.full { color: var(--text-faint); background: var(--surface-hover); }
-  .pk-supply-cat {
-    font-size: 11px; font-weight: 700; color: var(--text-faint);
-    text-transform: uppercase; letter-spacing: 1.2px;
-    margin-top: var(--space-2); margin-bottom: var(--space-1);
-  }
+  .pk-slot-item .badge.open { color: var(--accent); background: var(--accent-dim); }
+  .pk-slot-item .badge.full { color: var(--text-faint); background: var(--surface-hover); }
 
-  /* Step 2 buttons */
   .pk-step2-btns { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
   .pk-skip {
     flex: 1; padding: 12px;
@@ -266,43 +243,35 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
     border-bottom: 2px solid var(--surface);
   }
 
-  /* ── Menu (what people are bringing) ───────────────── */
-  .pk-menu-cat {
+  /* ── Sign-up sheet (view) ──────────────────────────── */
+  .pk-sheet-cat {
     font-size: 11px; font-weight: 700; color: var(--text-faint);
     text-transform: uppercase; letter-spacing: 1.5px;
     margin-top: var(--space-3); margin-bottom: var(--space-2);
     display: flex; align-items: center; gap: 8px;
   }
-  .pk-menu-cat::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-  .pk-menu-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 14px; margin-bottom: 6px;
-    background: rgba(16, 185, 129, 0.04);
-    border: 1px solid rgba(16, 185, 129, 0.12);
-    border-radius: 10px;
-  }
-  .pk-menu-dish { flex: 1; font-size: 15px; font-weight: 500; color: var(--text); }
-  .pk-menu-by { font-size: 13px; color: var(--green); font-weight: 600; }
-
-  /* ── Supplies list (view) ──────────────────────────── */
-  .pk-slot {
+  .pk-sheet-cat::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .pk-sheet-item {
     display: flex; align-items: center; gap: 12px;
     padding: 10px 14px; margin-bottom: 6px;
     border-radius: 10px;
   }
-  .pk-slot.open {
+  .pk-sheet-item.open {
     background: var(--surface); border: 1.5px dashed var(--border);
   }
-  .pk-slot.taken {
+  .pk-sheet-item.taken {
     background: rgba(16, 185, 129, 0.04);
     border: 1px solid rgba(16, 185, 129, 0.12);
   }
-  .pk-slot-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text); }
-  .pk-slot-who { font-size: 13px; color: var(--green); font-weight: 600; }
-  .pk-slot-badge {
+  .pk-sheet-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text); }
+  .pk-sheet-who { font-size: 13px; color: var(--green); font-weight: 600; }
+  .pk-sheet-badge {
     font-size: 11px; font-weight: 700; color: var(--accent);
     background: var(--accent-dim); border-radius: 999px;
     padding: 2px 10px;
+  }
+  .pk-sheet-progress {
+    font-size: 11px; color: var(--text-faint); font-weight: 600;
   }
 
   /* ── Who's coming ───────────────────────────────────── */
@@ -323,16 +292,43 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
   .pk-guest-plus { margin-left: auto; font-size: 12px; color: var(--accent); font-weight: 600; }
   .pk-empty { padding: var(--space-5); text-align: center; color: var(--text-faint); font-style: italic; }
 
+  /* ── Manage RSVP section ───────────────────────────── */
+  .pk-manage {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+  .pk-manage-title {
+    font-family: var(--font-display); font-size: 16px; font-weight: 700;
+    color: var(--text); margin-bottom: var(--space-2);
+  }
+  .pk-manage-sub { font-size: 13px; color: var(--text-sec); margin-bottom: var(--space-3); line-height: 1.5; }
+  .pk-manage-fields { display: flex; gap: var(--space-2); margin-bottom: var(--space-2); }
+  @media (max-width: 500px) { .pk-manage-fields { flex-direction: column; } }
+  .pk-manage-fields .pk-input { flex: 1; padding: 10px 12px; font-size: 14px; }
+  .pk-manage-btn {
+    padding: 10px 20px; border-radius: var(--radius-pill);
+    border: 1.5px solid var(--accent); background: var(--bg);
+    color: var(--accent); font-family: var(--font); font-size: 13px;
+    font-weight: 600; cursor: pointer; white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+  }
+  .pk-manage-btn:hover { background: var(--accent); color: #fff; }
+  .pk-manage-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .pk-manage-err { font-size: 12px; color: #EF4444; margin-top: var(--space-1); display: none; }
+  .pk-manage-err.show { display: block; }
+
   /* ── Actions row ────────────────────────────────────── */
   .pk-actions {
     display: flex; gap: var(--space-3); justify-content: center;
-    margin-bottom: var(--space-5);
+    margin-bottom: var(--space-5); flex-wrap: wrap;
   }
   .pk-action-btn {
     background: none; border: none; color: var(--text-sec);
     font-size: 13px; cursor: pointer; padding: 0;
     font-family: inherit; display: inline-flex;
     align-items: center; gap: 4px;
+    text-decoration: none;
   }
   .pk-action-btn:hover { color: var(--text); }
 
@@ -407,15 +403,9 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
     <div class="pk-stat-label">{guestTotal === 1 ? 'person' : 'people'} coming</div>
   </div>
   <div class="pk-stat">
-    <div class="pk-stat-num">{bringingCount}</div>
-    <div class="pk-stat-label">bringing food</div>
+    <div class="pk-stat-num">{totalClaimed}/{slots.length}</div>
+    <div class="pk-stat-label">items claimed</div>
   </div>
-  {supplyTotal > 0 && (
-    <div class="pk-stat">
-      <div class="pk-stat-num">{supplyClaimed}/{supplyTotal}</div>
-      <div class="pk-stat-label">supplies claimed</div>
-    </div>
-  )}
 </div>
 
 <div class="pk">
@@ -423,6 +413,7 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
   <div class="pk-actions" style="margin-top:var(--space-4)">
     <button class="pk-action-btn" id="copy-link">🔗 Copy link</button>
     <a href={`/potlucks/${id}/poster`} class="pk-action-btn">🖼 Poster</a>
+    <a href={`/potlucks/manage/${id}`} class="pk-action-btn">⚙️ Manage</a>
   </div>
 
   <!-- ── RSVP CARD ──────────────────────────────────────── -->
@@ -464,118 +455,99 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
       <div class="pk-error" id="step1-err"></div>
     </div>
 
-    <!-- STEP 2: What are you bringing? -->
+    <!-- STEP 2: Pick what to bring (SignUpGenius-style) -->
     <div id="step2">
       <div class="pk-step-label">Step 2</div>
-      <div class="pk-step-title">What are you bringing? 🥘</div>
-      <p class="pk-pick-intro">Pick a category and tell us what you're making — or skip if you're just showing up!</p>
+      <div class="pk-step-title">What would you like to bring? 🥘</div>
+      <p class="pk-pick-intro">Pick an item from the list below, or skip if you're just coming to hang out!</p>
 
-      <!-- Category + dish input -->
-      <div class="pk-dish-row">
-        <select class="pk-select" id="f-category">
-          <option value="">Category…</option>
-          <option value="Main Dishes">🍖 Main Dishes</option>
-          <option value="Sides & Salads">🥗 Sides & Salads</option>
-          <option value="Desserts">🍰 Desserts</option>
-          <option value="Drinks">🥤 Drinks</option>
-          <option value="Snacks & Apps">🧀 Snacks & Apps</option>
-          <option value="Other">🎁 Other</option>
-        </select>
-        <input type="text" class="pk-input" id="f-dish" placeholder="e.g. Grandma's mac & cheese"/>
+      <div id="slot-picker">
+        {slotGroupKeys.map((cat) => {
+          const items = slotGroups[cat];
+          return (
+            <>
+              <div class="pk-slot-cat">{cat}</div>
+              {items.map((item: any) => {
+                const isFull = item.max_claims < 900 && item.claim_count >= item.max_claims;
+                const spotsLeft = item.max_claims < 900 ? item.max_claims - item.claim_count : null;
+                return (
+                  <label class={`pk-slot-item ${isFull ? 'full' : ''}`}>
+                    <input type="radio" name="slot-pick" value={item.suggestion}
+                      data-category={item.category} disabled={isFull} />
+                    <span class="name">{item.suggestion}</span>
+                    {isFull ? (
+                      <span class="badge full">Full</span>
+                    ) : item.claim_count > 0 ? (
+                      <span class={`progress has-claims`}>
+                        {spotsLeft !== null ? `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left` : 'Open'}
+                      </span>
+                    ) : (
+                      <span class="badge open">Needed</span>
+                    )}
+                  </label>
+                );
+              })}
+            </>
+          );
+        })}
       </div>
-
-      <!-- Supply slots (if any exist) -->
-      {supplyTotal > 0 && (
-        <div class="pk-supply-section">
-          <div class="pk-supply-label">📦 Supplies & essentials needed</div>
-          {slotGroupKeys.map((cat) => {
-            const items = slotGroups[cat];
-            return (
-              <>
-                {slotGroupKeys.length > 1 && <div class="pk-supply-cat">{cat}</div>}
-                {items.map((item: any) => {
-                  const isTaken = !!item.claimed_by;
-                  return (
-                    <label class={`pk-supply-item ${isTaken ? 'taken' : ''}`}>
-                      <input type="checkbox" value={item.suggestion} data-slot="true"
-                        disabled={isTaken} />
-                      <span class="name">{item.suggestion}</span>
-                      {isTaken
-                        ? <span class="who">{item.claimed_by}</span>
-                        : <span class="badge open">Needed</span>
-                      }
-                    </label>
-                  );
-                })}
-              </>
-            );
-          })}
-        </div>
-      )}
 
       <div class="pk-step2-btns">
         <button class="pk-skip" id="skip-btn">Just showing up</button>
-        <button class="pk-save" id="save-btn">Save & sign up 🎉</button>
+        <button class="pk-save" id="save-btn">Sign up with this item 🎉</button>
       </div>
       <div class="pk-error" id="step2-err"></div>
     </div>
   </div>
 
-  <!-- ── ON THE MENU (food write-ins) ─────────────────── -->
-  <div class="pk-section-title">On the menu ({menuTotal} {menuTotal === 1 ? 'dish' : 'dishes'})</div>
-  {menuTotal === 0 ? (
-    <div class="pk-empty">No dishes yet — sign up and be the first to add something!</div>
-  ) : menuKeys.map((cat) => {
-    const items = menuGroups[cat];
-    const emoji: Record<string, string> = { 'Main Dishes': '🍖', 'Sides & Salads': '🥗', 'Desserts': '🍰', 'Drinks': '🥤', 'Snacks & Apps': '🧀', 'Other': '🎁' };
+  <!-- ── MANAGE YOUR RSVP ──────────────────────────────── -->
+  <div class="pk-manage" id="manage-section">
+    <div class="pk-manage-title">Already signed up?</div>
+    <div class="pk-manage-sub">Enter your name or email to edit or cancel your sign-up.</div>
+    <div class="pk-manage-fields">
+      <input type="text" class="pk-input" id="m-lookup" placeholder="Your name or email" autocomplete="off"/>
+      <button class="pk-manage-btn" id="m-lookup-btn">Find my RSVP</button>
+    </div>
+    <div class="pk-manage-err" id="m-lookup-err"></div>
+  </div>
+
+  <!-- ── SIGN-UP SHEET ───────────────────────────────── -->
+  <div class="pk-section-title">
+    Sign-up sheet ({totalClaimed}/{slots.length} items claimed)
+  </div>
+  {slotGroupKeys.map((cat) => {
+    const items = slotGroups[cat];
     return (
       <>
-        <div class="pk-menu-cat"><span>{emoji[cat] || '🍽️'} {cat}</span></div>
-        {items.map((item: any) => (
-          <div class="pk-menu-item">
-            <span class="pk-menu-dish">{item.dish}</span>
-            <span class="pk-menu-by">{item.name}</span>
-          </div>
-        ))}
+        <div class="pk-sheet-cat"><span>{cat}</span></div>
+        {items.map((item: any) => {
+          const isFull = item.max_claims < 900 && item.claim_count >= item.max_claims;
+          return item.claim_count > 0 ? (
+            <div class="pk-sheet-item taken">
+              <span style="font-size:16px">✅</span>
+              <span class="pk-sheet-name">{item.suggestion}</span>
+              <span class="pk-sheet-who">{item.claimed_names}</span>
+              {item.max_claims < 900 && item.claim_count < item.max_claims && (
+                <span class="pk-sheet-progress">{item.max_claims - item.claim_count} more needed</span>
+              )}
+            </div>
+          ) : (
+            <div class="pk-sheet-item open">
+              <span style="font-size:16px">⬜</span>
+              <span class="pk-sheet-name">{item.suggestion}</span>
+              <span class="pk-sheet-badge">Needed</span>
+            </div>
+          );
+        })}
       </>
     );
   })}
-
-  <!-- ── SUPPLIES STATUS ─────────────────────────────── -->
-  {supplyTotal > 0 && (
-    <>
-      <div class="pk-section-title" style="margin-top:var(--space-6)">
-        Supplies ({supplyClaimed}/{supplyTotal} claimed)
-      </div>
-      {slotGroupKeys.map((cat) => {
-        const items = slotGroups[cat];
-        return (
-          <>
-            {slotGroupKeys.length > 1 && <div class="pk-menu-cat"><span>{cat}</span></div>}
-            {items.map((item: any) => item.claimed_by ? (
-              <div class="pk-slot taken">
-                <span style="font-size:16px">✅</span>
-                <span class="pk-slot-name">{item.suggestion}</span>
-                <span class="pk-slot-who">{item.claimed_by}</span>
-              </div>
-            ) : (
-              <div class="pk-slot open">
-                <span style="font-size:16px">⬜</span>
-                <span class="pk-slot-name">{item.suggestion}</span>
-                <span class="pk-slot-badge">Needed</span>
-              </div>
-            ))}
-          </>
-        );
-      })}
-    </>
-  )}
 
   <!-- ── WHO'S COMING ─────────────────────────────────── -->
   <div class="pk-section-title" style="margin-top:var(--space-6)">Who's coming ({guestTotal})</div>
   {signups.length === 0 ? (
     <div class="pk-empty">Nobody's signed up yet — be the first!</div>
-  ) : signups.map((s: any) => (
+  ) : signups.filter((s: any) => parseInt(s.guest_count) > 0).map((s: any) => (
     <div class="pk-guest">
       <div class="pk-avatar">{(s.name || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</div>
       <div>
@@ -647,40 +619,38 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
     $('rsvp-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
-  // ── Skip → submit with no dish ──────────────────────
-  $('skip-btn').addEventListener('click', function () {
-    submitRsvp('', '', []);
+  // ── Highlight selected slot ──────────────────────────
+  var slotRadios = document.querySelectorAll('#slot-picker input[type="radio"]');
+  slotRadios.forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      document.querySelectorAll('.pk-slot-item').forEach(function (el) {
+        el.classList.remove('selected');
+      });
+      if (radio.checked) {
+        radio.closest('.pk-slot-item').classList.add('selected');
+      }
+    });
   });
 
-  // ── Save picks ──────────────────────────────────────
+  // ── Skip → submit with no dish ──────────────────────
+  $('skip-btn').addEventListener('click', function () {
+    submitRsvp('', '');
+  });
+
+  // ── Save pick → submit with chosen slot ─────────────
   $('save-btn').addEventListener('click', function () {
-    var dish = val('f-dish');
-    var category = val('f-category');
-
-    // Gather checked supply slots
-    var supplyChecks = document.querySelectorAll('#step2 input[data-slot]:checked');
-    var supplies = [];
-    supplyChecks.forEach(function (cb) { supplies.push(cb.value); });
-
-    // If they typed a dish but didn't pick a category, nudge them
-    if (dish && !category) {
-      $('f-category').style.borderColor = '#EF4444';
-      $('f-category').focus();
+    var selected = document.querySelector('#slot-picker input[type="radio"]:checked');
+    if (!selected) {
+      $('step2-err').textContent = 'Pick an item from the list, or tap "Just showing up".';
+      $('step2-err').classList.add('show');
       return;
     }
-    $('f-category').style.borderColor = '';
-
-    // Nothing at all? Submit with no dish
-    if (!dish && supplies.length === 0) {
-      submitRsvp('', '', []);
-      return;
-    }
-
-    submitRsvp(dish, category, supplies);
+    $('step2-err').classList.remove('show');
+    submitRsvp(selected.value, selected.getAttribute('data-category') || '');
   });
 
   // ── Submit to API ────────────────────────────────────
-  function submitRsvp(dish, dishCategory, supplies) {
+  function submitRsvp(dish, dishCategory) {
     var btn = $('save-btn');
     var errId = 'step2-err';
     var origText = btn.textContent;
@@ -692,7 +662,6 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
     var last = val('f-last');
     var name = last ? first + ' ' + last : first;
 
-    // Primary RSVP (with food dish or empty)
     fetch('/api/potluck', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -704,8 +673,8 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
         handle: '', platforms: '',
         rsvp: 'yes',
         guestCount: String(guestCount),
-        dish: dish || '',
-        dishCategory: dishCategory || '',
+        dish: dish,
+        dishCategory: dishCategory,
         dietary: '', notes: '',
         utensils: false, earlyArrive: false, seating: false,
         _gotcha: '', _turnstile: '',
@@ -723,33 +692,7 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
         btn.textContent = origText;
         return;
       }
-
-      // Submit supply claims as separate RSVPs (guestCount 0 to avoid double-counting)
-      if (supplies.length > 0) {
-        var promises = supplies.map(function (s) {
-          return fetch('/api/potluck', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              potluckId: String(potluckId),
-              name: name,
-              email: val('f-email'),
-              phone: val('f-phone'),
-              handle: '', platforms: '',
-              rsvp: 'yes', guestCount: '0',
-              dish: s, dishCategory: 'Supplies',
-              dietary: '', notes: '',
-              utensils: false, earlyArrive: false, seating: false,
-              _gotcha: '', _turnstile: '',
-            }),
-          });
-        });
-        Promise.all(promises).then(function () {
-          showConfirm(first, data.contact || {});
-        });
-      } else {
-        showConfirm(first, data.contact || {});
-      }
+      showConfirm(first, data.contact || {});
     })
     .catch(function () {
       $(errId).textContent = 'Network problem — try again.';
@@ -802,6 +745,48 @@ const menuTotal = Object.values(menuGroups).reduce((sum, arr) => sum + arr.lengt
       t.classList.add('show');
       setTimeout(function () { t.classList.remove('show'); }, 2000);
     }).catch(function () {});
+  });
+
+  // ── RSVP lookup ──────────────────────────────────────
+  $('m-lookup-btn').addEventListener('click', function () {
+    var input = val('m-lookup');
+    if (!input) {
+      $('m-lookup-err').textContent = 'Enter your name or email.';
+      $('m-lookup-err').classList.add('show');
+      return;
+    }
+    $('m-lookup-err').classList.remove('show');
+    var btn = $('m-lookup-btn');
+    btn.disabled = true;
+    btn.textContent = 'Looking up…';
+
+    var isEmail = input.indexOf('@') > -1;
+    var body = { potluckId: String(potluckId) };
+    if (isEmail) body.email = input;
+    else body.name = input;
+
+    fetch('/api/potluck-lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      btn.disabled = false;
+      btn.textContent = 'Find my RSVP';
+      if (data.ok && data.token) {
+        window.location.href = '/potlucks/edit?token=' + data.token;
+      } else {
+        $('m-lookup-err').textContent = data.error || 'Not found. Check your name or email.';
+        $('m-lookup-err').classList.add('show');
+      }
+    })
+    .catch(function () {
+      btn.disabled = false;
+      btn.textContent = 'Find my RSVP';
+      $('m-lookup-err').textContent = 'Network problem — try again.';
+      $('m-lookup-err').classList.add('show');
+    });
   });
 })();
 </script>
