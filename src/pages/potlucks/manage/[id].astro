@@ -35,150 +35,246 @@ attending.forEach((s:any) => {
   }
 });
 const dishEntries = Object.entries(dishMap);
+
+// Group slots by category
+const catMap: Record<string, any[]> = {};
+slots.forEach((s: any) => {
+  const cat = s.category || 'Items';
+  if (!catMap[cat]) catMap[cat] = [];
+  catMap[cat].push(s);
+});
+const catEntries = Object.entries(catMap);
+const catEmoji: Record<string,string> = { 'Salads':'🥗', 'Mains':'🍖', 'Sides':'🥘', 'Snacks':'🧀', 'Desserts':'🍰', 'Drinks':'🥤', 'Setup':'🛠', 'Items':'📦' };
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Manage · {potluck.title}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0f0f0f;color:#f0ebe3;font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:40px}
-    .hero{background:#1a0a00;border-bottom:1px solid #2a1a08;padding:32px 24px}
-    .hero-inner{max-width:800px;margin:0 auto}
-    .back{color:#6b5040;font-size:13px;text-decoration:none;margin-bottom:12px;display:inline-flex;align-items:center;gap:4px}
-    .hero h1{font-family:'Playfair Display',serif;font-size:clamp(22px,5vw,32px);color:#fff;margin-bottom:4px}
-    .hero p{font-size:13px;color:#6b5040}
-    .hero-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
-    .page{max-width:800px;margin:0 auto;padding:24px 16px}
-    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:28px}
-    .stat-card{background:#1a1108;border:1px solid #2a1a08;border-radius:12px;padding:16px;text-align:center}
-    .stat-num{font-size:28px;font-weight:700;color:#f5c842;margin-bottom:4px}
-    .stat-label{font-size:11px;color:#6b5040;text-transform:uppercase;letter-spacing:0.5px}
-    .sec{margin-bottom:28px}
-    .sec-label{font-size:10px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:#6b5040;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1a1108}
+    :root{--accent:#2D5F3F;--accent-light:#e8f5e9;--bg:#FAFAF8;--card:#FFFFFF;--border:#E8E4DE;--text:#1a1a1a;--muted:#7a746c;--danger:#dc2626;--danger-bg:#fef2f2}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;padding-bottom:60px}
+
+    /* Top bar */
+    .top-bar{background:var(--card);border-bottom:1px solid var(--border);padding:16px 24px;position:sticky;top:0;z-index:50}
+    .top-inner{max-width:900px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .top-left{display:flex;align-items:center;gap:12px}
+    .back-link{color:var(--muted);text-decoration:none;font-size:13px;display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);transition:all 0.15s}
+    .back-link:hover{background:var(--bg);color:var(--text)}
+    .top-title{font-family:'Outfit',sans-serif;font-size:18px;font-weight:700;color:var(--text)}
+    .top-actions{display:flex;gap:8px}
+
+    /* Buttons */
+    .btn{padding:8px 16px;border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px}
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-primary:hover{background:#234a30}
+    .btn-outline{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .btn-outline:hover{background:var(--bg);color:var(--text)}
+    .btn-danger{background:transparent;color:var(--danger);border:1px solid #fca5a5}
+    .btn-danger:hover{background:var(--danger-bg)}
+    .btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}
+
+    /* Page container */
+    .page{max-width:900px;margin:0 auto;padding:24px 16px}
+
+    /* Stat cards */
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:28px}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 16px;text-align:center}
+    .stat-num{font-family:'Outfit',sans-serif;font-size:32px;font-weight:700;color:var(--accent);line-height:1}
+    .stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:6px}
+
+    /* Section */
+    .section{margin-bottom:28px}
+    .section-head{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+    .section-count{background:var(--accent-light);color:var(--accent);font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px}
+
+    /* Sign-up items table */
+    .items-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .cat-header{background:var(--bg);padding:10px 16px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+    .cat-header:not(:first-child){border-top:1px solid var(--border)}
+    .item-row{display:grid;grid-template-columns:100px 1fr 100px 50px 70px;align-items:center;padding:6px 16px;border-bottom:1px solid #f5f3f0;gap:4px}
+    .item-row:last-child{border-bottom:none}
+    .item-row input{width:100%;padding:7px 10px;border:1px solid transparent;border-radius:6px;font-family:inherit;font-size:13px;background:transparent;color:var(--text)}
+    .item-row input:focus{border-color:var(--accent);background:#f8fdf9;outline:none}
+    .item-row input[type=number]{width:50px;text-align:center}
+    .item-actions{display:flex;gap:4px;justify-content:flex-end}
+
+    /* Category badge */
+    .cat-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--accent-light);color:var(--accent)}
+
+    /* Add new */
+    .add-strip{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:16px;margin-top:14px}
+    .add-strip-title{font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px}
+    .add-grid{display:grid;grid-template-columns:100px 1fr 100px 50px auto;gap:8px;align-items:center}
+    .add-grid input{padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;background:var(--card)}
+    .add-grid input:focus{border-color:var(--accent);outline:none}
+
+    /* Bulk import */
+    .bulk-details{margin-top:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .bulk-details summary{padding:12px 16px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);list-style:none;display:flex;align-items:center;gap:6px}
+    .bulk-details summary::before{content:'▸';font-size:11px;transition:transform 0.15s}
+    .bulk-details[open] summary::before{transform:rotate(90deg)}
+    .bulk-details summary:hover{background:var(--bg)}
+    .bulk-inner{padding:0 16px 16px}
+    .bulk-help{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5}
+    .bulk-inner textarea{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;resize:vertical;min-height:100px}
+    .bulk-inner textarea:focus{border-color:var(--accent);outline:none}
+    .bulk-footer{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .bulk-footer input{flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px}
+
+    /* Guest list table */
+    .guest-table{width:100%;border-collapse:collapse;font-size:13px}
+    .guest-table th{text-align:left;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:10px 12px;background:var(--bg);border-bottom:1px solid var(--border)}
+    .guest-table td{padding:10px 12px;border-bottom:1px solid #f5f3f0;vertical-align:top}
+    .guest-table td:first-child{font-weight:500;color:var(--text)}
+    .guest-table tr:last-child td{border-bottom:none}
+    .guest-sub{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+    .guest-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+
+    /* Dish chips */
     .dish-grid{display:flex;flex-wrap:wrap;gap:8px}
-    .dish-item{background:#1a1108;border:1px solid #2a1a08;border-radius:10px;padding:8px 14px}
-    .dish-name{color:#f0ebe3;font-weight:500;font-size:13px;margin-bottom:2px}
-    .dish-who{color:#4a3020;font-size:11px}
-    .dish-item.full .dish-name{color:#f87171}
-    .table{width:100%;border-collapse:collapse;font-size:13px}
-    .table th{text-align:left;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#4a3020;padding:8px 10px;border-bottom:1px solid #2a1a08}
-    .table td{padding:10px;border-bottom:1px solid #1a1108;color:#b09070;vertical-align:top}
-    .table td:first-child{color:#f0ebe3;font-weight:500}
-    .helper-row{display:flex;flex-wrap:wrap;gap:8px}
-    .helper-chip{background:#1a1108;border:1px solid #2a1a08;border-radius:8px;padding:5px 12px;font-size:12px;color:#b09070}
-    .del-btn{background:none;border:none;color:#4a3020;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px}
-    .del-btn:hover{background:#2e0d0d;color:#f87171}
-    .btn-orange{background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
-    .btn-ghost{background:transparent;color:#c4956a;border:1.5px solid #2a1a08;padding:8px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer}
-    .edit-panel{background:#1a1108;border:1px solid #2a1a08;border-radius:12px;padding:20px;margin-top:14px}
-    .field{margin-bottom:12px}
-    .field label{display:block;font-size:11px;color:#6b5040;margin-bottom:4px}
-    input[type=text]{width:100%;padding:8px 10px;background:#0f0f0f;border:1px solid #2a1a08;border-radius:7px;color:#f0ebe3;font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
-    .empty{text-align:center;padding:32px;color:#4a3020;font-style:italic;font-size:13px}
-    .hidden{display:none!important}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .dish-chip{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 14px}
+    .dish-name{font-size:13px;font-weight:500;color:var(--text)}
+    .dish-who{font-size:11px;color:var(--muted);margin-top:2px}
+    .dish-chip.full{border-color:#fca5a5;background:var(--danger-bg)}
+    .dish-chip.full .dish-name{color:var(--danger)}
+
+    /* Helper chips */
+    .helper-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+    .helper-chip{background:var(--accent-light);color:var(--accent);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:500}
+    .helper-section{margin-bottom:10px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+    .helper-label{font-size:12px;color:var(--muted);min-width:80px}
+
+    /* Edit panel */
+    .edit-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:20px}
+    .edit-panel.hidden{display:none!important}
+    .edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .field label{display:block;font-size:11px;font-weight:500;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px}
+    .field input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;background:var(--card);color:var(--text)}
+    .field input:focus{border-color:var(--accent);outline:none}
+    .field-full{grid-column:1/-1}
+
+    /* Empty state */
+    .empty{text-align:center;padding:40px;color:var(--muted);font-style:italic;font-size:14px}
+
+    /* Can't make it */
+    .decline-list{display:flex;flex-wrap:wrap;gap:6px}
+    .decline-chip{background:#f5f3f0;color:var(--muted);padding:4px 12px;border-radius:8px;font-size:12px}
+
+    @media(max-width:640px){
+      .add-grid{grid-template-columns:1fr 1fr;gap:6px}
+      .add-grid input:first-child{grid-column:1/-1}
+      .item-row{grid-template-columns:1fr 50px 60px;padding:8px 12px}
+      .item-row .sl-time{display:none}
+      .item-row .sl-category{display:none}
+      .edit-grid{grid-template-columns:1fr}
+      .top-title{font-size:15px}
+      .stats{grid-template-columns:repeat(3,1fr)}
+    }
   </style>
 </head>
 <body>
-  <div class="hero">
-    <div class="hero-inner">
-      <a href={`/potlucks/${id}`} class="back">← Back to event</a>
-      <h1>⚙ Manage · {potluck.title}</h1>
-      <p>{potluck.date_label} · {potluck.location}</p>
-      <div class="hero-actions">
-        <button class="btn-orange" onclick="document.getElementById('edit-panel').classList.toggle('hidden')">✏️ Edit details</button>
-        <button class="btn-ghost" onclick="duplicatePotluck()">Duplicate</button>
-        <button class="btn-ghost" onclick="markPast()">Mark as Past</button>
+  <div class="top-bar">
+    <div class="top-inner">
+      <div class="top-left">
+        <a href={`/potlucks/${id}`} class="back-link">← Back</a>
+        <span class="top-title">{potluck.title}</span>
       </div>
-      <div class="edit-panel hidden" id="edit-panel">
-        <div class="grid2">
-          <div class="field"><label>Title</label><input type="text" id="e-title" value={potluck.title}/></div>
-          <div class="field"><label>Date</label><input type="text" id="e-date" value={potluck.date_label ?? ''}/></div>
-          <div class="field"><label>Event Date (for reminders)</label><input type="date" id="e-event-date" value={potluck.event_date ?? ''}/></div>
-          <div class="field"><label>Time</label><input type="text" id="e-time" value={potluck.time_label ?? ''}/></div>
-          <div class="field"><label>Location</label><input type="text" id="e-loc" value={potluck.location ?? ''}/></div>
-          <div class="field" style="grid-column:1/-1"><label>Cover Photo URL</label><input type="text" id="e-cover" value={potluck.cover_photo ?? ''} placeholder="https://images.unsplash.com/…"/></div>
-        </div>
-        <button class="btn-orange" onclick="saveEdit()" style="margin-top:4px">Save</button>
+      <div class="top-actions">
+        <button class="btn btn-primary" onclick="document.getElementById('edit-panel').classList.toggle('hidden')">Edit details</button>
+        <button class="btn btn-outline" onclick="duplicatePotluck()">Duplicate</button>
+        <button class="btn btn-outline" onclick="markPast()">Mark as Past</button>
       </div>
     </div>
   </div>
 
   <div class="page">
-    <div class="sec">
-      <div class="sec-label">Sign-up Items ({slots.length})</div>
-      <div class="slot-grid-wrap">
-        <table class="slot-table">
-          <thead><tr><th style="width:120px">Time</th><th>Item</th><th style="width:100px">Category</th><th style="width:60px">Max</th><th style="width:80px"></th></tr></thead>
-          <tbody>
-            {slots.map((s:any) => (
-              <tr data-slot-id={s.id}>
-                <td><input type="text" class="sl-time" value={s.slot_time ?? ''} placeholder="—"/></td>
-                <td><input type="text" class="sl-suggestion" value={s.suggestion ?? ''}/></td>
-                <td><input type="text" class="sl-category" value={s.category ?? ''}/></td>
-                <td><input type="number" class="sl-max" value={s.max_claims ?? 1} min="1"/></td>
-                <td style="text-align:right"><button class="sl-save">Save</button> <button class="sl-del">✕</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <!-- Edit Panel (hidden by default) -->
+    <div class="edit-panel hidden" id="edit-panel">
+      <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:14px">Edit Event Details</div>
+      <div class="edit-grid">
+        <div class="field"><label>Title</label><input type="text" id="e-title" value={potluck.title}/></div>
+        <div class="field"><label>Date</label><input type="text" id="e-date" value={potluck.date_label ?? ''}/></div>
+        <div class="field"><label>Event Date (for reminders)</label><input type="date" id="e-event-date" value={potluck.event_date ?? ''}/></div>
+        <div class="field"><label>Time</label><input type="text" id="e-time" value={potluck.time_label ?? ''}/></div>
+        <div class="field"><label>Location</label><input type="text" id="e-loc" value={potluck.location ?? ''}/></div>
+        <div class="field field-full"><label>Cover Photo URL</label><input type="text" id="e-cover" value={potluck.cover_photo ?? ''} placeholder="https://images.unsplash.com/…"/></div>
       </div>
-      <div style="margin-top:14px;background:#fff8ec;border:1.5px dashed #fcd5a0;border-radius:10px;padding:14px">
-        <div style="font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Add new item</div>
-        <div style="display:grid;grid-template-columns:120px 1fr 100px 60px auto;gap:6px;align-items:center">
-          <input type="text" id="new-time" placeholder="Time (opt)" style="padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
-          <input type="text" id="new-suggestion" placeholder="Item (e.g. Chips & dip)" style="padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
-          <input type="text" id="new-category" placeholder="Category" value="Items" style="padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
-          <input type="number" id="new-max" value="1" min="1" style="padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
-          <button id="add-slot" class="btn-orange" style="white-space:nowrap">+ Add</button>
+      <button class="btn btn-primary" onclick="saveEdit()" style="margin-top:12px">Save changes</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat"><div class="stat-num">{guestTotal}</div><div class="stat-label">People</div></div>
+      <div class="stat"><div class="stat-num">{attending.length}</div><div class="stat-label">Sign-ups</div></div>
+      <div class="stat"><div class="stat-num">{slots.length}</div><div class="stat-label">Items</div></div>
+      <div class="stat"><div class="stat-num">{utensilPeople.length}</div><div class="stat-label">Utensils</div></div>
+      <div class="stat"><div class="stat-num">{earlyPeople.length}</div><div class="stat-label">Early Help</div></div>
+      <div class="stat"><div class="stat-num">{seatingPeople.length}</div><div class="stat-label">Seating</div></div>
+    </div>
+
+    <!-- Sign-up Items -->
+    <div class="section">
+      <div class="section-head">Sign-up Items <span class="section-count">{slots.length}</span></div>
+      <div class="items-wrap">
+        {catEntries.map(([cat, items]) => (
+          <Fragment>
+            <div class="cat-header">{catEmoji[cat] || '📦'} {cat} <span style="color:var(--accent);font-size:11px">({items.length})</span></div>
+            {items.map((s: any) => (
+              <div class="item-row" data-slot-id={s.id}>
+                <input type="text" class="sl-time" value={s.slot_time ?? ''} placeholder="Time"/>
+                <input type="text" class="sl-suggestion" value={s.suggestion ?? ''}/>
+                <input type="text" class="sl-category" value={s.category ?? ''}/>
+                <input type="number" class="sl-max" value={s.max_claims ?? 1} min="1"/>
+                <div class="item-actions">
+                  <button class="btn btn-sm btn-outline sl-save">Save</button>
+                  <button class="btn btn-sm btn-danger sl-del">✕</button>
+                </div>
+              </div>
+            ))}
+          </Fragment>
+        ))}
+        {slots.length === 0 && <div class="empty">No items yet — add some below</div>}
+      </div>
+
+      <!-- Add new item -->
+      <div class="add-strip">
+        <div class="add-strip-title">+ Add Item</div>
+        <div class="add-grid">
+          <input type="text" id="new-time" placeholder="Time"/>
+          <input type="text" id="new-suggestion" placeholder="Item name (e.g. Chips & dip)"/>
+          <input type="text" id="new-category" placeholder="Category" value="Items"/>
+          <input type="number" id="new-max" value="1" min="1"/>
+          <button id="add-slot" class="btn btn-primary">Add</button>
         </div>
       </div>
-      <details style="margin-top:14px;background:#f7f5f2;border:1px solid #e4ddd4;border-radius:10px">
-        <summary style="padding:12px 14px;cursor:pointer;font-size:13px;font-weight:600;color:#57524c;list-style:none">📋 Bulk-import items (paste a list)</summary>
-        <div style="padding:0 14px 14px">
-          <div style="font-size:12px;color:#a09890;margin-bottom:8px;line-height:1.5">
-            One item per line. Just an item name, or use <code style="background:#fff;padding:1px 5px;border-radius:4px;font-size:11px">Time | Item | Category | Max</code> for full control. Examples:<br/>
-            <code style="font-size:11px;color:#57524c;display:block;background:#fff;padding:8px;border-radius:6px;margin-top:6px;line-height:1.6">Chips &amp; dip<br/>Salad<br/>10am Setup | Plates &amp; napkins | Setup | 1<br/>| Cornbread | Sides | 2</code>
+
+      <!-- Bulk import -->
+      <details class="bulk-details">
+        <summary>Bulk import (paste a list)</summary>
+        <div class="bulk-inner">
+          <div class="bulk-help">
+            One item per line. Use <code style="background:var(--bg);padding:1px 5px;border-radius:4px;font-size:11px">Time | Item | Category | Max</code> for full control.
           </div>
-          <textarea id="bulk-text" rows="6" placeholder={`Chips & dip\nMain dish\nDessert`} style="width:100%;padding:10px;border:1px solid #e4ddd4;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:13px;resize:vertical"></textarea>
-          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-            <input type="text" id="bulk-default-cat" placeholder="Default category" value="Items" style="flex:1;padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
-            <button id="bulk-add" class="btn-orange" style="white-space:nowrap">Import all</button>
+          <textarea id="bulk-text" rows="5" placeholder={`Chips & dip\nMain dish\nDessert`}></textarea>
+          <div class="bulk-footer">
+            <input type="text" id="bulk-default-cat" placeholder="Default category" value="Items"/>
+            <button id="bulk-add" class="btn btn-primary">Import all</button>
           </div>
         </div>
       </details>
     </div>
-    <style is:inline>
-      .slot-grid-wrap{overflow-x:auto;background:#fff;border:1px solid #e4ddd4;border-radius:12px}
-      .slot-table{width:100%;border-collapse:collapse;font-size:13px}
-      .slot-table th{text-align:left;padding:10px 12px;font-size:11px;font-weight:700;color:#a09890;text-transform:uppercase;letter-spacing:0.5px;background:#f7f5f2;border-bottom:1px solid #e4ddd4}
-      .slot-table td{padding:6px 8px;border-bottom:1px solid #f0ede8;vertical-align:middle}
-      .slot-table input{width:100%;padding:7px 9px;border:1px solid transparent;border-radius:6px;font-family:inherit;font-size:13px;background:transparent}
-      .slot-table input:focus{border-color:#f77f00;background:#fffaf2;outline:none}
-      .slot-table .sl-save,.slot-table .sl-del{padding:6px 10px;border-radius:6px;border:1px solid #e4ddd4;background:#fff;font-size:12px;font-family:inherit;cursor:pointer}
-      .slot-table .sl-save{color:#c2410c;border-color:#fcd5a0}
-      .slot-table .sl-del{color:#a09890}
-    </style>
 
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-num">{guestTotal}</div><div class="stat-label">People Total</div></div>
-      <div class="stat-card"><div class="stat-num">{attending.length}</div><div class="stat-label">Sign-ups</div></div>
-      <div class="stat-card"><div class="stat-num">{dishEntries.length}</div><div class="stat-label">Dishes</div></div>
-      <div class="stat-card"><div class="stat-num">{utensilPeople.length}</div><div class="stat-label">Utensils</div></div>
-      <div class="stat-card"><div class="stat-num">{earlyPeople.length}</div><div class="stat-label">Early Help</div></div>
-      <div class="stat-card"><div class="stat-num">{seatingPeople.length}</div><div class="stat-label">Seating</div></div>
-    </div>
-
+    <!-- Dishes brought -->
     {dishEntries.length > 0 && (
-      <div class="sec">
-        <div class="sec-label">Dishes</div>
+      <div class="section">
+        <div class="section-head">Dishes <span class="section-count">{dishEntries.length}</span></div>
         <div class="dish-grid">
           {dishEntries.map(([dish, names]) => (
-            <div class={names.length >= 2 ? 'dish-item full' : 'dish-item'}>
-              <div class="dish-name">{dish}{names.length >= 2 ? ' ⚠ FULL' : ''}</div>
+            <div class={names.length >= 2 ? 'dish-chip full' : 'dish-chip'}>
+              <div class="dish-name">{dish}{names.length >= 2 ? ' (full)' : ''}</div>
               <div class="dish-who">{names.join(', ')}</div>
             </div>
           ))}
@@ -186,44 +282,64 @@ const dishEntries = Object.entries(dishMap);
       </div>
     )}
 
+    <!-- Helpers -->
     {(utensilPeople.length > 0 || earlyPeople.length > 0 || seatingPeople.length > 0) && (
-      <div class="sec">
-        <div class="sec-label">Helpers</div>
-        {utensilPeople.length > 0 && <div style="margin-bottom:8px"><span style="font-size:12px;color:#6b5040;margin-right:8px">🥄 Utensils:</span><span class="helper-row">{utensilPeople.map((s:any)=><span class="helper-chip">{s.name}</span>)}</span></div>}
-        {earlyPeople.length > 0 && <div style="margin-bottom:8px"><span style="font-size:12px;color:#6b5040;margin-right:8px">⏰ Early:</span><span class="helper-row">{earlyPeople.map((s:any)=><span class="helper-chip">{s.name}</span>)}</span></div>}
-        {seatingPeople.length > 0 && <div><span style="font-size:12px;color:#6b5040;margin-right:8px">🪑 Seating:</span><span class="helper-row">{seatingPeople.map((s:any)=><span class="helper-chip">{s.name}</span>)}</span></div>}
+      <div class="section">
+        <div class="section-head">Helpers</div>
+        {utensilPeople.length > 0 && (
+          <div class="helper-section">
+            <span class="helper-label">🥄 Utensils</span>
+            <div class="helper-row">{utensilPeople.map((s:any)=><span class="helper-chip">{s.name}</span>)}</div>
+          </div>
+        )}
+        {earlyPeople.length > 0 && (
+          <div class="helper-section">
+            <span class="helper-label">⏰ Early</span>
+            <div class="helper-row">{earlyPeople.map((s:any)=><span class="helper-chip">{s.name}</span>)}</div>
+          </div>
+        )}
+        {seatingPeople.length > 0 && (
+          <div class="helper-section">
+            <span class="helper-label">🪑 Seating</span>
+            <div class="helper-row">{seatingPeople.map((s:any)=><span class="helper-chip">{s.name}</span>)}</div>
+          </div>
+        )}
       </div>
     )}
 
-    <div class="sec">
-      <div class="sec-label">All Sign-ups ({attending.length})</div>
+    <!-- Guest List -->
+    <div class="section">
+      <div class="section-head">Guest List <span class="section-count">{attending.length}</span></div>
       {attending.length === 0
         ? <div class="empty">No sign-ups yet</div>
         : (
-          <table class="table">
-            <thead><tr><th>Name</th><th>Dish</th><th>👥</th><th>From</th><th>Dietary</th><th></th></tr></thead>
-            <tbody>
-              {attending.map((s:any) => (
-                <tr>
-                  <td>{s.name}{s.handle ? <span style="color:#4a3020;display:block;font-size:11px">{s.handle}</span> : null}</td>
-                  <td>{s.dish || '—'}{s.dish_category ? <span style="color:#4a3020;display:block;font-size:11px">{s.dish_category}</span> : null}</td>
-                  <td>{s.guest_count || 1}</td>
-                  <td style="font-size:11px;color:#6b5040">{s.platforms || '—'}</td>
-                  <td style="font-size:12px;color:#4a3020">{s.dietary || '—'}</td>
-                  <td><button class="del-btn" onclick={`deleteRsvp(${s.id})`}>✕</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div class="guest-wrap">
+            <table class="guest-table">
+              <thead><tr><th>Name</th><th>Bringing</th><th>Guests</th><th>From</th><th>Dietary</th><th></th></tr></thead>
+              <tbody>
+                {attending.map((s:any) => (
+                  <tr>
+                    <td>{s.name}{s.handle ? <span class="guest-sub">{s.handle}</span> : null}</td>
+                    <td>{s.dish || '—'}{s.dish_category ? <span class="guest-sub">{s.dish_category}</span> : null}</td>
+                    <td>{s.guest_count || 1}</td>
+                    <td style="font-size:12px;color:var(--muted)">{s.platforms || '—'}</td>
+                    <td style="font-size:12px;color:var(--muted)">{s.dietary || '—'}</td>
+                    <td><button class="btn btn-sm btn-danger" onclick={`deleteRsvp(${s.id})`}>✕</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )
       }
     </div>
 
+    <!-- Can't Make It -->
     {notComing.length > 0 && (
-      <div class="sec">
-        <div class="sec-label">Can't Make It ({notComing.length})</div>
-        <div class="helper-row">
-          {notComing.map((s:any) => <span class="helper-chip">{s.name}</span>)}
+      <div class="section">
+        <div class="section-head">Can't Make It <span class="section-count">{notComing.length}</span></div>
+        <div class="decline-list">
+          {notComing.map((s:any) => <span class="decline-chip">{s.name}</span>)}
         </div>
       </div>
     )}
@@ -236,12 +352,16 @@ const dishEntries = Object.entries(dishMap);
       const data = await res.json();
       if (data.ok) location.reload();
     }
+    window.deleteRsvp = deleteRsvp;
+
     async function saveEdit() {
       const body = { action:'update', id: parseInt(id), title: document.getElementById('e-title').value, date_label: document.getElementById('e-date').value, event_date: document.getElementById('e-event-date').value || null, time_label: document.getElementById('e-time').value, location: document.getElementById('e-loc').value, cover_photo: document.getElementById('e-cover').value.trim() || null, description: potluck.description || '', location_detail: potluck.location_detail || '', status: potluck.status };
       const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.ok) location.reload();
     }
+    window.saveEdit = saveEdit;
+
     async function duplicatePotluck() {
       const newTitle = prompt('Title for the copy?', (potluck.title || '') + ' (Copy)');
       if (!newTitle) return;
@@ -250,6 +370,8 @@ const dishEntries = Object.entries(dishMap);
       if (data.ok) window.location.href = '/potlucks/manage/' + data.id;
       else alert('Could not duplicate: ' + (data.error || 'unknown'));
     }
+    window.duplicatePotluck = duplicatePotluck;
+
     async function markPast() {
       if (!confirm('Mark this potluck as past?')) return;
       const body = { action:'update', id: parseInt(id), title: potluck.title, description: potluck.description || '', date_label: potluck.date_label || '', event_date: potluck.event_date || null, time_label: potluck.time_label || '', location: potluck.location || '', location_detail: potluck.location_detail || '', cover_photo: potluck.cover_photo || null, status: 'past' };
@@ -257,8 +379,10 @@ const dishEntries = Object.entries(dishMap);
       const data = await res.json();
       if (data.ok) location.reload();
     }
+    window.markPast = markPast;
 
-    document.querySelectorAll('.slot-table tr[data-slot-id]').forEach(function(row) {
+    // Slot inline save/delete
+    document.querySelectorAll('.item-row[data-slot-id]').forEach(function(row) {
       const slotId = parseInt(row.getAttribute('data-slot-id'));
       row.querySelector('.sl-save').addEventListener('click', async function() {
         const body = {
@@ -270,7 +394,7 @@ const dishEntries = Object.entries(dishMap);
         };
         const res = await fetch('/api/potluck-slots', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
         const data = await res.json();
-        if (data.ok) row.style.background = '#f0fdf4';
+        if (data.ok) { row.style.background = '#f0fdf4'; setTimeout(() => row.style.background = '', 1500); }
       });
       row.querySelector('.sl-del').addEventListener('click', async function() {
         if (!confirm('Delete this item?')) return;
@@ -280,6 +404,7 @@ const dishEntries = Object.entries(dishMap);
       });
     });
 
+    // Bulk import
     document.getElementById('bulk-add').addEventListener('click', async function() {
       const text = document.getElementById('bulk-text').value;
       if (!text.trim()) return;
@@ -293,6 +418,7 @@ const dishEntries = Object.entries(dishMap);
       if (data.ok) location.reload();
     });
 
+    // Add single item
     document.getElementById('add-slot').addEventListener('click', async function() {
       const suggestion = document.getElementById('new-suggestion').value.trim();
       if (!suggestion) { document.getElementById('new-suggestion').focus(); return; }
