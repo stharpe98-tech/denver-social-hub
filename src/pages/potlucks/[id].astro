@@ -98,10 +98,14 @@ slots.forEach((s:any) => {
     /* Category dropdowns */
     .cat-block { margin-bottom: 12px; background: #fff; border: 1.5px solid #e4ddd4; border-radius: 14px; overflow: hidden; }
     .cat-block[open] { border-color: #7DD3FC; }
-    .cat-title { font-size: 13px; font-weight: 700; color: #57524c; text-transform: uppercase; letter-spacing: 1px; padding: 16px 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; user-select: none; }
+    /* IMPORTANT: keep <summary> as default display so iOS Safari's
+       click-to-toggle works. Flex lives on the inner row instead. */
+    .cat-title { cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; list-style: none; }
     .cat-title::-webkit-details-marker { display: none; }
-    .cat-title:hover { background: #fffaf2; }
-    .cat-block[open] .cat-title { border-bottom: 1px solid #f0ede8; background: #fffaf2; }
+    .cat-title::marker { content: ''; }
+    .cat-title-row { display: flex; align-items: center; gap: 12px; padding: 16px 18px; font-size: 13px; font-weight: 700; color: #57524c; text-transform: uppercase; letter-spacing: 1px; }
+    .cat-title:hover .cat-title-row { background: #fffaf2; }
+    .cat-block[open] .cat-title-row { border-bottom: 1px solid #f0ede8; background: #fffaf2; }
     .cat-label { flex: 1; }
     .cat-count { font-size: 11px; font-weight: 600; color: #a09890; letter-spacing: 0.5px; text-transform: none; }
     .cat-chev { font-size: 16px; color: #a09890; transition: transform 0.2s; flex-shrink: 0; }
@@ -289,9 +293,11 @@ slots.forEach((s:any) => {
         return (
           <details class="cat-block">
             <summary class="cat-title">
-              <span class="cat-label">{cat}</span>
-              <span class="cat-count">{catClaimed} of {catTotal} claimed</span>
-              <span class="cat-chev">⌄</span>
+              <div class="cat-title-row">
+                <span class="cat-label">{cat}</span>
+                <span class="cat-count">{catClaimed} of {catTotal} claimed</span>
+                <span class="cat-chev">⌄</span>
+              </div>
             </summary>
             <div class="cat-body">
               {items.map((item:any) => item.claimed_by ? (
@@ -352,8 +358,10 @@ slots.forEach((s:any) => {
       <!-- Bring something else -->
       <details class="cat-block">
         <summary class="cat-title">
-          <span class="cat-label">Something else?</span>
-          <span class="cat-chev">⌄</span>
+          <div class="cat-title-row">
+            <span class="cat-label">Something else?</span>
+            <span class="cat-chev">⌄</span>
+          </div>
         </summary>
         <div class="cat-body">
         <div class="custom-block" id="custom-toggle" style="cursor:pointer">
