@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 42" fill="none">
+  <defs>
+    <linearGradient id="brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+    <linearGradient id="peak-grad" x1="0%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#67E8F9"/>
+    </linearGradient>
+    <linearGradient id="peak-grad2" x1="0%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon mark -->
+  <g>
+    <path d="M5 32 L13 11 L21 32 Z" fill="url(#peak-grad)" opacity="0.55"/>
+    <path d="M14 32 L22 13 L30 32 Z" fill="url(#peak-grad2)"/>
+    <circle cx="27" cy="11" r="2.8" fill="#38BDF8" opacity="0.95"/>
+    <circle cx="27" cy="11" r="4.5" fill="#38BDF8" opacity="0.18"/>
+    <rect x="3" y="32" width="29" height="2.5" rx="1.25" fill="url(#brand-grad)" opacity="0.35"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g font-family="'Outfit', system-ui, sans-serif" font-weight="800" font-size="19">
+    <text x="40" y="24" fill="#FFFFFF" transform="rotate(-1.5, 40, 24)">D</text>
+    <text x="54" y="24.5" fill="#FFFFFF" transform="rotate(1, 54, 24)">e</text>
+    <text x="65" y="23.5" fill="#FFFFFF" transform="rotate(-0.8, 65, 23)">n</text>
+    <text x="78" y="24.8" fill="#FFFFFF" transform="rotate(1.2, 78, 24)">v</text>
+    <text x="90" y="23.8" fill="#FFFFFF" transform="rotate(-1, 90, 24)">e</text>
+    <text x="101" y="24.2" fill="#FFFFFF" transform="rotate(0.8, 101, 24)">r</text>
+
+    <text x="118" y="24.5" fill="url(#brand-grad)" transform="rotate(1.2, 118, 24)">S</text>
+    <text x="131" y="23.5" fill="url(#brand-grad)" transform="rotate(-1.5, 131, 24)">o</text>
+    <text x="143" y="24.8" fill="url(#brand-grad)" transform="rotate(0.8, 143, 24)">c</text>
+    <text x="154" y="23.2" fill="url(#brand-grad)" transform="rotate(-1, 154, 24)">i</text>
+    <text x="160" y="24.5" fill="url(#brand-grad)" transform="rotate(1.5, 160, 24)">a</text>
+    <text x="172" y="23.8" fill="url(#brand-grad)" transform="rotate(-0.7, 172, 24)">l</text>
+  </g>
+
+  <!-- Tagline -->
+  <text x="41" y="37" font-family="'Inter', system-ui, sans-serif" font-size="7" font-weight="500" letter-spacing="1.2" fill="rgba(255,255,255,0.55)">REAL PEOPLE · SMALL GROUPS</text>
+</svg>
