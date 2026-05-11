@@ -25,15 +25,18 @@ const redditName = user?.reddit_username || user?.name;
   <!-- Top nav -->
   <header class="site-header">
     <div class="site-header-inner">
-      <a href="/" class="site-logo">
+      <nav class="site-nav site-nav-left">
+        <a href="/events"   class:list={["site-nav-link", { active: currentPath.startsWith("/events") }]}>Events</a>
+        <a href="/potlucks" class:list={["site-nav-link", { active: currentPath.startsWith("/potlucks") }]}>Potlucks</a>
+      </nav>
+
+      <a href="/" class="site-logo" aria-label="Denver Social home">
         <img src="/logo.svg" alt="Denver Social" class="site-logo-img" />
       </a>
 
-      <nav class="site-nav">
-        <a href="/events"   class:list={["site-nav-link", { active: currentPath.startsWith("/events") }]}>Events</a>
-        <a href="/potlucks" class:list={["site-nav-link", { active: currentPath.startsWith("/potlucks") }]}>Potlucks</a>
-        <a href="/recs"     class:list={["site-nav-link", { active: currentPath === "/recs" }]}>Recs</a>
-        <a href="/about"    class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
+      <nav class="site-nav site-nav-right">
+        <a href="/recs"  class:list={["site-nav-link", { active: currentPath === "/recs" }]}>Recs</a>
+        <a href="/about" class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
       </nav>
 
       <div class="site-auth">
@@ -190,71 +193,88 @@ const redditName = user?.reddit_username || user?.name;
   button { font-family: var(--font); }
   h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
 
-  /* ── Site Header (light, top, desktop/tablet) ── */
+  /* ── Site Header — dark slate, centered logo, nav split L/R ── */
   .site-header {
     position: sticky; top: 0; z-index: 200;
-    background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
-    height: 64px; display: flex; align-items: center;
+    background: rgba(15, 23, 42, 0.94); /* slate-900 */
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    height: 72px; display: flex; align-items: center;
   }
   .site-header-inner {
-    width: 100%; max-width: 1100px; margin: 0 auto;
+    width: 100%; max-width: 1200px; margin: 0 auto;
     padding: 0 var(--space-5);
-    display: flex; align-items: center; gap: var(--space-4);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    align-items: center;
+    gap: var(--space-4);
   }
+
+  .site-nav { display: flex; gap: var(--space-1); align-items: center; }
+  .site-nav-left { justify-self: end; }
+  .site-nav-right { justify-self: start; }
+  .site-nav-link {
+    font-size: 14px; font-weight: 500;
+    color: rgba(255,255,255,0.72);
+    padding: 8px 14px; border-radius: 999px;
+    transition: color 0.15s, background 0.15s; text-decoration: none;
+    white-space: nowrap;
+  }
+  .site-nav-link:hover { color: #fff; background: rgba(255,255,255,0.06); }
+  .site-nav-link:active { background: rgba(255,255,255,0.10); }
+  .site-nav-link.active { color: var(--accent); background: rgba(14, 165, 233, 0.14); }
 
   .site-logo {
     display: inline-flex; align-items: center; gap: var(--space-2);
     text-decoration: none; flex-shrink: 0;
-    transition: opacity 0.15s;
+    justify-self: center;
+    transition: opacity 0.15s, transform 0.15s;
   }
-  .site-logo:hover { opacity: 0.85; }
-  .site-logo:active { opacity: 0.7; }
+  .site-logo:hover { opacity: 0.92; transform: translateY(-1px); }
+  .site-logo:active { opacity: 0.8; transform: none; }
   .site-logo-img {
-    height: 38px; width: auto;
+    height: 44px; width: auto;
     display: block;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
   }
 
-  .site-nav { display: flex; gap: var(--space-1); align-items: center; margin-left: var(--space-3); }
-  .site-nav-link {
-    font-size: 14px; font-weight: 500; color: var(--text-sec);
-    padding: 8px 14px; border-radius: 999px;
-    transition: all 0.15s; text-decoration: none;
-  }
-  .site-nav-link:hover { color: var(--text); background: var(--surface); }
-  .site-nav-link:active { background: var(--surface-hover); }
-  .site-nav-link.active { color: var(--accent); background: var(--accent-dim); }
-  @media(max-width: 700px) { .site-nav { display: none; } }
-
-  .site-auth { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+  .site-auth { display: flex; align-items: center; gap: var(--space-2); justify-self: end; }
   .site-user {
     display: flex; flex-direction: column; align-items: flex-end;
     text-decoration: none; padding: 6px 12px; border-radius: 10px;
     transition: background 0.15s;
   }
-  .site-user:hover { background: var(--surface); }
-  .site-user-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .site-user:hover { background: rgba(255,255,255,0.06); }
+  .site-user-name { font-size: 13px; font-weight: 600; color: #fff; }
   .site-user-karma { font-size: 11px; color: var(--accent); font-weight: 600; }
   .site-logout {
-    font-size: 13px; color: var(--text-faint);
+    font-size: 13px; color: rgba(255,255,255,0.55);
     padding: 6px 10px; border-radius: 10px;
     transition: color 0.15s;
   }
-  .site-logout:hover { color: var(--red); }
+  .site-logout:hover { color: #fff; }
   .site-cta {
     font-size: 14px; font-weight: 600;
     background: var(--cta-bg); color: var(--cta-text);
     padding: 10px 20px; border-radius: var(--radius-pill);
     transition: all 0.15s;
     white-space: nowrap;
-    box-shadow: 0 1px 2px rgba(14,165,233,0.22);
+    box-shadow: 0 1px 2px rgba(14,165,233,0.30);
   }
-  .site-cta:hover { box-shadow: 0 4px 14px rgba(14,165,233,0.32); transform: translateY(-1px); }
+  .site-cta:hover { box-shadow: 0 4px 14px rgba(14,165,233,0.50); transform: translateY(-1px); }
   .site-cta:active { transform: translateY(0); }
+
+  @media(max-width: 760px) {
+    .site-nav { display: none; }
+    .site-header-inner { grid-template-columns: 1fr auto 1fr; gap: var(--space-3); }
+    .site-logo { grid-column: 2 / 3; }
+    .site-auth { grid-column: 3 / 4; }
+    .site-logo-img { height: 38px; }
+  }
   @media(max-width: 500px) {
     .site-user-karma { display: none; }
     .site-cta { font-size: 13px; padding: 9px 16px; }
-    .site-header-inner { gap: var(--space-2); padding: 0 var(--space-4); }
+    .site-header-inner { padding: 0 var(--space-4); }
   }
 
   /* ── Mobile bottom nav ── */
