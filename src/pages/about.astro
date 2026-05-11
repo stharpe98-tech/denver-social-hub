@@ -17,14 +17,14 @@ try {
 } catch {}
 
 const avatarColors = [
-  "linear-gradient(135deg,#7C3AED,#3B82F6)",
+  "linear-gradient(135deg,#0EA5E9,#3B82F6)",
   "linear-gradient(135deg,#EC4899,#F59E0B)",
   "linear-gradient(135deg,#3B82F6,#10B981)",
   "linear-gradient(135deg,#10B981,#06B6D4)",
   "linear-gradient(135deg,#F59E0B,#EF4444)",
-  "linear-gradient(135deg,#7C3AED,#EC4899)",
-  "linear-gradient(135deg,#EF4444,#7C3AED)",
-  "linear-gradient(135deg,#06B6D4,#7C3AED)",
+  "linear-gradient(135deg,#0EA5E9,#EC4899)",
+  "linear-gradient(135deg,#EF4444,#0EA5E9)",
+  "linear-gradient(135deg,#06B6D4,#0EA5E9)",
 ];
 
 function getInitials(name: string): string {
@@ -252,8 +252,8 @@ const content = await getContent();
   .about-hero { padding: 36px 0 28px; }
   .about-hero-tag {
     display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
-    color: #7C3AED; font-weight: 700; margin-bottom: 14px;
-    padding: 5px 12px; background: rgba(124,58,237,0.06); border-radius: 50px;
+    color: #0EA5E9; font-weight: 700; margin-bottom: 14px;
+    padding: 5px 12px; background: rgba(14,165,233,0.06); border-radius: 50px;
     font-family: 'Outfit', sans-serif;
   }
   .about-hero-h1 {
@@ -261,7 +261,7 @@ const content = await getContent();
     color: #111827; line-height: 1.15; margin-bottom: 14px; font-weight: 900;
     letter-spacing: -0.02em;
   }
-  .about-hero-h1 em { font-style: normal; color: #7C3AED; }
+  .about-hero-h1 em { font-style: normal; color: #0EA5E9; }
   .about-hero-sub { font-size: 14px; color: #6B7280; line-height: 1.7; max-width: 480px; }
 
   /* ─── STATS ─── */
@@ -271,7 +271,7 @@ const content = await getContent();
     background: #F8F9FB; border: 1px solid #E5E7EB;
   }
   .about-stat { flex: 1; text-align: center; }
-  .about-stat-num { display: block; font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900; color: #7C3AED; line-height: 1; margin-bottom: 4px; }
+  .about-stat-num { display: block; font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900; color: #0EA5E9; line-height: 1; margin-bottom: 4px; }
   .about-stat-label { font-size: 11px; color: #9CA3AF; font-weight: 500; }
   .about-stat-divider { width: 1px; height: 36px; background: #E5E7EB; flex-shrink: 0; }
 
@@ -286,9 +286,9 @@ const content = await getContent();
     border-bottom: 1px solid #E5E7EB;
   }
   .about-story-avatar {
-    width: 44px; height: 44px; border-radius: 50%; background: rgba(124,58,237,0.1);
+    width: 44px; height: 44px; border-radius: 50%; background: rgba(14,165,233,0.1);
     display: flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 700; color: #7C3AED; flex-shrink: 0;
+    font-size: 16px; font-weight: 700; color: #0EA5E9; flex-shrink: 0;
     font-family: 'Outfit', sans-serif;
   }
   .about-story-head strong { display: block; font-family: 'Outfit', sans-serif; font-size: 15px; color: #111827; font-weight: 700; }
@@ -308,7 +308,7 @@ const content = await getContent();
     font-family: 'Outfit', sans-serif; font-size: clamp(22px, 3.5vw, 30px);
     color: #111827; margin-bottom: 20px; font-weight: 800; letter-spacing: -0.02em;
   }
-  .about-section-h2 em { font-style: normal; color: #7C3AED; }
+  .about-section-h2 em { font-style: normal; color: #0EA5E9; }
 
   /* ─── THE CREW ─── */
   .about-crew { margin-bottom: 36px; }
@@ -330,12 +330,12 @@ const content = await getContent();
   .mc-name { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px; color: #111827; margin-bottom: 2px; }
   .mc-hood { font-size: 10px; color: #9CA3AF; margin-bottom: 6px; }
   .mc-badges { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-bottom: 8px; min-height: 18px; }
-  .mc-badge { font-size: 8px; padding: 2px 6px; border-radius: 5px; font-weight: 700; background: rgba(124,58,237,0.06); color: #7C3AED; }
+  .mc-badge { font-size: 8px; padding: 2px 6px; border-radius: 5px; font-weight: 700; background: rgba(14,165,233,0.06); color: #0EA5E9; }
   .mc-badge.organizer { background: rgba(16,185,129,0.08); color: #10B981; }
   .mc-badge.streak { background: rgba(245,158,11,0.08); color: #D97706; }
   .mc-stats { display: flex; justify-content: center; gap: 14px; padding-top: 8px; border-top: 1px solid #E5E7EB; }
   .mc-s { text-align: center; }
-  .mc-s-num { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 13px; color: #7C3AED; }
+  .mc-s-num { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 13px; color: #0EA5E9; }
   .mc-s-label { font-size: 8px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: .04em; }
   .crew-empty {
     text-align: center; padding: 36px 20px;
@@ -355,9 +355,9 @@ const content = await getContent();
   }
   .about-step-num {
     width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px;
-    background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.12);
+    background: rgba(14,165,233,0.06); border: 1px solid rgba(14,165,233,0.12);
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #7C3AED;
+    font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #0EA5E9;
   }
   .about-step-text h3 { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px; }
   .about-step-text p { font-size: 12px; color: #6B7280; line-height: 1.6; }
@@ -375,10 +375,10 @@ const content = await getContent();
     background: rgba(16,185,129,0.08); display: flex; align-items: center; justify-content: center;
     color: #10B981; font-size: 11px; font-weight: 700;
   }
-  .about-trust-icon.shield { background: rgba(124,58,237,0.08); font-size: 14px; }
+  .about-trust-icon.shield { background: rgba(14,165,233,0.08); font-size: 14px; }
   .about-trust-item strong { display: block; font-family: 'Outfit', sans-serif; font-size: 12px; color: #111827; margin-bottom: 2px; font-weight: 700; }
   .about-trust-item p { font-size: 11px; color: #6B7280; line-height: 1.5; }
-  .about-trust-link { color: #7C3AED; font-weight: 600; text-decoration: none; }
+  .about-trust-link { color: #0EA5E9; font-weight: 600; text-decoration: none; }
   .about-trust-link:hover { text-decoration: underline; }
 
   /* ─── FAQ ─── */
@@ -396,7 +396,7 @@ const content = await getContent();
   }
   .about-faq-item summary:hover { background: #F0F2F5; }
   .about-faq-item summary::after { content: '+'; font-size: 18px; color: #9CA3AF; flex-shrink: 0; margin-left: 12px; }
-  .about-faq-item[open] summary::after { content: '−'; color: #7C3AED; }
+  .about-faq-item[open] summary::after { content: '−'; color: #0EA5E9; }
   .about-faq-item summary::-webkit-details-marker { display: none; }
   .about-faq-item p { padding: 0 18px 14px; font-size: 12px; color: #6B7280; line-height: 1.7; }
 
@@ -404,8 +404,8 @@ const content = await getContent();
   .about-contact { margin-bottom: 40px; }
   .about-contact-card {
     padding: 32px; border-radius: 20px; text-align: center;
-    background: linear-gradient(135deg, rgba(124,58,237,0.04), rgba(16,185,129,0.04));
-    border: 1px solid rgba(124,58,237,0.1);
+    background: linear-gradient(135deg, rgba(14,165,233,0.04), rgba(16,185,129,0.04));
+    border: 1px solid rgba(14,165,233,0.1);
   }
   .about-contact-icon { font-size: 32px; display: block; margin-bottom: 12px; }
   .about-contact-card h2 { font-family: 'Outfit', sans-serif; font-size: 22px; color: #111827; margin-bottom: 8px; font-weight: 800; }
@@ -414,9 +414,9 @@ const content = await getContent();
   .about-btn-cta {
     display: inline-block; padding: 12px 24px; border-radius: 50px;
     font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
-    background: #7C3AED; color: #fff; transition: all .2s;
+    background: #0EA5E9; color: #fff; transition: all .2s;
   }
-  .about-btn-cta:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(124,58,237,0.2); }
+  .about-btn-cta:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(14,165,233,0.2); }
   .about-btn-ghost {
     display: inline-block; padding: 12px 24px; border-radius: 50px;
     font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;

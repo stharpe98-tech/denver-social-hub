@@ -176,7 +176,7 @@ const content = await getContent();
   }
   .rc-hero-bg {
     position: absolute; inset: 0;
-    background: linear-gradient(135deg, #1a1a2e 0%, #4a1a6b 40%, #7C3AED 70%, #a855f7 100%);
+    background: linear-gradient(135deg, #0F172A 0%, #1E40AF 40%, #0EA5E9 70%, #10B981 100%);
     z-index: 0;
   }
   .rc-hero-content { position: relative; z-index: 1; }
@@ -238,9 +238,9 @@ const content = await getContent();
     transition: all .2s;
     white-space: nowrap;
   }
-  .rc-chip:hover { border-color: #7C3AED; color: #7C3AED; }
+  .rc-chip:hover { border-color: #0EA5E9; color: #0EA5E9; }
   .rc-chip.active {
-    background: linear-gradient(135deg, #7C3AED, #a855f7);
+    background: linear-gradient(135deg, #0EA5E9, #10B981);
     color: #fff;
     border-color: transparent;
   }
@@ -251,17 +251,17 @@ const content = await getContent();
     width: 100%;
     margin-top: 16px;
     padding: 14px;
-    border: 2px dashed #7C3AED;
+    border: 2px dashed #0EA5E9;
     border-radius: 16px;
-    background: rgba(124,58,237,.04);
-    color: #7C3AED;
+    background: rgba(14,165,233,.04);
+    color: #0EA5E9;
     font-size: 15px;
     font-weight: 700;
     font-family: 'Outfit', sans-serif;
     cursor: pointer;
     transition: all .2s;
   }
-  .rc-add-btn:hover { background: rgba(124,58,237,.1); }
+  .rc-add-btn:hover { background: rgba(14,165,233,.1); }
 
   /* ── Add form ── */
   .rc-form-wrap { margin-top: 16px; }
@@ -301,7 +301,7 @@ const content = await getContent();
     box-sizing: border-box;
     transition: border-color .2s;
   }
-  .rc-input:focus { border-color: #7C3AED; outline: none; box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+  .rc-input:focus { border-color: #0EA5E9; outline: none; box-shadow: 0 0 0 3px rgba(14,165,233,.1); }
   .rc-input::placeholder { color: var(--text-faint, #bbb); }
   select.rc-input { cursor: pointer; }
   .rc-form-actions {
@@ -312,7 +312,7 @@ const content = await getContent();
   .rc-btn-submit {
     flex: 1;
     padding: 13px;
-    background: linear-gradient(135deg, #7C3AED, #a855f7);
+    background: linear-gradient(135deg, #0EA5E9, #10B981);
     color: #fff;
     border: none;
     border-radius: 12px;
@@ -322,7 +322,7 @@ const content = await getContent();
     cursor: pointer;
     transition: all .2s;
   }
-  .rc-btn-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(124,58,237,.25); }
+  .rc-btn-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(14,165,233,.25); }
   .rc-btn-cancel {
     padding: 13px 20px;
     background: transparent;
@@ -373,10 +373,10 @@ const content = await getContent();
     transition: all .2s;
     min-width: 44px;
   }
-  .rc-vote-btn:not(:disabled):hover { border-color: #7C3AED; }
+  .rc-vote-btn:not(:disabled):hover { border-color: #0EA5E9; }
   .rc-vote-btn.voted {
-    border-color: #7C3AED;
-    background: rgba(124,58,237,.06);
+    border-color: #0EA5E9;
+    background: rgba(14,165,233,.06);
   }
   .rc-vote-btn:disabled { opacity: .5; cursor: default; }
   .rc-arrow {
@@ -384,14 +384,14 @@ const content = await getContent();
     color: var(--text-faint, #999);
     line-height: 1;
   }
-  .rc-vote-btn.voted .rc-arrow { color: #7C3AED; }
+  .rc-vote-btn.voted .rc-arrow { color: #0EA5E9; }
   .rc-vote-count {
     font-size: 14px;
     font-weight: 700;
     font-family: 'Outfit', sans-serif;
     color: var(--text, #1a1a1a);
   }
-  .rc-vote-btn.voted .rc-vote-count { color: #7C3AED; }
+  .rc-vote-btn.voted .rc-vote-count { color: #0EA5E9; }
 
   /* Card content */
   .rc-card-right { flex: 1; min-width: 0; }
@@ -450,7 +450,7 @@ const content = await getContent();
   .rc-cta-btn {
     display: inline-block;
     padding: 14px 28px;
-    background: linear-gradient(135deg, #7C3AED, #a855f7);
+    background: linear-gradient(135deg, #0EA5E9, #10B981);
     color: #fff;
     border-radius: 14px;
     font-size: 15px;
@@ -458,9 +458,9 @@ const content = await getContent();
     font-family: 'Outfit', sans-serif;
     text-decoration: none;
     transition: all .25s;
-    box-shadow: 0 4px 14px rgba(124,58,237,.25);
+    box-shadow: 0 4px 14px rgba(14,165,233,.25);
   }
-  .rc-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,58,237,.35); }
+  .rc-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(14,165,233,.35); }
 
   /* ── Mobile ── */
   @media (max-width: 480px) {
