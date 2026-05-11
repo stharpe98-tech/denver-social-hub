@@ -42,7 +42,7 @@ const errorMsg = errorParam ? (errorMessages[errorParam] || "Something went wron
         <div class="login-error">{errorMsg}</div>
       )}
 
-      {emailLoginAvailable ? (
+      {emailLoginAvailable && (
         <>
           <!-- Step 1: Email input -->
           <div id="step-email">
