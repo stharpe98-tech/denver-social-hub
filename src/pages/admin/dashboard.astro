@@ -24,259 +24,504 @@ try {
     templates = t?.results ?? [];
   }
 } catch(e) {}
+const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 0), 0);
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Dashboard · {org.name}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
-  <style is:global>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{background:#f7f5f2;color:#1c1917;font-family:'DM Sans',sans-serif;min-height:100vh}
-    body{padding-bottom:40px}
-    .hero{background:#fff;border-bottom:1px solid #e4ddd4;padding:24px 20px}
-    .hi{max-width:700px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
-    .hero h1{font-family:'Playfair Display',serif;font-size:22px;color:#1c1917}
-    .hero-sub{font-size:13px;color:#a09890;margin-top:2px}
-    .page{max-width:700px;margin:0 auto;padding:24px 16px}
-    .nav-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:28px}
-    @media(min-width:500px){.nav-grid{grid-template-columns:repeat(4,1fr)}}
-    .nav-card{background:#fff;border:1px solid #e4ddd4;border-radius:14px;padding:16px;text-align:center;text-decoration:none;transition:border-color 0.15s;-webkit-tap-highlight-color:transparent}
-    .nav-card:active{border-color:#f77f00}
-    .nav-icon{font-size:28px;display:block;margin-bottom:6px}
-    .nav-label{font-size:13px;font-weight:600;color:#57524c}
-    .sec-label{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#a09890;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #e4ddd4}
-    .event-card{background:#fff;border:1px solid #e4ddd4;border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;text-decoration:none;gap:12px;-webkit-tap-highlight-color:transparent}
-    .event-card:active{border-color:#f77f00}
-    .event-title{font-size:15px;font-weight:500;color:#1c1917}
-    .event-meta{font-size:12px;color:#a09890;margin-top:2px}
-    .event-stats{font-size:12px;color:#c2410c;font-weight:600;flex-shrink:0}
-    .tmpl-card{background:#fff;border:1px solid #e4ddd4;border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
-    .tmpl-name{font-size:14px;font-weight:500;color:#1c1917}
-    .tmpl-meta{font-size:12px;color:#a09890}
-    .tmpl-actions{display:flex;gap:8px}
-    .use-btn{padding:6px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
-    .del-btn{padding:6px 12px;border-radius:8px;border:1px solid #e4ddd4;background:transparent;color:#a09890;font-size:13px;cursor:pointer}
-    .logout-btn{font-size:13px;color:#a09890;background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif}
-    .empty{text-align:center;padding:24px;color:#a09890;font-style:italic;font-size:13px}
-    .plan-badge{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff}
-    .profile-section{background:#fff;border:1px solid #e4ddd4;border-radius:14px;padding:18px;margin-bottom:24px}
-    .pf-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-    @media(max-width:420px){.pf-row{grid-template-columns:1fr}}
-    .pf-field label{display:block;font-size:11px;color:#a09890;margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px}
-    .pf-input{width:100%;padding:10px 12px;background:#f7f5f2;border:1.5px solid #e4ddd4;border-radius:8px;color:#1c1917;font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
-    .pf-input:focus{border-color:#f77f00}
-    .save-btn{padding:10px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
-    .embed-section{background:#1c1917;border-radius:14px;padding:16px 18px;margin-top:10px}
-    .embed-code{font-family:'JetBrains Mono',monospace;font-size:11px;color:#86efac;word-break:break-all;line-height:1.6}
-    .copy-embed{margin-top:10px;padding:8px 16px;border-radius:8px;border:1px solid #3d3d3d;background:transparent;color:#a09890;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif}
-    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0d2e1a;border:1px solid #166534;color:#4ade80;padding:10px 20px;border-radius:8px;font-size:13px;display:none;z-index:999}
+    :root {
+      --bg: #FAFAF8; --surface: #FFFFFF; --border: #E8E4DE;
+      --text: #1A1A1A; --text-sec: #6B6560; --text-faint: #A09890;
+      --accent: #2D5F3F; --accent-light: #E8F5EC; --accent-hover: #245233;
+      --orange: #D97B3A; --orange-light: #FEF3E8;
+      --red: #DC2626; --red-light: #FEF2F2;
+      --radius: 14px; --radius-sm: 10px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08);
+      --font: 'Inter', sans-serif; --font-display: 'Outfit', sans-serif;
+    }
+    html,body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; font-size: 14px; }
+
+    /* ── Top bar ── */
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .topbar-avatar {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-weight: 700; font-size: 15px;
+    }
+    .topbar-name { font-family: var(--font-display); font-weight: 700; font-size: 17px; }
+    .topbar-email { font-size: 12px; color: var(--text-faint); }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .plan-badge {
+      padding: 3px 10px; border-radius: 100px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      background: var(--accent-light); color: var(--accent);
+    }
+    .logout-btn {
+      font-size: 13px; color: var(--text-faint); background: none; border: none;
+      cursor: pointer; font-family: var(--font); padding: 6px 10px; border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .logout-btn:hover { background: var(--border); color: var(--text); }
+
+    /* ── Tab nav ── */
+    .tab-bar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 24px; display: flex; gap: 0; overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tab-btn {
+      padding: 14px 20px; font-size: 13px; font-weight: 600; font-family: var(--font);
+      color: var(--text-faint); background: none; border: none; cursor: pointer;
+      border-bottom: 2.5px solid transparent; white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab-btn:hover { color: var(--text-sec); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Page shell ── */
+    .page { max-width: 800px; margin: 0 auto; padding: 28px 20px 60px; }
+
+    /* ── Stat cards ── */
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+    @media (max-width: 500px) { .stats-row { grid-template-columns: 1fr; } }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 18px 20px; box-shadow: var(--shadow);
+    }
+    .stat-value { font-family: var(--font-display); font-weight: 800; font-size: 28px; color: var(--text); }
+    .stat-label { font-size: 12px; color: var(--text-faint); margin-top: 2px; font-weight: 500; }
+
+    /* ── Quick action grid ── */
+    .action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 28px; }
+    @media (min-width: 600px) { .action-grid { grid-template-columns: repeat(4, 1fr); } }
+    .action-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px 16px; text-align: center; text-decoration: none;
+      box-shadow: var(--shadow); transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .action-card:hover { border-color: var(--accent); box-shadow: var(--shadow-lg); }
+    .action-icon { font-size: 26px; display: block; margin-bottom: 8px; }
+    .action-label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .action-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+    /* ── Section headers ── */
+    .sec-head {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--text-faint); margin-bottom: 12px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px;
+    }
+    .card-title {
+      font-family: var(--font-display); font-weight: 700; font-size: 16px;
+      color: var(--text); margin-bottom: 4px;
+    }
+    .card-desc { font-size: 13px; color: var(--text-sec); line-height: 1.6; margin-bottom: 16px; }
+
+    /* ── Event rows ── */
+    .event-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 16px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); margin-bottom: 8px;
+      text-decoration: none; transition: border-color 0.15s;
+    }
+    .event-row:hover { border-color: var(--accent); }
+    .event-title { font-weight: 600; font-size: 14px; color: var(--text); }
+    .event-meta { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+    .event-badge {
+      font-size: 12px; font-weight: 600; color: var(--accent);
+      background: var(--accent-light); padding: 4px 10px; border-radius: 8px; flex-shrink: 0;
+    }
+
+    /* ── Template rows ── */
+    .tmpl-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 16px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); margin-bottom: 8px;
+    }
+    .tmpl-name { font-weight: 600; font-size: 13px; color: var(--text); }
+    .tmpl-meta { font-size: 12px; color: var(--text-faint); }
+    .tmpl-actions { display: flex; gap: 6px; }
+
+    /* ── Org rows ── */
+    .org-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+    }
+    .org-row:last-child { border-bottom: none; }
+    .org-name { font-weight: 600; font-size: 13px; }
+    .org-email { font-size: 12px; color: var(--text-faint); }
+    .org-badge { font-size: 11px; color: var(--text-faint); padding: 4px 10px; }
+
+    /* ── Form elements ── */
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 11px; font-weight: 700; color: var(--text-sec);
+      margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .field input, .field select {
+      width: 100%; padding: 10px 12px; background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); font-family: var(--font); font-size: 13px;
+      outline: none; transition: border-color 0.15s;
+    }
+    .field input:focus { border-color: var(--accent); }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 500px) { .field-row { grid-template-columns: 1fr; } }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      padding: 10px 20px; border-radius: var(--radius-sm); border: none;
+      background: var(--accent); color: #fff; font-family: var(--font);
+      font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary {
+      padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-sec); font-family: var(--font);
+      font-size: 13px; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--text-faint); color: var(--text); }
+    .btn-danger {
+      padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid #FCA5A5;
+      background: var(--red-light); color: var(--red); font-family: var(--font);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-approve {
+      padding: 6px 14px; border-radius: 8px; border: none;
+      background: var(--accent); color: #fff; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: var(--font);
+    }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── Embed code ── */
+    .embed-block {
+      background: #1A1A1A; border-radius: var(--radius-sm); padding: 16px 18px; margin-top: 10px;
+    }
+    .embed-code {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #86EFAC;
+      word-break: break-all; line-height: 1.6;
+    }
+    .copy-btn {
+      margin-top: 10px; padding: 7px 14px; border-radius: 8px; border: 1px solid #3D3D3D;
+      background: transparent; color: #A09890; font-size: 12px; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 28px; color: var(--text-faint); font-style: italic; font-size: 13px; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #0D2E1A; border: 1px solid #166534; color: #4ADE80;
+      padding: 10px 20px; border-radius: var(--radius-sm); font-size: 13px;
+      display: none; z-index: 999; box-shadow: var(--shadow-lg);
+    }
+
+    /* ── Hint text ── */
+    .hint { font-size: 12px; color: var(--text-faint); line-height: 1.5; }
+
+    /* ── Pending alert ── */
+    .pending-alert {
+      background: #FEF3C7; border: 1px solid #F59E0B; border-radius: var(--radius-sm);
+      padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #92400E;
+    }
   </style>
 </head>
 <body>
-  <div class="hero">
-    <div class="hi">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-avatar">{org.name.charAt(0).toUpperCase()}</div>
       <div>
-        <h1>👋 Welcome, {org.name}</h1>
-        <div class="hero-sub">{org.email}</div>
+        <div class="topbar-name">{org.name}</div>
+        <div class="topbar-email">{org.email}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <span class="plan-badge">{org.plan}</span>
-        <button class="logout-btn" id="logout-btn">Sign out</button>
-      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="plan-badge">{org.plan}</span>
+      <button class="logout-btn" id="logout-btn">Sign out</button>
     </div>
   </div>
 
-  <div class="page">
-    <!-- Quick nav -->
-    <div class="nav-grid">
-      <a href="/potlucks/manage" class="nav-card"><span class="nav-icon">🍽</span><span class="nav-label">Events</span></a>
-      <a href="/admin/analytics" class="nav-card"><span class="nav-icon">📊</span><span class="nav-label">Analytics</span></a>
-      <a href="/admin/links" class="nav-card"><span class="nav-icon">🔗</span><span class="nav-label">Short Links</span></a>
-      <a href="/potlucks/1/poster" class="nav-card"><span class="nav-icon">🖼</span><span class="nav-label">Poster</span></a>
-    </div>
+  <!-- Tab nav -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+    <button class="tab-btn" data-tab="security">Security</button>
+    {showApprovalUI && <button class="tab-btn" data-tab="admin">Admin</button>}
+  </div>
 
-    {showApprovalUI && (
-      <div style="margin-bottom:28px">
-        <div class="sec-label">Backup & Restore (super-admin)</div>
-        <div class="profile-section">
-          <div style="font-size:13px;color:#57524c;margin-bottom:12px;line-height:1.6">
-            Download a single JSON file containing every table in the database
-            (events, sign-ups, organizers, passkeys, config secrets, everything).
-            Save it somewhere safe — anyone with this file can restore your full site.
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-            <a href="/api/admin/backup" class="save-btn" style="text-decoration:none;display:inline-block">⬇ Download backup</a>
-            <a href="https://github.com/stharpe98-tech/denver-social-hub/archive/refs/heads/main.zip" class="del-btn" style="text-decoration:none;display:inline-block">⬇ Download source code</a>
-          </div>
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB: Overview                                -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="tab-panel active" id="panel-overview">
+    <div class="page">
 
-          <div style="margin-top:18px;padding-top:18px;border-top:1px solid #f0ede8">
-            <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:6px">⚠ Restore (destructive)</div>
-            <div style="font-size:12px;color:#a09890;margin-bottom:10px;line-height:1.6">
-              Choose a backup JSON file. Drops + recreates every table in the file.
-              Tables not in the backup are kept (uncheck "wipe first" if you want to merge).
-            </div>
-            <input type="file" id="restore-file" accept="application/json" style="margin-bottom:10px"/>
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#57524c;margin-bottom:10px">
-              <input type="checkbox" id="restore-wipe"/> Wipe all tables first (full reset)
-            </label>
-            <button class="del-btn" id="restore-btn" style="background:#fef2f2;color:#dc2626;border-color:#fca5a5">Restore from file</button>
-            <div id="restore-status" style="font-size:13px;margin-top:10px;display:none"></div>
-          </div>
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value">{events.length}</div>
+          <div class="stat-label">Events</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{totalSignups}</div>
+          <div class="stat-label">Total sign-ups</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{templates.length}</div>
+          <div class="stat-label">Templates</div>
         </div>
       </div>
-    )}
 
-    <!-- Passkeys -->
-    <div style="margin-bottom:28px">
-      <div class="sec-label">Passkeys (sign in with Face ID / Touch ID)</div>
-      <div class="profile-section">
-        <div id="passkey-list" style="font-size:13px;color:#57524c;margin-bottom:12px">Loading…</div>
-        <button class="save-btn" id="add-passkey-btn">+ Add a passkey</button>
-        <div class="settings-hint" style="font-size:12px;color:#a09890;margin-top:10px">Once enrolled, you can sign in from /admin without a password by tapping "Sign in with passkey".</div>
-        <div id="passkey-err" style="font-size:13px;color:#dc2626;margin-top:10px;display:none"></div>
+      <!-- Quick actions -->
+      <div class="sec-head">Quick Actions</div>
+      <div class="action-grid">
+        <a href="/potlucks/manage" class="action-card">
+          <span class="action-icon">🍽</span>
+          <span class="action-label">Manage Events</span>
+          <span class="action-sub">Edit potlucks & RSVPs</span>
+        </a>
+        <a href="/admin/analytics" class="action-card">
+          <span class="action-icon">📊</span>
+          <span class="action-label">Analytics</span>
+          <span class="action-sub">Views & conversions</span>
+        </a>
+        <a href="/admin/links" class="action-card">
+          <span class="action-icon">🔗</span>
+          <span class="action-label">Short Links</span>
+          <span class="action-sub">Track shares</span>
+        </a>
+        <a href="/potlucks/1/poster" class="action-card">
+          <span class="action-icon">🖼</span>
+          <span class="action-label">Poster</span>
+          <span class="action-sub">Shareable flyer</span>
+        </a>
       </div>
-    </div>
 
-    <!-- Quick PIN -->
-    <div style="margin-bottom:28px">
-      <div class="sec-label">Quick PIN (for this device)</div>
-      <div class="profile-section">
-        <div style="font-size:13px;color:#57524c;margin-bottom:12px;line-height:1.6">
-          Set a 4–8 digit PIN to sign in fast on this device. The PIN only works on devices you've trusted, so a stolen PIN alone can't log in. 5 wrong tries removes the device — you'd need to log in normally and re-enroll.
-        </div>
-        <div class="pf-row" style="grid-template-columns:1fr 1fr">
-          <div class="pf-field"><label>New PIN</label><input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="pin-new" class="pf-input" placeholder="1234" autocomplete="off"/></div>
-          <div class="pf-field"><label>Device name (optional)</label><input type="text" id="pin-label" class="pf-input" placeholder="Seth's MacBook" autocomplete="off"/></div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="save-btn" id="pin-save-btn">Save PIN for this device</button>
-          <button class="del-btn" id="pin-disable-all-btn" type="button">Remove all PINs</button>
-        </div>
-        <div id="pin-err" style="font-size:13px;color:#dc2626;margin-top:10px;display:none"></div>
-        <div id="pin-list" style="font-size:13px;color:#57524c;margin-top:14px;border-top:1px solid #f0ede8;padding-top:14px">Loading trusted devices…</div>
-      </div>
-    </div>
-
-    <!-- White label / profile -->
-    <div style="margin-bottom:28px">
-      <div class="sec-label">Your Profile & Branding</div>
-      <div class="profile-section">
-        <div class="pf-row">
-          <div class="pf-field"><label>Display Name</label><input type="text" id="pf-name" class="pf-input" placeholder="Denver Social Community" value={org.name}/></div>
-          <div class="pf-field"><label>Logo URL</label><input type="text" id="pf-logo" class="pf-input" placeholder="https://…/logo.png"/></div>
-        </div>
-        <div class="pf-row">
-          <div class="pf-field"><label>Stripe Payment Link</label><input type="text" id="pf-stripe" class="pf-input" placeholder="https://buy.stripe.com/…"/></div>
-          <div class="pf-field"><label>Twilio Phone (SMS)</label><input type="text" id="pf-twilio" class="pf-input" placeholder="+1720…"/></div>
-        </div>
-        <button class="save-btn" id="save-profile">Save</button>
-      </div>
-    </div>
-
-    <!-- Embed widget -->
-    <div style="margin-bottom:28px">
-      <div class="sec-label">Embed on Any Website</div>
-      <p style="font-size:13px;color:#57524c;margin-bottom:10px">Drop this on any website to embed the sign-up form directly.</p>
-      <div class="embed-section">
-        <div class="embed-code" id="embed-code">&lt;iframe src="https://denversocialhub.com/potlucks/1" width="100%" height="700" frameborder="0" style="border-radius:16px"&gt;&lt;/iframe&gt;</div>
-        <button class="copy-embed" id="copy-embed">Copy embed code</button>
-      </div>
-    </div>
-
-    <!-- Event templates -->
-    <div style="margin-bottom:28px">
-      <div class="sec-label">Saved Event Templates ({templates.length})</div>
-      {templates.length === 0
-        ? <div class="empty">No templates yet — save a potluck as a template from the manage page</div>
-        : templates.map((t:any) => (
-          <div class="tmpl-card">
+      <!-- Your events -->
+      <div class="sec-head">Your Events</div>
+      {events.length === 0
+        ? <div class="empty">No events yet</div>
+        : events.slice(0, 8).map((p: any) => (
+          <a href={`/potlucks/manage/${p.id}`} class="event-row">
             <div>
-              <div class="tmpl-name">{t.name}</div>
-              <div class="tmpl-meta">{t.location} · {t.template} theme</div>
+              <div class="event-title">{p.title}</div>
+              <div class="event-meta">{p.date_label} · {p.location}</div>
             </div>
-            <div class="tmpl-actions">
-              <button class="use-btn" data-id={t.id}>Use</button>
-              <button class="del-btn" data-tmpl-id={t.id}>Del</button>
-            </div>
-          </div>
+            <span class="event-badge">{p.signups || 0} signed up</span>
+          </a>
         ))
       }
-    </div>
 
-    {showApprovalUI && (
-      <div style="margin-bottom:28px">
-        <div class="sec-label">Organizer Access ({pendingOrgs.length} pending · {approvedOrgs.length} approved)</div>
-        {pendingOrgs.length > 0 && (
-          <div style="margin-bottom:14px">
-            <div style="font-size:12px;color:#a09890;margin-bottom:8px">Pending approval</div>
-            {pendingOrgs.map((o:any) => (
-              <div class="tmpl-card">
-                <div>
-                  <div class="tmpl-name">{o.name}</div>
-                  <div class="tmpl-meta">{o.email}</div>
-                </div>
-                <div class="tmpl-actions">
-                  <button class="use-btn" data-approve-id={o.id}>Approve</button>
-                </div>
+      <!-- Templates -->
+      <div style="margin-top: 28px;">
+        <div class="sec-head">Saved Templates ({templates.length})</div>
+        {templates.length === 0
+          ? <div class="empty">No templates yet — save a potluck as a template from the manage page</div>
+          : templates.map((t: any) => (
+            <div class="tmpl-row">
+              <div>
+                <div class="tmpl-name">{t.name}</div>
+                <div class="tmpl-meta">{t.location} · {t.template} theme</div>
               </div>
-            ))}
-          </div>
-        )}
-        {approvedOrgs.length > 0 && (
-          <div>
-            <div style="font-size:12px;color:#a09890;margin-bottom:8px">Approved</div>
-            {approvedOrgs.map((o:any) => (
-              <div class="tmpl-card">
-                <div>
-                  <div class="tmpl-name">{o.name}</div>
-                  <div class="tmpl-meta">{o.email}</div>
-                </div>
-                <div class="tmpl-actions">
-                  {o.email.toLowerCase() === 'stharpe98@gmail.com'
-                    ? <span style="font-size:11px;color:#a09890;padding:6px 10px">super</span>
-                    : <button class="del-btn" data-revoke-id={o.id}>Revoke</button>}
-                </div>
+              <div class="tmpl-actions">
+                <button class="btn-approve" data-id={t.id}>Use</button>
+                <button class="btn-secondary" data-tmpl-id={t.id} style="font-size:12px;padding:6px 12px">Delete</button>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))
+        }
       </div>
-    )}
 
-    <!-- Recent events -->
-    <div>
-      <div class="sec-label">Your Events</div>
-      {events.slice(0,5).map((p:any) => (
-        <a href={`/potlucks/manage/${p.id}`} class="event-card">
-          <div>
-            <div class="event-title">{p.title}</div>
-            <div class="event-meta">{p.date_label} · {p.location}</div>
+      <!-- Embed -->
+      <div style="margin-top: 28px;">
+        <div class="sec-head">Embed Widget</div>
+        <div class="card">
+          <div class="card-desc" style="margin-bottom:10px">Drop this on any website to embed your sign-up form.</div>
+          <div class="embed-block">
+            <div class="embed-code" id="embed-code">&lt;iframe src="https://denversocialhub.com/potlucks/1" width="100%" height="700" frameborder="0" style="border-radius:16px"&gt;&lt;/iframe&gt;</div>
+            <button class="copy-btn" id="copy-embed">Copy embed code</button>
           </div>
-          <div class="event-stats">{p.signups || 0} signed up</div>
-        </a>
-      ))}
+        </div>
+      </div>
+
     </div>
   </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB: Settings                                -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-settings">
+    <div class="page">
+      <div class="sec-head">Profile & Branding</div>
+      <div class="card">
+        <div class="field-row">
+          <div class="field"><label>Display Name</label><input type="text" id="pf-name" placeholder="Denver Social Community" value={org.name}/></div>
+          <div class="field"><label>Logo URL</label><input type="text" id="pf-logo" placeholder="https://…/logo.png"/></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Stripe Payment Link</label><input type="text" id="pf-stripe" placeholder="https://buy.stripe.com/…"/></div>
+          <div class="field"><label>Twilio Phone (SMS)</label><input type="text" id="pf-twilio" placeholder="+1720…"/></div>
+        </div>
+        <button class="btn-primary" id="save-profile">Save changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB: Security                                -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-security">
+    <div class="page">
+
+      <!-- Passkeys -->
+      <div class="sec-head">Passkeys</div>
+      <div class="card">
+        <div class="card-desc">Sign in instantly with Face ID, Touch ID, or your device's biometric. No password needed.</div>
+        <div id="passkey-list" style="margin-bottom:14px">Loading…</div>
+        <button class="btn-primary" id="add-passkey-btn">+ Add a passkey</button>
+        <div id="passkey-err" style="font-size:13px;color:var(--red);margin-top:10px;display:none"></div>
+      </div>
+
+      <!-- Quick PIN -->
+      <div style="margin-top:24px">
+        <div class="sec-head">Quick PIN</div>
+        <div class="card">
+          <div class="card-desc">Set a 4–8 digit PIN to sign in fast on this device. 5 wrong tries locks the device.</div>
+          <div class="field-row">
+            <div class="field"><label>New PIN</label><input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="pin-new" placeholder="1234" autocomplete="off"/></div>
+            <div class="field"><label>Device Name (optional)</label><input type="text" id="pin-label" placeholder="Seth's MacBook" autocomplete="off"/></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" id="pin-save-btn">Save PIN for this device</button>
+            <button class="btn-secondary" id="pin-disable-all-btn">Remove all PINs</button>
+          </div>
+          <div id="pin-err" style="font-size:13px;color:var(--red);margin-top:10px;display:none"></div>
+          <div id="pin-list" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">Loading trusted devices…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB: Admin (super only)                      -->
+  <!-- ════════════════════════════════════════════ -->
+  {showApprovalUI && (
+    <div class="tab-panel" id="panel-admin">
+      <div class="page">
+
+        <!-- Organizer access -->
+        <div class="sec-head">Organizer Access ({pendingOrgs.length} pending · {approvedOrgs.length} approved)</div>
+
+        {pendingOrgs.length > 0 && (
+          <div class="card" style="border-color: #F59E0B; background: #FFFBEB;">
+            <div style="font-size:12px;font-weight:700;color:#92400E;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Pending Approval</div>
+            {pendingOrgs.map((o: any) => (
+              <div class="org-row">
+                <div>
+                  <div class="org-name">{o.name}</div>
+                  <div class="org-email">{o.email}</div>
+                </div>
+                <button class="btn-approve" data-approve-id={o.id}>Approve</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div class="card">
+          <div style="font-size:12px;font-weight:700;color:var(--text-faint);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Approved</div>
+          {approvedOrgs.map((o: any) => (
+            <div class="org-row">
+              <div>
+                <div class="org-name">{o.name}</div>
+                <div class="org-email">{o.email}</div>
+              </div>
+              {o.email.toLowerCase() === 'stharpe98@gmail.com'
+                ? <span class="org-badge">super</span>
+                : <button class="btn-secondary" data-revoke-id={o.id} style="font-size:12px;padding:5px 12px">Revoke</button>}
+            </div>
+          ))}
+        </div>
+
+        <!-- Backup & Restore -->
+        <div style="margin-top:28px">
+          <div class="sec-head">Backup & Restore</div>
+          <div class="card">
+            <div class="card-desc">Download a single JSON file containing every table in the database. Save it somewhere safe.</div>
+            <div class="btn-row" style="margin-bottom:20px">
+              <a href="/api/admin/backup" class="btn-primary" style="text-decoration:none;display:inline-block">⬇ Download backup</a>
+              <a href="https://github.com/stharpe98-tech/denver-social-hub/archive/refs/heads/main.zip" class="btn-secondary" style="text-decoration:none;display:inline-block">⬇ Source code</a>
+            </div>
+
+            <div style="padding-top:18px;border-top:1px solid var(--border)">
+              <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px">Restore (destructive)</div>
+              <div class="hint" style="margin-bottom:10px">
+                Choose a backup JSON file. Drops + recreates every table in the file.
+                Uncheck "wipe first" if you want to merge.
+              </div>
+              <input type="file" id="restore-file" accept="application/json" style="margin-bottom:10px;font-size:13px"/>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-sec);margin-bottom:10px">
+                <input type="checkbox" id="restore-wipe"/> Wipe all tables first (full reset)
+              </label>
+              <button class="btn-danger" id="restore-btn">Restore from file</button>
+              <div id="restore-status" style="font-size:13px;margin-top:10px;display:none"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )}
 
   <div class="toast" id="toast"></div>
 
+  <!-- ── Inline JS (no imports needed) ── -->
   <script is:inline>
+    /* Tabs */
+    document.querySelectorAll('.tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        var panel = document.getElementById('panel-' + btn.getAttribute('data-tab'));
+        if (panel) panel.classList.add('active');
+      });
+    });
+
     function showToast(msg) {
       var t = document.getElementById('toast');
-      t.textContent = msg; t.style.display='block';
-      setTimeout(function(){t.style.display='none';},2000);
+      t.textContent = msg; t.style.display = 'block';
+      setTimeout(function() { t.style.display = 'none'; }, 2000);
     }
 
     document.getElementById('logout-btn').addEventListener('click', async function() {
-      await fetch('/api/auth', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});
+      await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) });
       location.href = '/admin/login';
     });
 
     document.getElementById('save-profile').addEventListener('click', async function() {
-      var res = await fetch('/api/auth', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-        action:'update_profile',
+      var res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        action: 'update_profile',
         white_label_name: document.getElementById('pf-name').value,
         white_label_logo: document.getElementById('pf-logo').value,
         stripe_link: document.getElementById('pf-stripe').value,
@@ -293,7 +538,7 @@ try {
     document.querySelectorAll('[data-approve-id]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var id = parseInt(btn.getAttribute('data-approve-id'));
-        var res = await fetch('/api/admin/organizers', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'approve',id:id})});
+        var res = await fetch('/api/admin/organizers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve', id: id }) });
         var data = await res.json();
         if (data.ok) location.reload();
       });
@@ -302,25 +547,32 @@ try {
       btn.addEventListener('click', async function() {
         if (!confirm('Revoke potluck admin access for this user?')) return;
         var id = parseInt(btn.getAttribute('data-revoke-id'));
-        var res = await fetch('/api/admin/organizers', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'revoke',id:id})});
+        var res = await fetch('/api/admin/organizers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'revoke', id: id }) });
         var data = await res.json();
         if (data.ok) location.reload();
       });
     });
 
-    document.querySelectorAll('.del-btn[data-tmpl-id]').forEach(function(btn) {
+    document.querySelectorAll('.btn-secondary[data-tmpl-id]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         if (!confirm('Delete this template?')) return;
-        await fetch('/api/event-templates', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:parseInt(btn.dataset.tmplId)})});
-        btn.closest('.tmpl-card').remove();
+        await fetch('/api/event-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id: parseInt(btn.dataset.tmplId) }) });
+        btn.closest('.tmpl-row').remove();
         showToast('Deleted');
       });
     });
   </script>
 
+  <!-- ── Bundled JS (imports from npm) ── -->
   <script>
-    // Bundled by Astro (NOT is:inline) so we can import from npm.
     import { startRegistration } from '@simplewebauthn/browser';
+
+    function showToast(msg: string) {
+      const t = document.getElementById('toast');
+      if (!t) return;
+      t.textContent = msg; t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 2000);
+    }
 
     async function refreshPasskeyList() {
       const listEl = document.getElementById('passkey-list');
@@ -330,21 +582,21 @@ try {
         const data = await res.json();
         const passkeys = data.passkeys || [];
         if (passkeys.length === 0) {
-          listEl.innerHTML = '<em style="color:#a09890">No passkeys yet — tap below to add one.</em>';
+          listEl.innerHTML = '<em style="color:var(--text-faint)">No passkeys yet — tap below to add one.</em>';
           return;
         }
-        listEl.innerHTML = passkeys.map((pk) => {
+        listEl.innerHTML = passkeys.map((pk: any) => {
           const label = pk.device_label || 'Unnamed device';
           const date = new Date(pk.created_at).toLocaleDateString();
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0ede8">
-            <div><strong>🔑 ${label}</strong><div style="font-size:11px;color:#a09890">added ${date}</div></div>
-            <button class="del-btn" data-pk-id="${pk.id}">Remove</button>
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+            <div><strong>🔑 ${label}</strong><div style="font-size:11px;color:var(--text-faint)">added ${date}</div></div>
+            <button class="btn-secondary" data-pk-id="${pk.id}" style="font-size:12px;padding:5px 12px">Remove</button>
           </div>`;
         }).join('');
         listEl.querySelectorAll('[data-pk-id]').forEach((btn) => {
           btn.addEventListener('click', async () => {
             if (!confirm('Remove this passkey?')) return;
-            await fetch('/api/passkey/manage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id: parseInt(btn.getAttribute('data-pk-id')) }) });
+            await fetch('/api/passkey/manage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id: parseInt(btn.getAttribute('data-pk-id')!) }) });
             refreshPasskeyList();
           });
         });
@@ -354,16 +606,14 @@ try {
     }
 
     document.getElementById('add-passkey-btn')?.addEventListener('click', async () => {
-      const errEl = document.getElementById('passkey-err');
+      const errEl = document.getElementById('passkey-err')!;
       errEl.style.display = 'none';
       try {
         const optsRes = await fetch('/api/passkey/register-options', { method: 'POST' });
         if (!optsRes.ok) throw new Error('options_failed');
         const opts = await optsRes.json();
-
         const label = prompt('Name this device (e.g. "MacBook", "iPhone"):', '') || '';
         const attResp = await startRegistration({ optionsJSON: opts });
-
         const verifyRes = await fetch('/api/passkey/register-verify', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ response: attResp, deviceLabel: label }),
@@ -372,7 +622,7 @@ try {
         if (!data.ok) throw new Error(data.error || 'verify_failed');
         showToast('Passkey added ✓');
         refreshPasskeyList();
-      } catch (e) {
+      } catch (e: any) {
         errEl.textContent = 'Couldn\'t add passkey: ' + (e.message || 'unknown error');
         errEl.style.display = 'block';
       }
@@ -380,7 +630,7 @@ try {
 
     refreshPasskeyList();
 
-    // ── Quick PIN (trusted-device) ──
+    // ── Quick PIN ──
     async function refreshPinList() {
       const listEl = document.getElementById('pin-list');
       if (!listEl) return;
@@ -389,23 +639,23 @@ try {
         const data = await res.json();
         const devices = data.devices || [];
         if (devices.length === 0) {
-          listEl.innerHTML = '<em style="color:#a09890">No PIN set on any device yet.</em>';
+          listEl.innerHTML = '<em style="color:var(--text-faint)">No PIN set on any device yet.</em>';
           return;
         }
-        listEl.innerHTML = '<div style="font-size:11px;font-weight:700;color:#a09890;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Trusted devices</div>' + devices.map((d) => {
+        listEl.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Trusted Devices</div>' + devices.map((d: any) => {
           const label = d.device_label || 'Unnamed device';
           const date = new Date(d.created_at).toLocaleDateString();
           const last = d.last_used_at ? new Date(d.last_used_at).toLocaleDateString() : 'never';
-          const here = d.is_current ? ' <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 6px;border-radius:6px;margin-left:6px">this device</span>' : '';
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0ede8">
-            <div><strong>📱 ${label}</strong>${here}<div style="font-size:11px;color:#a09890">added ${date} · last used ${last}</div></div>
-            <button class="del-btn" data-trusted-id="${d.id}">Remove</button>
+          const here = d.is_current ? ' <span style="background:#FEF3C7;color:#92400E;font-size:10px;padding:2px 6px;border-radius:6px;margin-left:6px">this device</span>' : '';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+            <div><strong>📱 ${label}</strong>${here}<div style="font-size:11px;color:var(--text-faint)">added ${date} · last used ${last}</div></div>
+            <button class="btn-secondary" data-trusted-id="${d.id}" style="font-size:12px;padding:5px 12px">Remove</button>
           </div>`;
         }).join('');
         listEl.querySelectorAll('[data-trusted-id]').forEach((btn) => {
           btn.addEventListener('click', async () => {
             if (!confirm('Remove PIN access from this device?')) return;
-            await fetch('/api/pin/manage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id: parseInt(btn.getAttribute('data-trusted-id')) }) });
+            await fetch('/api/pin/manage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id: parseInt(btn.getAttribute('data-trusted-id')!) }) });
             refreshPinList();
           });
         });
@@ -415,10 +665,10 @@ try {
     }
 
     document.getElementById('pin-save-btn')?.addEventListener('click', async () => {
-      const errEl = document.getElementById('pin-err');
+      const errEl = document.getElementById('pin-err')!;
       errEl.style.display = 'none';
-      const pin = document.getElementById('pin-new').value.trim();
-      const label = document.getElementById('pin-label').value.trim();
+      const pin = (document.getElementById('pin-new') as HTMLInputElement).value.trim();
+      const label = (document.getElementById('pin-label') as HTMLInputElement).value.trim();
       if (!/^\d{4,8}$/.test(pin)) {
         errEl.textContent = 'PIN must be 4–8 digits.';
         errEl.style.display = 'block';
@@ -431,7 +681,7 @@ try {
         errEl.style.display = 'block';
         return;
       }
-      document.getElementById('pin-new').value = '';
+      (document.getElementById('pin-new') as HTMLInputElement).value = '';
       showToast('PIN saved ✓');
       refreshPinList();
     });
@@ -447,25 +697,25 @@ try {
 
     // ── Backup / Restore ──
     document.getElementById('restore-btn')?.addEventListener('click', async () => {
-      const fileEl = document.getElementById('restore-file');
-      const statusEl = document.getElementById('restore-status');
+      const fileEl = document.getElementById('restore-file') as HTMLInputElement;
+      const statusEl = document.getElementById('restore-status')!;
       const file = fileEl.files?.[0];
       if (!file) {
         statusEl.style.display = 'block';
-        statusEl.style.color = '#dc2626';
+        statusEl.style.color = 'var(--red)';
         statusEl.textContent = 'Pick a backup file first.';
         return;
       }
-      const wipe = document.getElementById('restore-wipe').checked;
+      const wipe = (document.getElementById('restore-wipe') as HTMLInputElement).checked;
       if (!confirm(`Restore from "${file.name}"? This will drop + recreate every table in the backup.${wipe ? ' Plus wipe ALL existing tables first.' : ''} There is no undo.`)) return;
 
       statusEl.style.display = 'block';
-      statusEl.style.color = '#57524c';
+      statusEl.style.color = 'var(--text-sec)';
       statusEl.textContent = 'Reading file…';
       const text = await file.text();
       let payload;
       try { payload = JSON.parse(text); } catch {
-        statusEl.style.color = '#dc2626';
+        statusEl.style.color = 'var(--red)';
         statusEl.textContent = 'File isn\'t valid JSON.';
         return;
       }
@@ -475,10 +725,10 @@ try {
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (data.ok) {
-        statusEl.style.color = '#16a34a';
+        statusEl.style.color = '#16A34A';
         statusEl.textContent = `✓ Restored ${data.tables_recreated} tables, ${data.rows_inserted} rows.`;
       } else {
-        statusEl.style.color = '#dc2626';
+        statusEl.style.color = 'var(--red)';
         statusEl.textContent = `Restore had errors: ${(data.errors || []).join('; ') || data.error || 'unknown'}`;
       }
     });
