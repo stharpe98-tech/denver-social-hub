@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../lib/db';
 import { buildConfirmationEmail } from '../../lib/email';
+import { ensurePotluckSchema } from '../../lib/potluck-schema';
 
 function generateToken(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -41,6 +42,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const db = getDB();
   if (!db) return new Response(JSON.stringify({ ok: false }), { status: 500 });
   try {
+    await ensurePotluckSchema(db);
     const b = await request.json() as Record<string, any>;
 
     // Honeypot check — bots fill hidden fields, humans don't
@@ -79,10 +81,10 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
     const cancelToken = generateToken();
     await db.prepare(`
-      INSERT INTO potluck_rsvp (potluck_id,name,email,handle,platforms,rsvp,guest_count,dish,dish_category,dietary,utensils,early_arrive,seating,cancel_token)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).bind(potluckId, b.name??'', b.email??'', b.handle??'', b.platforms??'', b.rsvp??'',
-      parseInt(b.guestCount??'1'), b.dish??'', b.dishCategory??'', b.dietary??'',
+      INSERT INTO potluck_rsvp (potluck_id,name,email,phone,handle,platforms,rsvp,guest_count,dish,dish_category,dietary,notes,utensils,early_arrive,seating,cancel_token)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).bind(potluckId, b.name??'', b.email??'', b.phone??'', b.handle??'', b.platforms??'', b.rsvp??'',
+      parseInt(b.guestCount??'1'), b.dish??'', b.dishCategory??'', b.dietary??'', b.notes??'',
       b.utensils?1:0, b.earlyArrive?1:0, b.seating?1:0, cancelToken).run();
 
     const potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(potluckId).first() as any;

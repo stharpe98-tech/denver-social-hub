@@ -21,4 +21,10 @@ export async function ensurePotluckSchema(db: D1Database): Promise<void> {
   if (!rsvpNames.has('reminder_sent_at')) {
     await db.prepare("ALTER TABLE potluck_rsvp ADD COLUMN reminder_sent_at TEXT").run();
   }
+  if (!rsvpNames.has('phone')) {
+    await db.prepare("ALTER TABLE potluck_rsvp ADD COLUMN phone TEXT").run();
+  }
+  if (!rsvpNames.has('notes')) {
+    await db.prepare("ALTER TABLE potluck_rsvp ADD COLUMN notes TEXT").run();
+  }
 }
