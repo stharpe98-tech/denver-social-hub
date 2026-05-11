@@ -129,6 +129,23 @@ try {
     </div>
 
     <div class="ms">
+      <div class="ms-label">🚧 Coming Soon Mode</div>
+      <div class="settings-card">
+        <div class="cf-field" style="margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="cfg-coming-soon" style="width:18px;height:18px;cursor:pointer"/>
+            <span>Show "Coming soon" page to all visitors</span>
+          </label>
+        </div>
+        <div class="cf-field" style="margin-bottom:10px"><label>Launch date (shown on coming-soon page, optional)</label><input type="text" id="cfg-launch-date" class="cf-input" placeholder="May 30, 2026"/></div>
+        <div class="cf-field" style="margin-bottom:10px"><label>Teaser text (optional)</label><input type="text" id="cfg-launch-teaser" class="cf-input" placeholder="A custom one-liner instead of the default copy"/></div>
+        <div class="cf-field" style="margin-bottom:12px"><label>Preview key (share <code>?preview=key</code> URLs to bypass the gate)</label><input type="text" id="cfg-preview-key" class="cf-input" placeholder="auto-generated if blank"/></div>
+        <button class="save-btn" id="save-coming-soon-cfg">Save</button>
+        <div class="settings-hint" style="margin-top:8px">When on, every page (except /admin, /login, and the API) redirects to <code>/coming-soon</code>. Admins logged in to the dashboard see the real site.</div>
+      </div>
+    </div>
+
+    <div class="ms">
       <div class="ms-label">🛡 Bot Protection (Cloudflare Turnstile)</div>
       <div class="settings-card">
         <div class="cf-field" style="margin-bottom:10px"><label>Turnstile Secret Key</label><input type="text" id="cfg-turnstile-secret" class="cf-input" placeholder="0x4AAAAAAA…"/></div>
@@ -261,6 +278,11 @@ try {
       setVal('cfg-stripe', cfg.stripe_link);
       setVal('cfg-cashapp', cfg.cashapp_handle);
       setVal('cfg-turnstile-secret', cfg.turnstile_secret_key);
+      setVal('cfg-launch-date', cfg.launch_date);
+      setVal('cfg-launch-teaser', cfg.launch_teaser);
+      setVal('cfg-preview-key', cfg.preview_key);
+      var csChk = document.getElementById('cfg-coming-soon');
+      if (csChk) csChk.checked = (cfg.coming_soon_mode ?? 'on').toString().toLowerCase() !== 'off';
       setVal('cfg-twilio-sid', cfg.twilio_account_sid);
       setVal('cfg-twilio-token', cfg.twilio_auth_token);
       setVal('cfg-twilio-from', cfg.twilio_from);
@@ -285,6 +307,22 @@ try {
     document.getElementById('save-turnstile-cfg').addEventListener('click', async function() {
       await saveCfg('turnstile_secret_key', document.getElementById('cfg-turnstile-secret').value.trim());
       showToast('Turnstile saved ✓');
+    });
+    document.getElementById('save-coming-soon-cfg').addEventListener('click', async function() {
+      var on = document.getElementById('cfg-coming-soon').checked;
+      var key = document.getElementById('cfg-preview-key').value.trim();
+      if (on && !key) {
+        // Auto-generate a 12-char preview key if blank so the toggle is useful immediately
+        key = Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 8);
+        document.getElementById('cfg-preview-key').value = key;
+      }
+      await Promise.all([
+        saveCfg('coming_soon_mode', on ? 'on' : 'off'),
+        saveCfg('launch_date', document.getElementById('cfg-launch-date').value.trim()),
+        saveCfg('launch_teaser', document.getElementById('cfg-launch-teaser').value.trim()),
+        saveCfg('preview_key', key),
+      ]);
+      showToast(on ? 'Coming-soon mode ON ✓' : 'Coming-soon mode OFF ✓');
     });
     document.getElementById('save-twilio-cfg').addEventListener('click', async function() {
       await Promise.all([
