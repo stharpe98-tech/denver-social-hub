@@ -2,6 +2,10 @@
 import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
 import { getLevel, getNextLevel } from '../lib/levels';
+import { env } from 'cloudflare:workers';
+
+const redditAvailable = !!(env as any).REDDIT_CLIENT_ID;
+const discordAvailable = !!(env as any).DISCORD_CLIENT_ID;
 
 const db = getDB();
 let user: any = null;
@@ -264,43 +268,49 @@ const connectBanner =
   )}
 
   <!-- ═══ CONNECTED ACCOUNTS ═══ -->
-  <div class="p-section">
-    <div class="p-section-head">
-      <span class="p-section-title">Connected accounts</span>
-    </div>
-    <div class="p-conn-grid">
-      <div class="p-conn">
-        <div class="p-conn-left">
-          <span class="p-conn-icon" style="background:#FF4500">🟠</span>
-          <div class="p-conn-text">
-            <strong>Reddit</strong>
+  {(redditAvailable || discordAvailable || member?.reddit_username || member?.discord_username) && (
+    <div class="p-section">
+      <div class="p-section-head">
+        <span class="p-section-title">Connected accounts</span>
+      </div>
+      <div class="p-conn-grid">
+        {(redditAvailable || member?.reddit_username) && (
+          <div class="p-conn">
+            <div class="p-conn-left">
+              <span class="p-conn-icon" style="background:#FF4500">🟠</span>
+              <div class="p-conn-text">
+                <strong>Reddit</strong>
+                {member?.reddit_username
+                  ? <span>u/{member.reddit_username} · {member.karma || 0} karma</span>
+                  : <span>Connect for the karma trust badge</span>}
+              </div>
+            </div>
             {member?.reddit_username
-              ? <span>u/{member.reddit_username} · {member.karma || 0} karma</span>
-              : <span>Connect for the karma trust badge</span>}
+              ? <button class="p-conn-btn p-conn-btn-off" data-disconnect="reddit">Disconnect</button>
+              : <a href="/api/auth/reddit?connect=1&next=/profile" class="p-conn-btn p-conn-btn-on">Connect</a>}
           </div>
-        </div>
-        {member?.reddit_username
-          ? <button class="p-conn-btn p-conn-btn-off" data-disconnect="reddit">Disconnect</button>
-          : <a href="/api/auth/reddit?connect=1&next=/profile" class="p-conn-btn p-conn-btn-on">Connect</a>}
-      </div>
+        )}
 
-      <div class="p-conn">
-        <div class="p-conn-left">
-          <span class="p-conn-icon" style="background:#5865F2">💬</span>
-          <div class="p-conn-text">
-            <strong>Discord</strong>
+        {(discordAvailable || member?.discord_username) && (
+          <div class="p-conn">
+            <div class="p-conn-left">
+              <span class="p-conn-icon" style="background:#5865F2">💬</span>
+              <div class="p-conn-text">
+                <strong>Discord</strong>
+                {member?.discord_username
+                  ? <span>{member.discord_username}</span>
+                  : <span>Connect to join the community Discord</span>}
+              </div>
+            </div>
             {member?.discord_username
-              ? <span>{member.discord_username}</span>
-              : <span>Connect to join the community Discord</span>}
+              ? <button class="p-conn-btn p-conn-btn-off" data-disconnect="discord">Disconnect</button>
+              : <a href="/api/auth/discord?connect=1&next=/profile" class="p-conn-btn p-conn-btn-on">Connect</a>}
           </div>
-        </div>
-        {member?.discord_username
-          ? <button class="p-conn-btn p-conn-btn-off" data-disconnect="discord">Disconnect</button>
-          : <a href="/api/auth/discord?connect=1&next=/profile" class="p-conn-btn p-conn-btn-on">Connect</a>}
+        )}
       </div>
+      <div id="p-conn-err" class="p-conn-err"></div>
     </div>
-    <div id="p-conn-err" class="p-conn-err"></div>
-  </div>
+  )}
 
   <!-- ═══ EDIT PROFILE ═══ -->
   <div class="p-section">
