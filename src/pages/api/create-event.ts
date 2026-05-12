@@ -27,7 +27,7 @@ async function notifyAdmin(db: D1Database, eventTitle: string, submittedBy: stri
               <p style="font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 8px;">${eventTitle}</p>
               <p style="font-size:14px;color:#666;margin:0;">Posted by: ${submittedBy}</p>
             </div>
-            <a href="https://denversocialhub.com/events" style="display:inline-block;background:#c2410c;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">View Events</a>
+            <a href="https://denversocialhub.com/events" style="display:inline-block;background:#0EA5E9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">View Events</a>
           </div>
         `,
       }),

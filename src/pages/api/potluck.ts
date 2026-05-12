@@ -117,7 +117,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const orgEmail = cfg.organizer_email || potluck?.organizer_email;
     if (orgEmail && cfg.resend_api_key && b.rsvp === 'yes') {
       const orgHtml = `<div style="font-family:sans-serif;max-width:500px;padding:20px">
-        <h2 style="color:#c2410c">New sign-up: ${potluck?.title}</h2>
+        <h2 style="color:#0284C7">New sign-up: ${potluck?.title}</h2>
         <table style="width:100%;border-collapse:collapse">
           <tr><td style="padding:8px 0;border-bottom:1px solid #f0ede8;color:#57524c;width:120px">Name</td><td style="padding:8px 0;border-bottom:1px solid #f0ede8;font-weight:600">${b.name}</td></tr>
           ${b.dish ? `<tr><td style="padding:8px 0;border-bottom:1px solid #f0ede8;color:#57524c">Bringing</td><td style="padding:8px 0;border-bottom:1px solid #f0ede8;font-weight:600">${b.dish}</td></tr>` : ''}
