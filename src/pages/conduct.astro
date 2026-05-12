@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import { getContent } from '../lib/content';
 const content = await getContent();
 ---
-<Base title="Safety & Conduct">
+<Base title="Safety, Conduct & Terms">
 <div class="conduct-page">
 
   <section class="cond-hero">
@@ -87,6 +87,21 @@ const content = await getContent();
       <a href="https://discord.gg/S8SFNkdSgK" class="cond-btn discord" target="_blank" rel="noopener">Discord</a>
       <a href="/contact" class="cond-btn email">Contact us</a>
     </div>
+  </section>
+
+  <!-- TERMS -->
+  <section class="cond-section" id="terms">
+    <h2 class="cond-h2">The boring-but-important stuff</h2>
+    <p class="cond-p">We're not hiding anything behind legal jargon. Here's how this works:</p>
+    <div class="cond-list-simple">
+      <div>💸 <strong>It's free.</strong> No membership fees, no premium tier, no upsell. Ever.</div>
+      <div>🔒 <strong>Your data.</strong> We store your name and email to run the service. We don't sell your data.</div>
+      <div>🍽️ <strong>Event costs.</strong> Some events have costs between you and the venue — Denver Social doesn't take a cut.</div>
+      <div>💰 <strong>Deposits.</strong> Some events require a refundable deposit. Show up → get it back. No-show → forfeited.</div>
+      <div>🚫 <strong>Account removal.</strong> We can remove accounts that violate the rules above.</div>
+      <div>⚠️ <strong>Liability.</strong> Denver Social organizes events but isn't liable for what happens at them. Attend at your own risk.</div>
+    </div>
+    <p class="cond-p cond-updated">Last updated: March 2026</p>
   </section>
 
   <!-- CLOSER -->
@@ -188,6 +203,7 @@ const content = await getContent();
   .cond-btn.discord:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(88,101,242,0.3); }
   .cond-btn.email { background: #F8F9FB; color: #6B7280; border: 1px solid #E5E7EB; }
   .cond-btn.email:hover { border-color: #D1D5DB; color: #111827; }
+  .cond-updated { font-size: 11px !important; color: #9CA3AF !important; margin-top: 14px !important; }
 
   @media (max-width: 500px) {
     .cond-grid { grid-template-columns: 1fr; }
