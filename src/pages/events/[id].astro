@@ -323,7 +323,22 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   <!-- ═══════════════════════════════════════ -->
   <div class="ev-section">
     <h2 class="ev-section-title">👋 Who's coming ({rsvps.length})</h2>
-    {rsvps.length > 0 ? (
+    {!user && rsvps.length > 0 ? (
+      <div class="ev-guests-locked">
+        <div class="ev-guests-avatars">
+          {rsvps.slice(0, 6).map((r: any, i: number) => {
+            const name = r.member_name || r.reddit_username || 'Guest';
+            const initial = name[0]?.toUpperCase() || '?';
+            return <div class="ev-guest-avatar ev-guest-avatar-stack" style={`z-index:${10 - i}`}>{initial}</div>;
+          })}
+          {rsvps.length > 6 && <div class="ev-guest-avatar ev-guest-avatar-stack ev-guest-avatar-more">+{rsvps.length - 6}</div>}
+        </div>
+        <div class="ev-guests-locked-text">
+          <strong>{rsvps.length} {rsvps.length === 1 ? 'person is' : 'people are'} going</strong>
+          <a href={`/login?next=/events/${id}`}>Sign in to see who →</a>
+        </div>
+      </div>
+    ) : user && rsvps.length > 0 ? (
       <div class="ev-guests">
         {rsvps.map((r: any) => {
           const name = r.member_name || (r.reddit_username ? `u/${r.reddit_username}` : 'Guest');
@@ -357,18 +372,22 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
       <p class="ev-empty">No RSVPs yet — be the first!</p>
     )}
 
-    {/* Waitlist */}
+    {/* Waitlist — names hidden for logged-out, count only */}
     {waitlist.length > 0 && (
       <div class="ev-waitlist-section">
         <h3 class="ev-waitlist-title">Waitlist ({waitlist.length})</h3>
-        <div class="ev-waitlist">
-          {waitlist.map((w: any, i: number) => (
-            <div class="ev-wl-person">
-              <span class="ev-wl-num">#{i + 1}</span>
-              <span>{w.reddit_username ? `u/${w.reddit_username}` : w.member_name}</span>
-            </div>
-          ))}
-        </div>
+        {user ? (
+          <div class="ev-waitlist">
+            {waitlist.map((w: any, i: number) => (
+              <div class="ev-wl-person">
+                <span class="ev-wl-num">#{i + 1}</span>
+                <span>{w.reddit_username ? `u/${w.reddit_username}` : w.member_name}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p class="ev-waitlist-locked">{waitlist.length} on the waitlist — <a href={`/login?next=/events/${id}`}>sign in</a> to see names.</p>
+        )}
       </div>
     )}
   </div>
@@ -804,6 +823,33 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   .ev-guest-plus { font-size: 11px; color: var(--accent); background: var(--accent-dim); padding: 1px 6px; border-radius: 4px; font-weight: 600; }
   .ev-guest-bringing { font-size: 12px; color: var(--text-sec); }
   .ev-empty { font-size: 14px; color: var(--text-faint); text-align: center; padding: 24px 0; }
+
+  /* Locked guest list (logged-out) — show an avatar cluster + "sign in" nudge */
+  .ev-guests-locked {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px; border-radius: 14px;
+    background: var(--surface); border: 1px dashed var(--border);
+  }
+  .ev-guests-avatars { display: flex; }
+  .ev-guest-avatar-stack {
+    margin-right: -10px;
+    border: 2px solid var(--bg);
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+  }
+  .ev-guest-avatar-more {
+    background: var(--bg) !important;
+    color: var(--text-sec) !important;
+    border-color: var(--border) !important;
+    font-size: 12px;
+  }
+  .ev-guests-locked-text { display: flex; flex-direction: column; gap: 2px; }
+  .ev-guests-locked-text strong { font-size: 14px; color: var(--text); }
+  .ev-guests-locked-text a { font-size: 13px; color: var(--accent); font-weight: 600; }
+  .ev-guests-locked-text a:hover { text-decoration: underline; }
+
+  .ev-waitlist-locked { font-size: 13px; color: var(--text-sec); padding: 8px 0; }
+  .ev-waitlist-locked a { color: var(--accent); font-weight: 600; }
 
   /* Waitlist */
   .ev-waitlist-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
