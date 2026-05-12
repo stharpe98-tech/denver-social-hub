@@ -71,6 +71,41 @@ export const GET = async ({ request, cookies }: { request: Request; cookies: any
   if (!db) return new Response(null, { status: 302, headers: { 'Location': '/login?error=db' } });
   await ensureMemberAuthSchema(db);
 
+  const isConnect = !!(statePayload as any).connect;
+
+  // Connect flow: link Discord to the currently-signed-in member.
+  if (isConnect) {
+    const userCookie = cookies.get('dsn_user')?.value;
+    let currentUser: any = null;
+    try { if (userCookie) currentUser = JSON.parse(userCookie); } catch {}
+    if (!currentUser?.email) {
+      return new Response(null, { status: 302, headers: { 'Location': '/login?error=not_signed_in' } });
+    }
+    const owner: any = await db.prepare("SELECT * FROM members WHERE discord_id = ?").bind(discordId).first();
+    if (owner && owner.email.toLowerCase() !== currentUser.email.toLowerCase()) {
+      return new Response(null, { status: 302, headers: { 'Location': '/profile?connect=discord_taken' } });
+    }
+    await db.prepare(
+      "UPDATE members SET discord_id = ?, discord_username = ?, avatar_url = COALESCE(?, avatar_url) WHERE LOWER(email) = LOWER(?)"
+    ).bind(discordId, discordUsername, avatarUrl, currentUser.email).run();
+    const updated: any = await db.prepare("SELECT id, email, name, role, reddit_username FROM members WHERE LOWER(email) = LOWER(?)").bind(currentUser.email).first();
+    const cookieVal = encodeURIComponent(JSON.stringify({
+      id: updated?.id ?? currentUser.id,
+      email: updated?.email ?? currentUser.email,
+      name: updated?.name ?? currentUser.name,
+      role: updated?.role ?? currentUser.role ?? 'member',
+      reddit_username: updated?.reddit_username ?? currentUser.reddit_username,
+      discord_username: discordUsername,
+      avatar_url: avatarUrl,
+      karma: currentUser.karma ?? 0,
+    }));
+    const headers = new Headers();
+    headers.append('Location', '/profile?connect=discord_ok');
+    headers.append('Set-Cookie', `dsn_user=${cookieVal}; Path=/; Max-Age=604800; SameSite=Lax`);
+    headers.append('Set-Cookie', 'discord_state=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly');
+    return new Response(null, { status: 302, headers });
+  }
+
   // Find by discord_id first, then fall back to matching email so users
   // who already have a Reddit-backed account can link Discord.
   let member: any = await db.prepare("SELECT * FROM members WHERE discord_id = ?").bind(discordId).first();

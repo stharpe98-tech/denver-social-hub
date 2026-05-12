@@ -9,6 +9,7 @@ export const GET = async ({ request }: { request: Request }) => {
 
   const url = new URL(request.url);
   const next = url.searchParams.get('next') || '/events';
+  const connect = url.searchParams.get('connect') === '1';
   // Default redirect URI is computed from the request host so previews
   // and production both work without an env var.
   const redirectUri = (env as any).DISCORD_REDIRECT_URI || `${url.origin}/api/auth/discord/callback`;
@@ -16,7 +17,7 @@ export const GET = async ({ request }: { request: Request }) => {
   const stateBytes = new Uint8Array(16);
   crypto.getRandomValues(stateBytes);
   const csrf = Array.from(stateBytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-  const statePayload = btoa(JSON.stringify({ csrf, next }));
+  const statePayload = btoa(JSON.stringify({ csrf, next, connect }));
 
   const authUrl = new URL('https://discord.com/oauth2/authorize');
   authUrl.searchParams.set('client_id', DISCORD_CLIENT_ID);

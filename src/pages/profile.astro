@@ -88,12 +88,22 @@ const firstName = (member?.name || user.name || '').split(' ')[0];
 // Fun stat labels
 const funFactCount = totalEvts + (streak?.current_streak || 0) + mySuggestions.length;
 const socialLevel = totalEvts === 0 ? "Fresh face" : totalEvts < 3 ? "Getting out there" : totalEvts < 8 ? "Becoming a regular" : totalEvts < 15 ? "Denver knows your name" : "Absolute legend";
+
+// Connected accounts banner — surfaced after the OAuth callback redirects back here
+const connectResult = Astro.url.searchParams.get('connect');
+const connectBanner =
+  connectResult === 'reddit_ok'    ? { kind: 'ok',  text: 'Reddit account connected ✓' } :
+  connectResult === 'discord_ok'   ? { kind: 'ok',  text: 'Discord account connected ✓' } :
+  connectResult === 'reddit_taken' ? { kind: 'err', text: "That Reddit account is already linked to another Denver Social account." } :
+  connectResult === 'discord_taken'? { kind: 'err', text: "That Discord account is already linked to another Denver Social account." } :
+  null;
 ---
 <Base title="My Profile">
 <div class="p">
 
   {error   && <div class="p-toast err">{error}</div>}
   {success && <div class="p-toast ok">Profile saved</div>}
+  {connectBanner && <div class={`p-toast ${connectBanner.kind}`}>{connectBanner.text}</div>}
 
   <!-- ═══ HERO ═══ -->
   <div class="p-hero">
@@ -252,6 +262,45 @@ const socialLevel = totalEvts === 0 ? "Fresh face" : totalEvts < 3 ? "Getting ou
       </div>
     </div>
   )}
+
+  <!-- ═══ CONNECTED ACCOUNTS ═══ -->
+  <div class="p-section">
+    <div class="p-section-head">
+      <span class="p-section-title">Connected accounts</span>
+    </div>
+    <div class="p-conn-grid">
+      <div class="p-conn">
+        <div class="p-conn-left">
+          <span class="p-conn-icon" style="background:#FF4500">🟠</span>
+          <div class="p-conn-text">
+            <strong>Reddit</strong>
+            {member?.reddit_username
+              ? <span>u/{member.reddit_username} · {member.karma || 0} karma</span>
+              : <span>Connect for the karma trust badge</span>}
+          </div>
+        </div>
+        {member?.reddit_username
+          ? <button class="p-conn-btn p-conn-btn-off" data-disconnect="reddit">Disconnect</button>
+          : <a href="/api/auth/reddit?connect=1&next=/profile" class="p-conn-btn p-conn-btn-on">Connect</a>}
+      </div>
+
+      <div class="p-conn">
+        <div class="p-conn-left">
+          <span class="p-conn-icon" style="background:#5865F2">💬</span>
+          <div class="p-conn-text">
+            <strong>Discord</strong>
+            {member?.discord_username
+              ? <span>{member.discord_username}</span>
+              : <span>Connect to join the community Discord</span>}
+          </div>
+        </div>
+        {member?.discord_username
+          ? <button class="p-conn-btn p-conn-btn-off" data-disconnect="discord">Disconnect</button>
+          : <a href="/api/auth/discord?connect=1&next=/profile" class="p-conn-btn p-conn-btn-on">Connect</a>}
+      </div>
+    </div>
+    <div id="p-conn-err" class="p-conn-err"></div>
+  </div>
 
   <!-- ═══ EDIT PROFILE ═══ -->
   <div class="p-section">
@@ -510,6 +559,36 @@ const socialLevel = totalEvts === 0 ? "Fresh face" : totalEvts < 3 ? "Getting ou
   .p-idea-status.approved { background: #EEF2FF; color: #6366F1; }
   .p-idea-status.closed { background: #F3F4F6; color: #9CA3AF; }
 
+  /* ═══ CONNECTED ACCOUNTS ═══ */
+  .p-conn-grid { display: flex; flex-direction: column; gap: 8px; }
+  .p-conn {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 16px;
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 14px;
+  }
+  .p-conn-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .p-conn-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .p-conn-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .p-conn-text strong { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; }
+  .p-conn-text span { font-size: 12px; color: #6B7280; }
+  .p-conn-btn {
+    padding: 8px 16px; border-radius: 999px;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; text-decoration: none;
+    border: 1px solid transparent;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+  .p-conn-btn-on { background: #0EA5E9; color: #fff; }
+  .p-conn-btn-on:hover { opacity: 0.9; }
+  .p-conn-btn-off { background: #fff; color: #6B7280; border-color: #E5E7EB; }
+  .p-conn-btn-off:hover { border-color: #DC2626; color: #DC2626; }
+  .p-conn-err { font-size: 13px; color: #DC2626; margin-top: 8px; min-height: 18px; }
+
   /* ═══ EDIT ═══ */
   .p-edit-toggle {
     display: flex; align-items: center; justify-content: space-between;
@@ -665,4 +744,28 @@ const socialLevel = totalEvts === 0 ? "Fresh face" : totalEvts < 3 ? "Getting ou
       }
     });
   }
+
+  // ═══ Disconnect a linked auth provider ═══
+  document.querySelectorAll('[data-disconnect]').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var provider = btn.getAttribute('data-disconnect');
+      if (!confirm('Disconnect ' + provider + ' from this account? You can reconnect anytime.')) return;
+      var err = document.getElementById('p-conn-err');
+      err.textContent = '';
+      btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Disconnecting…';
+      try {
+        var res = await fetch('/api/auth/disconnect', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ provider: provider }),
+        });
+        var data = await res.json();
+        if (data.ok) { location.reload(); return; }
+        if (data.error === 'last_method') err.textContent = 'Add a different sign-in method (real email or other provider) before disconnecting this one.';
+        else err.textContent = data.error || 'Could not disconnect — try again.';
+      } catch {
+        err.textContent = 'Network error — try again.';
+      }
+      btn.disabled = false; btn.textContent = orig;
+    });
+  });
 </script>
