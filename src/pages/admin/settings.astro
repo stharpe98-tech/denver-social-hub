@@ -1,0 +1,230 @@
+---
+import { requireApprovedOrg, isSuperAdmin } from '../../lib/admin-auth';
+import { getDB } from '../../lib/db';
+
+const gate = await requireApprovedOrg(Astro);
+if (gate instanceof Response) return gate;
+const org = gate;
+const isSuper = isSuperAdmin(org);
+
+const db = getDB();
+let cfg: Record<string, string> = {};
+if (db) {
+  const rows = await db.prepare("SELECT key, value FROM config").all();
+  (rows.results ?? []).forEach((r: any) => { cfg[r.key] = r.value || ''; });
+}
+
+const v = (k: string) => cfg[k] || '';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Site settings · Denver Social</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #FAFAF8; --surface: #FFFFFF; --border: #E8E4DE;
+      --text: #1A1A1A; --text-sec: #6B6560; --text-faint: #A09890;
+      --accent: #0EA5E9; --accent-dim: rgba(14,165,233,0.10);
+      --mint: #10B981; --red: #DC2626;
+    }
+    html, body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; font-size: 14px; padding-bottom: 60px; }
+
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .topbar-left { display: flex; align-items: center; gap: 16px; }
+    .back-link { color: var(--text-sec); text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); }
+    .back-link:hover { background: var(--bg); color: var(--text); }
+    .topbar h1 { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; }
+
+    .page { max-width: 760px; margin: 0 auto; padding: 28px 20px; }
+
+    .group { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 18px; }
+    .group-head { margin-bottom: 16px; }
+    .group-title { font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .group-sub { font-size: 13px; color: var(--text-sec); line-height: 1.5; }
+    .group-sub a { color: var(--accent); font-weight: 600; }
+
+    .row { margin-bottom: 12px; }
+    .row label { display: block; font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .row label .opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-faint); }
+    .row input, .row textarea {
+      width: 100%; padding: 10px 12px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      font-family: inherit; font-size: 14px; color: var(--text);
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+      -webkit-appearance: none;
+    }
+    .row input:focus, .row textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 500px) { .row-2 { grid-template-columns: 1fr; } }
+
+    .check-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+    .check-row input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
+
+    .save-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+    .save-btn {
+      padding: 10px 20px; border-radius: 999px; border: none;
+      background: var(--accent); color: #fff;
+      font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: box-shadow 0.15s, transform 0.15s;
+      box-shadow: 0 1px 3px rgba(14,165,233,0.25);
+    }
+    .save-btn:hover { box-shadow: 0 6px 18px rgba(14,165,233,0.35); transform: translateY(-1px); }
+    .save-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .save-note { font-size: 13px; color: var(--mint); font-weight: 500; opacity: 0; transition: opacity 0.15s; }
+    .save-note.show { opacity: 1; }
+
+    code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 12px; color: var(--text-sec); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <a href="/admin/dashboard" class="back-link">← Dashboard</a>
+    <h1>Site settings</h1>
+  </div>
+  <span style="font-size:12px;color:var(--text-faint)">{org.email}</span>
+</div>
+
+<div class="page">
+
+  <!-- EMAIL (Resend) -->
+  <form class="group" data-group="email">
+    <div class="group-head">
+      <div class="group-title">📧 Email (Resend)</div>
+      <p class="group-sub">Powers every email the site sends: RSVP confirmations, organizer notifications, daily reminders, email magic-code login, admin OTP. Get a free key at <a href="https://resend.com" target="_blank" rel="noopener">resend.com</a>.</p>
+    </div>
+    <div class="row"><label>Resend API Key</label><input type="password" name="resend_api_key" value={v('resend_api_key')} placeholder="re_xxxxxxxxxxxxxxx" autocomplete="off"/></div>
+    <div class="row-2">
+      <div class="row"><label>From email</label><input type="text" name="from_email" value={v('from_email')} placeholder="Denver Social <onboarding@resend.dev>"/></div>
+      <div class="row"><label>Site URL <span class="opt">(used in email links)</span></label><input type="text" name="site_url" value={v('site_url')} placeholder="https://denversocialhub.com"/></div>
+    </div>
+    <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
+  </form>
+
+  <!-- SMS (Twilio) -->
+  <form class="group" data-group="sms">
+    <div class="group-head">
+      <div class="group-title">📱 SMS (Twilio)</div>
+      <p class="group-sub">Sends a one-line text to your phone every time someone RSVPs. Optional. Twilio gives you a free trial number.</p>
+    </div>
+    <div class="row-2">
+      <div class="row"><label>Account SID</label><input type="text" name="twilio_account_sid" value={v('twilio_account_sid')} placeholder="AC…"/></div>
+      <div class="row"><label>Auth token</label><input type="password" name="twilio_auth_token" value={v('twilio_auth_token')} placeholder="••••••••" autocomplete="off"/></div>
+    </div>
+    <div class="row-2">
+      <div class="row"><label>From number <span class="opt">(E.164)</span></label><input type="text" name="twilio_from" value={v('twilio_from')} placeholder="+15551234567"/></div>
+      <div class="row"><label>Your phone <span class="opt">(where notifications go)</span></label><input type="text" name="twilio_to" value={v('twilio_to')} placeholder="+17205551234"/></div>
+    </div>
+    <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
+  </form>
+
+  <!-- BOT PROTECTION -->
+  <form class="group" data-group="turnstile">
+    <div class="group-head">
+      <div class="group-title">🛡 Bot protection (Cloudflare Turnstile)</div>
+      <p class="group-sub">Prevents spam sign-ups. Get the secret key from <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">Cloudflare → Turnstile</a>. The site key is already wired in code.</p>
+    </div>
+    <div class="row"><label>Turnstile secret key</label><input type="password" name="turnstile_secret_key" value={v('turnstile_secret_key')} placeholder="0x4AAAAAAA…" autocomplete="off"/></div>
+    <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
+  </form>
+
+  <!-- CONTACT & PAYMENT DEFAULTS -->
+  <form class="group" data-group="contact">
+    <div class="group-head">
+      <div class="group-title">📞 Contact &amp; payment defaults</div>
+      <p class="group-sub">Shown to attendees on the post-signup confirmation. Never appears in public HTML — only delivered to confirmed RSVPs.</p>
+    </div>
+    <div class="row"><label>Organizer email <span class="opt">(gets notified on every sign-up)</span></label><input type="text" name="organizer_email" value={v('organizer_email')} placeholder="you@example.com"/></div>
+    <div class="row-2">
+      <div class="row"><label>Contact phone</label><input type="text" name="contact_phone" value={v('contact_phone')} placeholder="(720) 555-1234"/></div>
+      <div class="row"><label>Discord handle</label><input type="text" name="contact_discord" value={v('contact_discord')} placeholder="@yourhandle"/></div>
+    </div>
+    <div class="row"><label>Discord invite URL</label><input type="text" name="contact_discord_url" value={v('contact_discord_url')} placeholder="https://discord.gg/…"/></div>
+    <div class="row-2">
+      <div class="row"><label>Venmo handle</label><input type="text" name="venmo_handle" value={v('venmo_handle')} placeholder="@yourvenmo"/></div>
+      <div class="row"><label>Cash App handle</label><input type="text" name="cashapp_handle" value={v('cashapp_handle')} placeholder="$yourcashtag"/></div>
+    </div>
+    <div class="row"><label>Stripe payment link <span class="opt">(optional)</span></label><input type="text" name="stripe_link" value={v('stripe_link')} placeholder="https://buy.stripe.com/…"/></div>
+    <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
+  </form>
+
+  <!-- INTEGRATIONS -->
+  <form class="group" data-group="webhook">
+    <div class="group-head">
+      <div class="group-title">⚡ Zapier / webhook</div>
+      <p class="group-sub">Every confirmed sign-up POSTs JSON here. Useful for Google Sheets or Slack via Zapier "Catch Hook".</p>
+    </div>
+    <div class="row"><label>Webhook URL</label><input type="text" name="webhook_url" value={v('webhook_url')} placeholder="https://hooks.zapier.com/hooks/catch/…"/></div>
+    <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
+  </form>
+
+  {isSuper && (
+    <form class="group" data-group="coming_soon">
+      <div class="group-head">
+        <div class="group-title">🚧 Coming-soon mode <span style="font-size:11px;background:var(--accent-dim);color:var(--accent);padding:2px 8px;border-radius:999px;margin-left:6px">super</span></div>
+        <p class="group-sub">While ON, public visitors see <code>/coming-soon</code>. Signed-in members + admins always bypass.</p>
+      </div>
+      <label class="check-row" style="margin-bottom:12px">
+        <input type="checkbox" name="coming_soon_mode" data-bool="on" data-bool-off="off" checked={(v('coming_soon_mode') || 'on').toLowerCase() !== 'off'}/>
+        <span>Show "Coming soon" page to public visitors</span>
+      </label>
+      <div class="row-2">
+        <div class="row"><label>Launch date <span class="opt">(shown on splash)</span></label><input type="text" name="launch_date" value={v('launch_date')} placeholder="May 30, 2026"/></div>
+        <div class="row"><label>Preview key <span class="opt">(share <code>?preview=…</code>)</span></label><input type="text" name="preview_key" value={v('preview_key')} placeholder="auto-generated"/></div>
+      </div>
+      <div class="row"><label>Teaser text <span class="opt">(optional)</span></label><input type="text" name="launch_teaser" value={v('launch_teaser')} placeholder="Custom one-liner for the splash"/></div>
+      <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
+    </form>
+  )}
+
+</div>
+
+<script is:inline>
+  document.querySelectorAll('form.group').forEach(function(form) {
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var btn = form.querySelector('.save-btn');
+      var note = form.querySelector('.save-note');
+      var origText = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Saving…';
+      note.classList.remove('show');
+
+      var entries = Array.from(form.querySelectorAll('[name]'));
+      var ops = entries.map(function(el) {
+        var key = el.getAttribute('name');
+        var value;
+        if (el.type === 'checkbox') {
+          value = el.checked ? (el.dataset.bool || 'on') : (el.dataset.boolOff || 'off');
+        } else {
+          value = el.value.trim();
+        }
+        return fetch('/api/potlucks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'set_config', key: key, value: value }),
+        }).then(function(r) { return r.json(); });
+      });
+
+      try {
+        var results = await Promise.all(ops);
+        var ok = results.every(function(r) { return r.ok; });
+        note.textContent = ok ? 'Saved ✓' : 'Some fields failed';
+        note.style.color = ok ? 'var(--mint)' : 'var(--red)';
+        note.classList.add('show');
+        setTimeout(function() { note.classList.remove('show'); }, 2500);
+      } catch (err) {
+        note.textContent = 'Network error';
+        note.style.color = 'var(--red)';
+        note.classList.add('show');
+      }
+      btn.disabled = false; btn.textContent = origText;
+    });
+  });
+</script>
+
+</body>
+</html>
