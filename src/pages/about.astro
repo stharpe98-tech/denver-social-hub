@@ -208,24 +208,6 @@ const content = await getContent();
   .about-step-text p { font-size: 12px; color: #6B7280; line-height: 1.6; }
 
   /* ─── TRUST ─── */
-  .about-trust { margin-bottom: 36px; }
-  .about-trust-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .about-trust-item {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 16px; border-radius: 14px;
-    background: #F8F9FB; border: 1px solid #E5E7EB;
-  }
-  .about-trust-icon {
-    width: 26px; height: 26px; flex-shrink: 0; border-radius: 8px;
-    background: rgba(16,185,129,0.08); display: flex; align-items: center; justify-content: center;
-    color: #10B981; font-size: 11px; font-weight: 700;
-  }
-  .about-trust-icon.shield { background: rgba(14,165,233,0.08); font-size: 14px; }
-  .about-trust-item strong { display: block; font-family: 'Outfit', sans-serif; font-size: 12px; color: #111827; margin-bottom: 2px; font-weight: 700; }
-  .about-trust-item p { font-size: 11px; color: #6B7280; line-height: 1.5; }
-  .about-trust-link { color: #0EA5E9; font-weight: 600; text-decoration: none; }
-  .about-trust-link:hover { text-decoration: underline; }
-
   /* ─── FAQ ─── */
   .about-faq { margin-bottom: 36px; }
   .about-faq-list { display: flex; flex-direction: column; gap: 8px; }
@@ -270,7 +252,6 @@ const content = await getContent();
   .about-btn-ghost:hover { border-color: #D1D5DB; color: #111827; }
 
   @media (max-width: 600px) {
-    .about-trust-grid { grid-template-columns: 1fr; }
     .about-stats { flex-direction: column; gap: 16px; }
     .about-stat-divider { width: 60px; height: 1px; }
   }
