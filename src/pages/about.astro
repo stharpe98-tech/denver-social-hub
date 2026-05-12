@@ -1,37 +1,16 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
-import { getLevel } from '../lib/levels';
 import { getContent } from '../lib/content';
 
 const db = getDB();
-let members: any[] = [];
 let totalMembers = 0;
 try {
   if (db) {
-    const r = await db.prepare("SELECT m.id,m.name,m.email,m.neighborhood,m.points,m.role,s.current_streak,s.total_events FROM members m LEFT JOIN member_streaks s ON m.email=s.email WHERE m.name IS NOT NULL AND m.name!='' ORDER BY m.points DESC LIMIT 20").all();
-    members = r?.results || [];
     const mc = await db.prepare("SELECT COUNT(*) as cnt FROM members").first();
     totalMembers = mc?.cnt || 0;
   }
 } catch {}
-
-const avatarColors = [
-  "linear-gradient(135deg,#0EA5E9,#3B82F6)",
-  "linear-gradient(135deg,#EC4899,#F59E0B)",
-  "linear-gradient(135deg,#3B82F6,#10B981)",
-  "linear-gradient(135deg,#10B981,#06B6D4)",
-  "linear-gradient(135deg,#F59E0B,#EF4444)",
-  "linear-gradient(135deg,#0EA5E9,#EC4899)",
-  "linear-gradient(135deg,#EF4444,#0EA5E9)",
-  "linear-gradient(135deg,#06B6D4,#0EA5E9)",
-];
-
-function getInitials(name: string): string {
-  const parts = (name || '?').trim().split(' ');
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return (name || '?')[0].toUpperCase();
-}
 
 const faqs = [
   { q: "Is this actually free?", a: "Yep. No fees, no premium tier, no upsell." },
@@ -86,44 +65,6 @@ const content = await getContent();
       <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking "when's the next one?" — so we kept going. Bowling, hikes, pottery, game nights. There's 80+ of us now and it still feels small because every event is capped at 12.</p>
       <p>The only rules: don't be a creep, show up if you say you will, don't pitch crypto at dinner. That's it.</p>
     </div>
-  </section>
-
-  <!-- THE CREW (merged from /members) -->
-  <section class="about-crew" id="crew">
-    <div class="about-section-tag">The Crew</div>
-    <h2 class="about-section-h2">These people actually leave the <em>house.</em></h2>
-
-    {members.length > 0 ? (
-      <div class="mem-grid">
-        {members.map((m: any, i: number) => {
-          const lvl = getLevel(m.total_events || 0);
-          return (
-            <div class="mc">
-              <div class="mc-av" style={`background:${avatarColors[i % avatarColors.length]}`}>
-                {getInitials(m.name)}
-              </div>
-              <div class="mc-name">{m.name}</div>
-              <div class="mc-hood">{m.neighborhood || 'Denver'}</div>
-              <div class="mc-badges">
-                {m.role === 'admin' && <span class="mc-badge organizer">Organizer</span>}
-                {lvl.number > 1 && <span class="mc-badge" style={`background:${lvl.color}12;color:${lvl.color}`}>{lvl.emoji} {lvl.name}</span>}
-                {(m.current_streak || 0) >= 3 && <span class="mc-badge streak">🔥 {m.current_streak}</span>}
-              </div>
-              <div class="mc-stats">
-                <div class="mc-s"><div class="mc-s-num">{m.total_events || 0}</div><div class="mc-s-label">Events</div></div>
-                <div class="mc-s"><div class="mc-s-num">{m.points || 0}</div><div class="mc-s-label">Points</div></div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    ) : (
-      <div class="crew-empty">
-        <div class="crew-empty-icon">👥</div>
-        <h3>The crew is just getting started</h3>
-        <p>Be one of the founding members.</p>
-      </div>
-    )}
   </section>
 
   <!-- HOW IT WORKS -->
@@ -249,41 +190,6 @@ const content = await getContent();
   }
   .about-section-h2 em { font-style: normal; color: #0EA5E9; }
 
-  /* ─── THE CREW ─── */
-  .about-crew { margin-bottom: 36px; }
-  .mem-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 12px;
-  }
-  .mc {
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 14px;
-    padding: 16px; text-align: center; transition: all .2s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  }
-  .mc:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); border-color: #D1D5DB; }
-  .mc-av {
-    width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px; font-weight: 800; color: #fff; font-family: 'Outfit', sans-serif;
-  }
-  .mc-name { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px; color: #111827; margin-bottom: 2px; }
-  .mc-hood { font-size: 10px; color: #9CA3AF; margin-bottom: 6px; }
-  .mc-badges { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-bottom: 8px; min-height: 18px; }
-  .mc-badge { font-size: 8px; padding: 2px 6px; border-radius: 5px; font-weight: 700; background: rgba(14,165,233,0.06); color: #0EA5E9; }
-  .mc-badge.organizer { background: rgba(16,185,129,0.08); color: #10B981; }
-  .mc-badge.streak { background: rgba(245,158,11,0.08); color: #D97706; }
-  .mc-stats { display: flex; justify-content: center; gap: 14px; padding-top: 8px; border-top: 1px solid #E5E7EB; }
-  .mc-s { text-align: center; }
-  .mc-s-num { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 13px; color: #0EA5E9; }
-  .mc-s-label { font-size: 8px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: .04em; }
-  .crew-empty {
-    text-align: center; padding: 36px 20px;
-    border-radius: 14px; background: #F8F9FB; border: 1px solid #E5E7EB;
-  }
-  .crew-empty-icon { font-size: 32px; margin-bottom: 8px; }
-  .crew-empty h3 { font-family: 'Outfit', sans-serif; font-size: 16px; color: #111827; margin-bottom: 4px; font-weight: 700; }
-  .crew-empty p { font-size: 12px; color: #6B7280; }
-
   /* ─── HOW IT WORKS ─── */
   .about-how { margin-bottom: 36px; }
   .about-steps { display: flex; flex-direction: column; gap: 12px; }
@@ -367,7 +273,6 @@ const content = await getContent();
     .about-trust-grid { grid-template-columns: 1fr; }
     .about-stats { flex-direction: column; gap: 16px; }
     .about-stat-divider { width: 60px; height: 1px; }
-    .mem-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   }
 </style>
 
