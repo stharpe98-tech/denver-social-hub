@@ -16,9 +16,11 @@ export const GET = async ({ request }: { request: Request }) => {
 
   const url = new URL(request.url);
   const next = url.searchParams.get('next') || '/events';
+  const connect = url.searchParams.get('connect') === '1';
 
-  // Encode next URL into state so we can redirect after callback
-  const statePayload = btoa(JSON.stringify({ csrf: state, next }));
+  // Encode next URL + connect flag into state so the callback knows
+  // whether to merge identities into the existing session or sign in.
+  const statePayload = btoa(JSON.stringify({ csrf: state, next, connect }));
 
   const authUrl = new URL('https://www.reddit.com/api/v1/authorize');
   authUrl.searchParams.set('client_id', REDDIT_CLIENT_ID);
