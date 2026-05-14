@@ -138,7 +138,7 @@ export const GET = async ({ request, cookies }: { request: Request; cookies: any
     }));
     const headers = new Headers();
     headers.append('Location', '/profile?connect=reddit_ok');
-    headers.append('Set-Cookie', `dsn_user=${cookieVal}; Path=/; Max-Age=604800; SameSite=Lax`);
+    headers.append('Set-Cookie', `dsn_user=${cookieVal}; Path=/; Max-Age=2592000; SameSite=Lax`);
     headers.append('Set-Cookie', 'reddit_state=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly');
     return new Response(null, { status: 302, headers });
   }
@@ -186,7 +186,7 @@ export const GET = async ({ request, cookies }: { request: Request; cookies: any
   // Clear the state cookie, set session cookie
   const headers = new Headers();
   headers.append('Location', isNewUser ? '/onboarding/1' : nextUrl);
-  headers.append('Set-Cookie', `dsn_user=${cookieVal}; Path=/; Max-Age=604800; SameSite=Lax`);
+  headers.append('Set-Cookie', `dsn_user=${cookieVal}; Path=/; Max-Age=2592000; SameSite=Lax`);
   headers.append('Set-Cookie', 'reddit_state=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly');
 
   return new Response(null, { status: 302, headers });
