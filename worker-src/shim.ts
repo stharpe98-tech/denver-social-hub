@@ -7,9 +7,11 @@
 import astroWorker from '../worker/index.js';
 import { buildReminderEmail } from '../src/lib/email';
 import { ensurePotluckSchema } from '../src/lib/potluck-schema';
+import { runAllSyncs } from '../src/lib/event-sync';
 
 interface Env {
   DB: D1Database;
+  DISCORD_BOT_TOKEN?: string;
   [key: string]: unknown;
 }
 
@@ -187,7 +189,24 @@ function escapeHtml(s: string): string {
 
 export default {
   fetch: (astroWorker as any).fetch,
-  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    // Two crons share this handler — branch on the pattern so we don't
+    // try to send 96 daily emails or sync events once a day.
+    const cron = (event as any).cron as string | undefined;
+    const isSync = cron === '*/15 * * * *';
+
+    if (isSync) {
+      ctx.waitUntil(
+        runAllSyncs(env.DB, env.DISCORD_BOT_TOKEN).then((r) => {
+          console.log(`[sync] inserted=${r.total.inserted} updated=${r.total.updated} errors=${r.total.errors}`);
+        }).catch((e) => {
+          console.error('[sync] failed', e);
+        }),
+      );
+      return;
+    }
+
+    // Default = daily reminder cron (0 14 * * *)
     ctx.waitUntil(
       sendReminders(env).then((r) => {
         console.log(`[reminders] sent=${r.sent} errors=${r.errors} skipped=${r.skipped ?? 'none'}`);
