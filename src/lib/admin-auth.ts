@@ -39,11 +39,46 @@ export function getOrgSession(ctx: CookieCtx): OrgSession | null {
 //   if (gate instanceof Response) return gate;
 //   const org = gate;
 export async function requireApprovedOrg(Astro: AstroGlobal): Promise<Org | Response> {
-  const session = getOrgSession(Astro);
-  if (!session) return Astro.redirect('/admin/login');
+  let session = getOrgSession(Astro);
   const db = getDB();
   if (!db) return new Response('DB unavailable', { status: 500 });
   await ensureOrgSchema(db);
+
+  // Bridge: if the visitor has no organizer session but their member
+  // (dsn_user) cookie is the super-admin or role=admin, auto-issue an
+  // organizer session from the matching organizers row so admins don't
+  // have to log in twice to reach /admin/*.
+  if (!session) {
+    const userCookie = Astro.cookies.get('dsn_user')?.value;
+    if (userCookie) {
+      try {
+        const u = JSON.parse(userCookie);
+        const email = (u?.email || '').toLowerCase();
+        const isAdmin = email === SUPER_ADMIN_EMAIL || u?.role === 'admin';
+        if (isAdmin && email) {
+          let orgRow = await db.prepare(
+            "SELECT id, name, email, plan FROM organizers WHERE LOWER(email) = ?"
+          ).bind(email).first() as OrgSession | null;
+          if (!orgRow && email === SUPER_ADMIN_EMAIL) {
+            await db.prepare(
+              "INSERT INTO organizers (name, email, plan, approved_for_potlucks) VALUES (?, ?, 'free', 1)"
+            ).bind(u?.name || 'Admin', email).run();
+            orgRow = await db.prepare(
+              "SELECT id, name, email, plan FROM organizers WHERE LOWER(email) = ?"
+            ).bind(email).first() as OrgSession | null;
+          }
+          if (orgRow) {
+            session = orgRow;
+            Astro.cookies.set('dsn_org', JSON.stringify(orgRow), {
+              path: '/', maxAge: 60 * 60 * 24 * 30, sameSite: 'lax', httpOnly: true,
+            });
+          }
+        }
+      } catch {}
+    }
+  }
+
+  if (!session) return Astro.redirect('/admin/login');
   const row = await db.prepare(
     "SELECT id, name, email, plan, approved_for_potlucks FROM organizers WHERE id = ?"
   ).bind(session.id).first() as Org | null;
