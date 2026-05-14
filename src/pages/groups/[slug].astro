@@ -107,12 +107,12 @@ const canJoinDirect = !myRole && group.privacy === 'public' && !!user;
       </section>
 
       <section class="g-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;">
-          <h2 class="g-h" style="margin-bottom:0;">Events ({groupEvents.length})</h2>
+        <div class="g-card-head-row">
+          <h2 class="g-h g-h-inline">Events ({groupEvents.length})</h2>
           {myRole && <a href={`/events/new?group=${group.slug}`} class="g-invite-btn">+ New event</a>}
         </div>
         {groupEvents.length === 0 ? (
-          <p style="font-size:14px;color:var(--text-sec);line-height:1.5;">No events yet. {myRole ? <>Be the first — <a href={`/events/new?group=${group.slug}`} style="color:var(--accent);font-weight:600;">post one →</a></> : 'Members can post events scoped to this group.'}</p>
+          <p class="g-events-empty">No events yet. {myRole ? <>Be the first — <a href={`/events/new?group=${group.slug}`} class="g-events-empty-link">post one →</a></> : 'Members can post events scoped to this group.'}</p>
         ) : (
           <div class="g-events">
             {groupEvents.map((ev: any) => (
@@ -231,6 +231,10 @@ const canJoinDirect = !myRole && group.privacy === 'public' && !!user;
   .g-iv-used { color: var(--accent2); font-weight: 600; }
 
   .g-events { display: flex; flex-direction: column; gap: 8px; }
+  .g-events-empty { font-size: 14px; color: var(--text-sec); line-height: 1.5; }
+  .g-events-empty-link { color: var(--accent); font-weight: 600; }
+  .g-card-head-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+  .g-h-inline { margin-bottom: 0; }
   .g-event { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; transition: transform 0.15s, border-color 0.15s, background 0.15s; }
   .g-event:hover { transform: translateY(-1px); border-color: var(--border-hover); background: var(--bg); }
   .g-event.past { opacity: 0.7; }
