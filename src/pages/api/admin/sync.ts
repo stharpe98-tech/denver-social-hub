@@ -2,7 +2,7 @@ import type { APIContext } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getDB } from '../../../lib/db';
 import { ensureEventSyncSchema } from '../../../lib/event-sync/schema';
-import { runAllSyncs } from '../../../lib/event-sync';
+import { runAllSyncs, runOneSync } from '../../../lib/event-sync';
 import { findKind, buildConfigFromBody } from '../../../lib/event-sync/kinds';
 
 export const prerender = false;
@@ -43,10 +43,17 @@ export async function POST({ request }: APIContext) {
     if (error) return json({ error }, 400);
 
     const webhookToken = kind === 'webhook' ? generateToken() : null;
-    await db.prepare(
+    const insert = await db.prepare(
       "INSERT INTO event_sources (kind, label, config, webhook_token, enabled) VALUES (?, ?, ?, ?, 1)"
     ).bind(kind, label, JSON.stringify(config || {}), webhookToken).run();
-    return json({ ok: true });
+
+    const newId = Number((insert as any).meta?.last_row_id) || 0;
+    let sync: any = null;
+    if (kind !== 'webhook' && newId) {
+      const botToken = (env as any).DISCORD_BOT_TOKEN as string | undefined;
+      sync = await runOneSync(db, newId, botToken);
+    }
+    return json({ ok: true, id: newId, sync });
   }
 
   if (action === 'update') {
@@ -63,14 +70,27 @@ export async function POST({ request }: APIContext) {
     await db.prepare(
       "UPDATE event_sources SET label = ?, config = ?, enabled = ? WHERE id = ?"
     ).bind(label, JSON.stringify(config || {}), enabled, id).run();
-    return json({ ok: true });
+
+    let sync: any = null;
+    if (enabled && row.kind !== 'webhook') {
+      const botToken = (env as any).DISCORD_BOT_TOKEN as string | undefined;
+      sync = await runOneSync(db, id, botToken);
+    }
+    return json({ ok: true, sync });
   }
 
   if (action === 'toggle') {
     const id = parseInt(body.id);
     if (!id) return json({ error: 'missing id' }, 400);
     await db.prepare("UPDATE event_sources SET enabled = 1 - enabled WHERE id = ?").bind(id).run();
-    return json({ ok: true });
+    // If we just enabled it, sync right away so the user doesn't wait for cron.
+    const row: any = await db.prepare("SELECT kind, enabled FROM event_sources WHERE id = ?").bind(id).first();
+    let sync: any = null;
+    if (row?.enabled && row.kind !== 'webhook') {
+      const botToken = (env as any).DISCORD_BOT_TOKEN as string | undefined;
+      sync = await runOneSync(db, id, botToken);
+    }
+    return json({ ok: true, sync });
   }
 
   if (action === 'rotate_token') {

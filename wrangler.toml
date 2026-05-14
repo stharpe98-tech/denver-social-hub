@@ -21,5 +21,5 @@ run_worker_first = true
 [triggers]
 crons = [
   "0 14 * * *",   # Daily at 2pm UTC (8am MT) — potluck reminder emails
-  "0 */2 * * *",  # Every 2 hours — event sync from Discord/ICS sources
+  "*/15 * * * *", # Every 15 minutes — event sync from all configured sources
 ]
