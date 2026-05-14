@@ -14,54 +14,54 @@ const content = await getContent();
 
   <ol class="c-rules">
     <li class="c-rule">
-      <span class="c-num">1</span>
+      <span class="c-num">👋</span>
       <div>
         <h2>Everyone's welcome.</h2>
-        <p>Quiet, loud, awkward, neurodivergent, new to Denver — you're good here. Leave whenever. You don't owe anyone an explanation.</p>
+        <p>Quiet, loud, awkward, neurodivergent, brand new to Denver — you're good here. Leave whenever you want. You don't owe anyone an explanation. 🚪</p>
       </div>
     </li>
 
     <li class="c-rule">
-      <span class="c-num">2</span>
+      <span class="c-num">🔒</span>
       <div>
         <h2>Your info stays private.</h2>
-        <p>Locations and host contact are hidden until you RSVP. Other members only see your first name and neighborhood.</p>
+        <p>Locations and host phone numbers are hidden until you RSVP. Other members only see your first name and neighborhood. No data selling, no creep tracking.</p>
       </div>
     </li>
 
     <li class="c-rule">
-      <span class="c-num">3</span>
+      <span class="c-num">🎤</span>
       <div>
         <h2>Hosts are accountable.</h2>
-        <p>Every event has a named host. Events are moderated before going live. Groups stay small (usually 6–12 people).</p>
+        <p>Every event has a named host. Events get a quick moderation pass before going live. Groups stay small (usually 6–12 people) so things actually feel like a hangout.</p>
       </div>
     </li>
 
     <li class="c-rule c-rule-warn">
-      <span class="c-num c-num-warn">!</span>
+      <span class="c-num c-num-warn">🚫</span>
       <div>
         <h2>What gets you removed.</h2>
-        <p>Harassment, intimidation, following someone after an event, or sharing someone's location or private info. You don't need proof to report — your word is enough.</p>
+        <p>Harassment, intimidation, following someone after an event, or sharing someone's location or private info. You don't need proof to report — your word is enough. We listen, we act.</p>
       </div>
     </li>
 
     <li class="c-rule">
-      <span class="c-num">4</span>
+      <span class="c-num">📣</span>
       <div>
         <h2>Report anything that feels off.</h2>
-        <p>Tell the host, jump in our Discord, or email us. We keep it between us.</p>
+        <p>Tell the host on the spot, jump in our Discord, or email us. We keep it between us. No "are you sure?" gauntlet.</p>
         <div class="c-btns">
-          <a href="https://discord.gg/S8SFNkdSgK" class="c-btn c-btn-discord" target="_blank" rel="noopener">Discord</a>
-          <a href="/contact" class="c-btn c-btn-ghost">Contact us</a>
+          <a href="https://discord.gg/S8SFNkdSgK" class="c-btn c-btn-discord" target="_blank" rel="noopener">💬 Discord</a>
+          <a href="/contact" class="c-btn c-btn-ghost">✉️ Contact us</a>
         </div>
       </div>
     </li>
 
     <li class="c-rule">
-      <span class="c-num">5</span>
+      <span class="c-num">🎉</span>
       <div>
         <h2>It's free, and that's the deal.</h2>
-        <p>No fees, no premium tier, no selling your data. Some events have venue costs between you and the venue — we don't take a cut. Denver Social organizes events but isn't liable for what happens at them.</p>
+        <p>No fees, no premium tier, no upsell. Some events have venue costs between you and the venue — we don't take a cut. Denver Social organizes the meetups but isn't liable for what happens at them. Show up, have fun, be cool. 🏔</p>
       </div>
     </li>
   </ol>
@@ -102,13 +102,13 @@ const content = await getContent();
   .c-rule p { font-size: 15px; line-height: 1.6; color: var(--text-sec); }
   .c-num {
     flex-shrink: 0;
-    width: 36px; height: 36px; border-radius: 50%;
+    width: 44px; height: 44px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-size: 16px; font-weight: 800;
-    background: var(--accent-dim); color: var(--accent);
+    font-size: 22px;
+    background: var(--accent-dim);
   }
   .c-rule-warn { background: linear-gradient(180deg, #FEF2F2, #fff); border-color: #FECACA; }
-  .c-num-warn { background: #FEE2E2; color: #991B1B; }
+  .c-num-warn { background: #FEE2E2; }
 
   .c-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
   .c-btn {
