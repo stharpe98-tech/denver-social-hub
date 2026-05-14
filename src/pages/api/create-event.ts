@@ -54,7 +54,7 @@ export async function POST({ request, cookies }: APIContext) {
 
   try {
     await ensureEventsSchema(db);
-    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day, vibe_tags } = await request.json() as any;
+    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day, vibe_tags, group_id: rawGroupId } = await request.json() as any;
 
     if (!title || !title.trim()) {
       return new Response(JSON.stringify({ error: 'Title is required' }), { status: 400 });
@@ -107,8 +107,20 @@ export async function POST({ request, cookies }: APIContext) {
       ? vibe_tags.filter((s: any) => typeof s === 'string').slice(0, 6).join(',')
       : '';
 
+    // Group scoping (optional). Must be a member of the group to post under it.
+    let groupId: number | null = null;
+    if (rawGroupId) {
+      const gid = parseInt(rawGroupId);
+      if (gid) {
+        const isMember: any = await db.prepare(
+          'SELECT 1 FROM group_members WHERE group_id=? AND LOWER(member_email)=LOWER(?)'
+        ).bind(gid, user.email).first();
+        if (isMember) groupId = gid;
+      }
+    }
+
     await db.prepare(
-      `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, discord_link, contact_phone, vibe_tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, discord_link, contact_phone, vibe_tags, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       title.trim(),
       fullDesc,
@@ -123,6 +135,7 @@ export async function POST({ request, cookies }: APIContext) {
       eventLink,
       phone,
       vibeTagsStr,
+      groupId,
     ).run();
 
     // Notify Seth about new event (non-blocking)

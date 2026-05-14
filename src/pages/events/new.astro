@@ -1,19 +1,48 @@
 ---
 import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+import { ensureGroupsSchema } from '../../lib/groups-schema';
 
 const cookie = Astro.cookies.get('dsn_user')?.value;
 let user: any = null;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
-if (!user) return Astro.redirect('/login?next=' + encodeURIComponent('/events/new'));
+const groupSlug = Astro.url.searchParams.get('group') || '';
+const nextUrl = '/events/new' + (groupSlug ? `?group=${encodeURIComponent(groupSlug)}` : '');
+if (!user) return Astro.redirect('/login?next=' + encodeURIComponent(nextUrl));
+
+let postingInGroup: any = null;
+if (groupSlug) {
+  const db = getDB();
+  if (db) {
+    await ensureGroupsSchema(db);
+    const g: any = await db.prepare('SELECT id, slug, name FROM groups WHERE slug=?').bind(groupSlug).first();
+    if (g) {
+      const member: any = await db.prepare(
+        'SELECT 1 FROM group_members WHERE group_id=? AND LOWER(member_email)=LOWER(?)'
+      ).bind(g.id, user.email).first();
+      if (member) postingInGroup = g;
+    }
+  }
+}
 ---
 <Base title="Create an event" description="Plan a small-group event in Denver — dinner, hike, game night, whatever.">
   <div class="ne-wrap">
     <div class="ne-card">
-      <a href="/events" class="ne-back">← Events</a>
+      <a href={postingInGroup ? `/groups/${postingInGroup.slug}` : '/events'} class="ne-back">← {postingInGroup ? postingInGroup.name : 'Events'}</a>
       <h1>Plan an event.</h1>
       <p class="ne-sub">Anything — a dinner, hike, game night, brewery hop. Other locals will see it and RSVP.</p>
 
-      <form id="ne-form">
+      {postingInGroup && (
+        <div class="ne-group-banner">
+          <span class="ne-group-icon">👥</span>
+          <div>
+            <strong>Posting in {postingInGroup.name}</strong>
+            <span>This event will be scoped to the group — visible everywhere but tagged with it.</span>
+          </div>
+        </div>
+      )}
+
+      <form id="ne-form" data-group-id={postingInGroup?.id || ''} data-group-slug={postingInGroup?.slug || ''}>
         <label class="ne-label">What are you hosting? <span class="opt">*</span></label>
         <input type="text" id="ne-title" class="ne-input" placeholder="Sunset hike at Mount Falcon" required maxlength="120"/>
 
@@ -124,6 +153,15 @@ if (!user) return Astro.redirect('/login?next=' + encodeURIComponent('/events/ne
     .ne-vibe input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
     .ne-err { font-size: 13px; color: var(--red); margin-top: 10px; display: none; text-align: center; }
     .ne-err.show { display: block; }
+    .ne-group-banner {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; margin: 0 0 var(--space-4);
+      background: linear-gradient(135deg, #EEF2FF, #F0FDF4);
+      border: 1px solid #C7D2FE; border-radius: 12px;
+    }
+    .ne-group-icon { font-size: 20px; }
+    .ne-group-banner strong { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--text); display: block; }
+    .ne-group-banner span { font-size: 12px; color: var(--text-sec); display: block; }
   </style>
 
   <script is:inline>
@@ -140,6 +178,9 @@ if (!user) return Astro.redirect('/login?next=' + encodeURIComponent('/events/ne
 
       var btn = document.getElementById('ne-submit'); var orig = btn.textContent;
       btn.disabled = true; btn.textContent = 'Posting…';
+      var form = document.getElementById('ne-form');
+      var groupId = form.getAttribute('data-group-id') || null;
+      var groupSlug = form.getAttribute('data-group-slug') || '';
       var body = {
         title: title,
         description: document.getElementById('ne-desc').value.trim(),
@@ -153,11 +194,12 @@ if (!user) return Astro.redirect('/login?next=' + encodeURIComponent('/events/ne
         link: document.getElementById('ne-link').value.trim(),
         contact_phone: document.getElementById('ne-phone').value.trim(),
         vibe_tags: Array.from(document.querySelectorAll('input[name="vibe"]:checked')).map(function(c){ return c.value; }),
+        group_id: groupId,
       };
       try {
         var res = await fetch('/api/create-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         var data = await res.json();
-        if (data.ok || data.created) { location.href = '/events'; return; }
+        if (data.ok || data.created) { location.href = groupSlug ? ('/groups/' + groupSlug) : '/events'; return; }
         err.textContent = data.error || 'Could not post — try again.';
         err.className = 'ne-err show';
       } catch {

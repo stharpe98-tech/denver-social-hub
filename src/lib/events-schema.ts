@@ -7,6 +7,10 @@ export async function ensureEventsSchema(db: D1Database): Promise<void> {
     // Comma-separated for simplicity (e.g. "sober,introvert,lgbtq").
     await db.prepare("ALTER TABLE events ADD COLUMN vibe_tags TEXT").run();
   }
+  if (!names.has('group_id')) {
+    // Optional link to a Group — null means "site-wide", not scoped.
+    await db.prepare("ALTER TABLE events ADD COLUMN group_id INTEGER").run();
+  }
 }
 
 // Canonical vibe-tag dictionary. Keep keys URL/storage-friendly; labels
