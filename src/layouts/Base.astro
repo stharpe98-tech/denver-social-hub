@@ -36,6 +36,9 @@ const redditName = user?.reddit_username || user?.name;
       <nav class="site-nav site-nav-right">
         <a href="/about" class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
         <a href="/help"  class:list={["site-nav-link", { active: currentPath.startsWith("/help") }]}>Help</a>
+        {isAdmin && (
+          <a href="/admin/dashboard" class:list={["site-nav-link site-nav-admin", { active: currentPath.startsWith("/admin") }]}>⚙ Admin</a>
+        )}
       </nav>
 
       <div class="site-auth">
@@ -80,6 +83,7 @@ const redditName = user?.reddit_username || user?.name;
         <div class="footer-col-title">Stay in touch</div>
         <a href="/contact">Contact us</a>
         <a href="/login">Sign in</a>
+        {isAdmin && <a href="/admin/dashboard">Admin dashboard</a>}
       </div>
     </div>
     <div class="site-footer-bottom">
@@ -220,6 +224,11 @@ const redditName = user?.reddit_username || user?.name;
   .site-nav-link:hover { color: #fff; background: rgba(255,255,255,0.06); }
   .site-nav-link:active { background: rgba(255,255,255,0.10); }
   .site-nav-link.active { color: var(--accent); background: rgba(14, 165, 233, 0.14); }
+  .site-nav-admin {
+    color: #c4b5fd; background: rgba(124,58,237,0.18);
+    border: 1px solid rgba(124,58,237,0.35);
+  }
+  .site-nav-admin:hover { color: #fff; background: rgba(124,58,237,0.30); }
 
   .site-logo {
     display: inline-flex; align-items: center; gap: var(--space-2);
