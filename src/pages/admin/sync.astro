@@ -1,0 +1,251 @@
+---
+import { getDB } from '../../lib/db';
+import { requireApprovedOrg } from '../../lib/admin-auth';
+import { ensureEventSyncSchema } from '../../lib/event-sync/schema';
+
+const gate = await requireApprovedOrg(Astro);
+if (gate instanceof Response) return gate;
+
+const db = getDB();
+let sources: any[] = [];
+if (db) {
+  await ensureEventSyncSchema(db);
+  const { results } = await db.prepare(
+    "SELECT id, kind, label, config, enabled, last_synced_at, last_status, last_error, last_count FROM event_sources ORDER BY id DESC"
+  ).all();
+  sources = results ?? [];
+}
+
+function describeConfig(kind: string, configJson: string | null): string {
+  if (!configJson) return '';
+  try {
+    const c = JSON.parse(configJson);
+    if (kind === 'discord') return `guild ${c.guild_id || '?'}`;
+    if (kind === 'ics') return c.url || '';
+    return '';
+  } catch { return ''; }
+}
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Event Sync · Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style is:global>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #f7f5f2; color: #1c1917; font-family: 'Inter', sans-serif; min-height: 100vh; }
+    body { padding-bottom: 60px; }
+    .lh { background: #f7f5f2; border-bottom: 1px solid #e4ddd4; padding: 28px 20px; }
+    .lh-in { max-width: 720px; margin: 0 auto; }
+    .lh-back { color: #8a8a96; font-size: 13px; text-decoration: none; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; }
+    .lh h1 { font-size: clamp(20px,5vw,26px); font-weight: 700; color: #1c1917; margin-bottom: 4px; }
+    .lh p { font-size: 13px; color: #8a8a96; font-family: 'JetBrains Mono', monospace; }
+    .lp { max-width: 720px; margin: 0 auto; padding: 20px 16px; }
+    .card { background: #fff; border: 1px solid #e4ddd4; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+    .card-title { font-size: 11px; font-weight: 600; color: #8a8a96; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 11px; color: #8a8a96; margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; }
+    .inp { width: 100%; padding: 11px 13px; background: #f7f5f2; border: 1px solid #e4ddd4; border-radius: 7px; color: #1c1917; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; -webkit-appearance: none; }
+    .inp:focus { border-color: #7C3AED; }
+    .sel { width: 100%; padding: 11px 13px; background: #f7f5f2; border: 1px solid #e4ddd4; border-radius: 7px; font-size: 14px; font-family: 'Inter', sans-serif; }
+    .btn { padding: 11px 16px; border-radius: 8px; border: none; background: #7C3AED; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .btn:hover { background: #6D28D9; }
+    .btn-sec { background: transparent; color: #6a6a76; border: 1px solid #e4ddd4; padding: 9px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+    .btn-sec:hover { border-color: #7C3AED; color: #7C3AED; }
+    .btn-danger { background: transparent; color: #8a8a96; border: 1px solid #e4ddd4; padding: 9px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+    .btn-danger:hover { border-color: #ff4757; color: #ff4757; }
+    .run-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .sec-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #8a8a96; margin-bottom: 12px; }
+    .src { background: #fff; border: 1px solid #e4ddd4; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+    .src.disabled { opacity: 0.55; }
+    .src-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+    .src-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .kind-pill { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+    .kind-discord { background: #EEF2FF; color: #4338CA; }
+    .kind-ics { background: #F0FDF4; color: #047857; }
+    .src-label { font-size: 14px; font-weight: 600; color: #1c1917; }
+    .src-cfg { font-size: 12px; color: #6a6a76; font-family: 'JetBrains Mono', monospace; margin-bottom: 8px; word-break: break-all; }
+    .src-meta { font-size: 11px; color: #8a8a96; font-family: 'JetBrains Mono', monospace; }
+    .src-status-ok { color: #047857; }
+    .src-status-err { color: #b91c1c; }
+    .src-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .empty { text-align: center; padding: 32px; color: #8a8a96; font-style: italic; font-size: 13px; }
+    .run-result { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6a6a76; margin-top: 8px; white-space: pre-wrap; }
+    .hide { display: none; }
+    .kind-fields { display: none; }
+    .kind-fields.show { display: block; }
+    .help { font-size: 11px; color: #8a8a96; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="lh">
+    <div class="lh-in">
+      <a href="/admin/dashboard" class="lh-back">← Admin</a>
+      <h1>🤖 Event Sync</h1>
+      <p>multi-source bot · pulls events into /events</p>
+    </div>
+  </div>
+
+  <div class="lp">
+
+    <div class="card">
+      <div class="run-row">
+        <div>
+          <div class="card-title" style="margin-bottom: 2px;">Run now</div>
+          <div style="font-size:12px;color:#8a8a96">Cron runs every 2 hours. Trigger manually any time.</div>
+        </div>
+        <button class="btn" id="runBtn">Sync all</button>
+      </div>
+      <div class="run-result hide" id="runResult"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Add source</div>
+      <div class="field">
+        <label>kind</label>
+        <select class="sel" id="newKind">
+          <option value="discord">Discord guild events</option>
+          <option value="ics">ICS calendar feed (Meetup, Google, Apple…)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>label</label>
+        <input type="text" class="inp" id="newLabel" placeholder="e.g. Denver Social Discord"/>
+      </div>
+
+      <div class="kind-fields show" data-kind="discord">
+        <div class="field">
+          <label>guild id</label>
+          <input type="text" class="inp" id="newGuildId" placeholder="123456789012345678"/>
+          <div class="help">Enable Developer Mode in Discord → right-click your server → Copy Server ID.</div>
+        </div>
+        <div class="field">
+          <label>bot token (optional)</label>
+          <input type="text" class="inp" id="newToken" placeholder="leave blank to use DISCORD_BOT_TOKEN secret"/>
+          <div class="help">Bot must be a member of the guild and have permission to view scheduled events.</div>
+        </div>
+      </div>
+
+      <div class="kind-fields" data-kind="ics">
+        <div class="field">
+          <label>ICS feed URL</label>
+          <input type="text" class="inp" id="newUrl" placeholder="https://…/events.ics"/>
+          <div class="help">Meetup: group page → Subscribe to calendar. Google: settings → "Secret address in iCal format".</div>
+        </div>
+      </div>
+
+      <button class="btn" id="addBtn">Add source</button>
+    </div>
+
+    <div class="sec-label">Connected sources ({sources.length})</div>
+
+    {sources.length === 0 ? (
+      <div class="empty">No sources yet — add one above.</div>
+    ) : (
+      sources.map((s: any) => (
+        <div class={"src" + (s.enabled ? "" : " disabled")} data-id={s.id}>
+          <div class="src-top">
+            <div class="src-title">
+              <span class={"kind-pill kind-" + s.kind}>{s.kind}</span>
+              <span class="src-label">{s.label || '(no label)'}</span>
+            </div>
+            <div style="font-size:11px;color:#8a8a96">#{s.id}</div>
+          </div>
+          <div class="src-cfg">{describeConfig(s.kind, s.config)}</div>
+          <div class="src-meta">
+            {s.last_synced_at ? (
+              <>
+                last sync: {new Date(s.last_synced_at).toLocaleString()} ·
+                {s.last_status === 'ok' ? (
+                  <span class="src-status-ok"> ok · {s.last_count ?? 0} events</span>
+                ) : (
+                  <span class="src-status-err"> error: {s.last_error || 'unknown'}</span>
+                )}
+              </>
+            ) : (
+              <span>never run</span>
+            )}
+          </div>
+          <div class="src-actions">
+            <button class="btn-sec js-toggle" data-id={s.id}>{s.enabled ? 'Disable' : 'Enable'}</button>
+            <button class="btn-danger js-delete" data-id={s.id}>Delete</button>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+
+  <script is:inline>
+    const $ = (id) => document.getElementById(id);
+
+    document.querySelectorAll('.kind-fields').forEach(el => el.classList.remove('show'));
+    function showKindFields(kind) {
+      document.querySelectorAll('.kind-fields').forEach(el => {
+        el.classList.toggle('show', el.getAttribute('data-kind') === kind);
+      });
+    }
+    showKindFields($('newKind').value);
+    $('newKind').addEventListener('change', e => showKindFields(e.target.value));
+
+    async function call(body) {
+      const res = await fetch('/api/admin/sync', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return res.json();
+    }
+
+    $('addBtn').addEventListener('click', async () => {
+      const kind = $('newKind').value;
+      const payload = { action: 'create', kind, label: $('newLabel').value.trim() };
+      if (kind === 'discord') {
+        payload.guild_id = $('newGuildId').value.trim();
+        payload.token = $('newToken').value.trim();
+      } else {
+        payload.url = $('newUrl').value.trim();
+      }
+      const r = await call(payload);
+      if (r.ok) location.reload();
+      else alert(r.error || 'Failed');
+    });
+
+    document.querySelectorAll('.js-toggle').forEach(b => b.addEventListener('click', async () => {
+      const r = await call({ action: 'toggle', id: parseInt(b.dataset.id) });
+      if (r.ok) location.reload(); else alert(r.error || 'Failed');
+    }));
+
+    document.querySelectorAll('.js-delete').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('Delete this source? Events already imported will stay.')) return;
+      const r = await call({ action: 'delete', id: parseInt(b.dataset.id) });
+      if (r.ok) location.reload(); else alert(r.error || 'Failed');
+    }));
+
+    $('runBtn').addEventListener('click', async () => {
+      const btn = $('runBtn');
+      const out = $('runResult');
+      btn.disabled = true; btn.textContent = 'Syncing…';
+      out.classList.remove('hide');
+      out.textContent = 'Running…';
+      try {
+        const r = await call({ action: 'run' });
+        if (!r.ok) { out.textContent = 'Error: ' + (r.error || 'unknown'); }
+        else {
+          const t = r.result.total;
+          const lines = [`Total: +${t.inserted} new · ${t.updated} updated · ${t.errors} errors`];
+          for (const s of r.result.bySource) {
+            lines.push(s.status === 'ok'
+              ? `  ✓ [${s.kind}] ${s.label || '(unlabeled)'}: +${s.inserted} / ~${s.updated}`
+              : `  ✗ [${s.kind}] ${s.label || '(unlabeled)'}: ${s.error}`);
+          }
+          out.textContent = lines.join('\n');
+          setTimeout(() => location.reload(), 1500);
+        }
+      } catch (e) {
+        out.textContent = 'Network error: ' + (e && e.message || e);
+      }
+      btn.disabled = false; btn.textContent = 'Sync all';
+    });
+  </script>
+</body>
+</html>

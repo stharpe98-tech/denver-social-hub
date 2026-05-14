@@ -7,6 +7,7 @@
 import astroWorker from '../worker/index.js';
 import { buildReminderEmail } from '../src/lib/email';
 import { ensurePotluckSchema } from '../src/lib/potluck-schema';
+import { runAllSyncs } from '../src/lib/event-sync';
 
 interface Env {
   DB: D1Database;
@@ -84,15 +85,33 @@ async function sendReminders(env: Env): Promise<{ sent: number; errors: number; 
   return { sent, errors, skipped: null };
 }
 
+async function runEventSync(env: Env): Promise<void> {
+  const db = env.DB;
+  if (!db) { console.log('[sync] skipped: no DB'); return; }
+  try {
+    const botToken = (env as any).DISCORD_BOT_TOKEN as string | undefined;
+    const r = await runAllSyncs(db, botToken);
+    console.log(`[sync] inserted=${r.total.inserted} updated=${r.total.updated} errors=${r.total.errors}`);
+  } catch (e) {
+    console.error('[sync] failed', e);
+  }
+}
+
 export default {
   fetch: (astroWorker as any).fetch,
-  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(
-      sendReminders(env).then((r) => {
-        console.log(`[reminders] sent=${r.sent} errors=${r.errors} skipped=${r.skipped ?? 'none'}`);
-      }).catch((e) => {
-        console.error('[reminders] failed', e);
-      }),
-    );
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    // The daily reminder cron is "0 14 * * *". Any other cron is the 2-hour
+    // sync schedule. Branch so we don't email reminders 12x/day.
+    if (event.cron === '0 14 * * *') {
+      ctx.waitUntil(
+        sendReminders(env).then((r) => {
+          console.log(`[reminders] sent=${r.sent} errors=${r.errors} skipped=${r.skipped ?? 'none'}`);
+        }).catch((e) => {
+          console.error('[reminders] failed', e);
+        }),
+      );
+    } else {
+      ctx.waitUntil(runEventSync(env));
+    }
   },
 };
