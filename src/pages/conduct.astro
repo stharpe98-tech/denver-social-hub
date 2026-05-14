@@ -3,210 +3,242 @@ import Base from '../layouts/Base.astro';
 import { getContent } from '../lib/content';
 const content = await getContent();
 ---
-<Base title="Safety, Conduct & Terms">
-<div class="conduct-page">
+<Base title="Safety & Terms" description="How Denver Social keeps things safe, friendly, and fair for everyone.">
+<div class="c-page">
 
-  <section class="cond-hero">
-    <div class="cond-tag">Safety & Conduct</div>
-    <h1 class="cond-h1" set:html={content.conduct_title}></h1>
-    <p class="cond-sub">{content.conduct_subtitle}</p>
-  </section>
+  <!-- HERO -->
+  <header class="c-hero">
+    <div class="c-tag">Safety & Terms</div>
+    <h1 class="c-title" set:html={content.conduct_title}></h1>
+    <p class="c-lede">{content.conduct_subtitle}</p>
+  </header>
 
-  <!-- EVERYONE'S WELCOME -->
-  <section class="cond-section">
-    <h2 class="cond-h2">Everyone's welcome here</h2>
-    <p class="cond-p">All ages, all backgrounds, all brain types. Quiet, loud, awkward, outgoing — doesn't matter. A few things we want people to know:</p>
-    <div class="cond-grid">
-      <div class="cond-card">
-        <strong>🧠 All brains welcome</strong>
-        <p>Neurodivergent, autistic, ADHD, social anxiety — you're good here. Be quiet, leave early, skip small talk, ask questions. There's no "right way" to hang out.</p>
+  <!-- TABLE OF CONTENTS -->
+  <nav class="c-toc" aria-label="On this page">
+    <span class="c-toc-label">On this page</span>
+    <ol>
+      <li><a href="#welcome">Everyone's welcome</a></li>
+      <li><a href="#safety">How we keep it safe</a></li>
+      <li><a href="#women">For women</a></li>
+      <li><a href="#line">Where's the line</a></li>
+      <li><a href="#hosting">Hosting & reporting</a></li>
+      <li><a href="#terms">Terms (the basics)</a></li>
+    </ol>
+  </nav>
+
+  <!-- EVERYONE -->
+  <section class="c-section" id="welcome">
+    <h2>Everyone's welcome</h2>
+    <p>All ages, all backgrounds, all brain types. Quiet, loud, awkward, outgoing — doesn't matter.</p>
+    <div class="c-cards">
+      <div class="c-card">
+        <span class="c-card-emoji">🧠</span>
+        <strong>All brains welcome</strong>
+        <p>Neurodivergent, autistic, ADHD, social anxiety — you're good here. Be quiet, leave early, skip small talk. There's no "right way" to hang out.</p>
       </div>
-      <div class="cond-card">
-        <strong>👋 Show up as you are</strong>
-        <p>Half the people here describe themselves as awkward. That's kind of the point. Nobody's performing. Nobody's keeping score on how social you are.</p>
+      <div class="c-card">
+        <span class="c-card-emoji">👋</span>
+        <strong>Show up as you are</strong>
+        <p>Half the people here describe themselves as awkward. That's kind of the point. Nobody's performing. Nobody's keeping score.</p>
       </div>
-      <div class="cond-card">
-        <strong>💜 Not a dating app</strong>
+      <div class="c-card">
+        <span class="c-card-emoji">💜</span>
+        <strong>Not a dating app</strong>
         <p>People are here to make friends. If something happens naturally, cool — but don't come here to hit on people. Read the room.</p>
       </div>
-      <div class="cond-card">
-        <strong>🚪 Leave whenever</strong>
+      <div class="c-card">
+        <span class="c-card-emoji">🚪</span>
+        <strong>Leave whenever</strong>
         <p>Hit your limit? Social battery dead? Just go. You don't owe anyone an explanation. No one will be weird about it.</p>
       </div>
     </div>
   </section>
 
   <!-- SAFETY -->
-  <section class="cond-section">
-    <h2 class="cond-h2">How we keep things safe</h2>
-    <p class="cond-p">A few things are built into how this works:</p>
-    <div class="cond-list-simple">
-      <div>📍 <strong>Locations hidden</strong> until you RSVP</div>
-      <div>📞 <strong>Host contact</strong> shared only with attendees</div>
-      <div>👤 <strong>Every event has a named host</strong> — someone's always accountable</div>
-      <div>✋ <strong>Events are moderated</strong> before going live</div>
-      <div>👥 <strong>Small groups</strong> — 6 to 12 people max</div>
+  <section class="c-section" id="safety">
+    <h2>How we keep it safe</h2>
+    <p>A few things are built in by default:</p>
+    <ul class="c-list">
+      <li><span class="c-icn">📍</span><div><strong>Locations hidden</strong> until you RSVP</div></li>
+      <li><span class="c-icn">📞</span><div><strong>Host contact</strong> only shared with confirmed attendees</div></li>
+      <li><span class="c-icn">👤</span><div><strong>Every event has a named host</strong> — someone's always accountable</div></li>
+      <li><span class="c-icn">✋</span><div><strong>Events are moderated</strong> before going live</div></li>
+      <li><span class="c-icn">👥</span><div><strong>Small groups</strong> — usually 6 to 12 people max</div></li>
+    </ul>
+  </section>
+
+  <!-- WOMEN -->
+  <section class="c-section" id="women">
+    <h2>For women</h2>
+    <p>We know meetups can feel different if you're a woman. Here's what we want you to know:</p>
+    <div class="c-callout c-callout-pos">
+      <ul class="c-checks">
+        <li><span class="c-check">✓</span>If someone makes you uncomfortable, tell the host or reach out to us. You don't need proof — your word is enough.</li>
+        <li><span class="c-check">✓</span>Your info stays private. Other members only see your first name and neighborhood.</li>
+        <li><span class="c-check">✓</span>Bring a friend your first time if you want. RSVP for both.</li>
+        <li><span class="c-check">✓</span>Most events are in public places. If someone hosts at home, the event says so upfront.</li>
+      </ul>
     </div>
   </section>
 
-  <!-- FOR WOMEN -->
-  <section class="cond-section">
-    <h2 class="cond-h2">For women</h2>
-    <p class="cond-p">We know meetups can feel different if you're a woman. Here's what we want you to know:</p>
-    <div class="cond-callout women">
-      <div class="cond-check-list">
-        <div><span class="cond-ck">✓</span> If someone makes you uncomfortable, tell the host or reach out to us. You don't need proof — your word is enough.</div>
-        <div><span class="cond-ck">✓</span> Your info stays private. Other members only see your first name and neighborhood.</div>
-        <div><span class="cond-ck">✓</span> Bring a friend your first time if you want. RSVP for both.</div>
-        <div><span class="cond-ck">✓</span> Most events are in public places. If someone hosts at their home, the event will say so upfront.</div>
-      </div>
+  <!-- LINE -->
+  <section class="c-section" id="line">
+    <h2>Where's the line</h2>
+    <p>We're pretty relaxed. But if someone says you made them uncomfortable, we're going to listen. These get you removed immediately:</p>
+    <div class="c-callout c-callout-neg">
+      <ul class="c-checks">
+        <li><span class="c-x">✕</span>Harassment or making someone feel unsafe</li>
+        <li><span class="c-x">✕</span>Threatening or intimidating anyone</li>
+        <li><span class="c-x">✕</span>Following someone after an event</li>
+        <li><span class="c-x">✕</span>Sharing someone's location or private info</li>
+      </ul>
     </div>
+    <p class="c-aside">Anything else — being rude, too drunk, trying to sell people something — someone will just talk to you about it.</p>
   </section>
 
-  <!-- THE LINE -->
-  <section class="cond-section">
-    <h2 class="cond-h2">Where's the line?</h2>
-    <p class="cond-p">We're pretty relaxed. But if someone says you made them uncomfortable, we're going to listen. These get you removed immediately:</p>
-    <div class="cond-callout red">
-      <div class="cond-check-list">
-        <div><span class="cond-x">✕</span> Harassment or making someone feel unsafe</div>
-        <div><span class="cond-x">✕</span> Threatening or intimidating anyone</div>
-        <div><span class="cond-x">✕</span> Following someone after an event</div>
-        <div><span class="cond-x">✕</span> Sharing someone's location or private info</div>
-      </div>
-    </div>
-    <p class="cond-p" style="margin-top:14px">Anything else — being rude, too drunk, trying to sell people something — someone will just talk to you about it.</p>
-  </section>
-
-  <!-- HOSTING + REPORTING -->
-  <section class="cond-section">
-    <h2 class="cond-h2">Hosting & reporting</h2>
-    <p class="cond-p">Anyone can host. You pick the spot, set the vibe, and help people find you. You're not a bouncer — everyone who shows up is responsible for themselves.</p>
-    <p class="cond-p">If something happens at an event, talk to the host, hop in the Discord, or email Seth. We'll keep it between us.</p>
-    <div class="cond-btns">
-      <a href="https://discord.gg/S8SFNkdSgK" class="cond-btn discord" target="_blank" rel="noopener">Discord</a>
-      <a href="/contact" class="cond-btn email">Contact us</a>
+  <!-- HOSTING -->
+  <section class="c-section" id="hosting">
+    <h2>Hosting & reporting</h2>
+    <p>Anyone can host. You pick the spot, set the vibe, and help people find you. You're not a bouncer — everyone who shows up is responsible for themselves.</p>
+    <p>If something happens at an event, talk to the host, jump in the Discord, or email us. We'll keep it between us.</p>
+    <div class="c-btns">
+      <a href="https://discord.gg/S8SFNkdSgK" class="c-btn c-btn-discord" target="_blank" rel="noopener">Open Discord</a>
+      <a href="/contact" class="c-btn c-btn-ghost">Contact us</a>
     </div>
   </section>
 
   <!-- TERMS -->
-  <section class="cond-section" id="terms">
-    <h2 class="cond-h2">The boring-but-important stuff</h2>
-    <p class="cond-p">We're not hiding anything behind legal jargon. Here's how this works:</p>
-    <div class="cond-list-simple">
-      <div>💸 <strong>It's free.</strong> No membership fees, no premium tier, no upsell. Ever.</div>
-      <div>🔒 <strong>Your data.</strong> We store your name and email to run the service. We don't sell your data.</div>
-      <div>🍽️ <strong>Event costs.</strong> Some events have costs between you and the venue — Denver Social doesn't take a cut.</div>
-      <div>💰 <strong>Deposits.</strong> Some events require a refundable deposit. Show up → get it back. No-show → forfeited.</div>
-      <div>🚫 <strong>Account removal.</strong> We can remove accounts that violate the rules above.</div>
-      <div>⚠️ <strong>Liability.</strong> Denver Social organizes events but isn't liable for what happens at them. Attend at your own risk.</div>
-    </div>
-    <p class="cond-p cond-updated">Last updated: March 2026</p>
+  <section class="c-section" id="terms">
+    <h2>Terms (the basics)</h2>
+    <p>We're not hiding anything behind legal jargon. Here's how this works:</p>
+    <ul class="c-list">
+      <li><span class="c-icn">💸</span><div><strong>It's free.</strong> No membership fees, no premium tier, no upsell. Ever.</div></li>
+      <li><span class="c-icn">🔒</span><div><strong>Your data.</strong> We store your name and email to run the service. We don't sell it.</div></li>
+      <li><span class="c-icn">🍽️</span><div><strong>Event costs.</strong> Some events have costs between you and the venue — Denver Social doesn't take a cut.</div></li>
+      <li><span class="c-icn">💰</span><div><strong>Deposits.</strong> Some events require a refundable deposit. Show up → get it back. No-show → forfeited.</div></li>
+      <li><span class="c-icn">🚫</span><div><strong>Account removal.</strong> We can remove accounts that violate the rules above.</div></li>
+      <li><span class="c-icn">⚠️</span><div><strong>Liability.</strong> Denver Social organizes events but isn't liable for what happens at them. Attend at your own risk.</div></li>
+    </ul>
+    <p class="c-updated">Last updated: March 2026</p>
   </section>
 
   <!-- CLOSER -->
-  <section class="cond-section">
-    <div class="cond-callout blue">
-      <p><strong>Real talk:</strong> Being awkward? Normal. Saying something dumb? Happens. Running late because I-25 is a parking lot? Every single time. This page isn't about being perfect — it's so everyone can relax and have fun. If you read this far, you're exactly the kind of person we want around.</p>
-      <a href="/events" class="cond-cta">See what's coming up →</a>
-    </div>
+  <section class="c-closer">
+    <p><strong>Real talk:</strong> Being awkward? Normal. Saying something dumb? Happens. Running late because I-25 is a parking lot? Every single time. This page isn't about being perfect — it's so everyone can relax and have fun.</p>
+    <p>If you read this far, you're exactly the kind of person we want around.</p>
+    <a href="/events" class="c-btn c-btn-primary">See what's coming up →</a>
   </section>
 
 </div>
 
 <style is:inline>
-  .conduct-page { max-width: 640px; margin: 0 auto; padding: 0 24px 48px; }
+  .c-page { max-width: 760px; margin: 0 auto; padding: 32px clamp(20px, 4vw, 40px) 96px; }
 
-  .cond-hero { padding: 36px 0 28px; }
-  .cond-tag {
-    display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
-    color: #0EA5E9; font-weight: 700; margin-bottom: 14px;
-    padding: 5px 12px; background: rgba(124,58,237,0.06); border-radius: 50px;
-    font-family: 'Outfit', sans-serif;
+  /* HERO */
+  .c-hero { padding: 16px 0 40px; }
+  .c-tag {
+    display: inline-block; font-family: var(--font-display);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-dim);
+    padding: 6px 14px; border-radius: 999px; margin-bottom: 18px;
   }
-  .cond-h1 {
-    font-family: 'Outfit', sans-serif; font-size: clamp(26px, 4vw, 34px);
-    color: #111827; line-height: 1.15; margin-bottom: 12px; font-weight: 900;
-    letter-spacing: -0.02em;
+  .c-title {
+    font-family: var(--font-display); font-size: clamp(34px, 5vw, 48px); font-weight: 900;
+    letter-spacing: -0.025em; line-height: 1.1; color: var(--text); margin-bottom: 14px;
   }
-  .cond-h1 em { font-style: normal; color: #0EA5E9; }
-  .cond-sub { font-size: 14px; color: #6B7280; line-height: 1.7; max-width: 480px; }
+  .c-title em { font-style: normal; color: var(--accent); }
+  .c-lede { font-size: 17px; color: var(--text-sec); line-height: 1.55; max-width: 580px; }
 
-  .cond-section { margin-bottom: 32px; }
-  .cond-h2 {
-    font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800;
-    color: #111827; margin-bottom: 8px; letter-spacing: -0.01em;
+  /* TOC */
+  .c-toc {
+    margin-bottom: 48px; padding: 18px 22px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
   }
-  .cond-p { font-size: 13px; color: #6B7280; line-height: 1.7; margin-bottom: 14px; }
+  .c-toc-label {
+    display: block; font-family: var(--font-display);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-sec); margin-bottom: 10px;
+  }
+  .c-toc ol { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 24px; counter-reset: toc; }
+  .c-toc li { counter-increment: toc; font-size: 14px; }
+  .c-toc li::before { content: counter(toc) ". "; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .c-toc a { color: var(--text); text-decoration: none; font-weight: 500; }
+  .c-toc a:hover { color: var(--accent); }
+  @media (max-width: 560px) { .c-toc ol { grid-template-columns: 1fr; } }
 
-  /* ─── CARD GRID ─── */
-  .cond-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .cond-card {
-    padding: 14px 16px; border-radius: 12px;
-    background: #F8F9FB; border: 1px solid #E5E7EB;
+  /* SECTIONS */
+  .c-section { margin-bottom: 56px; scroll-margin-top: 96px; }
+  .c-section h2 {
+    font-family: var(--font-display); font-size: 26px; font-weight: 800;
+    letter-spacing: -0.02em; color: var(--text); margin-bottom: 12px;
   }
-  .cond-card strong {
-    display: block; font-family: 'Outfit', sans-serif; font-size: 13px;
-    color: #111827; font-weight: 700; margin-bottom: 4px;
-  }
-  .cond-card p { font-size: 11px; color: #6B7280; line-height: 1.5; }
+  .c-section p { font-size: 16px; line-height: 1.65; color: var(--text-sec); margin-bottom: 14px; }
+  .c-section p:last-child { margin-bottom: 0; }
+  .c-section strong { color: var(--text); font-weight: 700; }
+  .c-aside { font-size: 14px !important; color: var(--text-faint) !important; margin-top: 14px !important; }
 
-  /* ─── SIMPLE LIST ─── */
-  .cond-list-simple {
-    display: flex; flex-direction: column; gap: 8px;
-    padding: 16px 20px; border-radius: 14px;
-    background: #F8F9FB; border: 1px solid #E5E7EB;
+  /* CARD GRID */
+  .c-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .c-card {
+    padding: 20px; border-radius: 14px;
+    background: var(--bg); border: 1px solid var(--border);
+    transition: border-color 0.15s, transform 0.15s;
   }
-  .cond-list-simple div { font-size: 13px; color: #6B7280; line-height: 1.5; }
-  .cond-list-simple strong { color: #111827; }
+  .c-card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+  .c-card-emoji { font-size: 24px; display: block; margin-bottom: 10px; }
+  .c-card strong { display: block; font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .c-card p { font-size: 14px !important; color: var(--text-sec); line-height: 1.55; margin-bottom: 0 !important; }
+  @media (max-width: 560px) { .c-cards { grid-template-columns: 1fr; } }
 
-  /* ─── CALLOUTS ─── */
-  .cond-callout { border-radius: 14px; padding: 18px 20px; }
-  .cond-callout.women {
-    background: linear-gradient(135deg, rgba(124,58,237,0.03), rgba(219,39,119,0.03));
-    border: 1px solid rgba(124,58,237,0.12);
+  /* LIST WITH ICONS */
+  .c-list { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 4px; }
+  .c-list li {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 14px 18px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 12px;
   }
-  .cond-callout.red { background: rgba(248,113,113,0.04); border: 1px solid rgba(248,113,113,0.15); }
-  .cond-callout.blue {
-    background: rgba(96,165,250,0.04); border: 1px solid rgba(96,165,250,0.15);
-  }
-  .cond-callout.blue p { font-size: 13px; color: #6B7280; line-height: 1.7; margin-bottom: 0; }
-  .cond-callout.blue strong { color: #111827; }
-  .cond-cta {
-    display: inline-block; margin-top: 16px; padding: 10px 24px; border-radius: 50px;
-    background: #0EA5E9; color: #fff; font-family: 'Outfit', sans-serif;
-    font-size: 14px; font-weight: 700; text-decoration: none; transition: all .2s;
-  }
-  .cond-cta:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(124,58,237,0.3); }
+  .c-list li div { font-size: 15px; line-height: 1.55; color: var(--text-sec); flex: 1; }
+  .c-icn { font-size: 20px; line-height: 1.4; flex-shrink: 0; }
 
-  .cond-check-list { display: flex; flex-direction: column; gap: 10px; }
-  .cond-check-list div { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #6B7280; line-height: 1.5; }
-  .cond-ck {
-    width: 20px; height: 20px; flex-shrink: 0; border-radius: 5px;
-    background: rgba(124,58,237,0.08); display: flex; align-items: center; justify-content: center;
-    color: #0EA5E9; font-size: 9px; font-weight: 700; margin-top: 2px;
+  /* CALLOUTS */
+  .c-callout { padding: 22px 24px; border-radius: 16px; margin-top: 16px; }
+  .c-callout-pos { background: linear-gradient(135deg, #F5F3FF, #ECFDF5); border: 1px solid #DDD6FE; }
+  .c-callout-neg { background: #FEF2F2; border: 1px solid #FECACA; }
+  .c-checks { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+  .c-checks li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; line-height: 1.55; color: var(--text); }
+  .c-check, .c-x {
+    width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; margin-top: 1px;
   }
-  .cond-x {
-    width: 20px; height: 20px; flex-shrink: 0; border-radius: 5px;
-    background: rgba(248,113,113,0.08); display: flex; align-items: center; justify-content: center;
-    color: #f87171; font-size: 9px; font-weight: 700; margin-top: 2px;
-  }
+  .c-check { background: #DCFCE7; color: #166534; }
+  .c-x { background: #FEE2E2; color: #991B1B; }
 
-  /* ─── BUTTONS ─── */
-  .cond-btns { display: flex; gap: 10px; flex-wrap: wrap; }
-  .cond-btn {
-    display: inline-block; padding: 10px 20px; border-radius: 50px;
-    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
-    text-decoration: none; transition: all .2s;
+  /* BUTTONS */
+  .c-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  .c-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 12px 24px; border-radius: 999px;
+    font-family: var(--font-display); font-size: 14px; font-weight: 700;
+    text-decoration: none; transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
   }
-  .cond-btn.discord { background: #5865F2; color: #fff; }
-  .cond-btn.discord:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(88,101,242,0.3); }
-  .cond-btn.email { background: #F8F9FB; color: #6B7280; border: 1px solid #E5E7EB; }
-  .cond-btn.email:hover { border-color: #D1D5DB; color: #111827; }
-  .cond-updated { font-size: 11px !important; color: #9CA3AF !important; margin-top: 14px !important; }
+  .c-btn-primary { background: var(--cta-bg); color: var(--cta-text); margin-top: 16px; }
+  .c-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px var(--accent-glow); }
+  .c-btn-discord { background: #5865F2; color: #fff; }
+  .c-btn-discord:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(88,101,242,0.32); }
+  .c-btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .c-btn-ghost:hover { background: var(--surface-hover); }
 
-  @media (max-width: 500px) {
-    .cond-grid { grid-template-columns: 1fr; }
+  /* CLOSER */
+  .c-closer {
+    padding: 32px clamp(20px, 4vw, 36px); border-radius: 20px;
+    background: linear-gradient(135deg, #F0F9FF, #ECFDF5);
+    border: 1px solid #BAE6FD;
   }
+  .c-closer p { font-size: 16px; line-height: 1.65; color: var(--text); margin-bottom: 14px; }
+  .c-closer p:last-of-type { color: var(--text-sec); }
+  .c-closer strong { color: var(--text); font-weight: 700; }
+
+  .c-updated { font-size: 13px !important; color: var(--text-faint) !important; margin-top: 18px !important; }
 </style>
 </Base>
