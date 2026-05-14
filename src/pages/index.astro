@@ -7,6 +7,7 @@ let upcomingEvents: any[] = [];
 let memberCount = 0;
 let eventCount = 0;
 let upcomingPotluck: any = null;
+let suggestions: any[] = []; // FIX: was undeclared
 
 try {
   if (db) {
@@ -43,6 +44,17 @@ const typeLabel: Record<string, string> = {
   group_tickets: '🎟 Tickets', camping: '🏕 Camping', sports_outing: '⚾ Sports',
   bowling: '🎳 Bowling', active: '🏃 Active', casino: '🎰 Casino', food_trucks: '🌮 Food', other: '✨ Event',
 };
+
+// Aspirational chips — what people host (no counts)
+const eventTypeChips = [
+  { emoji: '🥾', label: 'Hikes' },
+  { emoji: '🍽', label: 'Potlucks' },
+  { emoji: '🏺', label: 'Pottery & making' },
+  { emoji: '🎲', label: 'Game nights' },
+  { emoji: '☕', label: 'Coffee meetups' },
+  { emoji: '🧊', label: 'Cold plunges' },
+  { emoji: '🖼', label: 'Art walks' },
+];
 ---
 <Base title="Real events, real people" description="Small-group events across Denver. No algorithms. Just locals getting together.">
 
@@ -138,16 +150,28 @@ const typeLabel: Record<string, string> = {
   )}
 
 
-  <!-- FINAL CTA -->
-  <section class="final-cta">
-    <div class="page-wrap final-cta-inner">
-      <h2>Your people are already here.</h2>
-      <p>Pick an event. Show up. Make a friend.</p>
-      <div class="hero-ctas" style="justify-content:center">
-        <a href="/events" class="btn-cta">Browse events</a>
-        <a href="/events" class="btn-sec">See potlucks</a>
+  <!-- WHAT WE GET UP TO + HOST THE NEXT ONE -->
+  <section class="page-wrap">
+    <div class="get-up-to">
+      <span class="get-up-label">What we get up to</span>
+      <div class="chip-row">
+        {eventTypeChips.map(c => (
+          <span class="chip-pill">
+            <span class="chip-emoji">{c.emoji}</span> {c.label}
+          </span>
+        ))}
       </div>
     </div>
+
+    <a href="/events" class="host-slot">
+      <div class="host-slot-icon">+</div>
+      <div class="host-slot-text">
+        <span class="host-slot-eyebrow">Open slot · this week</span>
+        <h3 class="host-slot-title">Host the next one</h3>
+        <p>A board game evening. A long walk. A potluck. Whatever you'd want to show up to — chances are someone else would too.</p>
+      </div>
+      <span class="host-slot-arrow">→</span>
+    </a>
   </section>
 
   <style>
@@ -240,11 +264,70 @@ const typeLabel: Record<string, string> = {
     .ev-meta-dot { width: 3px; height: 3px; background: var(--border); border-radius: 50%; }
 
 
-    /* FINAL CTA */
-    .final-cta { background: linear-gradient(135deg, #E0F2FE, #D1FAE5); margin-top: var(--space-7); }
-    .final-cta-inner { text-align: center; padding: var(--space-7) var(--space-5); }
-    .final-cta h2 { font-size: clamp(28px, 4vw, 40px); margin-bottom: var(--space-2); }
-    .final-cta p { color: var(--text-sec); font-size: 16px; margin-bottom: var(--space-5); }
+    /* "What we get up to" chip row */
+    .get-up-to { margin-bottom: var(--space-5); }
+    .get-up-label {
+      display: block;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 2px;
+      color: var(--text-faint);
+      margin-bottom: var(--space-3);
+    }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 14px; font-weight: 500; color: var(--text);
+    }
+    .chip-emoji { font-size: 15px; line-height: 1; }
+
+    /* "Host the next one" callout */
+    .host-slot {
+      display: flex; align-items: center; gap: var(--space-4);
+      padding: var(--space-5);
+      background: linear-gradient(135deg, #E0F2FE 0%, #F0F9FF 100%);
+      border: 1.5px dashed #38BDF8;
+      border-radius: var(--radius-lg);
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .host-slot:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--card-shadow-lg);
+      border-color: #0EA5E9;
+    }
+    .host-slot-icon {
+      width: 56px; height: 56px;
+      background: var(--bg);
+      border: 1.5px dashed #38BDF8;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px; font-weight: 300; color: #0EA5E9;
+      flex-shrink: 0; line-height: 1;
+    }
+    .host-slot-text { flex: 1; min-width: 0; }
+    .host-slot-eyebrow {
+      display: inline-block;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: #0369A1;
+      margin-bottom: 4px;
+    }
+    .host-slot-title {
+      font-family: var(--font-display);
+      font-size: 22px; font-weight: 700; color: var(--text);
+      margin-bottom: 4px; letter-spacing: -0.01em;
+    }
+    .host-slot p { font-size: 14px; color: var(--text-sec); line-height: 1.5; }
+    .host-slot-arrow { font-size: 28px; color: #0EA5E9; flex-shrink: 0; }
+
+    @media (max-width: 700px) {
+      .host-slot { flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+      .host-slot-arrow { display: none; }
+    }
   </style>
 
 </Base>
