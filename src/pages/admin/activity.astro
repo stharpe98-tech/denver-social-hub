@@ -1,0 +1,206 @@
+---
+import { requireApprovedOrg } from '../../lib/admin-auth';
+import { getDB } from '../../lib/db';
+
+const gate = await requireApprovedOrg(Astro);
+if (gate instanceof Response) return gate;
+const org = gate;
+const db = getDB();
+
+type Entry = { kind: string; at: string; who: string; what: string; link?: string };
+let entries: Entry[] = [];
+let counts = { rsvps_24h: 0, signups_24h: 0, suggestions_24h: 0, groups_24h: 0 };
+
+const since24 = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+if (db) {
+  try {
+    const rs = await db.prepare(`
+      SELECT r.member_name, r.member_email, r.created_at, e.id as event_id, e.title, r.status
+      FROM event_rsvps r LEFT JOIN events e ON r.event_id = e.id
+      WHERE r.created_at IS NOT NULL
+      ORDER BY r.created_at DESC LIMIT 50
+    `).all();
+    (rs?.results || []).forEach((r: any) => {
+      const verb = r.status === 'maybe' ? 'said maybe to' : r.status === 'not_going' ? 'declined' : 'RSVP\'d to';
+      entries.push({
+        kind: 'rsvp', at: r.created_at,
+        who: r.member_name || r.member_email || 'Someone',
+        what: `${verb} ${r.title || `event #${r.event_id}`}`,
+        link: r.event_id ? `/events/${r.event_id}` : undefined,
+      });
+    });
+  } catch {}
+  try {
+    const ms = await db.prepare(`
+      SELECT name, email, joined_at FROM members WHERE joined_at IS NOT NULL
+      ORDER BY joined_at DESC LIMIT 30
+    `).all();
+    (ms?.results || []).forEach((m: any) => {
+      entries.push({
+        kind: 'signup', at: m.joined_at,
+        who: m.name || m.email,
+        what: 'joined Denver Social',
+      });
+    });
+  } catch {}
+  try {
+    const sg = await db.prepare(`
+      SELECT title, type, member_name, created_at FROM suggestions
+      WHERE created_at IS NOT NULL ORDER BY created_at DESC LIMIT 30
+    `).all();
+    (sg?.results || []).forEach((s: any) => {
+      entries.push({
+        kind: 'suggestion', at: s.created_at,
+        who: s.member_name || 'Someone',
+        what: `suggested "${s.title}"`,
+      });
+    });
+  } catch {}
+  try {
+    const gr = await db.prepare(`
+      SELECT name, slug, creator_email, created_at FROM groups
+      WHERE created_at IS NOT NULL ORDER BY created_at DESC LIMIT 30
+    `).all();
+    (gr?.results || []).forEach((g: any) => {
+      entries.push({
+        kind: 'group', at: g.created_at,
+        who: g.creator_email,
+        what: `created group "${g.name}"`,
+        link: `/groups/${g.slug}`,
+      });
+    });
+  } catch {}
+  try {
+    const cm = await db.prepare(`
+      SELECT c.body, c.author_name, c.created_at, c.event_id, e.title
+      FROM comments c LEFT JOIN events e ON c.event_id = e.id
+      WHERE c.created_at IS NOT NULL ORDER BY c.created_at DESC LIMIT 30
+    `).all();
+    (cm?.results || []).forEach((c: any) => {
+      entries.push({
+        kind: 'comment', at: c.created_at,
+        who: c.author_name || 'Someone',
+        what: `commented on ${c.title || 'an event'}: "${(c.body || '').slice(0, 60)}${(c.body || '').length > 60 ? '…' : ''}"`,
+        link: c.event_id ? `/events/${c.event_id}` : undefined,
+      });
+    });
+  } catch {}
+
+  entries.sort((a, b) => (a.at < b.at ? 1 : -1));
+  entries = entries.slice(0, 100);
+
+  counts.rsvps_24h = entries.filter(e => e.kind === 'rsvp' && e.at >= since24).length;
+  counts.signups_24h = entries.filter(e => e.kind === 'signup' && e.at >= since24).length;
+  counts.suggestions_24h = entries.filter(e => e.kind === 'suggestion' && e.at >= since24).length;
+  counts.groups_24h = entries.filter(e => e.kind === 'group' && e.at >= since24).length;
+}
+
+function timeAgo(iso: string): string {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms)) return iso;
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+const KIND_ICON: Record<string, string> = {
+  rsvp: '🎉', signup: '👋', suggestion: '💡', group: '👥', comment: '💬',
+};
+const KIND_LABEL: Record<string, string> = {
+  rsvp: 'RSVP', signup: 'Signup', suggestion: 'Idea', group: 'Group', comment: 'Comment',
+};
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Activity · Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body {
+      font-family: 'Inter', sans-serif; background: #FAFAF8; color: #1A1A1A;
+      min-height: 100vh; padding: 32px clamp(16px, 4vw, 40px) 80px;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+    .sub { color: #6B6560; font-size: 14px; }
+    .back { font-size: 13px; color: #6B6560; text-decoration: none; }
+    .back:hover { color: #1A1A1A; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 28px; }
+    .stat { padding: 16px; background: #fff; border: 1px solid #E8E4DE; border-radius: 14px; }
+    .stat-big { font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 800; line-height: 1; }
+    .stat-label { font-size: 12px; color: #6B6560; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+    .feed { display: flex; flex-direction: column; gap: 6px; }
+    .row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #fff; border: 1px solid #E8E4DE; border-radius: 12px; transition: border-color 0.15s, transform 0.15s; }
+    .row:hover { border-color: #D1D5DB; transform: translateY(-1px); }
+    .row a { color: inherit; text-decoration: none; }
+    .icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; background: #F0F2F5; flex-shrink: 0; }
+    .row-main { flex: 1; min-width: 0; }
+    .row-who { font-weight: 600; font-size: 14px; color: #1A1A1A; }
+    .row-what { font-size: 13px; color: #6B6560; }
+    .row-meta { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .badge { font-size: 10px; padding: 3px 9px; border-radius: 999px; background: #F0F2F5; color: #6B6560; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; }
+    .b-rsvp { background: #DCFCE7; color: #166534; }
+    .b-signup { background: #DBEAFE; color: #1E40AF; }
+    .b-suggestion { background: #FEF3C7; color: #92400E; }
+    .b-group { background: #F3E8FF; color: #6B21A8; }
+    .b-comment { background: #FEE7F3; color: #9D174D; }
+    .ago { font-size: 12px; color: #A09890; }
+    .empty { padding: 60px; text-align: center; color: #A09890; }
+    @media (max-width: 600px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="/admin/dashboard" class="back">← Dashboard</a>
+
+    <div class="top">
+      <div>
+        <h1>Activity</h1>
+        <p class="sub">Live feed of everything happening across Denver Social.</p>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-big">{counts.rsvps_24h}</div><div class="stat-label">RSVPs · 24h</div></div>
+      <div class="stat"><div class="stat-big">{counts.signups_24h}</div><div class="stat-label">Signups · 24h</div></div>
+      <div class="stat"><div class="stat-big">{counts.suggestions_24h}</div><div class="stat-label">Ideas · 24h</div></div>
+      <div class="stat"><div class="stat-big">{counts.groups_24h}</div><div class="stat-label">Groups · 24h</div></div>
+    </div>
+
+    {entries.length === 0 ? (
+      <div class="empty">No recent activity to show.</div>
+    ) : (
+      <div class="feed">
+        {entries.map((e: Entry) => {
+          const inner = (
+            <div class="row">
+              <span class="icon">{KIND_ICON[e.kind] || '•'}</span>
+              <div class="row-main">
+                <div class="row-who">{e.who}</div>
+                <div class="row-what">{e.what}</div>
+              </div>
+              <div class="row-meta">
+                <span class={`badge b-${e.kind}`}>{KIND_LABEL[e.kind] || e.kind}</span>
+                <span class="ago">{timeAgo(e.at)}</span>
+              </div>
+            </div>
+          );
+          return e.link ? <a href={e.link}>{inner}</a> : inner;
+        })}
+      </div>
+    )}
+  </div>
+</body>
+</html>
