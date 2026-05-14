@@ -212,7 +212,12 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
           <div>
             <strong>{myRsvp.status === 'maybe' ? 'You said Maybe' : "You're going"}</strong>
             <span class="ev-rsvp-meta">
-              {googleCalUrl && myRsvp.status !== 'maybe' && <a href={googleCalUrl} target="_blank" rel="noopener" class="ev-cal-link">📅 Add to calendar</a>}
+              {googleCalUrl && myRsvp.status !== 'maybe' && (
+                <span class="ev-cal-links">
+                  <a href={googleCalUrl} target="_blank" rel="noopener" class="ev-cal-link">📅 Google</a>
+                  <a href={`/api/events/${id}/ics`} class="ev-cal-link">📥 .ics</a>
+                </span>
+              )}
               <button class="ev-cancel-btn" id="cancel-rsvp-btn" data-event-id={id}>Cancel RSVP</button>
             </span>
           </div>
@@ -753,6 +758,7 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   }
   .ev-cal-link { color: var(--accent); font-weight: 500; text-decoration: none; }
   .ev-cal-link:hover { text-decoration: underline; }
+  .ev-cal-links { display: inline-flex; gap: 12px; }
   .ev-cancel-btn {
     font-size: 12px;
     color: var(--text-faint);
