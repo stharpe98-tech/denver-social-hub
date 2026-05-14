@@ -3,138 +3,76 @@ import Base from '../layouts/Base.astro';
 import { getContent } from '../lib/content';
 const content = await getContent();
 ---
-<Base title="Safety & Terms" description="How Denver Social keeps things safe, friendly, and fair for everyone.">
+<Base title="Safety & Terms" description="The short version of how Denver Social works.">
 <div class="c-page">
 
-  <!-- HERO -->
   <header class="c-hero">
     <div class="c-tag">Safety & Terms</div>
     <h1 class="c-title" set:html={content.conduct_title}></h1>
-    <p class="c-lede">{content.conduct_subtitle}</p>
+    <p class="c-lede">The short version.</p>
   </header>
 
-  <!-- TABLE OF CONTENTS -->
-  <nav class="c-toc" aria-label="On this page">
-    <span class="c-toc-label">On this page</span>
-    <ol>
-      <li><a href="#welcome">Everyone's welcome</a></li>
-      <li><a href="#safety">How we keep it safe</a></li>
-      <li><a href="#women">For women</a></li>
-      <li><a href="#line">Where's the line</a></li>
-      <li><a href="#hosting">Hosting & reporting</a></li>
-      <li><a href="#terms">Terms (the basics)</a></li>
-    </ol>
-  </nav>
-
-  <!-- EVERYONE -->
-  <section class="c-section" id="welcome">
-    <h2>Everyone's welcome</h2>
-    <p>All ages, all backgrounds, all brain types. Quiet, loud, awkward, outgoing — doesn't matter.</p>
-    <div class="c-cards">
-      <div class="c-card">
-        <span class="c-card-emoji">🧠</span>
-        <strong>All brains welcome</strong>
-        <p>Neurodivergent, autistic, ADHD, social anxiety — you're good here. Be quiet, leave early, skip small talk. There's no "right way" to hang out.</p>
+  <ol class="c-rules">
+    <li class="c-rule">
+      <span class="c-num">1</span>
+      <div>
+        <h2>Everyone's welcome.</h2>
+        <p>Quiet, loud, awkward, neurodivergent, new to Denver — you're good here. Leave whenever. You don't owe anyone an explanation.</p>
       </div>
-      <div class="c-card">
-        <span class="c-card-emoji">👋</span>
-        <strong>Show up as you are</strong>
-        <p>Half the people here describe themselves as awkward. That's kind of the point. Nobody's performing. Nobody's keeping score.</p>
+    </li>
+
+    <li class="c-rule">
+      <span class="c-num">2</span>
+      <div>
+        <h2>Your info stays private.</h2>
+        <p>Locations and host contact are hidden until you RSVP. Other members only see your first name and neighborhood.</p>
       </div>
-      <div class="c-card">
-        <span class="c-card-emoji">💜</span>
-        <strong>Not a dating app</strong>
-        <p>People are here to make friends. If something happens naturally, cool — but don't come here to hit on people. Read the room.</p>
+    </li>
+
+    <li class="c-rule">
+      <span class="c-num">3</span>
+      <div>
+        <h2>Hosts are accountable.</h2>
+        <p>Every event has a named host. Events are moderated before going live. Groups stay small (usually 6–12 people).</p>
       </div>
-      <div class="c-card">
-        <span class="c-card-emoji">🚪</span>
-        <strong>Leave whenever</strong>
-        <p>Hit your limit? Social battery dead? Just go. You don't owe anyone an explanation. No one will be weird about it.</p>
+    </li>
+
+    <li class="c-rule c-rule-warn">
+      <span class="c-num c-num-warn">!</span>
+      <div>
+        <h2>What gets you removed.</h2>
+        <p>Harassment, intimidation, following someone after an event, or sharing someone's location or private info. You don't need proof to report — your word is enough.</p>
       </div>
-    </div>
-  </section>
+    </li>
 
-  <!-- SAFETY -->
-  <section class="c-section" id="safety">
-    <h2>How we keep it safe</h2>
-    <p>A few things are built in by default:</p>
-    <ul class="c-list">
-      <li><span class="c-icn">📍</span><div><strong>Locations hidden</strong> until you RSVP</div></li>
-      <li><span class="c-icn">📞</span><div><strong>Host contact</strong> only shared with confirmed attendees</div></li>
-      <li><span class="c-icn">👤</span><div><strong>Every event has a named host</strong> — someone's always accountable</div></li>
-      <li><span class="c-icn">✋</span><div><strong>Events are moderated</strong> before going live</div></li>
-      <li><span class="c-icn">👥</span><div><strong>Small groups</strong> — usually 6 to 12 people max</div></li>
-    </ul>
-  </section>
+    <li class="c-rule">
+      <span class="c-num">4</span>
+      <div>
+        <h2>Report anything that feels off.</h2>
+        <p>Tell the host, jump in our Discord, or email us. We keep it between us.</p>
+        <div class="c-btns">
+          <a href="https://discord.gg/S8SFNkdSgK" class="c-btn c-btn-discord" target="_blank" rel="noopener">Discord</a>
+          <a href="/contact" class="c-btn c-btn-ghost">Contact us</a>
+        </div>
+      </div>
+    </li>
 
-  <!-- WOMEN -->
-  <section class="c-section" id="women">
-    <h2>For women</h2>
-    <p>We know meetups can feel different if you're a woman. Here's what we want you to know:</p>
-    <div class="c-callout c-callout-pos">
-      <ul class="c-checks">
-        <li><span class="c-check">✓</span>If someone makes you uncomfortable, tell the host or reach out to us. You don't need proof — your word is enough.</li>
-        <li><span class="c-check">✓</span>Your info stays private. Other members only see your first name and neighborhood.</li>
-        <li><span class="c-check">✓</span>Bring a friend your first time if you want. RSVP for both.</li>
-        <li><span class="c-check">✓</span>Most events are in public places. If someone hosts at home, the event says so upfront.</li>
-      </ul>
-    </div>
-  </section>
+    <li class="c-rule">
+      <span class="c-num">5</span>
+      <div>
+        <h2>It's free, and that's the deal.</h2>
+        <p>No fees, no premium tier, no selling your data. Some events have venue costs between you and the venue — we don't take a cut. Denver Social organizes events but isn't liable for what happens at them.</p>
+      </div>
+    </li>
+  </ol>
 
-  <!-- LINE -->
-  <section class="c-section" id="line">
-    <h2>Where's the line</h2>
-    <p>We're pretty relaxed. But if someone says you made them uncomfortable, we're going to listen. These get you removed immediately:</p>
-    <div class="c-callout c-callout-neg">
-      <ul class="c-checks">
-        <li><span class="c-x">✕</span>Harassment or making someone feel unsafe</li>
-        <li><span class="c-x">✕</span>Threatening or intimidating anyone</li>
-        <li><span class="c-x">✕</span>Following someone after an event</li>
-        <li><span class="c-x">✕</span>Sharing someone's location or private info</li>
-      </ul>
-    </div>
-    <p class="c-aside">Anything else — being rude, too drunk, trying to sell people something — someone will just talk to you about it.</p>
-  </section>
-
-  <!-- HOSTING -->
-  <section class="c-section" id="hosting">
-    <h2>Hosting & reporting</h2>
-    <p>Anyone can host. You pick the spot, set the vibe, and help people find you. You're not a bouncer — everyone who shows up is responsible for themselves.</p>
-    <p>If something happens at an event, talk to the host, jump in the Discord, or email us. We'll keep it between us.</p>
-    <div class="c-btns">
-      <a href="https://discord.gg/S8SFNkdSgK" class="c-btn c-btn-discord" target="_blank" rel="noopener">Open Discord</a>
-      <a href="/contact" class="c-btn c-btn-ghost">Contact us</a>
-    </div>
-  </section>
-
-  <!-- TERMS -->
-  <section class="c-section" id="terms">
-    <h2>Terms (the basics)</h2>
-    <p>We're not hiding anything behind legal jargon. Here's how this works:</p>
-    <ul class="c-list">
-      <li><span class="c-icn">💸</span><div><strong>It's free.</strong> No membership fees, no premium tier, no upsell. Ever.</div></li>
-      <li><span class="c-icn">🔒</span><div><strong>Your data.</strong> We store your name and email to run the service. We don't sell it.</div></li>
-      <li><span class="c-icn">🍽️</span><div><strong>Event costs.</strong> Some events have costs between you and the venue — Denver Social doesn't take a cut.</div></li>
-      <li><span class="c-icn">💰</span><div><strong>Deposits.</strong> Some events require a refundable deposit. Show up → get it back. No-show → forfeited.</div></li>
-      <li><span class="c-icn">🚫</span><div><strong>Account removal.</strong> We can remove accounts that violate the rules above.</div></li>
-      <li><span class="c-icn">⚠️</span><div><strong>Liability.</strong> Denver Social organizes events but isn't liable for what happens at them. Attend at your own risk.</div></li>
-    </ul>
-    <p class="c-updated">Last updated: March 2026</p>
-  </section>
-
-  <!-- CLOSER -->
-  <section class="c-closer">
-    <p><strong>Real talk:</strong> Being awkward? Normal. Saying something dumb? Happens. Running late because I-25 is a parking lot? Every single time. This page isn't about being perfect — it's so everyone can relax and have fun.</p>
-    <p>If you read this far, you're exactly the kind of person we want around.</p>
-    <a href="/events" class="c-btn c-btn-primary">See what's coming up →</a>
-  </section>
+  <p class="c-updated">Last updated March 2026 · <a href="/events">See what's coming up →</a></p>
 
 </div>
 
 <style is:inline>
-  .c-page { max-width: 760px; margin: 0 auto; padding: 32px clamp(20px, 4vw, 40px) 96px; }
+  .c-page { max-width: 680px; margin: 0 auto; padding: 32px clamp(20px, 4vw, 40px) 96px; }
 
-  /* HERO */
   .c-hero { padding: 16px 0 40px; }
   .c-tag {
     display: inline-block; font-family: var(--font-display);
@@ -144,101 +82,49 @@ const content = await getContent();
   }
   .c-title {
     font-family: var(--font-display); font-size: clamp(34px, 5vw, 48px); font-weight: 900;
-    letter-spacing: -0.025em; line-height: 1.1; color: var(--text); margin-bottom: 14px;
+    letter-spacing: -0.025em; line-height: 1.1; color: var(--text); margin-bottom: 12px;
   }
   .c-title em { font-style: normal; color: var(--accent); }
-  .c-lede { font-size: 17px; color: var(--text-sec); line-height: 1.55; max-width: 580px; }
+  .c-lede { font-size: 17px; color: var(--text-sec); }
 
-  /* TOC */
-  .c-toc {
-    margin-bottom: 48px; padding: 18px 22px;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-  }
-  .c-toc-label {
-    display: block; font-family: var(--font-display);
-    font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-    color: var(--text-sec); margin-bottom: 10px;
-  }
-  .c-toc ol { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 24px; counter-reset: toc; }
-  .c-toc li { counter-increment: toc; font-size: 14px; }
-  .c-toc li::before { content: counter(toc) ". "; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-  .c-toc a { color: var(--text); text-decoration: none; font-weight: 500; }
-  .c-toc a:hover { color: var(--accent); }
-  @media (max-width: 560px) { .c-toc ol { grid-template-columns: 1fr; } }
-
-  /* SECTIONS */
-  .c-section { margin-bottom: 56px; scroll-margin-top: 96px; }
-  .c-section h2 {
-    font-family: var(--font-display); font-size: 26px; font-weight: 800;
-    letter-spacing: -0.02em; color: var(--text); margin-bottom: 12px;
-  }
-  .c-section p { font-size: 16px; line-height: 1.65; color: var(--text-sec); margin-bottom: 14px; }
-  .c-section p:last-child { margin-bottom: 0; }
-  .c-section strong { color: var(--text); font-weight: 700; }
-  .c-aside { font-size: 14px !important; color: var(--text-faint) !important; margin-top: 14px !important; }
-
-  /* CARD GRID */
-  .c-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
-  .c-card {
-    padding: 20px; border-radius: 14px;
-    background: var(--bg); border: 1px solid var(--border);
+  .c-rules { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+  .c-rule {
+    display: flex; gap: 18px; align-items: flex-start;
+    padding: 22px clamp(18px, 3vw, 26px);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 16px;
     transition: border-color 0.15s, transform 0.15s;
   }
-  .c-card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
-  .c-card-emoji { font-size: 24px; display: block; margin-bottom: 10px; }
-  .c-card strong { display: block; font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-  .c-card p { font-size: 14px !important; color: var(--text-sec); line-height: 1.55; margin-bottom: 0 !important; }
-  @media (max-width: 560px) { .c-cards { grid-template-columns: 1fr; } }
-
-  /* LIST WITH ICONS */
-  .c-list { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 4px; }
-  .c-list li {
-    display: flex; align-items: flex-start; gap: 14px;
-    padding: 14px 18px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 12px;
+  .c-rule:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+  .c-rule h2 {
+    font-family: var(--font-display); font-size: 19px; font-weight: 800;
+    letter-spacing: -0.01em; color: var(--text); margin-bottom: 6px;
   }
-  .c-list li div { font-size: 15px; line-height: 1.55; color: var(--text-sec); flex: 1; }
-  .c-icn { font-size: 20px; line-height: 1.4; flex-shrink: 0; }
-
-  /* CALLOUTS */
-  .c-callout { padding: 22px 24px; border-radius: 16px; margin-top: 16px; }
-  .c-callout-pos { background: linear-gradient(135deg, #F5F3FF, #ECFDF5); border: 1px solid #DDD6FE; }
-  .c-callout-neg { background: #FEF2F2; border: 1px solid #FECACA; }
-  .c-checks { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
-  .c-checks li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; line-height: 1.55; color: var(--text); }
-  .c-check, .c-x {
-    width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
+  .c-rule p { font-size: 15px; line-height: 1.6; color: var(--text-sec); }
+  .c-num {
+    flex-shrink: 0;
+    width: 36px; height: 36px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; margin-top: 1px;
+    font-family: var(--font-display); font-size: 16px; font-weight: 800;
+    background: var(--accent-dim); color: var(--accent);
   }
-  .c-check { background: #DCFCE7; color: #166534; }
-  .c-x { background: #FEE2E2; color: #991B1B; }
+  .c-rule-warn { background: linear-gradient(180deg, #FEF2F2, #fff); border-color: #FECACA; }
+  .c-num-warn { background: #FEE2E2; color: #991B1B; }
 
-  /* BUTTONS */
-  .c-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  .c-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
   .c-btn {
     display: inline-flex; align-items: center; justify-content: center;
-    padding: 12px 24px; border-radius: 999px;
-    font-family: var(--font-display); font-size: 14px; font-weight: 700;
+    padding: 10px 20px; border-radius: 999px;
+    font-family: var(--font-display); font-size: 13px; font-weight: 700;
     text-decoration: none; transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
   }
-  .c-btn-primary { background: var(--cta-bg); color: var(--cta-text); margin-top: 16px; }
-  .c-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px var(--accent-glow); }
   .c-btn-discord { background: #5865F2; color: #fff; }
-  .c-btn-discord:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(88,101,242,0.32); }
+  .c-btn-discord:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(88,101,242,0.32); }
   .c-btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
   .c-btn-ghost:hover { background: var(--surface-hover); }
 
-  /* CLOSER */
-  .c-closer {
-    padding: 32px clamp(20px, 4vw, 36px); border-radius: 20px;
-    background: linear-gradient(135deg, #F0F9FF, #ECFDF5);
-    border: 1px solid #BAE6FD;
+  .c-updated {
+    margin-top: 36px; font-size: 13px; color: var(--text-faint); text-align: center;
   }
-  .c-closer p { font-size: 16px; line-height: 1.65; color: var(--text); margin-bottom: 14px; }
-  .c-closer p:last-of-type { color: var(--text-sec); }
-  .c-closer strong { color: var(--text); font-weight: 700; }
-
-  .c-updated { font-size: 13px !important; color: var(--text-faint) !important; margin-top: 18px !important; }
+  .c-updated a { color: var(--accent); font-weight: 600; }
 </style>
 </Base>
