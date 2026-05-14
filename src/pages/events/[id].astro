@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
 import { parseVibeTags, vibeLabel } from '../../lib/events-schema';
+import { ensureCohostsSchema } from '../../lib/cohosts-schema';
 
 const db = getDB();
 const { id } = Astro.params;
@@ -13,6 +14,7 @@ let event: any = null;
 let rsvps: any[] = [];
 let maybeList: any[] = [];
 let waitlist: any[] = [];
+let cohosts: any[] = [];
 let comments: any[] = [];
 let bringItems: any[] = [];
 let myRsvp: any = null;
@@ -50,6 +52,15 @@ try {
         || null;
       myWaitlistEntry = waitlist.find((w: any) => w.member_email === user.email) || null;
     }
+    await ensureCohostsSchema(db);
+    const ch = await db.prepare(`
+      SELECT ec.member_email, m.name as display_name, m.reddit_username, m.discord_username
+      FROM event_cohosts ec
+      LEFT JOIN members m ON LOWER(m.email) = LOWER(ec.member_email)
+      WHERE ec.event_id = ?
+      ORDER BY ec.added_at ASC
+    `).bind(id).all();
+    cohosts = (ch?.results || []) as any[];
   }
 } catch (err) { console.error('Event detail error:', err); }
 
@@ -68,6 +79,13 @@ const userAccountAge = user?.reddit_account_created
   : 0;
 const meetsKarmaGate = (!event.karma_min || userKarma >= event.karma_min) && (!event.account_age_min || userAccountAge >= event.account_age_min);
 const showLocation = myRsvp && meetsKarmaGate;
+
+// Permission: original host (matched by host_id = user.id) or any
+// listed co-host can manage co-hosts for this event.
+const isCreator = !!(user && event.host_id && event.host_id === user.id);
+const isCohost = !!(user?.email && cohosts.some((c: any) => (c.member_email || '').toLowerCase() === user.email.toLowerCase()));
+const canManageCohosts = isCreator || isCohost;
+const cohostEmailSet = new Set(cohosts.map((c: any) => (c.member_email || '').toLowerCase()));
 
 // Threaded comments
 const rootComments = comments.filter((c: any) => !c.parent_id);
@@ -354,6 +372,40 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
           </div>
         ))}
       </div>
+    </div>
+  )}
+
+  <!-- CO-HOSTS -->
+  {(cohosts.length > 0 || canManageCohosts) && (
+    <div class="ev-section">
+      <h2 class="ev-section-title">🎤 Hosts</h2>
+      <div class="ev-cohosts">
+        {event.submitted_by && (
+          <div class="ev-cohost-row">
+            <span class="ev-cohost-badge primary">Host</span>
+            <strong>{event.submitted_by}</strong>
+          </div>
+        )}
+        {cohosts.map((c: any) => {
+          const name = c.display_name || c.reddit_username || c.discord_username || (c.member_email || '').split('@')[0];
+          return (
+            <div class="ev-cohost-row">
+              <span class="ev-cohost-badge">Co-host</span>
+              <strong>{name}</strong>
+              {canManageCohosts && (
+                <button class="ev-cohost-remove" data-remove-cohost={c.member_email} data-event-id={id}>Remove</button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {canManageCohosts && (
+        <form class="ev-cohost-add" id="cohost-add-form" data-event-id={id}>
+          <input type="email" id="cohost-email-input" placeholder="member@email — add a co-host" class="ev-cohost-input" required />
+          <button type="submit" class="ev-cohost-add-btn">+ Add</button>
+        </form>
+      )}
+      <div id="cohost-err" class="ev-cohost-err"></div>
     </div>
   )}
 
@@ -759,6 +811,21 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   .ev-cal-link { color: var(--accent); font-weight: 500; text-decoration: none; }
   .ev-cal-link:hover { text-decoration: underline; }
   .ev-cal-links { display: inline-flex; gap: 12px; }
+
+  /* Co-hosts */
+  .ev-cohosts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .ev-cohost-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); }
+  .ev-cohost-row strong { flex: 1; font-size: 14px; font-weight: 600; }
+  .ev-cohost-badge { font-size: 10px; padding: 3px 9px; border-radius: 999px; background: var(--bg); color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; border: 1px solid var(--border); }
+  .ev-cohost-badge.primary { background: #FCE7F3; color: #9D174D; border-color: transparent; }
+  .ev-cohost-remove { background: none; border: none; color: var(--text-sec); font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .ev-cohost-remove:hover { color: #DC2626; background: #FEF2F2; }
+  .ev-cohost-add { display: flex; gap: 8px; }
+  .ev-cohost-input { flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-family: var(--font); background: var(--bg); }
+  .ev-cohost-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .ev-cohost-add-btn { padding: 10px 16px; border-radius: 999px; background: var(--cta-bg); color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 13px; border: none; cursor: pointer; }
+  .ev-cohost-add-btn:hover { box-shadow: 0 4px 12px var(--accent-glow); }
+  .ev-cohost-err { color: #DC2626; font-size: 12px; min-height: 16px; margin-top: 6px; }
   .ev-cancel-btn {
     font-size: 12px;
     color: var(--text-faint);
@@ -1113,6 +1180,51 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
           btn.classList.remove('loading');
           btn.disabled = false;
         }
+      });
+    });
+
+    // ── Co-hosts: add / remove ──
+    var cohostForm = document.getElementById('cohost-add-form');
+    var cohostErr = document.getElementById('cohost-err');
+    if (cohostForm) {
+      cohostForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (cohostErr) cohostErr.textContent = '';
+        var eventId = cohostForm.getAttribute('data-event-id');
+        var input = document.getElementById('cohost-email-input');
+        var email = input ? input.value.trim() : '';
+        if (!email) return;
+        try {
+          var res = await fetch('/api/events/cohosts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'add', event_id: parseInt(eventId), email: email })
+          });
+          var data = await res.json();
+          if (data.ok) location.reload();
+          else if (cohostErr) {
+            cohostErr.textContent = data.error === 'member_not_found' ? 'No member found with that email.' :
+              data.error === 'not_authorized' ? 'Only the host or co-hosts can add.' :
+              ('Failed: ' + data.error);
+          }
+        } catch (e) { if (cohostErr) cohostErr.textContent = 'Network error.'; }
+      });
+    }
+    document.querySelectorAll('[data-remove-cohost]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Remove this co-host?')) return;
+        var email = btn.getAttribute('data-remove-cohost');
+        var eventId = btn.getAttribute('data-event-id');
+        try {
+          var res = await fetch('/api/events/cohosts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'remove', event_id: parseInt(eventId), email: email })
+          });
+          var data = await res.json();
+          if (data.ok) location.reload();
+          else alert('Failed: ' + data.error);
+        } catch (e) { alert('Network error.'); }
       });
     });
 
