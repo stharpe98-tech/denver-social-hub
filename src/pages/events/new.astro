@@ -86,6 +86,16 @@ if (!user) return Astro.redirect('/login?next=' + encodeURIComponent('/events/ne
         <label class="ne-label">Link <span class="opt">(Discord, signup, anything)</span></label>
         <input type="text" id="ne-link" class="ne-input" placeholder="https://…"/>
 
+        <label class="ne-label">Vibe <span class="opt">(pick any that fit)</span></label>
+        <div class="ne-vibe-grid">
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="sober"/> <span>🥤 Sober-friendly</span></label>
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="introvert"/> <span>🤫 Introvert-friendly</span></label>
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="kids"/> <span>🧒 Kid-friendly</span></label>
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="lgbtq"/> <span>🏳️‍🌈 LGBTQ+ welcome</span></label>
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="adults"/> <span>🍷 21+</span></label>
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="dogs"/> <span>🐕 Dog-friendly</span></label>
+        </div>
+
         <button type="submit" id="ne-submit" class="btn-cta ne-submit">Post the event →</button>
         <div id="ne-err" class="ne-err"></div>
       </form>
@@ -107,6 +117,11 @@ if (!user) return Astro.redirect('/login?next=' + encodeURIComponent('/events/ne
     .ne-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
     .ne-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
     .ne-submit { width: 100%; padding: 14px; font-size: 15px; margin-top: var(--space-4); }
+    .ne-vibe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: var(--space-2); }
+    @media (max-width: 460px) { .ne-vibe-grid { grid-template-columns: 1fr; } }
+    .ne-vibe { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; font-size: 14px; color: var(--text); cursor: pointer; transition: border-color 0.15s; }
+    .ne-vibe:hover { border-color: var(--accent); }
+    .ne-vibe input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
     .ne-err { font-size: 13px; color: var(--red); margin-top: 10px; display: none; text-align: center; }
     .ne-err.show { display: block; }
   </style>
@@ -137,6 +152,7 @@ if (!user) return Astro.redirect('/login?next=' + encodeURIComponent('/events/ne
         spots: document.getElementById('ne-spots').value.trim() || null,
         link: document.getElementById('ne-link').value.trim(),
         contact_phone: document.getElementById('ne-phone').value.trim(),
+        vibe_tags: Array.from(document.querySelectorAll('input[name="vibe"]:checked')).map(function(c){ return c.value; }),
       };
       try {
         var res = await fetch('/api/create-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
