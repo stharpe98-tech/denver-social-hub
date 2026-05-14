@@ -27,6 +27,7 @@ const redditName = user?.reddit_username || user?.name;
     <div class="site-header-inner">
       <nav class="site-nav site-nav-left">
         <a href="/events" class:list={["site-nav-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
+        <a href="/groups" class:list={["site-nav-link", { active: currentPath.startsWith("/groups") }]}>Groups</a>
       </nav>
 
       <a href="/" class="site-logo" aria-label="Denver Social home">
