@@ -1,0 +1,259 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+import { ensureGroupsSchema } from '../../lib/groups-schema';
+
+const db = getDB();
+const { slug } = Astro.params;
+let user: any = null;
+const cookie = Astro.cookies.get('dsn_user')?.value;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+
+let group: any = null;
+let members: any[] = [];
+let myRole: string | null = null;
+let recentInvites: any[] = [];
+
+if (db && slug) {
+  await ensureGroupsSchema(db);
+  group = await db.prepare('SELECT * FROM groups WHERE slug=?').bind(slug).first();
+  if (group) {
+    const m = await db.prepare(`
+      SELECT gm.*, mem.name as display_name, mem.reddit_username, mem.discord_username
+      FROM group_members gm
+      LEFT JOIN members mem ON LOWER(mem.email) = LOWER(gm.member_email)
+      WHERE gm.group_id = ?
+      ORDER BY CASE gm.role WHEN 'owner' THEN 0 WHEN 'organizer' THEN 1 ELSE 2 END, gm.joined_at ASC
+    `).bind(group.id).all();
+    members = (m.results || []) as any[];
+    if (user?.email) {
+      const mine = members.find((mm: any) => mm.member_email?.toLowerCase() === user.email.toLowerCase());
+      myRole = mine?.role || null;
+      if (myRole === 'owner' || myRole === 'organizer') {
+        const inv = await db.prepare(`
+          SELECT id, code, invitee_email, used_at, used_by_email, created_at
+          FROM group_invites WHERE group_id = ? ORDER BY id DESC LIMIT 10
+        `).bind(group.id).all();
+        recentInvites = (inv.results || []) as any[];
+      }
+    }
+  }
+}
+
+if (!group) return Astro.redirect('/groups');
+
+const canInvite = myRole === 'owner' || myRole === 'organizer' || (group.privacy === 'public' && myRole === 'member');
+const canJoinDirect = !myRole && group.privacy === 'public' && !!user;
+---
+<Base title={group.name} description={group.description || `${group.name} on Denver Social`}>
+<div class="g-wrap">
+  <a href="/groups" class="g-back">← All groups</a>
+
+  <header class="g-hero">
+    <div class="g-hero-text">
+      <div class="g-hero-meta">
+        {group.privacy === 'invite_only'
+          ? <span class="g-privacy lock">🔒 Invite only</span>
+          : <span class="g-privacy">🌐 Public</span>}
+        <span class="g-count">{group.member_count} member{group.member_count === 1 ? '' : 's'}</span>
+      </div>
+      <h1 class="g-name">{group.name}</h1>
+      {group.description && <p class="g-desc">{group.description}</p>}
+    </div>
+    <div class="g-hero-actions">
+      {!user && <a href={`/login?next=/groups/${slug}`} class="btn-cta">Sign in</a>}
+      {canJoinDirect && (
+        <button class="btn-cta" id="join-btn" data-group-id={group.id}>Join group</button>
+      )}
+      {myRole && (
+        <>
+          {canInvite && <button class="btn-cta" id="invite-btn" data-group-id={group.id}>+ Invite</button>}
+          <button class="btn-sec" id="leave-btn" data-group-id={group.id}>{myRole === 'owner' ? 'Delete group' : 'Leave'}</button>
+        </>
+      )}
+      {!myRole && user && group.privacy === 'invite_only' && (
+        <span class="g-locked-hint">You need an invite to join.</span>
+      )}
+    </div>
+  </header>
+
+  <div class="g-cols">
+    <main class="g-main">
+      <section class="g-card">
+        <h2 class="g-h">Members ({members.length})</h2>
+        <div class="g-members">
+          {members.map((mm: any) => {
+            const name = mm.display_name || mm.reddit_username || mm.discord_username || (mm.member_email || '').split('@')[0] || 'Member';
+            const initial = name[0]?.toUpperCase() || '?';
+            return (
+              <div class="g-member">
+                <div class="g-avatar">{initial}</div>
+                <div class="g-member-text">
+                  <strong>{name}</strong>
+                  {mm.role !== 'member' && <span class={`g-member-role role-${mm.role}`}>{mm.role}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section class="g-card g-empty-events">
+        <h2 class="g-h">Events</h2>
+        <p>Group-scoped events are coming soon — for now, post events to Denver Social and organize meetups inside the member list.</p>
+      </section>
+    </main>
+
+    {canInvite && (
+      <aside class="g-side">
+        <section class="g-card">
+          <h2 class="g-h">Invite people</h2>
+          <p class="g-side-help">Generate a one-time link to share. Anyone with the link can join — so be careful where you share private group links.</p>
+          <div class="g-invite-row">
+            <input type="email" id="invite-email" placeholder="friend@example.com (optional)" class="g-input" />
+            <button class="g-invite-btn" id="gen-invite" data-group-id={group.id}>Get invite link</button>
+          </div>
+          <div id="invite-out" class="g-invite-out"></div>
+
+          {recentInvites.length > 0 && (
+            <div class="g-invite-history">
+              <h3 class="g-side-sub">Recent</h3>
+              <ul>
+                {recentInvites.map((iv: any) => (
+                  <li class={iv.used_at ? 'used' : ''}>
+                    <code>/groups/join/{iv.code}</code>
+                    {iv.invitee_email && <span> · for {iv.invitee_email}</span>}
+                    {iv.used_at && <span class="g-iv-used"> · accepted by {iv.used_by_email}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      </aside>
+    )}
+  </div>
+</div>
+
+<style>
+  .g-wrap { max-width: 1180px; margin: 0 auto; padding: 24px clamp(16px, 4vw, 40px) 80px; }
+  .g-back { font-size: 13px; color: var(--text-sec); }
+  .g-back:hover { color: var(--text); }
+
+  .g-hero {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    gap: 32px; padding: 28px 0 32px; border-bottom: 1px solid var(--border);
+    margin-bottom: 28px; flex-wrap: wrap;
+  }
+  .g-hero-text { flex: 1; min-width: 280px; }
+  .g-hero-meta { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .g-privacy {
+    font-size: 12px; padding: 5px 12px; border-radius: 999px;
+    background: var(--accent2-dim); color: #047857; font-weight: 600;
+  }
+  .g-privacy.lock { background: #FEF3C7; color: #92400E; }
+  .g-count { font-size: 13px; color: var(--text-sec); font-weight: 500; }
+  .g-name { font-family: var(--font-display); font-size: clamp(30px, 5vw, 44px); font-weight: 900; letter-spacing: -0.02em; line-height: 1.05; }
+  .g-desc { font-size: 16px; color: var(--text-sec); margin-top: 12px; line-height: 1.5; max-width: 640px; }
+  .g-hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .g-locked-hint { font-size: 13px; color: var(--text-sec); font-style: italic; }
+
+  .g-cols { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .g-main, .g-side { display: flex; flex-direction: column; gap: 20px; }
+  .g-card { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 24px; box-shadow: var(--card-shadow); }
+  .g-h { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.01em; }
+  .g-empty-events p { font-size: 14px; color: var(--text-sec); line-height: 1.5; }
+
+  .g-members { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .g-member { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border-radius: 12px; }
+  .g-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 15px; font-weight: 800; flex-shrink: 0;
+  }
+  .g-member-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .g-member-text strong { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .g-member-role {
+    font-size: 10px; padding: 2px 7px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;
+    background: var(--surface); color: var(--text-sec); width: fit-content;
+  }
+  .role-owner { background: #FCE7F3; color: #9D174D; }
+  .role-organizer { background: #DBEAFE; color: #1E40AF; }
+
+  .g-side-help { font-size: 13px; color: var(--text-sec); margin-bottom: 14px; line-height: 1.5; }
+  .g-side-sub { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.06em; margin: 18px 0 8px; }
+  .g-invite-row { display: flex; flex-direction: column; gap: 8px; }
+  .g-input { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-family: var(--font); background: var(--bg); }
+  .g-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .g-invite-btn {
+    padding: 10px 14px; border-radius: 999px; background: var(--cta-bg); color: #fff;
+    font-family: var(--font-display); font-weight: 700; font-size: 13px; border: none; cursor: pointer;
+  }
+  .g-invite-btn:hover { box-shadow: 0 4px 12px var(--accent-glow); }
+  .g-invite-out { margin-top: 12px; font-size: 13px; min-height: 18px; word-break: break-all; }
+  .g-invite-out.ok { color: var(--text); }
+  .g-invite-out code { background: var(--surface); padding: 8px 10px; border-radius: 8px; display: block; margin-top: 6px; }
+  .g-invite-history ul { list-style: none; padding: 0; margin: 0; }
+  .g-invite-history li { font-size: 12px; color: var(--text-sec); padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .g-invite-history li.used { opacity: 0.6; text-decoration: line-through; }
+  .g-invite-history code { font-size: 11px; color: var(--text); background: var(--surface); padding: 2px 6px; border-radius: 4px; }
+  .g-iv-used { color: var(--accent2); font-weight: 600; }
+
+  @media (max-width: 920px) { .g-cols { grid-template-columns: 1fr; } }
+</style>
+
+<script>
+  const join = document.getElementById('join-btn');
+  const leave = document.getElementById('leave-btn');
+  const inviteOpen = document.getElementById('invite-btn');
+  const genBtn = document.getElementById('gen-invite');
+  const inviteEmail = document.getElementById('invite-email') as HTMLInputElement | null;
+  const out = document.getElementById('invite-out');
+
+  async function call(body: any) {
+    const res = await fetch('/api/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  }
+
+  join?.addEventListener('click', async () => {
+    const id = parseInt((join as HTMLElement).dataset.groupId || '0');
+    const d = await call({ action: 'join', group_id: id });
+    if (d.ok) location.reload();
+    else alert(`Couldn't join: ${d.error}`);
+  });
+
+  leave?.addEventListener('click', async () => {
+    const id = parseInt((leave as HTMLElement).dataset.groupId || '0');
+    const isOwner = (leave as HTMLElement).textContent?.includes('Delete');
+    if (!confirm(isOwner ? 'Delete this group and remove all members?' : 'Leave this group?')) return;
+    const d = await call({ action: 'leave', group_id: id });
+    if (d.ok) location.href = '/groups';
+    else alert(`Couldn't leave: ${d.error === 'transfer_ownership_first' ? 'Transfer ownership before leaving (or remove other members first).' : d.error}`);
+  });
+
+  inviteOpen?.addEventListener('click', () => {
+    inviteEmail?.focus();
+    inviteEmail?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  genBtn?.addEventListener('click', async () => {
+    const id = parseInt((genBtn as HTMLElement).dataset.groupId || '0');
+    if (out) out.textContent = '';
+    const d = await call({ action: 'invite', group_id: id, invitee_email: inviteEmail?.value || '' });
+    if (d.ok && d.code && out) {
+      const link = `${location.origin}/groups/join/${d.code}`;
+      out.className = 'g-invite-out ok';
+      out.innerHTML = `Share this link: <code>${link}</code>`;
+      try { await navigator.clipboard.writeText(link); } catch {}
+    } else if (out) {
+      out.textContent = `Couldn't generate: ${d.error}`;
+    }
+  });
+</script>
+</Base>
