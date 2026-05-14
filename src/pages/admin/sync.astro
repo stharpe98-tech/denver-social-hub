@@ -81,6 +81,16 @@ function describeConfig(kind: string, configJson: string | null): string {
     .kind-icon { font-size: 22px; line-height: 1; }
     .kind-name { font-size: 15px; font-weight: 700; color: #1c1917; }
     .kind-desc { font-size: 13px; color: #6a6a76; line-height: 1.45; margin-bottom: 10px; }
+    .setup-link {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;
+      color: #4338CA; text-decoration: none;
+      background: #EEF2FF; border: 1px solid #C7D2FE;
+      padding: 6px 10px; border-radius: 7px; margin-bottom: 12px;
+      transition: background 0.15s, border-color 0.15s;
+      align-self: flex-start;
+    }
+    .setup-link:hover { background: #E0E7FF; border-color: #A5B4FC; }
     .note { background: #FEF9C3; border: 1px solid #FDE68A; color: #713F12; font-size: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; line-height: 1.4; }
     .help { font-size: 11px; color: #8a8a96; margin-top: 4px; line-height: 1.4; }
     .add-row { margin-top: auto; padding-top: 4px; }
@@ -140,6 +150,11 @@ function describeConfig(kind: string, configJson: string | null): string {
             <span class="kind-name">{k.label}</span>
           </div>
           <p class="kind-desc">{k.description}</p>
+          {k.setupUrl && (
+            <a class="setup-link" href={k.setupUrl} target="_blank" rel="noopener noreferrer">
+              🔗 {k.setupLabel || 'Get credentials'} →
+            </a>
+          )}
           {k.note && <div class="note">{k.note}</div>}
 
           <div class="field">
