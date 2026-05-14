@@ -94,6 +94,74 @@ const redditName = user?.reddit_username || user?.name;
     </div>
   </footer>
 
+  {!user && (
+    <div id="welcome-tour" class="wt-overlay" hidden>
+      <div class="wt-modal" role="dialog" aria-modal="true" aria-labelledby="wt-title">
+        <button class="wt-close" id="wt-close" aria-label="Close">×</button>
+
+        <div class="wt-slide wt-slide-intro" data-step="0">
+          <div class="wt-emoji">👋</div>
+          <h2 id="wt-title">First time on Denver Social?</h2>
+          <p>We do real, small-group hangouts across Denver — dinners, hikes, game nights, brewery hops. No ads, no algorithms, just locals meeting locals.</p>
+          <div class="wt-actions">
+            <button class="wt-btn wt-btn-primary" data-action="start">Show me around</button>
+            <button class="wt-btn wt-btn-ghost" data-action="skip">I'm good, let me explore</button>
+          </div>
+        </div>
+
+        <div class="wt-slide" data-step="1" hidden>
+          <div class="wt-emoji">📅</div>
+          <h2>Browse events</h2>
+          <p>Head to <strong>Events</strong> to see what's happening this week. Filter by type (dinner, hike, brewery…) and pick something that fits your vibe.</p>
+          <div class="wt-tip"><strong>Tip:</strong> "Vibe tags" like 🥤 Sober-friendly or 🤫 Introvert-friendly help you find the right room.</div>
+        </div>
+
+        <div class="wt-slide" data-step="2" hidden>
+          <div class="wt-emoji">🎉</div>
+          <h2>RSVP in one tap</h2>
+          <p>Click any event and pick <strong>Going</strong>, <strong>Maybe</strong>, or <strong>Can't make it</strong>. Spots are limited — when an event fills up, you'll be auto-added to a waitlist if you still want in.</p>
+          <div class="wt-tip"><strong>Add to calendar:</strong> RSVPed events give you Google and .ics one-click adds.</div>
+        </div>
+
+        <div class="wt-slide" data-step="3" hidden>
+          <div class="wt-emoji">👥</div>
+          <h2>Build your own circle</h2>
+          <p>Make a <strong>Group</strong> for your trivia crew, hiking buddies, or dinner club. Invite-only or public — your call. Post events scoped just to that group.</p>
+          <div class="wt-tip"><strong>Single-use invite links</strong> let you share carefully without random people slipping in.</div>
+        </div>
+
+        <div class="wt-slide" data-step="4" hidden>
+          <div class="wt-emoji">🏆</div>
+          <h2>Level up</h2>
+          <p>Your <strong>profile</strong> tracks every hangout you've gone to. The more you show up, the higher you level — and Denver starts knowing your name.</p>
+          <div class="wt-tip"><strong>Reliability score:</strong> show up to events you RSVPed for and your score climbs. Skip and it drops.</div>
+        </div>
+
+        <div class="wt-slide" data-step="5" hidden>
+          <div class="wt-emoji">🚀</div>
+          <h2>You're set</h2>
+          <p>Sign up free with Discord and you can RSVP, host, and start your own groups. Or just keep browsing — no pressure.</p>
+          <div class="wt-actions">
+            <a href="/login" class="wt-btn wt-btn-primary">Sign in / sign up</a>
+            <button class="wt-btn wt-btn-ghost" data-action="skip">Keep browsing</button>
+          </div>
+        </div>
+
+        <div class="wt-footer" id="wt-footer" hidden>
+          <button class="wt-step-btn" id="wt-prev" data-action="prev">← Back</button>
+          <div class="wt-dots">
+            <span class="wt-dot" data-dot="1"></span>
+            <span class="wt-dot" data-dot="2"></span>
+            <span class="wt-dot" data-dot="3"></span>
+            <span class="wt-dot" data-dot="4"></span>
+            <span class="wt-dot" data-dot="5"></span>
+          </div>
+          <button class="wt-step-btn wt-step-btn-primary" id="wt-next" data-action="next">Next →</button>
+        </div>
+      </div>
+    </div>
+  )}
+
   <!-- Mobile bottom nav -->
   <nav class="mob-nav">
     <a href="/"        class:list={["mob-link", { active: currentPath === "/" }]}>
@@ -410,4 +478,138 @@ const redditName = user?.reddit_username || user?.name;
     .site-footer-inner { grid-template-columns: 1fr; }
     .footer-brand-col { grid-column: auto; }
   }
+
+  /* ── Welcome tour ── */
+  .wt-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--space-4);
+    animation: wt-fade 0.25s ease-out;
+  }
+  @keyframes wt-fade { from { opacity: 0; } to { opacity: 1; } }
+  .wt-modal {
+    position: relative; background: var(--bg); color: var(--text);
+    border-radius: 24px; max-width: 480px; width: 100%;
+    padding: var(--space-6);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+    animation: wt-pop 0.3s ease-out;
+  }
+  @keyframes wt-pop { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .wt-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 22px; line-height: 1; color: var(--text-sec);
+    cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wt-close:hover { background: var(--surface-hover); color: var(--text); }
+  .wt-slide { text-align: center; padding: 8px 4px 0; }
+  .wt-emoji { font-size: 56px; margin-bottom: 12px; line-height: 1; }
+  .wt-slide h2 { font-family: var(--font-display); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+  .wt-slide p { font-size: 15px; line-height: 1.55; color: var(--text-sec); margin-bottom: 14px; }
+  .wt-slide p strong { color: var(--text); font-weight: 700; }
+  .wt-tip {
+    margin-top: 12px; padding: 12px 14px;
+    background: linear-gradient(135deg, #EEF2FF, #F0FDF4);
+    border: 1px solid #C7D2FE; border-radius: 12px;
+    font-size: 13px; color: var(--text); text-align: left;
+  }
+  .wt-tip strong { font-weight: 700; }
+  .wt-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+  .wt-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 12px 22px; border-radius: 999px;
+    font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    border: none; cursor: pointer; text-decoration: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .wt-btn-primary { background: var(--cta-bg); color: var(--cta-text); }
+  .wt-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px var(--accent-glow); }
+  .wt-btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .wt-btn-ghost:hover { background: var(--surface-hover); }
+  .wt-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-top: 22px; padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  .wt-step-btn {
+    background: none; border: none; cursor: pointer;
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    color: var(--text-sec); padding: 8px 12px; border-radius: 8px;
+  }
+  .wt-step-btn:hover { color: var(--text); background: var(--surface); }
+  .wt-step-btn-primary { color: var(--accent); }
+  .wt-step-btn-primary:hover { color: var(--accent); background: var(--accent-dim); }
+  .wt-step-btn:disabled { opacity: 0.35; cursor: default; background: none; }
+  .wt-dots { display: flex; gap: 6px; }
+  .wt-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-hover); transition: background 0.2s; }
+  .wt-dot.active { background: var(--accent); }
 </style>
+
+<script is:inline>
+  (function() {
+    var tour = document.getElementById('welcome-tour');
+    if (!tour) return;
+    try {
+      if (localStorage.getItem('dsn_welcome_seen')) return;
+    } catch (e) {}
+    // Show after a brief delay so the page settles first
+    setTimeout(function() { tour.removeAttribute('hidden'); }, 500);
+
+    var slides = tour.querySelectorAll('.wt-slide');
+    var footer = document.getElementById('wt-footer');
+    var prevBtn = document.getElementById('wt-prev');
+    var nextBtn = document.getElementById('wt-next');
+    var closeBtn = document.getElementById('wt-close');
+    var dots = tour.querySelectorAll('.wt-dot');
+    var step = 0;
+    var maxStep = slides.length - 1;
+
+    function dismiss() {
+      try { localStorage.setItem('dsn_welcome_seen', '1'); } catch (e) {}
+      tour.setAttribute('hidden', '');
+    }
+
+    function show(n) {
+      step = Math.max(0, Math.min(maxStep, n));
+      slides.forEach(function(s, i) {
+        if (i === step) s.removeAttribute('hidden');
+        else s.setAttribute('hidden', '');
+      });
+      if (step >= 1 && step <= 5) {
+        footer.removeAttribute('hidden');
+        dots.forEach(function(d, i) {
+          d.classList.toggle('active', i === step - 1);
+        });
+        prevBtn.disabled = step === 1;
+        nextBtn.textContent = step === maxStep ? 'Done' : 'Next →';
+      } else {
+        footer.setAttribute('hidden', '');
+      }
+    }
+
+    tour.addEventListener('click', function(e) {
+      var t = e.target;
+      if (t === tour) { dismiss(); return; }
+      var action = t.getAttribute('data-action');
+      if (!action) return;
+      if (action === 'start') show(1);
+      else if (action === 'skip') dismiss();
+      else if (action === 'prev') show(step - 1);
+      else if (action === 'next') {
+        if (step === maxStep) dismiss();
+        else show(step + 1);
+      }
+    });
+    closeBtn.addEventListener('click', dismiss);
+    document.addEventListener('keydown', function(e) {
+      if (tour.hasAttribute('hidden')) return;
+      if (e.key === 'Escape') dismiss();
+      else if (e.key === 'ArrowRight' && step >= 1 && step < maxStep) show(step + 1);
+      else if (e.key === 'ArrowLeft' && step > 1) show(step - 1);
+    });
+  })();
+</script>
