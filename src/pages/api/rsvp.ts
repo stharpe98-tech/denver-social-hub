@@ -91,7 +91,7 @@ export const POST = async ({ request, cookies }: { request: Request; cookies: an
         }
       }
 
-      const count: any = await db.prepare("SELECT COUNT(*) as c FROM event_rsvps WHERE event_id=? AND waitlist_position IS NULL").bind(event_id).first();
+      const count: any = await db.prepare("SELECT COUNT(*) as c FROM event_rsvps WHERE event_id=? AND waitlist_position IS NULL AND (status IS NULL OR status = 'going')").bind(event_id).first();
 
       if (contentType.includes('application/json')) {
         return new Response(JSON.stringify({ rsvped: false, count: count?.c || 0 }));
@@ -100,7 +100,7 @@ export const POST = async ({ request, cookies }: { request: Request; cookies: an
     }
 
     // New RSVP
-    const confirmedCount: any = await db.prepare("SELECT COUNT(*) as c FROM event_rsvps WHERE event_id=? AND waitlist_position IS NULL").bind(event_id).first();
+    const confirmedCount: any = await db.prepare("SELECT COUNT(*) as c FROM event_rsvps WHERE event_id=? AND waitlist_position IS NULL AND (status IS NULL OR status = 'going')").bind(event_id).first();
     const spots = event.spots ? parseInt(event.spots) : null; // null = unlimited
     const isFull = spots !== null && (confirmedCount?.c || 0) >= spots;
 
@@ -134,7 +134,7 @@ export const POST = async ({ request, cookies }: { request: Request; cookies: an
     }
 
     // Update rsvp_count on event
-    const newCount: any = await db.prepare("SELECT COUNT(*) as c FROM event_rsvps WHERE event_id=? AND waitlist_position IS NULL").bind(event_id).first();
+    const newCount: any = await db.prepare("SELECT COUNT(*) as c FROM event_rsvps WHERE event_id=? AND waitlist_position IS NULL AND (status IS NULL OR status = 'going')").bind(event_id).first();
     await db.prepare("UPDATE events SET rsvp_count = ? WHERE id = ?").bind(newCount?.c || 0, event_id).run();
 
     if (contentType.includes('application/json')) {

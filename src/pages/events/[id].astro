@@ -11,6 +11,7 @@ if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 
 let event: any = null;
 let rsvps: any[] = [];
+let maybeList: any[] = [];
 let waitlist: any[] = [];
 let comments: any[] = [];
 let bringItems: any[] = [];
@@ -22,9 +23,13 @@ try {
   if (db && id) {
     event = await db.prepare("SELECT * FROM events WHERE id=?").bind(id).first();
     const r = await db.prepare(
-      "SELECT r.*, m.reddit_username, m.karma, m.reliability_score, m.check_in_count FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL AND (r.status IS NULL OR r.status != 'not_going') ORDER BY r.created_at"
+      "SELECT r.*, m.reddit_username, m.karma, m.reliability_score, m.check_in_count FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL AND (r.status IS NULL OR r.status = 'going') ORDER BY r.created_at"
     ).bind(id).all();
     rsvps = r?.results || [];
+    const mb = await db.prepare(
+      "SELECT r.*, m.reddit_username FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL AND r.status='maybe' ORDER BY r.created_at"
+    ).bind(id).all();
+    maybeList = (mb?.results || []) as any[];
     const w = await db.prepare(
       "SELECT r.*, m.reddit_username, m.karma FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NOT NULL ORDER BY r.waitlist_position"
     ).bind(id).all();
@@ -40,7 +45,9 @@ try {
       eventPhotos = ph?.results || [];
     } catch { /* table may not exist yet on fresh deploys */ }
     if (user) {
-      myRsvp = rsvps.find((r: any) => r.member_email === user.email) || null;
+      myRsvp = rsvps.find((r: any) => r.member_email === user.email)
+        || maybeList.find((r: any) => r.member_email === user.email)
+        || null;
       myWaitlistEntry = waitlist.find((w: any) => w.member_email === user.email) || null;
     }
   }
@@ -201,14 +208,18 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
     {user && myRsvp && (
       <div class="ev-rsvp-confirmed">
         <div class="ev-rsvp-confirmed-top">
-          <span class="ev-check">✓</span>
+          <span class="ev-check">{myRsvp.status === 'maybe' ? '🤔' : '✓'}</span>
           <div>
-            <strong>You're in!</strong>
+            <strong>{myRsvp.status === 'maybe' ? 'You said Maybe' : "You're going"}</strong>
             <span class="ev-rsvp-meta">
-              {googleCalUrl && <a href={googleCalUrl} target="_blank" rel="noopener" class="ev-cal-link">📅 Add to calendar</a>}
+              {googleCalUrl && myRsvp.status !== 'maybe' && <a href={googleCalUrl} target="_blank" rel="noopener" class="ev-cal-link">📅 Add to calendar</a>}
               <button class="ev-cancel-btn" id="cancel-rsvp-btn" data-event-id={id}>Cancel RSVP</button>
             </span>
           </div>
+        </div>
+        <div class="ev-rsvp-switch">
+          <button class={`ev-rsvp-switch-btn ${(myRsvp.status === 'going' || !myRsvp.status) ? 'active' : ''}`} data-switch="going" data-event-id={id}>Going</button>
+          <button class={`ev-rsvp-switch-btn ${myRsvp.status === 'maybe' ? 'active' : ''}`} data-switch="maybe" data-event-id={id}>Maybe</button>
         </div>
 
         {/* Bring items — claimable after RSVP */}
@@ -265,12 +276,23 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
     {/* Open to RSVP — the big moment */}
     {user && !myRsvp && !myWaitlistEntry && meetsKarmaGate && !isFull && (
       <div class="ev-rsvp-card" id="rsvp-card">
-        {/* Step 1: The big button */}
+        {/* Step 1: 3-state RSVP */}
         <div id="rsvp-step1">
-          <button class="ev-rsvp-btn" id="rsvp-go-btn" data-event-id={id}>
-            I'm in! 🎉
-          </button>
-          <span class="ev-rsvp-sub">{spotsLeft !== Infinity ? `${spotsLeft} spots left` : `${rsvps.length} going so far`}</span>
+          <div class="ev-rsvp-options">
+            <button class="ev-rsvp-btn ev-rsvp-going" data-rsvp="going" data-event-id={id}>
+              <span class="ev-rsvp-emoji">🎉</span>
+              <span>Going</span>
+            </button>
+            <button class="ev-rsvp-btn ev-rsvp-maybe" data-rsvp="maybe" data-event-id={id}>
+              <span class="ev-rsvp-emoji">🤔</span>
+              <span>Maybe</span>
+            </button>
+            <button class="ev-rsvp-btn ev-rsvp-no" data-rsvp="not_going" data-event-id={id}>
+              <span class="ev-rsvp-emoji">👋</span>
+              <span>Can't make it</span>
+            </button>
+          </div>
+          <span class="ev-rsvp-sub">{spotsLeft !== Infinity ? `${spotsLeft} spots left` : `${rsvps.length} going${maybeList.length ? ` · ${maybeList.length} maybe` : ''}`}</span>
         </div>
 
         {/* Step 2: Pick bring items (hidden initially, shown after RSVP) */}
@@ -622,6 +644,36 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   }
   .ev-rsvp-cta-text { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--text); }
   .ev-rsvp-sub { font-size: 13px; color: var(--text-sec); margin-top: 4px; }
+
+  /* 3-state RSVP buttons */
+  .ev-rsvp-options {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px; margin-bottom: 12px;
+  }
+  .ev-rsvp-options .ev-rsvp-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 14px 8px; font-size: 14px; border: 2px solid var(--border);
+    background: var(--bg); color: var(--text); border-radius: 14px;
+  }
+  .ev-rsvp-emoji { font-size: 22px; line-height: 1; }
+  .ev-rsvp-going:hover  { background: #DCFCE7; border-color: #16A34A; color: #166534; }
+  .ev-rsvp-maybe:hover  { background: #FEF3C7; border-color: #D97706; color: #92400E; }
+  .ev-rsvp-no:hover     { background: #FEE2E2; border-color: #DC2626; color: #991B1B; }
+  .ev-rsvp-options .ev-rsvp-btn.loading { opacity: 0.5; pointer-events: none; }
+  @media (max-width: 420px) {
+    .ev-rsvp-options { grid-template-columns: 1fr; }
+  }
+
+  /* Switch chips (after RSVP) */
+  .ev-rsvp-switch { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .ev-rsvp-switch-btn {
+    flex: 1; padding: 8px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 13px; font-weight: 600; color: var(--text-sec);
+    cursor: pointer; font-family: var(--font); transition: all 0.15s;
+  }
+  .ev-rsvp-switch-btn:hover { background: var(--surface-hover); color: var(--text); }
+  .ev-rsvp-switch-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
   /* The big RSVP button */
   .ev-rsvp-btn {
@@ -1015,53 +1067,70 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
 
 <script is:inline>
   (function() {
-    // ── RSVP: "I'm in!" button (Step 1 → Step 2) ──
-    var rsvpBtn = document.getElementById('rsvp-go-btn');
-    if (rsvpBtn) {
-      rsvpBtn.addEventListener('click', async function() {
-        var eventId = rsvpBtn.getAttribute('data-event-id');
-        rsvpBtn.classList.add('loading');
-        rsvpBtn.textContent = 'Saving…';
-        rsvpBtn.disabled = true;
+    // ── RSVP: 3-state Going / Maybe / Can't make it ──
+    document.querySelectorAll('[data-rsvp]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var status = btn.getAttribute('data-rsvp');
+        var eventId = btn.getAttribute('data-event-id');
+        btn.classList.add('loading');
+        btn.disabled = true;
 
         try {
           var res = await fetch('/api/rsvp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event_id: eventId, action: 'rsvp', status: 'going', party_size: 1 })
+            body: JSON.stringify({ event_id: eventId, action: 'rsvp', status: status, party_size: 1 })
           });
           var data = await res.json();
 
-          if (data.rsvped) {
-            // Success! Show Step 2
+          if (data.rsvped && status === 'going') {
             var step1 = document.getElementById('rsvp-step1');
             var step2 = document.getElementById('rsvp-step2');
             var card = document.getElementById('rsvp-card');
             if (step1) step1.style.display = 'none';
             if (step2) step2.style.display = 'block';
-            // Change card border to green
             if (card) {
               card.style.borderColor = 'var(--green)';
               card.style.boxShadow = '0 0 0 4px var(--green-dim)';
             }
-          } else if (data.waitlisted) {
+          } else if (data.rsvped || data.waitlisted || data.updated) {
             window.location.reload();
           } else if (data.error === 'login_required') {
             window.location.href = '/login?next=/events/' + eventId;
           } else if (data.error) {
             alert('Could not RSVP: ' + data.error);
-            rsvpBtn.classList.remove('loading');
-            rsvpBtn.textContent = "I'm in! 🎉";
-            rsvpBtn.disabled = false;
+            btn.classList.remove('loading');
+            btn.disabled = false;
           }
         } catch (err) {
           alert('Something went wrong. Please try again.');
-          rsvpBtn.classList.remove('loading');
-          rsvpBtn.textContent = "I'm in! 🎉";
-          rsvpBtn.disabled = false;
+          btn.classList.remove('loading');
+          btn.disabled = false;
         }
       });
-    }
+    });
+
+    // ── Switch between Going / Maybe after initial RSVP ──
+    document.querySelectorAll('[data-switch]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (btn.classList.contains('active')) return;
+        var status = btn.getAttribute('data-switch');
+        var eventId = btn.getAttribute('data-event-id');
+        btn.disabled = true;
+        try {
+          var res = await fetch('/api/rsvp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: eventId, action: 'update', status: status, party_size: 1 })
+          });
+          var data = await res.json();
+          if (data.updated || data.ok) window.location.reload();
+          else { alert('Update failed: ' + (data.error || 'unknown')); btn.disabled = false; }
+        } catch (e) {
+          alert('Network error.'); btn.disabled = false;
+        }
+      });
+    });
 
     // ── Step 2: Save picked items ──
     var saveBtn = document.getElementById('save-picks-btn');
