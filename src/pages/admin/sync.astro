@@ -44,26 +44,51 @@ function describeConfig(kind: string, configJson: string | null): string {
     html, body { background: #f7f5f2; color: #1c1917; font-family: 'Inter', sans-serif; min-height: 100vh; }
     body { padding-bottom: 60px; }
     .lh { background: #f7f5f2; border-bottom: 1px solid #e4ddd4; padding: 28px 20px; }
-    .lh-in { max-width: 760px; margin: 0 auto; }
+    .lh-in { max-width: 880px; margin: 0 auto; }
     .lh-back { color: #8a8a96; font-size: 13px; text-decoration: none; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; }
     .lh h1 { font-size: clamp(20px,5vw,26px); font-weight: 700; color: #1c1917; margin-bottom: 4px; }
     .lh p { font-size: 13px; color: #8a8a96; font-family: 'JetBrains Mono', monospace; }
-    .lp { max-width: 760px; margin: 0 auto; padding: 20px 16px; }
+    .lp { max-width: 880px; margin: 0 auto; padding: 20px 16px; }
+
     .card { background: #fff; border: 1px solid #e4ddd4; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
     .card-title { font-size: 11px; font-weight: 600; color: #8a8a96; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; }
+
     .field { margin-bottom: 12px; }
     .field label { display: block; font-size: 11px; color: #8a8a96; margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; }
     .inp { width: 100%; padding: 11px 13px; background: #f7f5f2; border: 1px solid #e4ddd4; border-radius: 7px; color: #1c1917; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; -webkit-appearance: none; }
     .inp:focus { border-color: #7C3AED; }
-    .sel { width: 100%; padding: 11px 13px; background: #f7f5f2; border: 1px solid #e4ddd4; border-radius: 7px; font-size: 14px; font-family: 'Inter', sans-serif; }
+
     .btn { padding: 11px 16px; border-radius: 8px; border: none; background: #7C3AED; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; }
     .btn:hover { background: #6D28D9; }
+    .btn:disabled { opacity: 0.6; cursor: progress; }
     .btn-sec { background: transparent; color: #6a6a76; border: 1px solid #e4ddd4; padding: 9px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; }
     .btn-sec:hover { border-color: #7C3AED; color: #7C3AED; }
     .btn-danger { background: transparent; color: #8a8a96; border: 1px solid #e4ddd4; padding: 9px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; }
     .btn-danger:hover { border-color: #ff4757; color: #ff4757; }
-    .run-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .sec-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #8a8a96; margin-bottom: 12px; margin-top: 8px; }
+
+    .run-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .sec-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #8a8a96; margin: 24px 0 12px; }
+
+    /* Source kind grid (the "all on one page" part) */
+    .kind-grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+    @media (min-width: 720px) { .kind-grid { grid-template-columns: 1fr 1fr; } }
+
+    .kind-card {
+      background: #fff; border: 1px solid #e4ddd4; border-radius: 12px;
+      padding: 18px; display: flex; flex-direction: column;
+    }
+    .kind-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .kind-icon { font-size: 22px; line-height: 1; }
+    .kind-name { font-size: 15px; font-weight: 700; color: #1c1917; }
+    .kind-desc { font-size: 13px; color: #6a6a76; line-height: 1.45; margin-bottom: 10px; }
+    .note { background: #FEF9C3; border: 1px solid #FDE68A; color: #713F12; font-size: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; line-height: 1.4; }
+    .help { font-size: 11px; color: #8a8a96; margin-top: 4px; line-height: 1.4; }
+    .add-row { margin-top: auto; padding-top: 4px; }
+    .kind-status { font-size: 11px; color: #6a6a76; font-family: 'JetBrains Mono', monospace; margin-top: 8px; }
+    .kind-status.ok { color: #047857; }
+    .kind-status.err { color: #b91c1c; }
+
+    /* Connected source list */
     .src { background: #fff; border: 1px solid #e4ddd4; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
     .src.disabled { opacity: 0.55; }
     .src-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
@@ -74,16 +99,10 @@ function describeConfig(kind: string, configJson: string | null): string {
     .src-meta { font-size: 11px; color: #8a8a96; font-family: 'JetBrains Mono', monospace; }
     .src-status-ok { color: #047857; }
     .src-status-err { color: #b91c1c; }
-    .src-status-skip { color: #6a6a76; }
     .src-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
     .empty { text-align: center; padding: 32px; color: #8a8a96; font-style: italic; font-size: 13px; }
     .run-result { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6a6a76; margin-top: 8px; white-space: pre-wrap; }
     .hide { display: none; }
-    .kind-fields { display: none; }
-    .kind-fields.show { display: block; }
-    .help { font-size: 11px; color: #8a8a96; margin-top: 4px; line-height: 1.4; }
-    .note { background: #FEF9C3; border: 1px solid #FDE68A; color: #713F12; font-size: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; line-height: 1.4; }
-    .desc { font-size: 13px; color: #6a6a76; margin-bottom: 12px; line-height: 1.4; }
     .webhook-info { background: #F0FDF4; border: 1px solid #BBF7D0; padding: 10px 12px; border-radius: 8px; margin-top: 10px; }
     .webhook-info code { display: block; background: #fff; border: 1px solid #BBF7D0; padding: 6px 8px; border-radius: 6px; font-size: 11px; word-break: break-all; margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
     .webhook-label { font-size: 11px; font-weight: 600; color: #047857; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -105,32 +124,29 @@ function describeConfig(kind: string, configJson: string | null): string {
       <div class="run-row">
         <div>
           <div class="card-title" style="margin-bottom: 2px;">Run pull-based sources now</div>
-          <div style="font-size:12px;color:#8a8a96">Cron runs every 2 hours. Webhook sources receive events via push and aren't included here.</div>
+          <div style="font-size:12px;color:#8a8a96">Cron runs every 2 hours. Webhook sources receive events via push and aren't included.</div>
         </div>
         <button class="btn" id="runBtn">Sync all</button>
       </div>
       <div class="run-result hide" id="runResult"></div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Add source</div>
-      <div class="field">
-        <label>source kind</label>
-        <select class="sel" id="newKind">
-          {SYNC_KINDS.map((k) => (
-            <option value={k.kind}>{k.icon} {k.label}</option>
-          ))}
-        </select>
-      </div>
-      <div class="field">
-        <label>label</label>
-        <input type="text" class="inp" id="newLabel" placeholder="e.g. Denver Social Discord"/>
-      </div>
-
+    <div class="sec-label">Add a source</div>
+    <div class="kind-grid">
       {SYNC_KINDS.map((k) => (
-        <div class={"kind-fields" + (k.kind === 'discord' ? ' show' : '')} data-kind={k.kind}>
-          <div class="desc">{k.description}</div>
+        <div class="kind-card" data-kind={k.kind}>
+          <div class="kind-head">
+            <span class="kind-icon">{k.icon}</span>
+            <span class="kind-name">{k.label}</span>
+          </div>
+          <p class="kind-desc">{k.description}</p>
           {k.note && <div class="note">{k.note}</div>}
+
+          <div class="field">
+            <label>label</label>
+            <input type="text" class="inp" data-field-name="__label" placeholder={`e.g. ${k.label}`} />
+          </div>
+
           {k.fields.map((f) => (
             <div class="field">
               <label>{f.label}{f.required ? ' *' : ''}</label>
@@ -138,16 +154,18 @@ function describeConfig(kind: string, configJson: string | null): string {
                 type={f.type === 'password' ? 'password' : 'text'}
                 class="inp"
                 data-field-name={f.name}
-                data-kind={k.kind}
                 placeholder={f.placeholder || ''}
               />
               {f.help && <div class="help">{f.help}</div>}
             </div>
           ))}
+
+          <div class="add-row">
+            <button class="btn js-add" data-kind={k.kind}>Add {k.label}</button>
+            <div class="kind-status hide" data-status></div>
+          </div>
         </div>
       ))}
-
-      <button class="btn" id="addBtn">Add source</button>
     </div>
 
     <div class="sec-label">Connected sources ({sources.length})</div>
@@ -181,7 +199,7 @@ function describeConfig(kind: string, configJson: string | null): string {
                   )}
                 </>
               ) : (
-                <span class="src-status-skip">never run</span>
+                <span>never run</span>
               )}
             </div>
             {s.kind === 'webhook' && (
@@ -206,16 +224,6 @@ function describeConfig(kind: string, configJson: string | null): string {
   </div>
 
   <script is:inline>
-    const $ = (id) => document.getElementById(id);
-
-    function showKindFields(kind) {
-      document.querySelectorAll('.kind-fields').forEach(el => {
-        el.classList.toggle('show', el.getAttribute('data-kind') === kind);
-      });
-    }
-    showKindFields($('newKind').value);
-    $('newKind').addEventListener('change', e => showKindFields(e.target.value));
-
     async function call(body) {
       const res = await fetch('/api/admin/sync', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -224,16 +232,27 @@ function describeConfig(kind: string, configJson: string | null): string {
       return res.json();
     }
 
-    $('addBtn').addEventListener('click', async () => {
-      const kind = $('newKind').value;
-      const payload = { action: 'create', kind, label: $('newLabel').value.trim() };
-      document.querySelectorAll(`.kind-fields[data-kind="${kind}"] input[data-field-name]`).forEach(inp => {
-        payload[inp.getAttribute('data-field-name')] = inp.value.trim();
+    document.querySelectorAll('.js-add').forEach(btn => btn.addEventListener('click', async () => {
+      const kind = btn.getAttribute('data-kind');
+      const card = btn.closest('.kind-card');
+      const statusEl = card.querySelector('[data-status]');
+      const payload = { action: 'create', kind };
+      card.querySelectorAll('input[data-field-name]').forEach(inp => {
+        const name = inp.getAttribute('data-field-name');
+        if (name === '__label') payload.label = inp.value.trim();
+        else payload[name] = inp.value.trim();
       });
-      const r = await call(payload);
-      if (r.ok) location.reload();
-      else alert(r.error || 'Failed');
-    });
+      btn.disabled = true;
+      statusEl.classList.remove('hide', 'ok', 'err');
+      statusEl.textContent = 'Adding…';
+      try {
+        const r = await call(payload);
+        if (r.ok) { statusEl.classList.add('ok'); statusEl.textContent = 'Added — reloading…'; setTimeout(() => location.reload(), 600); }
+        else { statusEl.classList.add('err'); statusEl.textContent = r.error || 'Failed'; btn.disabled = false; }
+      } catch (e) {
+        statusEl.classList.add('err'); statusEl.textContent = 'Network error'; btn.disabled = false;
+      }
+    }));
 
     document.querySelectorAll('.js-toggle').forEach(b => b.addEventListener('click', async () => {
       const r = await call({ action: 'toggle', id: parseInt(b.dataset.id) });
@@ -259,10 +278,10 @@ function describeConfig(kind: string, configJson: string | null): string {
       try { await navigator.clipboard.writeText(v); b.textContent = 'copied'; setTimeout(() => b.textContent = 'copy', 1500); } catch {}
     }));
 
-    $('runBtn').addEventListener('click', async () => {
-      const btn = $('runBtn');
-      const out = $('runResult');
-      btn.disabled = true; btn.textContent = 'Syncing…';
+    const runBtn = document.getElementById('runBtn');
+    const out = document.getElementById('runResult');
+    runBtn.addEventListener('click', async () => {
+      runBtn.disabled = true; runBtn.textContent = 'Syncing…';
       out.classList.remove('hide');
       out.textContent = 'Running…';
       try {
@@ -280,9 +299,9 @@ function describeConfig(kind: string, configJson: string | null): string {
           setTimeout(() => location.reload(), 1500);
         }
       } catch (e) {
-        out.textContent = 'Network error: ' + (e && e.message || e);
+        out.textContent = 'Network error';
       }
-      btn.disabled = false; btn.textContent = 'Sync all';
+      runBtn.disabled = false; runBtn.textContent = 'Sync all';
     });
   </script>
 </body>
