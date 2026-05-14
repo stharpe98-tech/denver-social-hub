@@ -15,6 +15,7 @@ let rsvps: any[] = [];
 let maybeList: any[] = [];
 let waitlist: any[] = [];
 let cohosts: any[] = [];
+let eventGroup: any = null;
 let comments: any[] = [];
 let bringItems: any[] = [];
 let myRsvp: any = null;
@@ -51,6 +52,11 @@ try {
         || maybeList.find((r: any) => r.member_email === user.email)
         || null;
       myWaitlistEntry = waitlist.find((w: any) => w.member_email === user.email) || null;
+    }
+    if (event.group_id) {
+      try {
+        eventGroup = await db.prepare('SELECT id, slug, name FROM groups WHERE id=?').bind(event.group_id).first();
+      } catch {}
     }
     await ensureCohostsSchema(db);
     const ch = await db.prepare(`
@@ -373,6 +379,14 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
         ))}
       </div>
     </div>
+  )}
+
+  {eventGroup && (
+    <a href={`/groups/${eventGroup.slug}`} class="ev-group-banner">
+      <span>👥</span>
+      <span>Posted in <strong>{eventGroup.name}</strong></span>
+      <span class="ev-group-arrow">›</span>
+    </a>
   )}
 
   <!-- CO-HOSTS -->
@@ -826,6 +840,18 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   .ev-cohost-add-btn { padding: 10px 16px; border-radius: 999px; background: var(--cta-bg); color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 13px; border: none; cursor: pointer; }
   .ev-cohost-add-btn:hover { box-shadow: 0 4px 12px var(--accent-glow); }
   .ev-cohost-err { color: #DC2626; font-size: 12px; min-height: 16px; margin-top: 6px; }
+
+  .ev-group-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; margin: 12px 0;
+    background: linear-gradient(135deg, #EEF2FF, #F0FDF4);
+    border: 1px solid #C7D2FE; border-radius: 12px;
+    font-size: 13px; color: var(--text); text-decoration: none;
+    transition: transform 0.15s;
+  }
+  .ev-group-banner:hover { transform: translateY(-1px); }
+  .ev-group-banner strong { font-weight: 700; }
+  .ev-group-arrow { margin-left: auto; font-size: 20px; color: #7C3AED; font-weight: 700; }
   .ev-cancel-btn {
     font-size: 12px;
     color: var(--text-faint);

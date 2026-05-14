@@ -13,6 +13,7 @@ let group: any = null;
 let members: any[] = [];
 let myRole: string | null = null;
 let recentInvites: any[] = [];
+let groupEvents: any[] = [];
 
 if (db && slug) {
   await ensureGroupsSchema(db);
@@ -26,6 +27,13 @@ if (db && slug) {
       ORDER BY CASE gm.role WHEN 'owner' THEN 0 WHEN 'organizer' THEN 1 ELSE 2 END, gm.joined_at ASC
     `).bind(group.id).all();
     members = (m.results || []) as any[];
+    try {
+      const ev = await db.prepare(`
+        SELECT id, title, event_type, event_month, event_day, location, zone, rsvp_count, spots, is_past
+        FROM events WHERE group_id = ? ORDER BY is_past ASC, id DESC LIMIT 30
+      `).bind(group.id).all();
+      groupEvents = (ev.results || []) as any[];
+    } catch {}
     if (user?.email) {
       const mine = members.find((mm: any) => mm.member_email?.toLowerCase() === user.email.toLowerCase());
       myRole = mine?.role || null;
@@ -98,9 +106,30 @@ const canJoinDirect = !myRole && group.privacy === 'public' && !!user;
         </div>
       </section>
 
-      <section class="g-card g-empty-events">
-        <h2 class="g-h">Events</h2>
-        <p>Group-scoped events are coming soon — for now, post events to Denver Social and organize meetups inside the member list.</p>
+      <section class="g-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;">
+          <h2 class="g-h" style="margin-bottom:0;">Events ({groupEvents.length})</h2>
+          {myRole && <a href={`/events/new?group=${group.slug}`} class="g-invite-btn">+ New event</a>}
+        </div>
+        {groupEvents.length === 0 ? (
+          <p style="font-size:14px;color:var(--text-sec);line-height:1.5;">No events yet. {myRole ? <>Be the first — <a href={`/events/new?group=${group.slug}`} style="color:var(--accent);font-weight:600;">post one →</a></> : 'Members can post events scoped to this group.'}</p>
+        ) : (
+          <div class="g-events">
+            {groupEvents.map((ev: any) => (
+              <a href={`/events/${ev.id}`} class={`g-event ${ev.is_past ? 'past' : ''}`}>
+                <div class="g-event-date">
+                  <div class="g-event-month">{(ev.event_month || 'TBD').slice(0, 3)}</div>
+                  <div class="g-event-day">{ev.event_day || '—'}</div>
+                </div>
+                <div class="g-event-info">
+                  <div class="g-event-title">{ev.title}</div>
+                  <div class="g-event-sub">{ev.zone || ev.location || 'Denver'} · {ev.rsvp_count || 0}{ev.spots ? `/${ev.spots}` : ''} going</div>
+                </div>
+                {ev.is_past && <span class="g-event-past">Past</span>}
+              </a>
+            ))}
+          </div>
+        )}
       </section>
     </main>
 
@@ -200,6 +229,18 @@ const canJoinDirect = !myRole && group.privacy === 'public' && !!user;
   .g-invite-history li.used { opacity: 0.6; text-decoration: line-through; }
   .g-invite-history code { font-size: 11px; color: var(--text); background: var(--surface); padding: 2px 6px; border-radius: 4px; }
   .g-iv-used { color: var(--accent2); font-weight: 600; }
+
+  .g-events { display: flex; flex-direction: column; gap: 8px; }
+  .g-event { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; transition: transform 0.15s, border-color 0.15s, background 0.15s; }
+  .g-event:hover { transform: translateY(-1px); border-color: var(--border-hover); background: var(--bg); }
+  .g-event.past { opacity: 0.7; }
+  .g-event-date { width: 48px; flex-shrink: 0; text-align: center; padding: 6px 0; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; }
+  .g-event-month { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
+  .g-event-day { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text); }
+  .g-event-info { flex: 1; min-width: 0; }
+  .g-event-title { font-size: 15px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .g-event-sub { font-size: 13px; color: var(--text-sec); }
+  .g-event-past { font-size: 11px; padding: 4px 10px; border-radius: 999px; background: var(--bg); color: var(--text-sec); font-weight: 600; border: 1px solid var(--border); }
 
   @media (max-width: 920px) { .g-cols { grid-template-columns: 1fr; } }
 </style>
