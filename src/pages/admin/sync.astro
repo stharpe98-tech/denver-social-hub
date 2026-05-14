@@ -2,6 +2,7 @@
 import { getDB } from '../../lib/db';
 import { requireApprovedOrg } from '../../lib/admin-auth';
 import { ensureEventSyncSchema } from '../../lib/event-sync/schema';
+import { SYNC_KINDS, findKind } from '../../lib/event-sync/kinds';
 
 const gate = await requireApprovedOrg(Astro);
 if (gate instanceof Response) return gate;
@@ -11,17 +12,23 @@ let sources: any[] = [];
 if (db) {
   await ensureEventSyncSchema(db);
   const { results } = await db.prepare(
-    "SELECT id, kind, label, config, enabled, last_synced_at, last_status, last_error, last_count FROM event_sources ORDER BY id DESC"
+    "SELECT id, kind, label, config, webhook_token, enabled, last_synced_at, last_status, last_error, last_count FROM event_sources ORDER BY id DESC"
   ).all();
   sources = results ?? [];
 }
+
+const origin = Astro.url.origin;
 
 function describeConfig(kind: string, configJson: string | null): string {
   if (!configJson) return '';
   try {
     const c = JSON.parse(configJson);
     if (kind === 'discord') return `guild ${c.guild_id || '?'}`;
-    if (kind === 'ics') return c.url || '';
+    if (kind === 'ics' || kind === 'rss') return c.url || '';
+    if (kind === 'eventbrite') return `org ${c.organization_id || '?'}`;
+    if (kind === 'luma') return `calendar ${c.calendar_api_id || '?'}`;
+    if (kind === 'ticketmaster') return [c.city, c.state_code, c.classification].filter(Boolean).join(' · ');
+    if (kind === 'facebook') return `page ${c.page_id || '?'}`;
     return '';
   } catch { return ''; }
 }
@@ -37,11 +44,11 @@ function describeConfig(kind: string, configJson: string | null): string {
     html, body { background: #f7f5f2; color: #1c1917; font-family: 'Inter', sans-serif; min-height: 100vh; }
     body { padding-bottom: 60px; }
     .lh { background: #f7f5f2; border-bottom: 1px solid #e4ddd4; padding: 28px 20px; }
-    .lh-in { max-width: 720px; margin: 0 auto; }
+    .lh-in { max-width: 760px; margin: 0 auto; }
     .lh-back { color: #8a8a96; font-size: 13px; text-decoration: none; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; }
     .lh h1 { font-size: clamp(20px,5vw,26px); font-weight: 700; color: #1c1917; margin-bottom: 4px; }
     .lh p { font-size: 13px; color: #8a8a96; font-family: 'JetBrains Mono', monospace; }
-    .lp { max-width: 720px; margin: 0 auto; padding: 20px 16px; }
+    .lp { max-width: 760px; margin: 0 auto; padding: 20px 16px; }
     .card { background: #fff; border: 1px solid #e4ddd4; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
     .card-title { font-size: 11px; font-weight: 600; color: #8a8a96; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; }
     .field { margin-bottom: 12px; }
@@ -55,27 +62,32 @@ function describeConfig(kind: string, configJson: string | null): string {
     .btn-sec:hover { border-color: #7C3AED; color: #7C3AED; }
     .btn-danger { background: transparent; color: #8a8a96; border: 1px solid #e4ddd4; padding: 9px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; }
     .btn-danger:hover { border-color: #ff4757; color: #ff4757; }
-    .run-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .sec-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #8a8a96; margin-bottom: 12px; }
+    .run-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .sec-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #8a8a96; margin-bottom: 12px; margin-top: 8px; }
     .src { background: #fff; border: 1px solid #e4ddd4; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
     .src.disabled { opacity: 0.55; }
     .src-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
     .src-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .kind-pill { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
-    .kind-discord { background: #EEF2FF; color: #4338CA; }
-    .kind-ics { background: #F0FDF4; color: #047857; }
+    .kind-pill { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #EEF2FF; color: #4338CA; }
     .src-label { font-size: 14px; font-weight: 600; color: #1c1917; }
     .src-cfg { font-size: 12px; color: #6a6a76; font-family: 'JetBrains Mono', monospace; margin-bottom: 8px; word-break: break-all; }
     .src-meta { font-size: 11px; color: #8a8a96; font-family: 'JetBrains Mono', monospace; }
     .src-status-ok { color: #047857; }
     .src-status-err { color: #b91c1c; }
+    .src-status-skip { color: #6a6a76; }
     .src-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
     .empty { text-align: center; padding: 32px; color: #8a8a96; font-style: italic; font-size: 13px; }
     .run-result { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6a6a76; margin-top: 8px; white-space: pre-wrap; }
     .hide { display: none; }
     .kind-fields { display: none; }
     .kind-fields.show { display: block; }
-    .help { font-size: 11px; color: #8a8a96; margin-top: 4px; }
+    .help { font-size: 11px; color: #8a8a96; margin-top: 4px; line-height: 1.4; }
+    .note { background: #FEF9C3; border: 1px solid #FDE68A; color: #713F12; font-size: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; line-height: 1.4; }
+    .desc { font-size: 13px; color: #6a6a76; margin-bottom: 12px; line-height: 1.4; }
+    .webhook-info { background: #F0FDF4; border: 1px solid #BBF7D0; padding: 10px 12px; border-radius: 8px; margin-top: 10px; }
+    .webhook-info code { display: block; background: #fff; border: 1px solid #BBF7D0; padding: 6px 8px; border-radius: 6px; font-size: 11px; word-break: break-all; margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+    .webhook-label { font-size: 11px; font-weight: 600; color: #047857; text-transform: uppercase; letter-spacing: 0.5px; }
+    .copy-btn { font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 1px solid #BBF7D0; background: #fff; color: #047857; cursor: pointer; margin-left: 6px; }
   </style>
 </head>
 <body>
@@ -92,8 +104,8 @@ function describeConfig(kind: string, configJson: string | null): string {
     <div class="card">
       <div class="run-row">
         <div>
-          <div class="card-title" style="margin-bottom: 2px;">Run now</div>
-          <div style="font-size:12px;color:#8a8a96">Cron runs every 2 hours. Trigger manually any time.</div>
+          <div class="card-title" style="margin-bottom: 2px;">Run pull-based sources now</div>
+          <div style="font-size:12px;color:#8a8a96">Cron runs every 2 hours. Webhook sources receive events via push and aren't included here.</div>
         </div>
         <button class="btn" id="runBtn">Sync all</button>
       </div>
@@ -103,10 +115,11 @@ function describeConfig(kind: string, configJson: string | null): string {
     <div class="card">
       <div class="card-title">Add source</div>
       <div class="field">
-        <label>kind</label>
+        <label>source kind</label>
         <select class="sel" id="newKind">
-          <option value="discord">Discord guild events</option>
-          <option value="ics">ICS calendar feed (Meetup, Google, Apple…)</option>
+          {SYNC_KINDS.map((k) => (
+            <option value={k.kind}>{k.icon} {k.label}</option>
+          ))}
         </select>
       </div>
       <div class="field">
@@ -114,26 +127,25 @@ function describeConfig(kind: string, configJson: string | null): string {
         <input type="text" class="inp" id="newLabel" placeholder="e.g. Denver Social Discord"/>
       </div>
 
-      <div class="kind-fields show" data-kind="discord">
-        <div class="field">
-          <label>guild id</label>
-          <input type="text" class="inp" id="newGuildId" placeholder="123456789012345678"/>
-          <div class="help">Enable Developer Mode in Discord → right-click your server → Copy Server ID.</div>
+      {SYNC_KINDS.map((k) => (
+        <div class={"kind-fields" + (k.kind === 'discord' ? ' show' : '')} data-kind={k.kind}>
+          <div class="desc">{k.description}</div>
+          {k.note && <div class="note">{k.note}</div>}
+          {k.fields.map((f) => (
+            <div class="field">
+              <label>{f.label}{f.required ? ' *' : ''}</label>
+              <input
+                type={f.type === 'password' ? 'password' : 'text'}
+                class="inp"
+                data-field-name={f.name}
+                data-kind={k.kind}
+                placeholder={f.placeholder || ''}
+              />
+              {f.help && <div class="help">{f.help}</div>}
+            </div>
+          ))}
         </div>
-        <div class="field">
-          <label>bot token (optional)</label>
-          <input type="text" class="inp" id="newToken" placeholder="leave blank to use DISCORD_BOT_TOKEN secret"/>
-          <div class="help">Bot must be a member of the guild and have permission to view scheduled events.</div>
-        </div>
-      </div>
-
-      <div class="kind-fields" data-kind="ics">
-        <div class="field">
-          <label>ICS feed URL</label>
-          <input type="text" class="inp" id="newUrl" placeholder="https://…/events.ics"/>
-          <div class="help">Meetup: group page → Subscribe to calendar. Google: settings → "Secret address in iCal format".</div>
-        </div>
-      </div>
+      ))}
 
       <button class="btn" id="addBtn">Add source</button>
     </div>
@@ -143,43 +155,59 @@ function describeConfig(kind: string, configJson: string | null): string {
     {sources.length === 0 ? (
       <div class="empty">No sources yet — add one above.</div>
     ) : (
-      sources.map((s: any) => (
-        <div class={"src" + (s.enabled ? "" : " disabled")} data-id={s.id}>
-          <div class="src-top">
-            <div class="src-title">
-              <span class={"kind-pill kind-" + s.kind}>{s.kind}</span>
-              <span class="src-label">{s.label || '(no label)'}</span>
+      sources.map((s: any) => {
+        const def = findKind(s.kind);
+        const webhookUrl = s.kind === 'webhook' ? `${origin}/api/sync/webhook/${s.id}` : '';
+        return (
+          <div class={"src" + (s.enabled ? "" : " disabled")} data-id={s.id}>
+            <div class="src-top">
+              <div class="src-title">
+                <span class="kind-pill">{def?.icon || ''} {s.kind}</span>
+                <span class="src-label">{s.label || '(no label)'}</span>
+              </div>
+              <div style="font-size:11px;color:#8a8a96">#{s.id}</div>
             </div>
-            <div style="font-size:11px;color:#8a8a96">#{s.id}</div>
-          </div>
-          <div class="src-cfg">{describeConfig(s.kind, s.config)}</div>
-          <div class="src-meta">
-            {s.last_synced_at ? (
-              <>
-                last sync: {new Date(s.last_synced_at).toLocaleString()} ·
-                {s.last_status === 'ok' ? (
-                  <span class="src-status-ok"> ok · {s.last_count ?? 0} events</span>
-                ) : (
-                  <span class="src-status-err"> error: {s.last_error || 'unknown'}</span>
-                )}
-              </>
-            ) : (
-              <span>never run</span>
+            {describeConfig(s.kind, s.config) && (
+              <div class="src-cfg">{describeConfig(s.kind, s.config)}</div>
             )}
+            <div class="src-meta">
+              {s.last_synced_at ? (
+                <>
+                  last sync: {new Date(s.last_synced_at).toLocaleString()} ·
+                  {s.last_status === 'ok' ? (
+                    <span class="src-status-ok"> ok · {s.last_count ?? 0} events</span>
+                  ) : (
+                    <span class="src-status-err"> error: {s.last_error || 'unknown'}</span>
+                  )}
+                </>
+              ) : (
+                <span class="src-status-skip">never run</span>
+              )}
+            </div>
+            {s.kind === 'webhook' && (
+              <div class="webhook-info">
+                <div class="webhook-label">Inbound webhook</div>
+                <div style="font-size:11px;color:#6a6a76;margin-top:4px">POST events to this URL with the token:</div>
+                <code>{webhookUrl}</code>
+                <code>Authorization: Bearer {s.webhook_token || '(rotate to generate)'}<button class="copy-btn js-copy" data-copy={s.webhook_token || ''}>copy</button></code>
+              </div>
+            )}
+            <div class="src-actions">
+              <button class="btn-sec js-toggle" data-id={s.id}>{s.enabled ? 'Disable' : 'Enable'}</button>
+              {s.kind === 'webhook' && (
+                <button class="btn-sec js-rotate" data-id={s.id}>Rotate token</button>
+              )}
+              <button class="btn-danger js-delete" data-id={s.id}>Delete</button>
+            </div>
           </div>
-          <div class="src-actions">
-            <button class="btn-sec js-toggle" data-id={s.id}>{s.enabled ? 'Disable' : 'Enable'}</button>
-            <button class="btn-danger js-delete" data-id={s.id}>Delete</button>
-          </div>
-        </div>
-      ))
+        );
+      })
     )}
   </div>
 
   <script is:inline>
     const $ = (id) => document.getElementById(id);
 
-    document.querySelectorAll('.kind-fields').forEach(el => el.classList.remove('show'));
     function showKindFields(kind) {
       document.querySelectorAll('.kind-fields').forEach(el => {
         el.classList.toggle('show', el.getAttribute('data-kind') === kind);
@@ -199,12 +227,9 @@ function describeConfig(kind: string, configJson: string | null): string {
     $('addBtn').addEventListener('click', async () => {
       const kind = $('newKind').value;
       const payload = { action: 'create', kind, label: $('newLabel').value.trim() };
-      if (kind === 'discord') {
-        payload.guild_id = $('newGuildId').value.trim();
-        payload.token = $('newToken').value.trim();
-      } else {
-        payload.url = $('newUrl').value.trim();
-      }
+      document.querySelectorAll(`.kind-fields[data-kind="${kind}"] input[data-field-name]`).forEach(inp => {
+        payload[inp.getAttribute('data-field-name')] = inp.value.trim();
+      });
       const r = await call(payload);
       if (r.ok) location.reload();
       else alert(r.error || 'Failed');
@@ -215,10 +240,23 @@ function describeConfig(kind: string, configJson: string | null): string {
       if (r.ok) location.reload(); else alert(r.error || 'Failed');
     }));
 
+    document.querySelectorAll('.js-rotate').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('Rotate the token? Existing webhook senders will need the new one.')) return;
+      const r = await call({ action: 'rotate_token', id: parseInt(b.dataset.id) });
+      if (r.ok) location.reload(); else alert(r.error || 'Failed');
+    }));
+
     document.querySelectorAll('.js-delete').forEach(b => b.addEventListener('click', async () => {
       if (!confirm('Delete this source? Events already imported will stay.')) return;
       const r = await call({ action: 'delete', id: parseInt(b.dataset.id) });
       if (r.ok) location.reload(); else alert(r.error || 'Failed');
+    }));
+
+    document.querySelectorAll('.js-copy').forEach(b => b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const v = b.getAttribute('data-copy');
+      if (!v) return;
+      try { await navigator.clipboard.writeText(v); b.textContent = 'copied'; setTimeout(() => b.textContent = 'copy', 1500); } catch {}
     }));
 
     $('runBtn').addEventListener('click', async () => {
@@ -234,9 +272,9 @@ function describeConfig(kind: string, configJson: string | null): string {
           const t = r.result.total;
           const lines = [`Total: +${t.inserted} new · ${t.updated} updated · ${t.errors} errors`];
           for (const s of r.result.bySource) {
-            lines.push(s.status === 'ok'
-              ? `  ✓ [${s.kind}] ${s.label || '(unlabeled)'}: +${s.inserted} / ~${s.updated}`
-              : `  ✗ [${s.kind}] ${s.label || '(unlabeled)'}: ${s.error}`);
+            if (s.status === 'ok') lines.push(`  ✓ [${s.kind}] ${s.label || '(unlabeled)'}: +${s.inserted} / ~${s.updated}`);
+            else if (s.status === 'skipped') lines.push(`  ◦ [${s.kind}] ${s.label || '(unlabeled)'}: skipped (${s.error})`);
+            else lines.push(`  ✗ [${s.kind}] ${s.label || '(unlabeled)'}: ${s.error}`);
           }
           out.textContent = lines.join('\n');
           setTimeout(() => location.reload(), 1500);

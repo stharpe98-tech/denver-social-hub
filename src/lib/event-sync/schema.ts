@@ -9,6 +9,7 @@ export async function ensureEventSyncSchema(db: D1Database): Promise<void> {
       kind TEXT NOT NULL,
       label TEXT,
       config TEXT,
+      webhook_token TEXT,
       enabled INTEGER NOT NULL DEFAULT 1,
       last_synced_at TEXT,
       last_status TEXT,
@@ -17,6 +18,13 @@ export async function ensureEventSyncSchema(db: D1Database): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `).run();
+
+  // Older deploys may already have event_sources without webhook_token.
+  const srcCols = await db.prepare("PRAGMA table_info(event_sources)").all();
+  const srcNames = new Set((srcCols.results ?? []).map((r: any) => r.name));
+  if (!srcNames.has('webhook_token')) {
+    await db.prepare("ALTER TABLE event_sources ADD COLUMN webhook_token TEXT").run();
+  }
 
   const cols = await db.prepare("PRAGMA table_info(events)").all();
   const names = new Set((cols.results ?? []).map((r: any) => r.name));

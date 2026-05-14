@@ -8,13 +8,7 @@
 // Apple Calendar publish URLs, Eventbrite organizer iCal — any ICS feed.
 import type { NormalizedEvent } from './normalize';
 
-interface IcsConfig {
-  url?: string;
-  label?: string;
-}
-
-export async function fetchIcsEvents(rawConfig: string | null | undefined): Promise<NormalizedEvent[]> {
-  const config: IcsConfig = rawConfig ? safeParse(rawConfig) : {};
+export async function fetchIcsEvents(config: Record<string, string>): Promise<NormalizedEvent[]> {
   const url = (config.url || '').trim();
   if (!url) throw new Error('ics: missing url in config');
   if (!/^https?:\/\//i.test(url)) throw new Error('ics: url must be http(s)');
@@ -101,6 +95,3 @@ function parseIcsDate(s: string): Date | null {
   return null;
 }
 
-function safeParse(s: string): IcsConfig {
-  try { return JSON.parse(s) as IcsConfig; } catch { return {}; }
-}

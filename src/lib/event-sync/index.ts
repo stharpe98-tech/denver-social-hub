@@ -1,13 +1,27 @@
 // Sync orchestrator: iterate over enabled `event_sources` rows, call the right
 // adapter, upsert into `events`, and record run state on the source row.
+// Webhook sources are push-only and skipped here.
 import { ensureEventSyncSchema } from './schema';
 import { upsertMany, type NormalizedEvent } from './normalize';
 import { fetchDiscordEvents } from './discord';
 import { fetchIcsEvents } from './ics';
+import { fetchEventbriteEvents } from './eventbrite';
+import { fetchLumaEvents } from './luma';
+import { fetchTicketmasterEvents } from './ticketmaster';
+import { fetchFacebookEvents } from './facebook';
+import { fetchRssEvents } from './rss';
 
 export interface SyncRunResult {
   total: { inserted: number; updated: number; errors: number };
-  bySource: Array<{ id: number; kind: string; label: string; status: 'ok' | 'error'; inserted: number; updated: number; error?: string }>;
+  bySource: Array<{ id: number; kind: string; label: string; status: 'ok' | 'error' | 'skipped'; inserted: number; updated: number; error?: string }>;
+}
+
+function parseConfig(raw: string | null | undefined): Record<string, string> {
+  if (!raw) return {};
+  try {
+    const v = JSON.parse(raw);
+    return v && typeof v === 'object' ? v as Record<string, string> : {};
+  } catch { return {}; }
 }
 
 export async function runAllSyncs(db: D1Database, envBotToken?: string): Promise<SyncRunResult> {
@@ -23,11 +37,25 @@ export async function runAllSyncs(db: D1Database, envBotToken?: string): Promise
     const id = r.id as number;
     const kind = String(r.kind || '');
     const label = String(r.label || '');
+    const config = parseConfig(r.config);
+
+    if (kind === 'webhook') {
+      out.bySource.push({ id, kind, label, status: 'skipped', inserted: 0, updated: 0, error: 'push-only — not pulled on schedule' });
+      continue;
+    }
+
     try {
       let events: NormalizedEvent[];
-      if (kind === 'discord') events = await fetchDiscordEvents(r.config, envBotToken);
-      else if (kind === 'ics') events = await fetchIcsEvents(r.config);
-      else throw new Error(`unknown source kind: ${kind}`);
+      switch (kind) {
+        case 'discord': events = await fetchDiscordEvents(config, envBotToken); break;
+        case 'ics': events = await fetchIcsEvents(config); break;
+        case 'eventbrite': events = await fetchEventbriteEvents(config); break;
+        case 'luma': events = await fetchLumaEvents(config); break;
+        case 'ticketmaster': events = await fetchTicketmasterEvents(config); break;
+        case 'facebook': events = await fetchFacebookEvents(config); break;
+        case 'rss': events = await fetchRssEvents(config); break;
+        default: throw new Error(`unknown source kind: ${kind}`);
+      }
 
       const { inserted, updated } = await upsertMany(db, events);
       out.total.inserted += inserted;

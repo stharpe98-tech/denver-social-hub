@@ -1,13 +1,7 @@
 // Discord scheduled-events adapter.
-// Config JSON shape: { "guild_id": "123...", "token"?: "Bot xxx" }
-// Falls back to env DISCORD_BOT_TOKEN if config.token is empty.
+// Config: { guild_id, token? }. Falls back to env DISCORD_BOT_TOKEN if no token.
 // Uses guild.scheduled_events list — requires the bot to be in the guild.
 import type { NormalizedEvent } from './normalize';
-
-interface DiscordConfig {
-  guild_id?: string;
-  token?: string;
-}
 
 interface DiscordScheduledEvent {
   id: string;
@@ -21,10 +15,9 @@ interface DiscordScheduledEvent {
 }
 
 export async function fetchDiscordEvents(
-  rawConfig: string | null | undefined,
+  config: Record<string, string>,
   envToken: string | undefined,
 ): Promise<NormalizedEvent[]> {
-  const config: DiscordConfig = rawConfig ? safeParse(rawConfig) : {};
   const guildId = (config.guild_id || '').trim();
   if (!guildId) throw new Error('discord: missing guild_id in config');
   const token = (config.token || envToken || '').trim();
@@ -57,8 +50,4 @@ export async function fetchDiscordEvents(
       spots: null,
     } satisfies NormalizedEvent;
   });
-}
-
-function safeParse(s: string): DiscordConfig {
-  try { return JSON.parse(s) as DiscordConfig; } catch { return {}; }
 }

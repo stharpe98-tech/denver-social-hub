@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers';
 import { getDB } from '../../../lib/db';
 import { ensureEventSyncSchema } from '../../../lib/event-sync/schema';
 import { runAllSyncs } from '../../../lib/event-sync';
+import { findKind, buildConfigFromBody } from '../../../lib/event-sync/kinds';
 
 export const prerender = false;
 
@@ -11,6 +12,16 @@ function isAdmin(req: Request) {
   const m = cookie.match(/dsn_user=([^;]+)/);
   if (!m) return false;
   try { return JSON.parse(decodeURIComponent(m[1])).email === 'stharpe98@gmail.com'; } catch { return false; }
+}
+
+function generateToken(): string {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
 export async function POST({ request }: APIContext) {
@@ -24,13 +35,17 @@ export async function POST({ request }: APIContext) {
 
   if (action === 'create') {
     const kind = String(body.kind || '').trim();
-    if (kind !== 'discord' && kind !== 'ics') return json({ error: 'kind must be discord or ics' }, 400);
+    const kindDef = findKind(kind);
+    if (!kindDef) return json({ error: `unknown kind: ${kind}` }, 400);
     const label = String(body.label || '').trim().slice(0, 100);
-    const config = normalizeConfig(kind, body);
-    if (!config) return json({ error: 'missing required config fields' }, 400);
+
+    const { config, error } = buildConfigFromBody(kindDef, body);
+    if (error) return json({ error }, 400);
+
+    const webhookToken = kind === 'webhook' ? generateToken() : null;
     await db.prepare(
-      "INSERT INTO event_sources (kind, label, config, enabled) VALUES (?, ?, ?, 1)"
-    ).bind(kind, label, JSON.stringify(config)).run();
+      "INSERT INTO event_sources (kind, label, config, webhook_token, enabled) VALUES (?, ?, ?, ?, 1)"
+    ).bind(kind, label, JSON.stringify(config || {}), webhookToken).run();
     return json({ ok: true });
   }
 
@@ -39,12 +54,15 @@ export async function POST({ request }: APIContext) {
     if (!id) return json({ error: 'missing id' }, 400);
     const row: any = await db.prepare("SELECT kind FROM event_sources WHERE id = ?").bind(id).first();
     if (!row) return json({ error: 'not found' }, 404);
-    const config = normalizeConfig(row.kind, body);
+    const kindDef = findKind(row.kind);
+    if (!kindDef) return json({ error: `unknown kind in DB: ${row.kind}` }, 500);
     const label = String(body.label || '').trim().slice(0, 100);
     const enabled = body.enabled ? 1 : 0;
+    const { config, error } = buildConfigFromBody(kindDef, body);
+    if (error) return json({ error }, 400);
     await db.prepare(
       "UPDATE event_sources SET label = ?, config = ?, enabled = ? WHERE id = ?"
-    ).bind(label, config ? JSON.stringify(config) : null, enabled, id).run();
+    ).bind(label, JSON.stringify(config || {}), enabled, id).run();
     return json({ ok: true });
   }
 
@@ -53,6 +71,17 @@ export async function POST({ request }: APIContext) {
     if (!id) return json({ error: 'missing id' }, 400);
     await db.prepare("UPDATE event_sources SET enabled = 1 - enabled WHERE id = ?").bind(id).run();
     return json({ ok: true });
+  }
+
+  if (action === 'rotate_token') {
+    const id = parseInt(body.id);
+    if (!id) return json({ error: 'missing id' }, 400);
+    const row: any = await db.prepare("SELECT kind FROM event_sources WHERE id = ?").bind(id).first();
+    if (!row) return json({ error: 'not found' }, 404);
+    if (row.kind !== 'webhook') return json({ error: 'not a webhook source' }, 400);
+    const token = generateToken();
+    await db.prepare("UPDATE event_sources SET webhook_token = ? WHERE id = ?").bind(token, id).run();
+    return json({ ok: true, token });
   }
 
   if (action === 'delete') {
@@ -69,25 +98,4 @@ export async function POST({ request }: APIContext) {
   }
 
   return json({ error: 'unknown action' }, 400);
-}
-
-function normalizeConfig(kind: string, body: any): Record<string, string> | null {
-  if (kind === 'discord') {
-    const guild_id = String(body.guild_id || '').trim();
-    if (!guild_id) return null;
-    const out: Record<string, string> = { guild_id };
-    const token = String(body.token || '').trim();
-    if (token) out.token = token;
-    return out;
-  }
-  if (kind === 'ics') {
-    const url = String(body.url || '').trim();
-    if (!url) return null;
-    return { url };
-  }
-  return null;
-}
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
