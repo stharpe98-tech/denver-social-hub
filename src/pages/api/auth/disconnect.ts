@@ -59,7 +59,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   return new Response(JSON.stringify({ ok: true }), {
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': `dsn_user=${sessionVal}; Path=/; Max-Age=604800; SameSite=Lax`,
+      'Set-Cookie': `dsn_user=${sessionVal}; Path=/; Max-Age=2592000; SameSite=Lax`,
     },
   });
 };

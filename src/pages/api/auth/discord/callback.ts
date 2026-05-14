@@ -101,7 +101,7 @@ export const GET = async ({ request, cookies }: { request: Request; cookies: any
     }));
     const headers = new Headers();
     headers.append('Location', '/profile?connect=discord_ok');
-    headers.append('Set-Cookie', `dsn_user=${cookieVal}; Path=/; Max-Age=604800; SameSite=Lax`);
+    headers.append('Set-Cookie', `dsn_user=${cookieVal}; Path=/; Max-Age=2592000; SameSite=Lax`);
     headers.append('Set-Cookie', 'discord_state=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly');
     return new Response(null, { status: 302, headers });
   }
@@ -142,7 +142,7 @@ export const GET = async ({ request, cookies }: { request: Request; cookies: any
   const isNewUser = !member.onboarding_done;
   const headers = new Headers();
   headers.append('Location', isNewUser ? '/onboarding/1' : nextUrl);
-  headers.append('Set-Cookie', `dsn_user=${cookieVal}; Path=/; Max-Age=604800; SameSite=Lax`);
+  headers.append('Set-Cookie', `dsn_user=${cookieVal}; Path=/; Max-Age=2592000; SameSite=Lax`);
   headers.append('Set-Cookie', 'discord_state=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly');
   return new Response(null, { status: 302, headers });
 };
