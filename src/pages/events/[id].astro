@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
+import { parseVibeTags, vibeLabel } from '../../lib/events-schema';
 
 const db = getDB();
 const { id } = Astro.params;
@@ -15,6 +16,7 @@ let comments: any[] = [];
 let bringItems: any[] = [];
 let myRsvp: any = null;
 let myWaitlistEntry: any = null;
+let eventPhotos: any[] = [];
 
 try {
   if (db && id) {
@@ -31,6 +33,12 @@ try {
     comments = c?.results || [];
     const bi = await db.prepare("SELECT * FROM bring_items WHERE event_id=? ORDER BY id ASC").bind(id).all();
     bringItems = bi?.results || [];
+    try {
+      const ph = await db.prepare(
+        "SELECT id, email, name, photo_url, caption, created_at FROM event_photos WHERE event_id = ? ORDER BY created_at DESC LIMIT 60"
+      ).bind(id).all();
+      eventPhotos = ph?.results || [];
+    } catch { /* table may not exist yet on fresh deploys */ }
     if (user) {
       myRsvp = rsvps.find((r: any) => r.member_email === user.email) || null;
       myWaitlistEntry = waitlist.find((w: any) => w.member_email === user.email) || null;
@@ -98,6 +106,10 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
       <span class="tag tag-blue">{typeLabel[event.event_type] || 'Event'}</span>
       {event.karma_min > 0 && <span class="tag tag-yellow">🔒 {event.karma_min}+ karma</span>}
       {event.account_age_min > 0 && <span class="tag tag-yellow">🔒 {event.account_age_min}d+ account</span>}
+      {parseVibeTags(event.vibe_tags).map((key:string) => {
+        const t = vibeLabel(key);
+        return t && <span class="tag tag-green">{t.emoji} {t.label}</span>;
+      })}
     </div>
   </div>
 
@@ -391,6 +403,41 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
       </div>
     )}
   </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- PHOTOS (post-event only)                -->
+  <!-- ═══════════════════════════════════════ -->
+  {event.is_past && (
+    <div class="ev-section">
+      <h2 class="ev-section-title">📸 Photos ({eventPhotos.length})</h2>
+      {eventPhotos.length > 0 ? (
+        <div class="ev-photos-grid">
+          {eventPhotos.map((p:any) => (
+            <figure class="ev-photo">
+              <img src={p.photo_url} alt={p.caption || `Photo by ${p.name}`} loading="lazy"/>
+              <figcaption>
+                <span class="ev-photo-by">{p.name || 'Anonymous'}</span>
+                {p.caption && <span class="ev-photo-cap">{p.caption}</span>}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      ) : (
+        <p class="ev-empty">No photos yet. Be the first to share one from the event.</p>
+      )}
+      {user && myRsvp && (
+        <div class="ev-photo-upload">
+          <label class="ev-photo-upload-btn">
+            📤 Upload a photo
+            <input type="file" id="ev-photo-input" accept="image/*" hidden/>
+          </label>
+          <input type="text" id="ev-photo-caption" class="input" placeholder="Add a caption (optional)" maxlength="160"/>
+          <button type="button" class="ev-photo-submit" id="ev-photo-submit" disabled>Share</button>
+          <div id="ev-photo-status" class="ev-photo-status"></div>
+        </div>
+      )}
+    </div>
+  )}
 
   <!-- ═══════════════════════════════════════ -->
   <!-- THREAD / COMMENTS                       -->
@@ -824,6 +871,23 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   .ev-guest-bringing { font-size: 12px; color: var(--text-sec); }
   .ev-empty { font-size: 14px; color: var(--text-faint); text-align: center; padding: 24px 0; }
 
+  /* Photos */
+  .ev-photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .ev-photo { margin: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  .ev-photo img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
+  .ev-photo figcaption { padding: 8px 10px; font-size: 12px; color: var(--text-sec); display: flex; flex-direction: column; gap: 2px; }
+  .ev-photo-by { font-weight: 600; color: var(--text); }
+  .ev-photo-cap { color: var(--text-sec); }
+  .ev-photo-upload { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 14px; background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; }
+  .ev-photo-upload-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; font-size: 13px; cursor: pointer; color: var(--text); transition: border-color 0.15s; }
+  .ev-photo-upload-btn:hover { border-color: var(--accent); }
+  .ev-photo-upload .input { flex: 1; min-width: 180px; }
+  .ev-photo-submit { padding: 9px 16px; border-radius: 999px; border: none; background: var(--accent); color: #fff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .ev-photo-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ev-photo-status { font-size: 12px; color: var(--text-sec); flex-basis: 100%; min-height: 14px; }
+  .ev-photo-status.err { color: var(--red); }
+  .ev-photo-status.ok { color: var(--mint); }
+
   /* Locked guest list (logged-out) — show an avatar cluster + "sign in" nudge */
   .ev-guests-locked {
     display: flex; align-items: center; gap: 16px;
@@ -1148,6 +1212,63 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
         comment.appendChild(form);
         form.querySelector('textarea').focus();
       });
+    });
+  })();
+
+  // ── Photo upload ─────────────────────────────────────
+  (function() {
+    var input = document.getElementById('ev-photo-input');
+    var submit = document.getElementById('ev-photo-submit');
+    var status = document.getElementById('ev-photo-status');
+    var caption = document.getElementById('ev-photo-caption');
+    if (!input || !submit) return;
+    var dataUrl = null;
+
+    input.addEventListener('change', function() {
+      var f = input.files && input.files[0];
+      if (!f) { submit.disabled = true; return; }
+      if (f.size > 2 * 1024 * 1024) {
+        status.className = 'ev-photo-status err';
+        status.textContent = 'Image too large (2MB max).';
+        submit.disabled = true; return;
+      }
+      var reader = new FileReader();
+      reader.onload = function() {
+        dataUrl = reader.result;
+        submit.disabled = false;
+        status.className = 'ev-photo-status';
+        status.textContent = f.name + ' ready — add a caption or just hit Share.';
+      };
+      reader.readAsDataURL(f);
+    });
+
+    submit.addEventListener('click', async function() {
+      if (!dataUrl) return;
+      submit.disabled = true;
+      status.className = 'ev-photo-status'; status.textContent = 'Uploading…';
+      try {
+        var eventId = (document.querySelector('[data-event-id]') || {}).getAttribute
+          ? document.querySelector('[data-event-id]').getAttribute('data-event-id')
+          : location.pathname.split('/').pop();
+        var res = await fetch('/api/upload-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event_id: eventId, photo: dataUrl, caption: caption.value.trim() }),
+        });
+        var data = await res.json();
+        if (data.ok) {
+          status.className = 'ev-photo-status ok'; status.textContent = 'Posted ✓ — refreshing…';
+          setTimeout(function(){ location.reload(); }, 600);
+        } else {
+          status.className = 'ev-photo-status err';
+          status.textContent = data.error || 'Upload failed.';
+          submit.disabled = false;
+        }
+      } catch {
+        status.className = 'ev-photo-status err';
+        status.textContent = 'Network error — try again.';
+        submit.disabled = false;
+      }
     });
   })();
 </script>
