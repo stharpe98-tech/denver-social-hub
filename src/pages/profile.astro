@@ -13,6 +13,11 @@ const cookie = Astro.cookies.get("dsn_user")?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 if (!user) return Astro.redirect("/login");
 
+// Surface admin entry-point + lock the delete button for admins, so a
+// super-admin never accidentally wipes their own access via /profile.
+const isSuperAdmin = (user.email || '').toLowerCase() === 'stharpe98@gmail.com';
+const isAdmin = isSuperAdmin || user.role === 'admin';
+
 let member: any = null;
 let error: string|null = null;
 let success = false;
@@ -123,6 +128,17 @@ const connectBanner =
       </div>
     </div>
   </div>
+
+  {isAdmin && (
+    <a href="/admin/dashboard" class="p-admin-card">
+      <span class="p-admin-icon">⚙️</span>
+      <div class="p-admin-body">
+        <strong>Admin dashboard</strong>
+        <span>This is your member view. Head to admin tools for organizer-side actions.</span>
+      </div>
+      <span class="p-admin-arrow">›</span>
+    </a>
+  )}
 
   <!-- ═══ BIO ═══ -->
   {member?.bio ? (
@@ -363,7 +379,8 @@ const connectBanner =
 
       <div class="p-danger">
         <a href="/api/logout" class="p-signout">Sign out</a>
-        <button id="delete-btn" class="p-delete">Delete account</button>
+        {!isAdmin && <button id="delete-btn" class="p-delete">Delete account</button>}
+        {isAdmin && <span class="p-admin-note">Admin accounts can't self-delete. Contact stharpe98@gmail.com to demote.</span>}
       </div>
     </div>
   </div>
@@ -396,6 +413,29 @@ const connectBanner =
   }
   .p-toast.err { background: #FEF2F2; color: #DC2626; border: 1px solid rgba(220,38,38,0.1); }
   .p-toast.ok { background: #F0FDF4; color: #16A34A; border: 1px solid rgba(22,163,74,0.1); }
+
+  /* ── Admin entry-point ── */
+  .p-admin-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; margin-bottom: 16px;
+    background: linear-gradient(135deg, #EEF2FF, #F0FDF4);
+    border: 1px solid #C7D2FE; border-radius: 14px;
+    text-decoration: none; color: #111827;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .p-admin-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.15); }
+  .p-admin-card:active { transform: translateY(0); }
+  .p-admin-icon { font-size: 24px; }
+  .p-admin-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .p-admin-body strong { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; }
+  .p-admin-body span { font-size: 12px; color: #6B7280; }
+  .p-admin-arrow { font-size: 24px; color: #7C3AED; font-weight: 700; }
+  .p-admin-note {
+    display: block; font-size: 12px; color: #6B7280;
+    padding: 12px 16px; background: #F8F9FB;
+    border: 1px solid #E5E7EB; border-radius: 12px;
+    font-family: 'Inter', sans-serif;
+  }
 
   /* ═══ HERO ═══ */
   .p-hero {
