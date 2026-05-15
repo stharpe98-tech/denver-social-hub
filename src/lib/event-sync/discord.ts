@@ -14,6 +14,29 @@ interface DiscordScheduledEvent {
   channel_id?: string | null;
 }
 
+// Discord hosts often bake the venue into the event name
+// ("Sunset hike at Mount Falcon"). When Discord doesn't set its own
+// location field, split the title on " at " / " @ " / " - " and pull
+// the trailing chunk into location. The split is conservative — we only
+// trigger when the prefix is meaningfully long, so we don't mangle
+// "Dinner at 7" style titles.
+const SPLIT_PATTERNS = [' at ', ' @ ', ' - ', ' — ', ' – '];
+function splitTitleAndLocation(title: string): { title: string; location: string } {
+  const t = (title || '').trim();
+  if (!t) return { title: t, location: '' };
+  for (const sep of SPLIT_PATTERNS) {
+    const idx = t.toLowerCase().lastIndexOf(sep);
+    if (idx <= 0) continue;
+    const left = t.slice(0, idx).trim();
+    const right = t.slice(idx + sep.length).trim();
+    // Both halves must be substantive to be worth splitting
+    if (left.length >= 3 && right.length >= 3 && /[A-Za-z]/.test(right)) {
+      return { title: left, location: right };
+    }
+  }
+  return { title: t, location: '' };
+}
+
 export async function fetchDiscordEvents(
   config: Record<string, string>,
   envToken: string | undefined,
@@ -38,13 +61,27 @@ export async function fetchDiscordEvents(
   return list.map((e) => {
     const start = e.scheduled_start_time ? new Date(e.scheduled_start_time) : null;
     const url = `https://discord.com/events/${e.guild_id}/${e.id}`;
+
+    // Discord's explicit location wins. If empty, try to extract it from
+    // the title (host habit: "Sunset hike at Mount Falcon").
+    const discordLocation = e.entity_metadata?.location || '';
+    let title = e.name || 'Discord Event';
+    let location = discordLocation;
+    if (!location) {
+      const split = splitTitleAndLocation(title);
+      if (split.location) {
+        title = split.title;
+        location = split.location;
+      }
+    }
+
     return {
       source: 'discord',
       externalId: e.id,
-      title: e.name || 'Discord Event',
+      title,
       description: e.description || '',
       startsAt: start,
-      location: e.entity_metadata?.location || '',
+      location,
       url,
       eventType: 'social',
       spots: null,
