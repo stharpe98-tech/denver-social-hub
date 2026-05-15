@@ -84,7 +84,6 @@ const userAccountAge = user?.reddit_account_created
   ? Math.floor((Date.now() - new Date(user.reddit_account_created).getTime()) / (1000 * 60 * 60 * 24))
   : 0;
 const meetsKarmaGate = (!event.karma_min || userKarma >= event.karma_min) && (!event.account_age_min || userAccountAge >= event.account_age_min);
-const showLocation = myRsvp && meetsKarmaGate;
 
 // Permission: original host (matched by host_id = user.id) or any
 // listed co-host can manage co-hosts for this event.
@@ -96,6 +95,10 @@ const canManageCohosts = isCreator || isCohost;
 // Owner + admins can delete any event; hosts/co-hosts can only delete their own.
 const canDeleteEvent = isAdmin || isCreator || isCohost;
 const cohostEmailSet = new Set(cohosts.map((c: any) => (c.member_email || '').toLowerCase()));
+
+// Address is visible to: hosts, co-hosts, admins (always), plus any
+// confirmed RSVP that clears the karma gate (going or maybe).
+const showLocation = isCreator || isCohost || isAdmin || (myRsvp && meetsKarmaGate);
 
 // Threaded comments
 const rootComments = comments.filter((c: any) => !c.parent_id);
@@ -133,9 +136,14 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   <!-- Back link -->
   <div class="ev-top-row">
     <a href="/events" class="ev-back">← Back to events</a>
-    {canDeleteEvent && (
-      <button class="ev-delete-btn" id="ev-delete-btn" data-event-id={id}>🗑 Delete event</button>
-    )}
+    <div class="ev-top-actions">
+      {user && !canDeleteEvent && (
+        <button class="ev-report-btn" data-report="event" data-id={id}>🚩 Report</button>
+      )}
+      {canDeleteEvent && (
+        <button class="ev-delete-btn" id="ev-delete-btn" data-event-id={id}>🗑 Delete event</button>
+      )}
+    </div>
   </div>
 
   <!-- Hero header -->
@@ -621,6 +629,16 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     margin-bottom: 16px; flex-wrap: wrap;
   }
+  .ev-top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ev-report-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-sec);
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .ev-report-btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-hover); }
+
   .ev-delete-btn {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 14px; border-radius: 999px;
@@ -1189,6 +1207,36 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
 
 <script is:inline>
   (function() {
+    // ── Report content ──
+    document.querySelectorAll('[data-report]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var kind = btn.getAttribute('data-report');
+        var id = btn.getAttribute('data-id');
+        var reasons = [
+          { key: 'harassment',     label: '1) Harassment or unsafe behavior' },
+          { key: 'spam',           label: '2) Spam or selling' },
+          { key: 'inaccurate',     label: '3) Inaccurate or misleading' },
+          { key: 'inappropriate',  label: '4) Inappropriate content' },
+          { key: 'other',          label: '5) Other' },
+        ];
+        var pick = prompt('Why are you reporting this ' + kind + '?\n\n' + reasons.map(function(r) { return r.label; }).join('\n') + '\n\nEnter 1-5:');
+        if (!pick) return;
+        var idx = parseInt(pick) - 1;
+        if (!reasons[idx]) { alert('Pick 1-5.'); return; }
+        var details = prompt('Anything else we should know? (optional)') || '';
+        try {
+          var res = await fetch('/api/report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'create', target_kind: kind, target_id: String(id), reason: reasons[idx].key, details: details }),
+          });
+          var d = await res.json();
+          if (d.ok) alert(d.already ? "You've already reported this — we're on it." : 'Thanks. We got it and a mod will review.');
+          else alert('Could not submit: ' + d.error);
+        } catch (e) { alert('Network error.'); }
+      });
+    });
+
     // ── Delete event ──
     var delBtn = document.getElementById('ev-delete-btn');
     if (delBtn) {
@@ -1235,18 +1283,12 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
           });
           var data = await res.json();
 
-          if (data.rsvped && status === 'going') {
-            var step1 = document.getElementById('rsvp-step1');
-            var step2 = document.getElementById('rsvp-step2');
-            var card = document.getElementById('rsvp-card');
-            if (step1) step1.style.display = 'none';
-            if (step2) step2.style.display = 'block';
-            if (card) {
-              card.style.borderColor = 'var(--green)';
-              card.style.boxShadow = '0 0 0 4px var(--green-dim)';
-            }
-          } else if (data.rsvped || data.waitlisted || data.updated) {
+          if (data.rsvped || data.waitlisted || data.updated) {
+            // Reload so the address / RSVP'd state / bring-items section
+            // all reflect the new state — keeping JS-only updates in sync
+            // with the gated rendering was too error-prone.
             window.location.reload();
+            return;
           } else if (data.error === 'login_required') {
             window.location.href = '/login?next=/events/' + eventId;
           } else if (data.error) {

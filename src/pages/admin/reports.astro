@@ -1,0 +1,164 @@
+---
+import { requireApprovedOrg } from '../../lib/admin-auth';
+import { getDB } from '../../lib/db';
+import { ensureReportsSchema, REPORT_REASONS } from '../../lib/reports-schema';
+
+const gate = await requireApprovedOrg(Astro);
+if (gate instanceof Response) return gate;
+
+const db = getDB();
+const view = Astro.url.searchParams.get('view') || 'open';
+
+let open: any[] = [];
+let recent: any[] = [];
+let openCount = 0;
+if (db) {
+  await ensureReportsSchema(db);
+  const o = await db.prepare("SELECT * FROM reports WHERE status='open' ORDER BY created_at DESC LIMIT 50").all();
+  open = (o.results || []) as any[];
+  openCount = open.length;
+  if (view === 'all') {
+    const r = await db.prepare("SELECT * FROM reports ORDER BY created_at DESC LIMIT 100").all();
+    recent = (r.results || []) as any[];
+  }
+}
+
+function reasonLabel(key: string) {
+  return REPORT_REASONS.find(r => r.key === key)?.label || key;
+}
+
+function targetLink(kind: string, id: string): string | null {
+  if (kind === 'event') return `/events/${id}`;
+  if (kind === 'group') return `/groups/${id}`;
+  if (kind === 'comment') return null;
+  if (kind === 'member') return null;
+  return null;
+}
+
+function timeAgo(iso: string): string {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso + 'Z').getTime();
+  if (Number.isNaN(ms)) return iso;
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Reports · Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #FAFAF8; color: #1A1A1A; min-height: 100vh; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+    .wrap { max-width: 920px; margin: 0 auto; }
+    .back { font-size: 13px; color: #6B6560; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+    .back:hover { color: #1A1A1A; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .sub { color: #6B6560; font-size: 14px; margin-bottom: 24px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 24px; }
+    .tab { padding: 8px 16px; border-radius: 999px; background: #fff; border: 1px solid #E8E4DE; font-size: 13px; font-weight: 600; color: #6B6560; text-decoration: none; }
+    .tab.active { background: #1A1A1A; color: #fff; border-color: #1A1A1A; }
+    .empty { padding: 64px 24px; text-align: center; color: #A09890; background: #fff; border: 1px dashed #E8E4DE; border-radius: 14px; }
+    .feed { display: flex; flex-direction: column; gap: 10px; }
+    .row { background: #fff; border: 1px solid #E8E4DE; border-radius: 14px; padding: 16px 18px; }
+    .row.resolved, .row.dismissed { opacity: 0.55; }
+    .row-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+    .badge { font-size: 10px; padding: 3px 9px; border-radius: 999px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; }
+    .b-kind { background: #DBEAFE; color: #1E40AF; }
+    .b-status-open { background: #FEF3C7; color: #92400E; }
+    .b-status-resolved { background: #DCFCE7; color: #166534; }
+    .b-status-dismissed { background: #F0F2F5; color: #6B6560; }
+    .row-target { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: #1A1A1A; }
+    .row-target a { color: #1A1A1A; text-decoration: underline; }
+    .row-meta { font-size: 12px; color: #A09890; margin-top: 2px; }
+    .row-reason { font-size: 14px; color: #1A1A1A; margin: 8px 0 4px; }
+    .row-details { font-size: 13px; color: #6B6560; line-height: 1.55; padding: 10px 12px; background: #FAFAF8; border-radius: 8px; margin-top: 8px; }
+    .actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+    .btn { padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; font-family: 'Inter', sans-serif; }
+    .btn-ok { background: #16A34A; color: #fff; }
+    .btn-no { background: #fff; border: 1px solid #E8E4DE; color: #6B6560; }
+    .btn-ok:hover { background: #15803D; }
+    .btn-no:hover { color: #1A1A1A; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="/admin/dashboard" class="back">← Dashboard</a>
+    <h1>Reports</h1>
+    <p class="sub">Member-flagged content. Resolve (action taken) or dismiss (no issue).</p>
+
+    <div class="tabs">
+      <a href="/admin/reports" class:list={["tab", { active: view !== 'all' }]}>Open ({openCount})</a>
+      <a href="/admin/reports?view=all" class:list={["tab", { active: view === 'all' }]}>All recent</a>
+    </div>
+
+    {(() => {
+      const list = view === 'all' ? recent : open;
+      if (list.length === 0) {
+        return <div class="empty">Nothing here. 🌿</div>;
+      }
+      return (
+        <div class="feed">
+          {list.map((r: any) => {
+            const link = targetLink(r.target_kind, r.target_id);
+            return (
+              <div class={`row ${r.status}`}>
+                <div class="row-top">
+                  <div>
+                    <div class="row-target">
+                      {link ? <a href={link} target="_blank" rel="noopener">{r.target_kind} · {r.target_id}</a> : <>{r.target_kind} · {r.target_id}</>}
+                    </div>
+                    <div class="row-meta">From {r.reporter_email} · {timeAgo(r.created_at)}</div>
+                  </div>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap">
+                    <span class="badge b-kind">{r.target_kind}</span>
+                    <span class={`badge b-status-${r.status}`}>{r.status}</span>
+                  </div>
+                </div>
+                <div class="row-reason"><strong>{reasonLabel(r.reason)}</strong></div>
+                {r.details && <div class="row-details">{r.details}</div>}
+                {r.status === 'open' && (
+                  <div class="actions">
+                    <button class="btn btn-ok" data-resolve={r.id}>Mark resolved</button>
+                    <button class="btn btn-no" data-dismiss={r.id}>Dismiss</button>
+                  </div>
+                )}
+                {r.status !== 'open' && r.resolution_note && (
+                  <div class="row-details">Note: {r.resolution_note}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    })()}
+  </div>
+
+  <script is:inline>
+    async function handle(action, id, btn) {
+      const note = prompt(action === 'resolve' ? 'Optional note about what you did:' : 'Optional reason for dismissing:');
+      if (note === null) return;
+      btn.disabled = true;
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, id: parseInt(id), note }),
+      });
+      const d = await res.json();
+      if (d.ok) location.reload();
+      else { alert('Failed: ' + d.error); btn.disabled = false; }
+    }
+    document.querySelectorAll('[data-resolve]').forEach(b => b.addEventListener('click', () => handle('resolve', b.getAttribute('data-resolve'), b)));
+    document.querySelectorAll('[data-dismiss]').forEach(b => b.addEventListener('click', () => handle('dismiss', b.getAttribute('data-dismiss'), b)));
+  </script>
+</body>
+</html>

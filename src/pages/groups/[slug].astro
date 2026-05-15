@@ -82,6 +82,9 @@ const canJoinDirect = !myRole && group.privacy === 'public' && !!user;
       {!myRole && user && group.privacy === 'invite_only' && (
         <span class="g-locked-hint">You need an invite to join.</span>
       )}
+      {user && (myRole === null || myRole === 'member') && (
+        <button class="g-report-btn" data-report="group" data-id={group.id}>🚩 Report</button>
+      )}
     </div>
   </header>
 
@@ -186,6 +189,14 @@ const canJoinDirect = !myRole && group.privacy === 'public' && !!user;
   .g-desc { font-size: 16px; color: var(--text-sec); margin-top: 12px; line-height: 1.5; max-width: 640px; }
   .g-hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .g-locked-hint { font-size: 13px; color: var(--text-sec); font-style: italic; }
+  .g-report-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-sec);
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .g-report-btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-hover); }
 
   .g-cols { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
   .g-main, .g-side { display: flex; flex-direction: column; gap: 20px; }
@@ -265,6 +276,36 @@ const canJoinDirect = !myRole && group.privacy === 'public' && !!user;
     });
     return res.json();
   }
+
+  // ── Report group ──
+  document.querySelectorAll('[data-report]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const kind = (btn as HTMLElement).getAttribute('data-report');
+      const id = (btn as HTMLElement).getAttribute('data-id');
+      const reasons = [
+        { key: 'harassment',     label: '1) Harassment or unsafe behavior' },
+        { key: 'spam',           label: '2) Spam or selling' },
+        { key: 'inaccurate',     label: '3) Inaccurate or misleading' },
+        { key: 'inappropriate',  label: '4) Inappropriate content' },
+        { key: 'other',          label: '5) Other' },
+      ];
+      const pick = prompt('Why are you reporting this ' + kind + '?\n\n' + reasons.map(r => r.label).join('\n') + '\n\nEnter 1-5:');
+      if (!pick) return;
+      const idx = parseInt(pick) - 1;
+      if (!reasons[idx]) { alert('Pick 1-5.'); return; }
+      const details = prompt('Anything else we should know? (optional)') || '';
+      try {
+        const res = await fetch('/api/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', target_kind: kind, target_id: String(id), reason: reasons[idx].key, details }),
+        });
+        const d = await res.json();
+        if (d.ok) alert(d.already ? "You've already reported this — we're on it." : 'Thanks. We got it and a mod will review.');
+        else alert('Could not submit: ' + d.error);
+      } catch { alert('Network error.'); }
+    });
+  });
 
   join?.addEventListener('click', async () => {
     const id = parseInt((join as HTMLElement).dataset.groupId || '0');
