@@ -1,14 +1,21 @@
 ---
 import Base from '../layouts/Base.astro';
 ---
-<Base title="Help" description="How Denver Social works — for attendees and organizers.">
+<Base title="Help & Safety" description="How Denver Social works — for attendees and organizers — and the safety rules that keep it good.">
   <div class="hp-wrap">
     <header class="hp-header">
-      <h1>How it works</h1>
-      <p class="hp-sub">Short answers for both attendees and organizers. <a href="/contact">Contact us</a> if something's missing.</p>
+      <h1>Help & Safety</h1>
+      <p class="hp-sub">Short answers for attendees and organizers, and the rules that keep things good. <a href="/contact">Contact us</a> if something's missing.</p>
     </header>
 
-    <section class="hp-sec">
+    <nav class="hp-toc" aria-label="Quick jump">
+      <a href="#attendees">For attendees</a>
+      <a href="#organizers">For organizers</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#safety">Safety & terms</a>
+    </nav>
+
+    <section class="hp-sec" id="attendees">
       <h2>For attendees</h2>
       <details class="hp-q">
         <summary>How do I join an event?</summary>
@@ -20,7 +27,7 @@ import Base from '../layouts/Base.astro';
       </details>
       <details class="hp-q">
         <summary>I RSVP'd. Can I cancel?</summary>
-        <p>Yes — go to <a href="/me">My account</a> and tap the event, or use the cancel link in your confirmation email. Please cancel early so the spot can go to someone on the waitlist.</p>
+        <p>Yes — go to your <a href="/profile">profile</a>, find the event, hit Cancel. Please cancel early so the spot can go to someone on the waitlist.</p>
       </details>
       <details class="hp-q">
         <summary>Where are events held?</summary>
@@ -32,15 +39,15 @@ import Base from '../layouts/Base.astro';
       </details>
     </section>
 
-    <section class="hp-sec">
+    <section class="hp-sec" id="organizers">
       <h2>For organizers</h2>
       <details class="hp-q">
         <summary>How do I post an event?</summary>
-        <p>Sign in, then go to <a href="/events/new">/events/new</a>. Fill out the form. Your event is live immediately. Email confirmations and SMS notifications fire automatically if the site has Resend and Twilio configured.</p>
+        <p>Sign in, then go to <a href="/events/new">/events/new</a>. Pick a type, name it, pick a date on the calendar, fill in the details, post. Done.</p>
       </details>
       <details class="hp-q">
         <summary>Can I run a potluck?</summary>
-        <p>Potluck-style sign-up sheets (with claimable items) need approved-organizer access. <a href="/contact">Send us a message</a> and we'll flip your account on.</p>
+        <p>Potluck-style sign-up sheets need approved-organizer access. <a href="/contact">Send us a message</a> and we'll flip your account on.</p>
       </details>
       <details class="hp-q">
         <summary>How do I cap attendance?</summary>
@@ -48,11 +55,11 @@ import Base from '../layouts/Base.astro';
       </details>
       <details class="hp-q">
         <summary>How do reminders work?</summary>
-        <p>If the organizer has Resend configured, attendees get a reminder email the day before the event (potlucks) or on the day of (events). SMS reminders are coming.</p>
+        <p>Attendees get a reminder email the day before for potlucks. Standard events surface in the weekly digest if you have Resend configured.</p>
       </details>
       <details class="hp-q">
-        <summary>I need to edit or cancel.</summary>
-        <p>Go to your event page from <a href="/me">/me</a>. You can edit details inline or mark the event as past. Attendees get an email update if you change time or location.</p>
+        <summary>How do I delete an event?</summary>
+        <p>Open the event and hit the red 🗑 Delete event button in the top-right. Wipes all RSVPs, comments, and bring-items. Cannot be undone.</p>
       </details>
       <details class="hp-q">
         <summary>What if someone's a no-show?</summary>
@@ -60,20 +67,70 @@ import Base from '../layouts/Base.astro';
       </details>
     </section>
 
-    <section class="hp-sec">
-      <h2>Privacy &amp; safety</h2>
+    <section class="hp-sec" id="privacy">
+      <h2>Privacy</h2>
       <details class="hp-q">
         <summary>Who can see my email or phone?</summary>
         <p>Only the organizer of the event you signed up for. We don't share it across events and we don't sell anything to advertisers.</p>
       </details>
       <details class="hp-q">
-        <summary>What if I feel unsafe at an event?</summary>
-        <p>Step away and let us know. Read our <a href="/conduct">Code of conduct</a> — we'll remove anyone who violates it.</p>
-      </details>
-      <details class="hp-q">
         <summary>How do I delete my account?</summary>
         <p>Sign in, go to <a href="/profile">/profile</a>, scroll to "Delete account". Removes your member record and any RSVPs.</p>
       </details>
+    </section>
+
+    <section class="hp-sec" id="safety">
+      <h2>Safety & terms</h2>
+      <p class="hp-safety-intro">The short version.</p>
+
+      <ol class="hp-rules">
+        <li class="hp-rule">
+          <span class="hp-rule-icon">👋</span>
+          <div>
+            <strong>Everyone's welcome.</strong>
+            <p>Quiet, loud, awkward, neurodivergent, brand new to Denver — you're good here. Leave whenever. You don't owe anyone an explanation.</p>
+          </div>
+        </li>
+        <li class="hp-rule">
+          <span class="hp-rule-icon">🔒</span>
+          <div>
+            <strong>Your info stays private.</strong>
+            <p>Locations and host phone numbers are hidden until you RSVP. Other members only see your first name and neighborhood.</p>
+          </div>
+        </li>
+        <li class="hp-rule">
+          <span class="hp-rule-icon">🎤</span>
+          <div>
+            <strong>Hosts are accountable.</strong>
+            <p>Every event has a named host. Events get a quick moderation pass before going live. Groups stay small so things actually feel like a hangout.</p>
+          </div>
+        </li>
+        <li class="hp-rule hp-rule-warn">
+          <span class="hp-rule-icon">🚫</span>
+          <div>
+            <strong>What gets you removed.</strong>
+            <p>Harassment, intimidation, following someone after an event, or sharing someone's location or private info. You don't need proof to report — your word is enough.</p>
+          </div>
+        </li>
+        <li class="hp-rule">
+          <span class="hp-rule-icon">📣</span>
+          <div>
+            <strong>Report anything that feels off.</strong>
+            <p>Tell the host on the spot, jump in our Discord, or email us. We keep it between us.</p>
+            <div class="hp-rule-btns">
+              <a href="https://discord.gg/S8SFNkdSgK" class="hp-btn hp-btn-discord" target="_blank" rel="noopener">💬 Discord</a>
+              <a href="/contact" class="hp-btn hp-btn-ghost">✉️ Contact us</a>
+            </div>
+          </div>
+        </li>
+        <li class="hp-rule">
+          <span class="hp-rule-icon">🎉</span>
+          <div>
+            <strong>It's free, and that's the deal.</strong>
+            <p>No fees, no premium tier, no upsell. Some events have venue costs between you and the venue — we don't take a cut. Denver Social organizes the meetups but isn't liable for what happens at them.</p>
+          </div>
+        </li>
+      </ol>
     </section>
 
     <div class="hp-foot">
@@ -82,13 +139,27 @@ import Base from '../layouts/Base.astro';
   </div>
 
   <style>
-    .hp-wrap { max-width: 720px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-8); }
-    .hp-header { text-align: center; margin-bottom: var(--space-6); }
-    .hp-header h1 { font-family: var(--font-display); font-size: clamp(28px, 5vw, 38px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 8px; }
-    .hp-sub { color: var(--text-sec); font-size: 15px; line-height: 1.55; max-width: 480px; margin: 0 auto; }
+    .hp-wrap { max-width: 720px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+    .hp-header { text-align: center; margin-bottom: 28px; }
+    .hp-header h1 { font-family: var(--font-display); font-size: clamp(32px, 5vw, 44px); font-weight: 900; letter-spacing: -0.025em; margin-bottom: 10px; }
+    .hp-sub { color: var(--text-sec); font-size: 16px; line-height: 1.55; max-width: 540px; margin: 0 auto; }
     .hp-sub a { color: var(--accent); font-weight: 600; }
-    .hp-sec { margin-bottom: var(--space-6); }
-    .hp-sec h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: var(--space-3); letter-spacing: -0.01em; }
+
+    .hp-toc {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+      padding: 12px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 999px; margin-bottom: 36px;
+    }
+    .hp-toc a {
+      padding: 6px 14px; border-radius: 999px;
+      font-family: var(--font); font-size: 13px; font-weight: 600;
+      color: var(--text-sec); text-decoration: none; transition: background 0.15s, color 0.15s;
+    }
+    .hp-toc a:hover { background: var(--bg); color: var(--text); }
+
+    .hp-sec { margin-bottom: 40px; scroll-margin-top: 96px; }
+    .hp-sec h2 { font-family: var(--font-display); font-size: 22px; font-weight: 800; margin-bottom: 14px; letter-spacing: -0.01em; }
+
     .hp-q { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; }
     .hp-q summary { padding: 14px 16px; font-size: 15px; font-weight: 600; color: var(--text); cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .hp-q summary::-webkit-details-marker { display: none; }
@@ -97,7 +168,40 @@ import Base from '../layouts/Base.astro';
     .hp-q[open] summary { border-bottom: 1px solid var(--border); }
     .hp-q p { padding: 12px 16px 16px; color: var(--text-sec); font-size: 14px; line-height: 1.65; }
     .hp-q a { color: var(--accent); font-weight: 600; }
-    .hp-foot { text-align: center; padding: var(--space-5) var(--space-4); border-top: 1px solid var(--border); color: var(--text-sec); font-size: 14px; margin-top: var(--space-6); }
+
+    /* Safety rules */
+    .hp-safety-intro { font-size: 15px; color: var(--text-sec); margin-bottom: 18px; }
+    .hp-rules { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+    .hp-rule {
+      display: flex; gap: 16px; align-items: flex-start;
+      padding: 18px clamp(16px, 3vw, 22px);
+      background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .hp-rule:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+    .hp-rule strong { font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--text); display: block; margin-bottom: 4px; }
+    .hp-rule p { font-size: 14px; line-height: 1.6; color: var(--text-sec); margin: 0; }
+    .hp-rule-icon {
+      flex-shrink: 0;
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; background: var(--accent-dim);
+    }
+    .hp-rule-warn { background: linear-gradient(180deg, #FEF2F2, #fff); border-color: #FECACA; }
+    .hp-rule-warn .hp-rule-icon { background: #FEE2E2; }
+    .hp-rule-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .hp-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 8px 16px; border-radius: 999px;
+      font-family: var(--font-display); font-size: 12px; font-weight: 700;
+      text-decoration: none; transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .hp-btn-discord { background: #5865F2; color: #fff; }
+    .hp-btn-discord:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(88,101,242,0.3); }
+    .hp-btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .hp-btn-ghost:hover { background: var(--surface-hover); }
+
+    .hp-foot { text-align: center; padding: 24px 16px; border-top: 1px solid var(--border); color: var(--text-sec); font-size: 14px; margin-top: 32px; }
     .hp-foot a { color: var(--accent); font-weight: 600; }
     .hp-foot code { background: var(--surface); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
   </style>

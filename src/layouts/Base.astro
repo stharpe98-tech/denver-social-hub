@@ -87,8 +87,7 @@ const redditName = user?.reddit_username || user?.name;
       <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}><span class="mob-drawer-icon">📅</span>Events</a>
       <a href="/groups" class:list={["mob-drawer-link", { active: currentPath.startsWith("/groups") }]}><span class="mob-drawer-icon">👥</span>Groups</a>
       <a href="/about" class:list={["mob-drawer-link", { active: currentPath.startsWith("/about") }]}><span class="mob-drawer-icon">ℹ️</span>About</a>
-      <a href="/help" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help") }]}><span class="mob-drawer-icon">❓</span>Help</a>
-      <a href="/conduct" class:list={["mob-drawer-link", { active: currentPath.startsWith("/conduct") }]}><span class="mob-drawer-icon">🛡</span>Safety & terms</a>
+      <a href="/help" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help") || currentPath.startsWith("/conduct") }]}><span class="mob-drawer-icon">❓</span>Help & Safety</a>
       <a href="/contact" class:list={["mob-drawer-link", { active: currentPath.startsWith("/contact") }]}><span class="mob-drawer-icon">✉️</span>Contact</a>
       {isAdmin && (
         <a href="/admin/dashboard" class:list={["mob-drawer-link mob-drawer-link-admin", { active: currentPath.startsWith("/admin") }]}><span class="mob-drawer-icon">⚙️</span>Admin</a>
@@ -117,12 +116,12 @@ const redditName = user?.reddit_username || user?.name;
       <div class="footer-col">
         <div class="footer-col-title">Explore</div>
         <a href="/events">Events</a>
-        <a href="/help">Help</a>
+        <a href="/groups">Groups</a>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">About</div>
         <a href="/about">About</a>
-        <a href="/conduct">Safety & terms</a>
+        <a href="/help">Help & Safety</a>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">Stay in touch</div>
