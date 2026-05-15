@@ -9,6 +9,32 @@ let eventCount = 0;
 let upcomingPotluck: any = null;
 let suggestions: any[] = []; // FIX: was undeclared
 
+// Pull Discord guild_id from event-sync config and fetch the live online count.
+// Cached at the worker fetch layer so we don't hammer Discord on every render.
+let discordOnline: number | null = null;
+let discordInvite: string | null = null;
+let discordName: string = '';
+if (db) {
+  try {
+    const src: any = await db.prepare(
+      "SELECT config FROM event_sources WHERE kind='discord' AND enabled=1 ORDER BY id LIMIT 1"
+    ).first();
+    const guildId = src?.config ? (() => { try { return (JSON.parse(src.config).guild_id || '').toString() || null; } catch { return null; } })() : null;
+    if (guildId) {
+      const r = await fetch(`https://discord.com/api/guilds/${encodeURIComponent(guildId)}/widget.json`, {
+        headers: { 'User-Agent': 'DenverSocialHub/1.0' },
+        cf: { cacheTtl: 60, cacheEverything: true } as any,
+      });
+      if (r.ok) {
+        const w: any = await r.json();
+        if (typeof w?.presence_count === 'number') discordOnline = w.presence_count;
+        discordInvite = w?.instant_invite || null;
+        discordName = w?.name || '';
+      }
+    }
+  } catch {}
+}
+
 try {
   if (db) {
     const now = new Date();
@@ -99,6 +125,19 @@ const eventTypeChips = [
       </div>
     </div>
   </section>
+
+  {/* DISCORD LIVE CHIP — just the count, no avatars */}
+  {discordOnline !== null && (
+    <section class="page-wrap discord-chip-wrap">
+      <a href="/discord" class="discord-chip">
+        <span class="discord-pulse"></span>
+        <span class="discord-text">
+          <strong>{discordOnline}</strong> online in the Discord{discordName ? ` · ${discordName}` : ''}
+        </span>
+        <span class="discord-arrow">→</span>
+      </a>
+    </section>
+  )}
 
   <!-- UPCOMING POTLUCK SPOTLIGHT -->
   {upcomingPotluck && (
@@ -271,6 +310,32 @@ const eventTypeChips = [
     .event-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); }
 
     /* Featured event */
+    /* Discord live chip */
+    .discord-chip-wrap { padding-top: var(--space-5); padding-bottom: 0; }
+    .discord-chip {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 10px 18px 10px 14px; border-radius: 999px;
+      background: linear-gradient(135deg, rgba(88,101,242,0.10), rgba(88,101,242,0.04));
+      border: 1px solid rgba(88,101,242,0.25);
+      color: var(--text); text-decoration: none;
+      font-size: 14px; font-family: var(--font);
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .discord-chip:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(88,101,242,0.18); border-color: rgba(88,101,242,0.4); }
+    .discord-pulse {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #57F287;
+      box-shadow: 0 0 0 0 rgba(87,242,135,0.6);
+      animation: discord-pulse 1.8s ease-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes discord-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(87,242,135,0.6); }
+      100% { box-shadow: 0 0 0 10px rgba(87,242,135,0); }
+    }
+    .discord-text strong { font-family: var(--font-display); font-weight: 800; color: #5865F2; }
+    .discord-arrow { color: #5865F2; font-weight: 700; }
+
     .featured-event {
       position: relative; display: block;
       border-radius: 24px; overflow: hidden;
