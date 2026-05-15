@@ -5,10 +5,16 @@ import { ensurePartnersSchema, PARTNER_CATEGORIES, categoryLabel } from '../lib/
 
 const db = getDB();
 let perks: any[] = [];
+let loadError: string | null = null;
 if (db) {
-  await ensurePartnersSchema(db);
-  const r = await db.prepare("SELECT * FROM partners WHERE status='approved' ORDER BY id DESC").all();
-  perks = (r.results || []) as any[];
+  try {
+    await ensurePartnersSchema(db);
+    const r = await db.prepare("SELECT * FROM partners WHERE status='approved' ORDER BY id DESC").all();
+    perks = (r.results || []) as any[];
+  } catch (e: any) {
+    console.error('/perks load failed:', e);
+    loadError = e?.message || 'load_failed';
+  }
 }
 ---
 <Base title="Perks" description="Local discounts and offers for Denver Social attendees.">
@@ -20,7 +26,13 @@ if (db) {
     <a href="/perks/new" class="btn-cta px-cta">+ Submit your business</a>
   </header>
 
-  {perks.length === 0 ? (
+  {loadError ? (
+    <div class="px-empty">
+      <div class="px-empty-emoji">⚠️</div>
+      <h3>Perks are temporarily unavailable.</h3>
+      <p>We hit a problem loading partner offers. Try refreshing in a minute — or <a href="/contact">tell us</a> if it keeps happening.</p>
+    </div>
+  ) : perks.length === 0 ? (
     <div class="px-empty">
       <div class="px-empty-emoji">🏪</div>
       <h3>No perks yet — but we're building this.</h3>
