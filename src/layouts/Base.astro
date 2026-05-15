@@ -399,9 +399,9 @@ const showWelcomeTour = !user && !tourSeen;
 <style is:global>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Design tokens — Earth Studio: parchment surface, sage + terracotta
-     accents + marigold pop, Fraunces display + Work Sans body. Quiet,
-     ceramic-studio energy. */
+  /* Design tokens — parchment paper background with a purple + pink
+     duo and warm grey for secondary text. Fraunces display + Work Sans
+     body. Fun but restrained. */
   :root {
     /* Surface — parchment */
     --bg: #F5EFE3;
@@ -410,40 +410,40 @@ const showWelcomeTour = !user && !tourSeen;
     --border: #DDD2BB;
     --border-hover: #C9BCA0;
 
-    /* Text — warm charcoal */
-    --text: #2D2A24;
-    --text-sec: #5C574E;
-    --text-faint: #8A8478;
+    /* Text — ink + warm grey */
+    --text: #2A2730;
+    --text-sec: #6B6B73;
+    --text-faint: #9B9AA0;
 
-    /* Accents — sage primary, clay secondary */
-    --accent: #6B8E5A;       /* sage green — primary identity */
-    --accent-dim: rgba(107, 142, 90, 0.14);
-    --accent-glow: rgba(107, 142, 90, 0.28);
-    --accent2: #C66B3D;      /* terracotta */
-    --accent2-dim: rgba(198, 107, 61, 0.14);
-    --sunset: #C66B3D;       /* terracotta (legacy name kept for callouts) */
-    --sunset-dim: rgba(198, 107, 61, 0.14);
-    --pink: #B8553D;         /* deeper clay (legacy "pink" slot) */
-    --pink-dim: rgba(184, 85, 61, 0.14);
-    --mint: #6B8E5A;
-    --marigold: #E8A33B;     /* saffron pop — tags, stamps, "filling up" */
-    --marigold-dim: rgba(232, 163, 59, 0.16);
+    /* Accents — purple primary, pink secondary */
+    --accent: #7C3AED;       /* deep purple — primary */
+    --accent-dim: rgba(124, 58, 237, 0.14);
+    --accent-glow: rgba(124, 58, 237, 0.28);
+    --accent2: #EC4899;      /* hot pink */
+    --accent2-dim: rgba(236, 72, 153, 0.14);
+    --sunset: #EC4899;       /* legacy slot — pink */
+    --sunset-dim: rgba(236, 72, 153, 0.14);
+    --pink: #EC4899;
+    --pink-dim: rgba(236, 72, 153, 0.14);
+    --mint: #7C3AED;
+    --marigold: #EC4899;     /* legacy slot — pink */
+    --marigold-dim: rgba(236, 72, 153, 0.16);
 
-    /* CTA — terracotta */
-    --cta-bg: linear-gradient(135deg, #C66B3D, #B8553D);
-    --cta-bg-solid: #C66B3D;
-    --cta-text: #F5EFE3;
-    --cta-glow: rgba(198, 107, 61, 0.32);
+    /* CTA — purple → pink */
+    --cta-bg: linear-gradient(135deg, #7C3AED, #EC4899);
+    --cta-bg-solid: #7C3AED;
+    --cta-text: #FFFFFF;
+    --cta-glow: rgba(124, 58, 237, 0.32);
 
-    /* Tags — earthy palette + marigold pop */
-    --tag-bg: #FCE3A8;       /* marigold tint */
-    --tag-text: #8B5A14;
-    --tag-bg2: #E5D4C2;      /* sand */
-    --tag-text2: #8B4A2B;
-    --tag-bg3: #DDE6CC;      /* moss */
-    --tag-text3: #4A6B3A;
-    --tag-bg4: #FCE3A8;
-    --tag-text4: #8B5A14;
+    /* Tags */
+    --tag-bg: #EDE9FE;       /* lilac */
+    --tag-text: #5B21B6;
+    --tag-bg2: #FCE7F3;      /* blush */
+    --tag-text2: #9D174D;
+    --tag-bg3: #EAE6DE;      /* warm grey */
+    --tag-text3: #52525B;
+    --tag-bg4: #EDE9FE;
+    --tag-text4: #5B21B6;
 
     /* Status */
     --green: #10B981;
