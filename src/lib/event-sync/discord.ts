@@ -21,6 +21,28 @@ interface DiscordScheduledEvent {
 // trigger when the prefix is meaningfully long, so we don't mangle
 // "Dinner at 7" style titles.
 const SPLIT_PATTERNS = [' at ', ' @ ', ' - ', ' — ', ' – '];
+
+// Words that stay lowercase in title-case unless they start the string
+const KEEP_LOWER = new Set(['a','an','and','as','at','but','by','for','in','of','on','or','the','to','vs','with']);
+
+function titleCase(s: string): string {
+  return (s || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w, i) => {
+      const lower = w.toLowerCase();
+      if (i > 0 && KEEP_LOWER.has(lower)) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(' ');
+}
+
+function sentenceCase(s: string): string {
+  const t = (s || '').trim();
+  if (!t) return t;
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 function splitTitleAndLocation(title: string): { title: string; location: string } {
   const t = (title || '').trim();
   if (!t) return { title: t, location: '' };
@@ -31,7 +53,10 @@ function splitTitleAndLocation(title: string): { title: string; location: string
     const right = t.slice(idx + sep.length).trim();
     // Both halves must be substantive to be worth splitting
     if (left.length >= 3 && right.length >= 3 && /[A-Za-z]/.test(right)) {
-      return { title: left, location: right };
+      return {
+        title: sentenceCase(left),
+        location: titleCase(right),
+      };
     }
   }
   return { title: t, location: '' };
