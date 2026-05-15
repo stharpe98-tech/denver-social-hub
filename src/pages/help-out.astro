@@ -77,7 +77,7 @@ function timeAgo(iso: string): string {
   )}
 
   {favors.length === 0 ? (
-    <div class="ho-empty">Nothing posted yet. {user ? 'Be first.' : <><a href="/login?next=/help-out">Sign in</a> and post the first.</>}</div>
+    <div class="ho-empty">Empty board. Nobody needs a ride to DIA. Nobody's offering to assemble IKEA furniture. {user ? "Yet. That's where you come in." : <><a href="/login?next=/help-out">Sign in</a> and break the ice.</>}</div>
   ) : (
     <div class="ho-feed">
       {favors.map((f: any) => {
