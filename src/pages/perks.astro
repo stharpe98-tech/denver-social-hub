@@ -1,0 +1,145 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDB } from '../lib/db';
+import { ensurePartnersSchema, PARTNER_CATEGORIES, categoryLabel } from '../lib/partners-schema';
+
+const db = getDB();
+let perks: any[] = [];
+if (db) {
+  await ensurePartnersSchema(db);
+  const r = await db.prepare("SELECT * FROM partners WHERE status='approved' ORDER BY id DESC").all();
+  perks = (r.results || []) as any[];
+}
+---
+<Base title="Perks" description="Local discounts and offers for Denver Social attendees.">
+<div class="px-wrap">
+  <header class="px-head">
+    <div class="px-eyebrow">Local partner perks</div>
+    <h1>Discounts for showing up.</h1>
+    <p class="px-sub">Local businesses offering deals to Denver Social attendees. No app, no membership — just mention us when you show up (or use the code).</p>
+    <a href="/perks/new" class="btn-cta px-cta">+ Submit your business</a>
+  </header>
+
+  {perks.length === 0 ? (
+    <div class="px-empty">
+      <div class="px-empty-emoji">🏪</div>
+      <h3>No perks yet — but we're building this.</h3>
+      <p>If you run a Denver business and want locals to find you, <a href="/perks/new">submit your offer</a>. We review and post for free.</p>
+    </div>
+  ) : (
+    <div class="px-grid">
+      {perks.map((p: any) => {
+        const cat = categoryLabel(p.category);
+        return (
+          <article class="px-card">
+            <div class="px-card-head">
+              {cat && <span class="px-tag">{cat.emoji} {cat.label}</span>}
+              {p.neighborhood && <span class="px-loc">📍 {p.neighborhood}</span>}
+            </div>
+            <h3 class="px-biz">{p.business_name}</h3>
+            <div class="px-offer">{p.offer_title}</div>
+            {p.offer_details && <p class="px-details">{p.offer_details}</p>}
+            {p.redemption && (
+              <div class="px-redeem">
+                <span class="px-redeem-label">How to claim</span>
+                <span>{p.redemption}</span>
+              </div>
+            )}
+            {p.website && (
+              <a href={p.website} target="_blank" rel="noopener" class="px-link" data-claim={p.id}>
+                Visit {p.business_name} →
+              </a>
+            )}
+          </article>
+        );
+      })}
+    </div>
+  )}
+
+  <section class="px-pitch">
+    <h2>Run a Denver business?</h2>
+    <p>Post a perk for our attendees — a discount, a happy hour, a free pastry, anything that makes locals want to walk in your door. It's free for partners. We don't take a cut.</p>
+    <a href="/perks/new" class="btn-cta">Submit your offer</a>
+  </section>
+</div>
+
+<style>
+  .px-wrap { max-width: 1180px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+
+  .px-head { text-align: center; margin-bottom: 36px; }
+  .px-eyebrow {
+    display: inline-block; font-family: var(--font-display);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-dim);
+    padding: 6px 14px; border-radius: 999px; margin-bottom: 16px;
+  }
+  .px-head h1 { font-family: var(--font-display); font-size: clamp(34px, 5vw, 48px); font-weight: 900; letter-spacing: -0.025em; margin-bottom: 12px; }
+  .px-sub { font-size: 16px; color: var(--text-sec); line-height: 1.6; max-width: 600px; margin: 0 auto 20px; }
+  .px-cta { display: inline-block; }
+
+  .px-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-bottom: 56px; }
+  .px-card {
+    padding: 22px; background: var(--bg); border: 1px solid var(--border); border-radius: 18px;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    display: flex; flex-direction: column;
+  }
+  .px-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
+
+  .px-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .px-tag { font-size: 11px; padding: 4px 10px; border-radius: 999px; background: var(--tag-bg); color: var(--tag-text); font-weight: 600; }
+  .px-loc { font-size: 12px; color: var(--text-sec); }
+
+  .px-biz { font-family: var(--font-display); font-size: 18px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 6px; }
+  .px-offer { font-family: var(--font-display); font-size: 22px; font-weight: 900; color: var(--accent); margin-bottom: 10px; letter-spacing: -0.02em; }
+  .px-details { font-size: 14px; line-height: 1.55; color: var(--text-sec); margin-bottom: 14px; flex: 1; }
+  .px-redeem {
+    margin-top: auto; padding: 12px 14px;
+    background: var(--surface); border-radius: 10px; font-size: 13px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .px-redeem-label { font-family: var(--font-display); font-size: 10px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em; }
+  .px-redeem span:last-child { color: var(--text); font-weight: 500; }
+  .px-link {
+    margin-top: 12px; display: inline-block; text-align: center;
+    padding: 10px 16px; border-radius: 999px;
+    background: var(--cta-bg); color: var(--cta-text);
+    font-family: var(--font-display); font-weight: 700; font-size: 13px;
+    text-decoration: none;
+  }
+  .px-link:hover { box-shadow: 0 4px 12px var(--accent-glow); }
+
+  .px-empty {
+    padding: 56px 24px; text-align: center; background: var(--surface);
+    border: 1px dashed var(--border); border-radius: 16px; margin-bottom: 48px;
+  }
+  .px-empty-emoji { font-size: 52px; margin-bottom: 12px; }
+  .px-empty h3 { font-family: var(--font-display); font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+  .px-empty p { font-size: 15px; color: var(--text-sec); line-height: 1.55; max-width: 460px; margin: 0 auto; }
+  .px-empty a { color: var(--accent); font-weight: 600; }
+
+  .px-pitch {
+    padding: 36px clamp(20px, 4vw, 36px); border-radius: 20px;
+    background: linear-gradient(135deg, #F0F9FF, #ECFDF5);
+    border: 1px solid #BAE6FD;
+    text-align: center;
+  }
+  .px-pitch h2 { font-family: var(--font-display); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+  .px-pitch p { font-size: 16px; color: var(--text-sec); line-height: 1.55; max-width: 540px; margin: 0 auto 20px; }
+</style>
+
+<script is:inline>
+  document.querySelectorAll('[data-claim]').forEach(a => {
+    a.addEventListener('click', () => {
+      const id = a.getAttribute('data-claim');
+      // Fire-and-forget — don't block the click
+      fetch('/api/partners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'claim', id: parseInt(id) }),
+        keepalive: true,
+      }).catch(() => {});
+    });
+  });
+</script>
+</Base>

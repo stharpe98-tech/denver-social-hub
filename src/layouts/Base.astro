@@ -38,6 +38,7 @@ const showWelcomeTour = !user && !tourSeen;
       <nav class="site-nav site-nav-left">
         <a href="/events" class:list={["site-nav-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
         <a href="/groups" class:list={["site-nav-link", { active: currentPath.startsWith("/groups") }]}>Groups</a>
+        <a href="/perks" class:list={["site-nav-link", { active: currentPath.startsWith("/perks") }]}>Perks</a>
       </nav>
 
       <a href="/" class="site-logo" aria-label="Denver Social home">
@@ -92,6 +93,7 @@ const showWelcomeTour = !user && !tourSeen;
       <a href="/" class:list={["mob-drawer-link", { active: currentPath === "/" }]}><span class="mob-drawer-icon">🏠</span>Home</a>
       <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}><span class="mob-drawer-icon">📅</span>Events</a>
       <a href="/groups" class:list={["mob-drawer-link", { active: currentPath.startsWith("/groups") }]}><span class="mob-drawer-icon">👥</span>Groups</a>
+      <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]}><span class="mob-drawer-icon">🏪</span>Perks</a>
       <a href="/about" class:list={["mob-drawer-link", { active: currentPath.startsWith("/about") }]}><span class="mob-drawer-icon">ℹ️</span>About</a>
       <a href="/help" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help") || currentPath.startsWith("/conduct") }]}><span class="mob-drawer-icon">❓</span>Help & Safety</a>
       <a href="/contact" class:list={["mob-drawer-link", { active: currentPath.startsWith("/contact") }]}><span class="mob-drawer-icon">✉️</span>Contact</a>
