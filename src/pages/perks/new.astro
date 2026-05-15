@@ -49,6 +49,11 @@ import { PARTNER_CATEGORIES } from '../../lib/partners-schema';
         <input type="text" name="redemption" class="np-input" maxlength="120" placeholder='Mention "Denver Social" / use code DSN15 / show this page' />
       </div>
       <div class="np-field">
+        <label class="np-label">Booking link (if reservation required)</label>
+        <input type="url" name="booking_url" class="np-input" placeholder="https://reservations.yoursite.com/…" />
+        <span class="np-hint">If guests must book through your site to get the deal, paste the booking URL. The perk card will show a "Book to claim →" button instead of a generic visit link.</span>
+      </div>
+      <div class="np-field">
         <label class="np-label">RSVPs to unlock</label>
         <input type="number" name="rsvp_threshold" class="np-input" min="0" max="500" step="1" value="0" placeholder="0" />
         <span class="np-hint">Hide the discount until this many people RSVP. Use 0 for an always-on offer. Crowd-funded perks (e.g. 10 RSVPs unlocks 15% off) build buzz before the visit.</span>

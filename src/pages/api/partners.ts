@@ -34,6 +34,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const category = String(body.category || 'other').toLowerCase();
     const neighborhood = String(body.neighborhood || '').trim();
     const website = String(body.website || '').trim();
+    const booking_url_raw = String(body.booking_url || '').trim();
+    const booking_url = /^https?:\/\//i.test(booking_url_raw) ? booking_url_raw : '';
     const thresholdRaw = parseInt(body.rsvp_threshold);
     const rsvp_threshold = Number.isFinite(thresholdRaw) && thresholdRaw > 0 ? Math.min(thresholdRaw, 500) : 0;
 
@@ -50,9 +52,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     await db.prepare(`
-      INSERT INTO partners (slug, business_name, category, neighborhood, offer_title, offer_details, redemption, website, contact_email, submitted_by_email, rsvp_threshold)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(slug, business_name, cat, neighborhood, offer_title, offer_details, redemption, website, contact_email, user?.email || null, rsvp_threshold).run();
+      INSERT INTO partners (slug, business_name, category, neighborhood, offer_title, offer_details, redemption, website, contact_email, submitted_by_email, rsvp_threshold, booking_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(slug, business_name, cat, neighborhood, offer_title, offer_details, redemption, website, contact_email, user?.email || null, rsvp_threshold, booking_url || null).run();
 
     return ok({ slug });
   }
