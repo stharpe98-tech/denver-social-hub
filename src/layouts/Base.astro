@@ -251,39 +251,49 @@ const showWelcomeTour = !user && !tourSeen;
 <style is:global>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* CLAUDE.md design tokens — Clean & Crisp light theme */
+  /* Design tokens — fun & happy theme: warm cream surface with sunset
+     orange + hot pink secondary accents. Sky blue stays as primary so
+     brand identity carries through navs and core CTAs. */
   :root {
-    /* Surface */
-    --bg: #FFFFFF;
-    --surface: #F8F9FB;
-    --surface-hover: #F0F2F5;
-    --border: #E5E7EB;
-    --border-hover: #D1D5DB;
+    /* Surface — warm cream base */
+    --bg: #FFFCF7;
+    --surface: #FFF6E9;
+    --surface-hover: #FBEFDA;
+    --border: #F0E5D1;
+    --border-hover: #E2D4B8;
 
-    /* Text */
-    --text: #111827;
-    --text-sec: #6B7280;
-    --text-faint: #9CA3AF;
+    /* Text — slightly warm */
+    --text: #1F1A14;
+    --text-sec: #6B5F4D;
+    --text-faint: #A8997F;
 
     /* Accents */
-    --accent: #0EA5E9;       /* sky blue primary */
-    --accent-dim: rgba(14, 165, 233, 0.10);
-    --accent-glow: rgba(14, 165, 233, 0.22);
-    --accent2: #10B981;      /* emerald green secondary */
-    --accent2-dim: rgba(16, 185, 129, 0.10);
-    --mint: #10B981;         /* alias */
+    --accent: #0EA5E9;       /* sky blue — kept as primary identity */
+    --accent-dim: rgba(14, 165, 233, 0.12);
+    --accent-glow: rgba(14, 165, 233, 0.28);
+    --accent2: #10B981;      /* emerald green */
+    --accent2-dim: rgba(16, 185, 129, 0.12);
+    --sunset: #F97316;       /* warm orange — secondary "fun" accent */
+    --sunset-dim: rgba(249, 115, 22, 0.14);
+    --pink: #EC4899;         /* hot pink — for gradients + delight */
+    --pink-dim: rgba(236, 72, 153, 0.14);
+    --mint: #10B981;
 
-    /* CTA */
-    --cta-bg: #0EA5E9;
+    /* CTA — sunset→pink gradient */
+    --cta-bg: linear-gradient(135deg, #F97316, #EC4899);
+    --cta-bg-solid: #F97316;
     --cta-text: #FFFFFF;
+    --cta-glow: rgba(249, 115, 22, 0.35);
 
-    /* Tags */
-    --tag-bg: #E0F2FE;       /* sky-100 */
-    --tag-text: #0369A1;     /* sky-700 */
-    --tag-bg2: #D1FAE5;      /* emerald-100 */
-    --tag-text2: #047857;    /* emerald-700 */
-    --tag-bg3: #FEF3C7;      /* amber-100 */
-    --tag-text3: #92400E;    /* amber-800 */
+    /* Tags — warmer, more variety */
+    --tag-bg: #FFEDD5;       /* sunset peach */
+    --tag-text: #C2410C;
+    --tag-bg2: #FCE7F3;      /* pink */
+    --tag-text2: #BE185D;
+    --tag-bg3: #DBEAFE;      /* sky */
+    --tag-text3: #1E40AF;
+    --tag-bg4: #DCFCE7;      /* mint */
+    --tag-text4: #166534;
 
     /* Status */
     --green: #10B981;
@@ -525,15 +535,16 @@ const showWelcomeTour = !user && !tourSeen;
   .btn-cta {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     padding: 12px 24px; border-radius: var(--radius-pill);
-    font-size: 15px; font-weight: 600;
+    font-size: 15px; font-weight: 700;
     background: var(--cta-bg); color: var(--cta-text); border: none;
     cursor: pointer; text-decoration: none;
-    box-shadow: 0 1px 3px rgba(14,165,233,0.25);
-    transition: all 0.15s;
+    box-shadow: 0 2px 8px rgba(249,115,22,0.25);
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
     -webkit-tap-highlight-color: transparent;
+    font-family: var(--font-display);
   }
-  .btn-cta:hover { box-shadow: 0 6px 20px rgba(14,165,233,0.35); transform: translateY(-1px); }
-  .btn-cta:active { transform: translateY(0); box-shadow: 0 1px 3px rgba(14,165,233,0.25); }
+  .btn-cta:hover { box-shadow: 0 8px 24px var(--cta-glow); transform: translateY(-2px) scale(1.02); filter: saturate(1.1); }
+  .btn-cta:active { transform: translateY(0); box-shadow: 0 2px 8px var(--cta-glow); }
 
   .btn-sec {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
