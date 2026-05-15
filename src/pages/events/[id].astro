@@ -90,7 +90,9 @@ const showLocation = myRsvp && meetsKarmaGate;
 // listed co-host can manage co-hosts for this event.
 const isCreator = !!(user && event.host_id && event.host_id === user.id);
 const isCohost = !!(user?.email && cohosts.some((c: any) => (c.member_email || '').toLowerCase() === user.email.toLowerCase()));
+const isSuperAdmin = (user?.email || '').toLowerCase() === 'stharpe98@gmail.com';
 const canManageCohosts = isCreator || isCohost;
+const canDeleteEvent = isCreator || isCohost || isSuperAdmin;
 const cohostEmailSet = new Set(cohosts.map((c: any) => (c.member_email || '').toLowerCase()));
 
 // Threaded comments
@@ -127,7 +129,12 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
 <Base title={event.title}>
 <main class="ev">
   <!-- Back link -->
-  <a href="/events" class="ev-back">← Back to events</a>
+  <div class="ev-top-row">
+    <a href="/events" class="ev-back">← Back to events</a>
+    {canDeleteEvent && (
+      <button class="ev-delete-btn" id="ev-delete-btn" data-event-id={id}>🗑 Delete event</button>
+    )}
+  </div>
 
   <!-- Hero header -->
   <div class="ev-hero">
@@ -608,6 +615,20 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   }
 
   /* Back link */
+  .ev-top-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .ev-delete-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 999px;
+    background: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C;
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .ev-delete-btn:hover { background: #FEE2E2; border-color: #F87171; color: #991B1B; }
+  .ev-delete-btn:active { background: #FECACA; }
+
   .ev-back {
     font-size: 13px;
     font-weight: 500;
@@ -1166,6 +1187,36 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
 
 <script is:inline>
   (function() {
+    // ── Delete event ──
+    var delBtn = document.getElementById('ev-delete-btn');
+    if (delBtn) {
+      delBtn.addEventListener('click', async function() {
+        if (!confirm('Delete this event? This wipes all RSVPs, comments, and bring-items. Cannot be undone.')) return;
+        var eventId = delBtn.getAttribute('data-event-id');
+        delBtn.disabled = true;
+        delBtn.textContent = 'Deleting…';
+        try {
+          var res = await fetch('/api/events/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: parseInt(eventId) }),
+          });
+          var data = await res.json();
+          if (data.ok) {
+            location.href = '/events';
+          } else {
+            alert('Delete failed: ' + (data.error || 'unknown'));
+            delBtn.disabled = false;
+            delBtn.textContent = '🗑 Delete event';
+          }
+        } catch (e) {
+          alert('Network error.');
+          delBtn.disabled = false;
+          delBtn.textContent = '🗑 Delete event';
+        }
+      });
+    }
+
     // ── RSVP: 3-state Going / Maybe / Can't make it ──
     document.querySelectorAll('[data-rsvp]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
