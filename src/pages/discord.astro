@@ -1,0 +1,214 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDB } from '../lib/db';
+
+// Pull the guild_id from the first enabled Discord event-source row.
+// Falls back gracefully if it's not set yet.
+const db = getDB();
+let guildId: string | null = null;
+if (db) {
+  try {
+    const row: any = await db.prepare(
+      "SELECT config FROM event_sources WHERE kind='discord' AND enabled=1 ORDER BY id LIMIT 1"
+    ).first();
+    if (row?.config) {
+      try {
+        const cfg = JSON.parse(row.config);
+        guildId = (cfg.guild_id || '').toString() || null;
+      } catch {}
+    }
+  } catch {}
+}
+
+// Discord widget.json — public, no token needed, but requires the
+// server admin to flip on "Enable Server Widget" in server settings.
+type Widget = {
+  id: string;
+  name: string;
+  instant_invite: string | null;
+  presence_count: number;
+  members: Array<{ id: string; username: string; avatar_url: string | null; status: string; channel_id?: string }>;
+  channels: Array<{ id: string; name: string; position: number }>;
+};
+
+let widget: Widget | null = null;
+let widgetError: string | null = null;
+if (guildId) {
+  try {
+    const r = await fetch(`https://discord.com/api/guilds/${encodeURIComponent(guildId)}/widget.json`, {
+      headers: { 'User-Agent': 'DenverSocialHub/1.0' },
+      cf: { cacheTtl: 60, cacheEverything: true } as any,
+    });
+    if (r.ok) {
+      widget = await r.json() as Widget;
+    } else {
+      widgetError = `Discord returned ${r.status}. Make sure "Enable Server Widget" is on in Server Settings → Widget.`;
+    }
+  } catch (e: any) {
+    widgetError = e?.message || 'Could not reach Discord.';
+  }
+}
+
+const inviteUrl = widget?.instant_invite || 'https://discord.gg/S8SFNkdSgK';
+---
+<Base title="Discord" description="Live view of the Denver Social Discord server.">
+<div class="d-wrap">
+  <header class="d-head">
+    <h1>The Discord</h1>
+    <p>Live look at who's around right now. Chat happens in Discord; everything else lives here.</p>
+  </header>
+
+  {!guildId && (
+    <div class="d-setup">
+      <strong>Discord isn't connected yet.</strong>
+      <p>An admin needs to add a Discord source on <a href="/admin/sync">/admin/sync</a> with the guild ID. The bot token isn't required for the widget — just the guild ID.</p>
+    </div>
+  )}
+
+  {guildId && widgetError && (
+    <div class="d-setup d-setup-warn">
+      <strong>Widget not enabled in Discord.</strong>
+      <p>Open Discord → <strong>Server Settings → Widget</strong> → toggle <em>"Enable Server Widget"</em>. Then refresh this page. ({widgetError})</p>
+    </div>
+  )}
+
+  {widget && (
+    <div class="d-grid">
+      <section class="d-card d-status">
+        <span class="d-pulse"></span>
+        <div>
+          <div class="d-status-count">{widget.presence_count}</div>
+          <div class="d-status-label">online in {widget.name}</div>
+        </div>
+        <a href={inviteUrl} target="_blank" rel="noopener" class="d-join">Join →</a>
+      </section>
+
+      {widget.channels && widget.channels.length > 0 && (
+        <section class="d-card">
+          <h2 class="d-h">🔊 Voice channels</h2>
+          <ul class="d-channels">
+            {widget.channels.map(ch => {
+              const members = widget!.members.filter(m => m.channel_id === ch.id);
+              return (
+                <li>
+                  <div class="d-ch-name">{ch.name}</div>
+                  {members.length > 0 ? (
+                    <div class="d-ch-people">
+                      {members.map(m => (
+                        <span class="d-person">
+                          {m.avatar_url ? <img src={m.avatar_url} alt={m.username} class="d-person-avatar" /> : <span class="d-person-avatar d-person-avatar-fallback">{m.username[0]?.toUpperCase()}</span>}
+                          {m.username}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span class="d-ch-empty">— empty</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      <section class="d-card">
+        <h2 class="d-h">Online ({widget.members.filter(m => !m.channel_id).length} in text)</h2>
+        <div class="d-members">
+          {widget.members.filter(m => !m.channel_id).map(m => (
+            <div class={`d-member d-status-${m.status}`}>
+              {m.avatar_url
+                ? <img src={m.avatar_url} alt={m.username} class="d-member-avatar" />
+                : <span class="d-member-avatar d-member-avatar-fallback">{m.username[0]?.toUpperCase()}</span>}
+              <span class="d-member-name">{m.username}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section class="d-card d-card-cta">
+        <h2 class="d-h">Want in?</h2>
+        <p>The Discord is where the chat lives — group threads, last-minute plans, sharing photos. Pop in whenever.</p>
+        <a href={inviteUrl} target="_blank" rel="noopener" class="btn-cta">Open Discord →</a>
+      </section>
+    </div>
+  )}
+</div>
+
+<style>
+  .d-wrap { max-width: 920px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+  .d-head { text-align: center; margin-bottom: 28px; }
+  .d-head h1 { font-family: var(--font-display); font-size: clamp(30px, 5vw, 42px); font-weight: 900; letter-spacing: -0.025em; }
+  .d-head p { font-size: 15px; color: var(--text-sec); margin-top: 8px; max-width: 540px; margin-left: auto; margin-right: auto; line-height: 1.55; }
+
+  .d-setup { padding: 18px 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 20px; }
+  .d-setup strong { display: block; font-family: var(--font-display); font-size: 15px; margin-bottom: 4px; }
+  .d-setup p { font-size: 13px; color: var(--text-sec); line-height: 1.55; }
+  .d-setup a { color: var(--accent); font-weight: 600; }
+  .d-setup-warn { background: var(--sunset-dim); border-color: rgba(249,115,22,0.25); }
+
+  .d-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .d-card { padding: 22px; background: var(--bg); border: 1px solid var(--border); border-radius: 16px; }
+  .d-card-cta { background: linear-gradient(135deg, #5865F2 0%, #404EED 100%); color: #fff; text-align: center; border-color: transparent; }
+  .d-card-cta h2 { color: #fff; }
+  .d-card-cta p { color: rgba(255,255,255,0.9); font-size: 15px; line-height: 1.55; margin: 8px 0 16px; }
+  .d-card-cta .btn-cta { background: #fff; color: #5865F2; box-shadow: none; }
+  .d-card-cta .btn-cta:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+
+  .d-status {
+    display: flex; align-items: center; gap: 16px;
+    background: linear-gradient(160deg, rgba(88,101,242,0.06), transparent);
+    border-color: rgba(88,101,242,0.18);
+  }
+  .d-pulse {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #57F287;
+    box-shadow: 0 0 0 0 rgba(87,242,135,0.6);
+    animation: d-pulse 1.8s ease-out infinite;
+  }
+  @keyframes d-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(87,242,135,0.6); }
+    100% { box-shadow: 0 0 0 14px rgba(87,242,135,0); }
+  }
+  .d-status-count { font-family: var(--font-display); font-size: 28px; font-weight: 900; line-height: 1; color: var(--text); }
+  .d-status-label { font-size: 13px; color: var(--text-sec); margin-top: 2px; }
+  .d-join {
+    margin-left: auto; padding: 10px 18px; border-radius: 999px;
+    background: #5865F2; color: #fff;
+    font-family: var(--font-display); font-weight: 700; font-size: 13px;
+    text-decoration: none; transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .d-join:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(88,101,242,0.4); }
+
+  .d-h { font-family: var(--font-display); font-size: 16px; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.01em; }
+
+  .d-channels { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  .d-channels li { padding: 12px 14px; background: var(--surface); border-radius: 12px; }
+  .d-ch-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .d-ch-empty { font-size: 12px; color: var(--text-faint); }
+  .d-ch-people { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .d-person, .d-member {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px 4px 4px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 999px; font-size: 12px; font-weight: 600;
+  }
+  .d-person-avatar, .d-member-avatar {
+    width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
+  }
+  .d-person-avatar-fallback, .d-member-avatar-fallback {
+    background: linear-gradient(135deg, var(--accent), var(--mint));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 11px; font-weight: 800;
+  }
+  .d-members { display: flex; flex-wrap: wrap; gap: 6px; }
+  .d-member-name { font-size: 12px; }
+  .d-status-online .d-member-avatar { box-shadow: 0 0 0 2px #57F287; }
+  .d-status-idle .d-member-avatar { box-shadow: 0 0 0 2px #FAA61A; }
+  .d-status-dnd .d-member-avatar { box-shadow: 0 0 0 2px #ED4245; }
+
+  @media (min-width: 640px) {
+    .d-grid { grid-template-columns: 1fr 1fr; }
+    .d-card-cta, .d-status { grid-column: 1 / -1; }
+  }
+</style>
+</Base>
