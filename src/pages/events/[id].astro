@@ -96,9 +96,6 @@ const canManageCohosts = isCreator || isCohost;
 const canDeleteEvent = isAdmin || isCreator || isCohost;
 const cohostEmailSet = new Set(cohosts.map((c: any) => (c.member_email || '').toLowerCase()));
 
-// Address is visible to: hosts, co-hosts, admins (always), plus any
-// confirmed RSVP that clears the karma gate (going or maybe).
-const showLocation = isCreator || isCohost || isAdmin || (myRsvp && meetsKarmaGate);
 
 // Threaded comments
 const rootComments = comments.filter((c: any) => !c.parent_id);
@@ -175,8 +172,7 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
       <div class="ev-info-detail">
         <span class="ev-info-label">Where</span>
         <span class="ev-info-value">
-          {showLocation && event.location ? event.location : (event.zone || 'Denver')}
-          {!showLocation && event.location && <span class="ev-locked">RSVP to see address</span>}
+          {event.location || event.zone || 'Denver'}
         </span>
       </div>
     </div>
