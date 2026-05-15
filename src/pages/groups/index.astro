@@ -2,14 +2,18 @@
 import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
 import { ensureGroupsSchema } from '../../lib/groups-schema';
+import { ensureDmSchema } from '../../lib/dm-schema';
 
 const db = getDB();
 let user: any = null;
 const cookie = Astro.cookies.get('dsn_user')?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 
+const tab = (Astro.url.searchParams.get('tab') || 'groups').toLowerCase();
+
 let myGroups: any[] = [];
 let discoverGroups: any[] = [];
+let conversations: any[] = [];
 
 if (db) {
   await ensureGroupsSchema(db);
@@ -32,74 +36,181 @@ if (db) {
     LIMIT 24
   `).bind(user?.email || null, user?.email || '').all();
   discoverGroups = (discover.results || []) as any[];
+
+  if (user?.email) {
+    await ensureDmSchema(db);
+    const me = (user.email || '').toLowerCase();
+    const r = await db.prepare(`
+      SELECT c.id, c.member_a_email, c.member_b_email, c.last_msg_at, c.last_msg_preview, c.last_msg_from,
+             m.name as other_name, m.reddit_username as other_reddit, m.discord_username as other_discord,
+             (SELECT COUNT(*) FROM dm_messages mm WHERE mm.conversation_id=c.id AND mm.from_email != ? AND mm.read_at IS NULL) AS unread
+      FROM dm_conversations c
+      LEFT JOIN members m ON LOWER(m.email) = CASE WHEN LOWER(c.member_a_email)=? THEN LOWER(c.member_b_email) ELSE LOWER(c.member_a_email) END
+      WHERE LOWER(c.member_a_email)=? OR LOWER(c.member_b_email)=?
+      ORDER BY COALESCE(c.last_msg_at, c.created_at) DESC
+    `).bind(me, me, me, me).all();
+    conversations = (r.results || []) as any[];
+  }
+}
+
+const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unread || 0), 0);
+
+function otherName(c: any): string {
+  return c.other_name || c.other_reddit || c.other_discord
+    || (c.member_a_email?.toLowerCase() === (user?.email || '').toLowerCase()
+        ? (c.member_b_email || '').split('@')[0]
+        : (c.member_a_email || '').split('@')[0])
+    || 'Member';
+}
+
+function timeAgo(iso: string): string {
+  if (!iso) return '';
+  const ms = Date.now() - new Date((iso || '').includes('Z') ? iso : iso + 'Z').getTime();
+  if (Number.isNaN(ms) || ms < 0) return '';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  return d < 30 ? `${d}d` : new Date(iso).toLocaleDateString();
 }
 ---
-<Base title="Groups" description="Subcommunities inside Denver Social. Create your own or join one.">
+<Base title="Groups" description="Subcommunities and direct messages in one place.">
 <div class="g-wrap">
   <header class="g-head">
     <div>
-      <h1>Groups</h1>
-      <p class="g-sub">Smaller circles inside Denver Social. Build one with friends, invite who you want.</p>
+      <h1>Groups & messages</h1>
+      <p class="g-sub">Smaller circles inside Denver Social, and private chats with the people in them.</p>
     </div>
-    {user && <a href="/groups/new" class="btn-cta">+ New group</a>}
-    {!user && <a href="/login?next=/groups" class="btn-cta">Sign in to create</a>}
+    {user && tab === 'groups' && <a href="/groups/new" class="btn-cta">+ New group</a>}
+    {!user && <a href="/login?next=/groups" class="btn-cta">Sign in</a>}
   </header>
 
   {user && (
+    <nav class="g-tabs" aria-label="Section">
+      <a href="/groups?tab=groups" class:list={["g-tab", { active: tab !== 'messages' }]}>
+        👥 Groups
+      </a>
+      <a href="/groups?tab=messages" class:list={["g-tab", { active: tab === 'messages' }]}>
+        💬 Messages
+        {totalUnread > 0 && <span class="g-tab-badge">{totalUnread}</span>}
+      </a>
+    </nav>
+  )}
+
+  {(tab !== 'messages' || !user) && (
+    <>
+      {user && (
+        <section class="g-section">
+          <h2 class="g-section-title">Your groups</h2>
+          {myGroups.length === 0 ? (
+            <div class="g-empty">
+              You haven't joined any groups yet. Browse below or <a href="/groups/new">make your own</a>.
+            </div>
+          ) : (
+            <div class="g-grid">
+              {myGroups.map((g: any) => (
+                <a href={`/groups/${g.slug}`} class="g-card">
+                  <div class="g-card-head">
+                    <span class="g-card-name">{g.name}</span>
+                    {g.privacy === 'invite_only' && <span class="g-card-lock">🔒 Private</span>}
+                  </div>
+                  {g.description && <p class="g-card-desc">{g.description}</p>}
+                  <div class="g-card-meta">
+                    <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
+                    {g.role === 'owner' && <span class="g-card-role">Owner</span>}
+                    {g.role === 'organizer' && <span class="g-card-role">Organizer</span>}
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      <section class="g-section">
+        <h2 class="g-section-title">Discover</h2>
+        {discoverGroups.length === 0 ? (
+          <div class="g-empty">No public groups yet. {user ? <a href="/groups/new">Start the first one →</a> : <a href="/login?next=/groups">Sign in</a>} to create one.</div>
+        ) : (
+          <div class="g-grid">
+            {discoverGroups.map((g: any) => (
+              <a href={`/groups/${g.slug}`} class="g-card">
+                <div class="g-card-head">
+                  <span class="g-card-name">{g.name}</span>
+                </div>
+                {g.description && <p class="g-card-desc">{g.description}</p>}
+                <div class="g-card-meta">
+                  <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
+  )}
+
+  {tab === 'messages' && user && (
     <section class="g-section">
-      <h2 class="g-section-title">Your groups</h2>
-      {myGroups.length === 0 ? (
+      <h2 class="g-section-title">Conversations</h2>
+      {conversations.length === 0 ? (
         <div class="g-empty">
-          You haven't joined any groups yet. Browse below or <a href="/groups/new">make your own</a>.
+          No chats yet. Open someone's group profile and hit 💬 to start one — or wait for a message.
         </div>
       ) : (
-        <div class="g-grid">
-          {myGroups.map((g: any) => (
-            <a href={`/groups/${g.slug}`} class="g-card">
-              <div class="g-card-head">
-                <span class="g-card-name">{g.name}</span>
-                {g.privacy === 'invite_only' && <span class="g-card-lock">🔒 Private</span>}
-              </div>
-              {g.description && <p class="g-card-desc">{g.description}</p>}
-              <div class="g-card-meta">
-                <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
-                {g.role === 'owner' && <span class="g-card-role">Owner</span>}
-                {g.role === 'organizer' && <span class="g-card-role">Organizer</span>}
-              </div>
-            </a>
-          ))}
+        <div class="dm-list">
+          {conversations.map((c: any) => {
+            const name = otherName(c);
+            const initial = name[0]?.toUpperCase() || '?';
+            const isUnread = (c.unread || 0) > 0;
+            const preview = c.last_msg_preview || 'Start the conversation…';
+            return (
+              <a href={`/messages/${c.id}`} class={`dm-row ${isUnread ? 'unread' : ''}`}>
+                <div class="dm-avatar">{initial}</div>
+                <div class="dm-body">
+                  <div class="dm-row-top">
+                    <strong>{name}</strong>
+                    <span class="dm-time">{timeAgo(c.last_msg_at)}</span>
+                  </div>
+                  <div class="dm-preview">
+                    {c.last_msg_from?.toLowerCase() === (user.email || '').toLowerCase() && <span class="dm-you">You: </span>}
+                    {preview}
+                  </div>
+                </div>
+                {isUnread && <span class="dm-badge">{c.unread}</span>}
+              </a>
+            );
+          })}
         </div>
       )}
     </section>
   )}
-
-  <section class="g-section">
-    <h2 class="g-section-title">Discover</h2>
-    {discoverGroups.length === 0 ? (
-      <div class="g-empty">No public groups yet. {user ? <a href="/groups/new">Start the first one →</a> : <a href="/login?next=/groups">Sign in</a>} to create one.</div>
-    ) : (
-      <div class="g-grid">
-        {discoverGroups.map((g: any) => (
-          <a href={`/groups/${g.slug}`} class="g-card">
-            <div class="g-card-head">
-              <span class="g-card-name">{g.name}</span>
-            </div>
-            {g.description && <p class="g-card-desc">{g.description}</p>}
-            <div class="g-card-meta">
-              <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
-            </div>
-          </a>
-        ))}
-      </div>
-    )}
-  </section>
 </div>
 
 <style>
   .g-wrap { max-width: 1180px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
-  .g-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 32px; flex-wrap: wrap; }
+  .g-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; }
   .g-head h1 { font-family: var(--font-display); font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -0.02em; }
   .g-sub { font-size: 15px; color: var(--text-sec); margin-top: 6px; max-width: 540px; }
+
+  .g-tabs { display: flex; gap: 6px; margin-bottom: 28px; background: var(--surface); padding: 6px; border-radius: 999px; width: fit-content; border: 1px solid var(--border); }
+  .g-tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 18px; border-radius: 999px;
+    font-family: var(--font-display); font-size: 14px; font-weight: 700;
+    color: var(--text-sec); text-decoration: none; transition: background 0.15s, color 0.15s;
+  }
+  .g-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--card-shadow); }
+  .g-tab:hover:not(.active) { color: var(--text); }
+  .g-tab-badge {
+    min-width: 20px; padding: 2px 8px; border-radius: 999px;
+    background: var(--cta-bg); color: #fff; font-size: 11px; font-weight: 800;
+    text-align: center;
+  }
+
   .g-section { margin-bottom: 36px; }
   .g-section-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.01em; }
   .g-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
@@ -121,5 +232,35 @@ if (db) {
     text-align: center; color: var(--text-sec); font-size: 14px;
   }
   .g-empty a { color: var(--accent); font-weight: 600; }
+
+  /* DM list (inline, reuses the styling from /messages) */
+  .dm-list { display: flex; flex-direction: column; gap: 6px; }
+  .dm-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 14px;
+    text-decoration: none; transition: background 0.15s, border-color 0.15s;
+  }
+  .dm-row:hover { background: var(--surface); border-color: var(--border-hover); }
+  .dm-row.unread { background: var(--accent-dim); border-color: var(--accent); }
+  .dm-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--sunset), var(--pink));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 800; font-size: 18px; flex-shrink: 0;
+  }
+  .dm-body { flex: 1; min-width: 0; }
+  .dm-row-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .dm-row-top strong { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); }
+  .dm-time { font-size: 12px; color: var(--text-faint); flex-shrink: 0; }
+  .dm-preview { font-size: 13px; color: var(--text-sec); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dm-row.unread .dm-preview { color: var(--text); font-weight: 500; }
+  .dm-you { color: var(--text-faint); }
+  .dm-badge {
+    min-width: 22px; padding: 3px 8px; border-radius: 999px;
+    background: var(--cta-bg); color: #fff;
+    font-family: var(--font-display); font-size: 11px; font-weight: 800;
+    text-align: center; flex-shrink: 0;
+  }
 </style>
 </Base>
