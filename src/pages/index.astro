@@ -61,11 +61,8 @@ const eventTypeChips = [
   <!-- HERO -->
   <section class="hero">
     <div class="hero-photos">
-      <img src="https://images.unsplash.com/photo-1551632811-561732d1e306?w=1200&h=800&fit=crop&crop=center" alt="Hiking a Colorado trail" class="hero-photo hp-1" loading="eager" />
-      <img src="https://images.unsplash.com/photo-1454391304352-2bf4678b1a7a?w=1200&h=800&fit=crop&crop=center" alt="Red Rocks" class="hero-photo hp-2" loading="eager" />
-      <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=800&fit=crop&crop=center" alt="Rocky Mountains" class="hero-photo hp-3" loading="eager" />
-      <img src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=1200&h=800&fit=crop&crop=center" alt="Dinner meetup" class="hero-photo hp-4" loading="eager" />
-      <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop&crop=center" alt="Restaurant dinner" class="hero-photo hp-5" loading="eager" />
+      <img src="/hero/red-rocks.jpg" alt="Red Rocks Amphitheatre at night" class="hero-photo hp-1" loading="eager" />
+      <img src="/hero/foothills.jpg" alt="Snowy Colorado foothills trail" class="hero-photo hp-2" loading="eager" />
     </div>
     <div class="hero-overlay"></div>
     <div class="hero-inner">
@@ -191,21 +188,18 @@ const eventTypeChips = [
       width: 100%; height: 100%;
       object-fit: cover; object-position: center;
       opacity: 0;
-      animation: heroFade 25s infinite;
+      animation: heroFade 16s infinite;
       filter: saturate(0.85) brightness(0.9);
       transform: scale(1.05);
     }
     .hp-1 { animation-delay: 0s; }
-    .hp-2 { animation-delay: 5s; }
-    .hp-3 { animation-delay: 10s; }
-    .hp-4 { animation-delay: 15s; }
-    .hp-5 { animation-delay: 20s; }
+    .hp-2 { animation-delay: 8s; }
 
     @keyframes heroFade {
       0%   { opacity: 0; transform: scale(1.05); }
-      4%   { opacity: 1; transform: scale(1.02); }
-      20%  { opacity: 1; transform: scale(1); }
-      24%  { opacity: 0; transform: scale(1); }
+      6%   { opacity: 1; transform: scale(1.02); }
+      45%  { opacity: 1; transform: scale(1); }
+      55%  { opacity: 0; transform: scale(1); }
       100% { opacity: 0; transform: scale(1.05); }
     }
 
