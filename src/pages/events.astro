@@ -248,7 +248,7 @@ const content = await getContent();
     <div class="ev-empty">
       <div class="ev-empty-term">
         <span class="term-prompt">$</span> <span class="term-cmd">What's happening</span><br/>
-        <span class="term-output">No events right now — check back soon.</span>
+        <span class="term-output">No events posted. The calendar's a blank canvas. Could be you, could be Marcus, could be a deer who got a Discord account.</span>
       </div>
       <p>{content.events_empty || 'Check back soon or post your own event.'}</p>
       {!user && <a href="/login" class="btn btn-primary">sign in to post</a>}
