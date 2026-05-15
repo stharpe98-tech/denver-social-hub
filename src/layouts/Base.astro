@@ -46,6 +46,9 @@ const showWelcomeTour = !user && !tourSeen;
       </a>
 
       <nav class="site-nav site-nav-right">
+        {user && (
+          <a href="/messages" class:list={["site-nav-link", { active: currentPath.startsWith("/messages") }]}>💬 Messages</a>
+        )}
         <a href="/about" class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
         <a href="/help"  class:list={["site-nav-link", { active: currentPath.startsWith("/help") }]}>Help</a>
         {isAdmin && (
@@ -94,6 +97,9 @@ const showWelcomeTour = !user && !tourSeen;
       <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}><span class="mob-drawer-icon">📅</span>Events</a>
       <a href="/groups" class:list={["mob-drawer-link", { active: currentPath.startsWith("/groups") }]}><span class="mob-drawer-icon">👥</span>Groups</a>
       <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]}><span class="mob-drawer-icon">🏪</span>Perks</a>
+      {user && (
+        <a href="/messages" class:list={["mob-drawer-link", { active: currentPath.startsWith("/messages") }]}><span class="mob-drawer-icon">💬</span>Messages</a>
+      )}
       <a href="/about" class:list={["mob-drawer-link", { active: currentPath.startsWith("/about") }]}><span class="mob-drawer-icon">ℹ️</span>About</a>
       <a href="/help" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help") || currentPath.startsWith("/conduct") }]}><span class="mob-drawer-icon">❓</span>Help & Safety</a>
       <a href="/contact" class:list={["mob-drawer-link", { active: currentPath.startsWith("/contact") }]}><span class="mob-drawer-icon">✉️</span>Contact</a>
