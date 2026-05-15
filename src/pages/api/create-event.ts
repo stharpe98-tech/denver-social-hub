@@ -1,5 +1,7 @@
 import type { APIContext } from 'astro';
+import { env } from 'cloudflare:workers';
 import { getDB } from '../../lib/db';
+import { mirrorEventCreate } from '../../lib/event-sync/outbound';
 
 async function notifyAdmin(db: D1Database, eventTitle: string, submittedBy: string) {
   try {
@@ -101,7 +103,7 @@ export async function POST({ request, cookies }: APIContext) {
 
     const phone = (contact_phone || '').trim();
 
-    await db.prepare(
+    const insert = await db.prepare(
       `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, discord_link, contact_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       title.trim(),
@@ -120,6 +122,13 @@ export async function POST({ request, cookies }: APIContext) {
 
     // Notify Seth about new event (non-blocking)
     notifyAdmin(db, title.trim(), submittedBy);
+
+    // Mirror to Discord scheduled events if any source has it enabled (non-blocking).
+    const newId = Number((insert as any).meta?.last_row_id) || 0;
+    if (newId) {
+      const botToken = (env as any).DISCORD_BOT_TOKEN as string | undefined;
+      try { await mirrorEventCreate(db, newId, botToken); } catch {}
+    }
 
     return new Response(JSON.stringify({ ok: true, created: true }));
   } catch (e: any) {

@@ -39,6 +39,8 @@ export const SYNC_KINDS: SyncKindDef[] = [
     fields: [
       { name: 'guild_id', label: 'Guild ID', type: 'text', required: true, placeholder: '123456789012345678', help: 'Enable Developer Mode in Discord → right-click your server → Copy Server ID.' },
       { name: 'token', label: 'Bot token (optional)', type: 'password', help: 'Leave blank to use the DISCORD_BOT_TOKEN secret. Bot must be in the guild.' },
+      { name: 'mirror_enabled', label: 'Mirror site events → Discord (any value enables)', type: 'text', placeholder: 'yes', help: 'Set to anything non-empty to also create Discord scheduled events when someone posts on the site.' },
+      { name: 'announce_channel_id', label: 'Announcement channel ID (optional)', type: 'text', placeholder: '123456789012345678', help: 'If set, the bot also posts a message in this channel when a site event is created.' },
     ],
   },
   {
