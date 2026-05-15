@@ -92,17 +92,11 @@ const showWelcomeTour = !user && !tourSeen;
 
     <nav class="mob-drawer-nav">
       <a href="/" class:list={["mob-drawer-link", { active: currentPath === "/" }]}><span class="mob-drawer-icon">🏠</span>Home</a>
-      <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}><span class="mob-drawer-icon">📅</span>Events</a>
+      <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") || currentPath.startsWith("/calendar") }]}><span class="mob-drawer-icon">📅</span>Events</a>
       <a href="/groups" class:list={["mob-drawer-link", { active: currentPath.startsWith("/groups") || currentPath.startsWith("/messages") }]}><span class="mob-drawer-icon">👥</span>Groups & DMs</a>
       <a href="/discord" class:list={["mob-drawer-link", { active: currentPath.startsWith("/discord") }]}><span class="mob-drawer-icon">💬</span>Discord</a>
       <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]}><span class="mob-drawer-icon">🏪</span>Perks</a>
-      <a href="/welcome" class:list={["mob-drawer-link", { active: currentPath.startsWith("/welcome") }]}><span class="mob-drawer-icon">👋</span>New here</a>
-      <a href="/neighborhoods" class:list={["mob-drawer-link", { active: currentPath.startsWith("/neighborhoods") }]}><span class="mob-drawer-icon">📍</span>Neighborhoods</a>
-      <a href="/help-out" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help-out") }]}><span class="mob-drawer-icon">🤝</span>Help out</a>
-      <a href="/calendar" class:list={["mob-drawer-link", { active: currentPath.startsWith("/calendar") }]}><span class="mob-drawer-icon">📆</span>Calendar</a>
-      <a href="/about" class:list={["mob-drawer-link", { active: currentPath.startsWith("/about") }]}><span class="mob-drawer-icon">ℹ️</span>About</a>
-      <a href="/help" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help") || currentPath.startsWith("/conduct") }]}><span class="mob-drawer-icon">❓</span>Help & Safety</a>
-      <a href="/contact" class:list={["mob-drawer-link", { active: currentPath.startsWith("/contact") }]}><span class="mob-drawer-icon">✉️</span>Contact</a>
+      <a href="/more" class:list={["mob-drawer-link", { active: currentPath.startsWith("/more") || currentPath.startsWith("/welcome") || currentPath.startsWith("/neighborhoods") || currentPath.startsWith("/help-out") || currentPath.startsWith("/about") || currentPath.startsWith("/help") || currentPath.startsWith("/conduct") || currentPath.startsWith("/contact") }]}><span class="mob-drawer-icon">🧭</span>More</a>
       {isAdmin && (
         <a href="/admin/dashboard" class:list={["mob-drawer-link mob-drawer-link-admin", { active: currentPath.startsWith("/admin") }]}><span class="mob-drawer-icon">⚙️</span>Admin</a>
       )}
