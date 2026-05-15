@@ -38,6 +38,7 @@ if (Astro.request.method === 'POST') {
 
 let streak: any = null;
 let mySuggestions: any[] = [];
+let incomingPhoneRequests: any[] = [];
 let upcomingRsvps: any[] = [];
 let pastRsvps: any[] = [];
 let myEvents: any[] = [];
@@ -51,6 +52,18 @@ try {
     const sug = await db.prepare('SELECT title, type, status, votes FROM suggestions WHERE member_name=? ORDER BY rowid DESC LIMIT 10')
       .bind(user.name || '').all();
     mySuggestions = sug.results || [];
+
+    try {
+      // Phone requests sent to me, still pending
+      const pr = await db.prepare(`
+        SELECT pr.id, pr.note, pr.created_at, pr.from_email, m.name as from_name
+        FROM phone_requests pr
+        LEFT JOIN members m ON LOWER(m.email) = LOWER(pr.from_email)
+        WHERE LOWER(pr.to_email) = LOWER(?) AND pr.status = 'pending'
+        ORDER BY pr.id DESC
+      `).bind(user.email).all();
+      incomingPhoneRequests = (pr.results || []) as any[];
+    } catch {}
 
     const rsvps = await db.prepare(`
       SELECT e.id, e.title, e.event_type, e.event_month, e.event_day, e.zone, e.location, e.is_past, r.party_size
@@ -208,6 +221,26 @@ const connectBanner =
 
     <!-- MAIN COLUMN -->
     <main class="p-main">
+
+      {incomingPhoneRequests.length > 0 && (
+        <section class="p-card p-phone-reqs">
+          <div class="p-card-head"><h2 class="p-h">📱 Phone requests ({incomingPhoneRequests.length})</h2></div>
+          <div class="p-phone-list">
+            {incomingPhoneRequests.map((pr: any) => (
+              <div class="p-phone-row">
+                <div class="p-phone-info">
+                  <strong>{pr.from_name || pr.from_email}</strong>
+                  <span>{pr.note ? `"${pr.note}"` : 'wants your phone number.'}</span>
+                </div>
+                <div class="p-phone-actions">
+                  <button class="p-phone-approve" data-approve-phone={pr.id}>Approve</button>
+                  <button class="p-phone-decline" data-decline-phone={pr.id}>Decline</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <!-- COMING UP -->
       <section class="p-card">
@@ -743,6 +776,17 @@ const connectBanner =
     .p-stat-big { font-size: 22px; }
     .p-card { padding: 18px; border-radius: 16px; }
   }
+
+  .p-phone-reqs { background: linear-gradient(160deg, var(--sunset-dim), var(--pink-dim)); border-color: rgba(249,115,22,0.25); }
+  .p-phone-list { display: flex; flex-direction: column; gap: 10px; }
+  .p-phone-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; flex-wrap: wrap; }
+  .p-phone-info { flex: 1; min-width: 200px; }
+  .p-phone-info strong { display: block; font-family: var(--font-display); font-weight: 700; font-size: 14px; }
+  .p-phone-info span { font-size: 13px; color: var(--text-sec); font-style: italic; }
+  .p-phone-actions { display: flex; gap: 6px; }
+  .p-phone-approve, .p-phone-decline { padding: 8px 14px; border-radius: 999px; border: none; cursor: pointer; font-family: var(--font-display); font-weight: 700; font-size: 12px; }
+  .p-phone-approve { background: var(--cta-bg); color: #fff; }
+  .p-phone-decline { background: var(--surface); color: var(--text-sec); border: 1px solid var(--border); }
 </style>
 
 <script>
@@ -781,6 +825,37 @@ const connectBanner =
       } catch {
         if (errEl) errEl.textContent = 'Network error. Try again.';
       }
+    });
+  });
+
+  // Phone-request approve/decline
+  document.querySelectorAll('[data-approve-phone]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt(btn.getAttribute('data-approve-phone') as string);
+      const phone = prompt('Share your phone number with this member?');
+      if (phone == null || phone.trim().length < 7) return;
+      const r = await fetch('/api/phone-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve', id, phone: phone.trim() }),
+      });
+      const d = await r.json();
+      if (d.ok) location.reload();
+      else alert('Failed: ' + d.error);
+    });
+  });
+  document.querySelectorAll('[data-decline-phone]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt(btn.getAttribute('data-decline-phone') as string);
+      if (!confirm('Decline this phone request?')) return;
+      const r = await fetch('/api/phone-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'decline', id }),
+      });
+      const d = await r.json();
+      if (d.ok) location.reload();
+      else alert('Failed: ' + d.error);
     });
   });
 </script>
