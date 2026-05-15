@@ -5,7 +5,13 @@ import { env } from 'cloudflare:workers';
 
 const db = getDB();
 const redditAvailable = !!(env as any).REDDIT_CLIENT_ID;
-const discordAvailable = !!(env as any).DISCORD_CLIENT_ID;
+let discordAvailable = !!(env as any).DISCORD_CLIENT_ID;
+if (!discordAvailable && db) {
+  try {
+    const row: any = await db.prepare("SELECT value FROM config WHERE key='discord_client_id'").first();
+    if (row?.value) discordAvailable = true;
+  } catch {}
+}
 const next = Astro.url.searchParams.get("next") || "/events";
 const errorParam = Astro.url.searchParams.get("error");
 
