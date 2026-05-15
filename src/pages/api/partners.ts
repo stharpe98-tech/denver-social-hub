@@ -34,6 +34,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const category = String(body.category || 'other').toLowerCase();
     const neighborhood = String(body.neighborhood || '').trim();
     const website = String(body.website || '').trim();
+    const thresholdRaw = parseInt(body.rsvp_threshold);
+    const rsvp_threshold = Number.isFinite(thresholdRaw) && thresholdRaw > 0 ? Math.min(thresholdRaw, 500) : 0;
 
     if (business_name.length < 2) return bad('business_name');
     if (offer_title.length < 3) return bad('offer_title');
@@ -48,9 +50,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     await db.prepare(`
-      INSERT INTO partners (slug, business_name, category, neighborhood, offer_title, offer_details, redemption, website, contact_email, submitted_by_email)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(slug, business_name, cat, neighborhood, offer_title, offer_details, redemption, website, contact_email, user?.email || null).run();
+      INSERT INTO partners (slug, business_name, category, neighborhood, offer_title, offer_details, redemption, website, contact_email, submitted_by_email, rsvp_threshold)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(slug, business_name, cat, neighborhood, offer_title, offer_details, redemption, website, contact_email, user?.email || null, rsvp_threshold).run();
 
     return ok({ slug });
   }
@@ -61,6 +63,28 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!id) return bad('id');
     await db.prepare("UPDATE partners SET claim_count = COALESCE(claim_count,0) + 1 WHERE id=? AND status='approved'").bind(id).run();
     return ok({});
+  }
+
+  // RSVP to a perk — must be signed in so we have an identity to dedupe on.
+  // Unique constraint on (partner_id, user_email) is what stops one person
+  // from inflating the count past the threshold.
+  if (action === 'rsvp') {
+    if (!user?.email) return bad('login_required', 401);
+    const id = parseInt(body.id);
+    if (!id) return bad('id');
+    const email = String(user.email).toLowerCase();
+    const partner = await db.prepare("SELECT id, rsvp_threshold FROM partners WHERE id=? AND status='approved'").bind(id).first() as any;
+    if (!partner) return bad('not_found', 404);
+
+    const ins = await db.prepare("INSERT OR IGNORE INTO perk_rsvps (partner_id, user_email) VALUES (?, ?)").bind(id, email).run();
+    const inserted = (ins.meta as any)?.changes > 0;
+    if (inserted) {
+      await db.prepare("UPDATE partners SET rsvp_count = COALESCE(rsvp_count,0) + 1 WHERE id=?").bind(id).run();
+    }
+    const fresh = await db.prepare("SELECT rsvp_count, rsvp_threshold FROM partners WHERE id=?").bind(id).first() as any;
+    const count = fresh?.rsvp_count || 0;
+    const threshold = fresh?.rsvp_threshold || 0;
+    return ok({ count, threshold, unlocked: threshold === 0 || count >= threshold, already: !inserted });
   }
 
   // Admin actions — approve, decline, delete

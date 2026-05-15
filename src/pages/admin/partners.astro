@@ -95,6 +95,9 @@ const list = view === 'approved' ? approved : view === 'declined' ? declined : p
               {p.offer_details && <div class="details">{p.offer_details}</div>}
               <div class="info">
                 {p.redemption && <><strong>How to claim:</strong> {p.redemption}<br/></>}
+                {(p.rsvp_threshold || 0) > 0 && (
+                  <><strong>RSVP gate:</strong> {p.rsvp_count || 0} / {p.rsvp_threshold} ({(p.rsvp_count || 0) >= p.rsvp_threshold ? 'unlocked' : 'locked'})<br/></>
+                )}
                 <strong>Contact:</strong> <a href={`mailto:${p.contact_email}`}>{p.contact_email}</a>
                 {p.website && <> · <a href={p.website} target="_blank" rel="noopener">{p.website}</a></>}
                 {view === 'approved' && <> · 👁 {p.view_count || 0} views · 👆 {p.claim_count || 0} click-throughs</>}
