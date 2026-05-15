@@ -97,6 +97,10 @@ const showWelcomeTour = !user && !tourSeen;
       <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}><span class="mob-drawer-icon">📅</span>Events</a>
       <a href="/groups" class:list={["mob-drawer-link", { active: currentPath.startsWith("/groups") }]}><span class="mob-drawer-icon">👥</span>Groups</a>
       <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]}><span class="mob-drawer-icon">🏪</span>Perks</a>
+      <a href="/welcome" class:list={["mob-drawer-link", { active: currentPath.startsWith("/welcome") }]}><span class="mob-drawer-icon">👋</span>New here</a>
+      <a href="/neighborhoods" class:list={["mob-drawer-link", { active: currentPath.startsWith("/neighborhoods") }]}><span class="mob-drawer-icon">📍</span>Neighborhoods</a>
+      <a href="/help-out" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help-out") }]}><span class="mob-drawer-icon">🤝</span>Help out</a>
+      <a href="/calendar" class:list={["mob-drawer-link", { active: currentPath.startsWith("/calendar") }]}><span class="mob-drawer-icon">📆</span>Calendar</a>
       {user && (
         <a href="/messages" class:list={["mob-drawer-link", { active: currentPath.startsWith("/messages") }]}><span class="mob-drawer-icon">💬</span>Messages</a>
       )}
