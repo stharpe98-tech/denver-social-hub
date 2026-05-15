@@ -8,6 +8,12 @@ if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 const isAdmin = user?.role === 'admin' || user?.email === "stharpe98@gmail.com";
 const currentPath = Astro.url.pathname;
 const redditName = user?.reddit_username || user?.name;
+// Tour is rendered only for signed-out visitors who haven't already
+// dismissed it. The cookie is the source of truth — localStorage is a
+// client-side fallback. Skipping the markup server-side means no
+// flash-of-tour on subsequent visits and zero JS cost.
+const tourSeen = Astro.cookies.get('dsn_tour_seen')?.value === '1';
+const showWelcomeTour = !user && !tourSeen;
 ---
 <html lang="en">
 <head>
@@ -137,7 +143,7 @@ const redditName = user?.reddit_username || user?.name;
     </div>
   </footer>
 
-  {!user && (
+  {showWelcomeTour && (
     <div id="welcome-tour" class="wt-overlay" hidden>
       <div class="wt-modal" role="dialog" aria-modal="true" aria-labelledby="wt-title">
         <button class="wt-close" id="wt-close" aria-label="Close">×</button>
@@ -707,6 +713,11 @@ const redditName = user?.reddit_username || user?.name;
 
     function dismiss() {
       try { localStorage.setItem('dsn_welcome_seen', '1'); } catch (e) {}
+      // Cookie is the source of truth — survives localStorage clears,
+      // Safari private mode, etc. 1 year, root path.
+      try {
+        document.cookie = 'dsn_tour_seen=1; Path=/; Max-Age=31536000; SameSite=Lax';
+      } catch (e) {}
       tour.setAttribute('hidden', '');
     }
 
