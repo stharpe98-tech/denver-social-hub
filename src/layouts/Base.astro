@@ -38,6 +38,7 @@ const showWelcomeTour = !user && !tourSeen;
       <nav class="site-nav site-nav-left">
         <a href="/events" class:list={["site-nav-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
         <a href="/groups" class:list={["site-nav-link", { active: currentPath.startsWith("/groups") || currentPath.startsWith("/messages") }]}>Groups & DMs</a>
+        <a href="/discord" class:list={["site-nav-link", { active: currentPath.startsWith("/discord") }]}>Discord</a>
         <a href="/perks" class:list={["site-nav-link", { active: currentPath.startsWith("/perks") }]}>Perks</a>
       </nav>
 
@@ -93,6 +94,7 @@ const showWelcomeTour = !user && !tourSeen;
       <a href="/" class:list={["mob-drawer-link", { active: currentPath === "/" }]}><span class="mob-drawer-icon">🏠</span>Home</a>
       <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}><span class="mob-drawer-icon">📅</span>Events</a>
       <a href="/groups" class:list={["mob-drawer-link", { active: currentPath.startsWith("/groups") || currentPath.startsWith("/messages") }]}><span class="mob-drawer-icon">👥</span>Groups & DMs</a>
+      <a href="/discord" class:list={["mob-drawer-link", { active: currentPath.startsWith("/discord") }]}><span class="mob-drawer-icon">💬</span>Discord</a>
       <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]}><span class="mob-drawer-icon">🏪</span>Perks</a>
       <a href="/welcome" class:list={["mob-drawer-link", { active: currentPath.startsWith("/welcome") }]}><span class="mob-drawer-icon">👋</span>New here</a>
       <a href="/neighborhoods" class:list={["mob-drawer-link", { active: currentPath.startsWith("/neighborhoods") }]}><span class="mob-drawer-icon">📍</span>Neighborhoods</a>
