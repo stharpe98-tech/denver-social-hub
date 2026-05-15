@@ -42,7 +42,7 @@ export const POST: APIRoute = async ({ request }) => {
             <h2 style="font-size:22px;font-weight:900;margin-bottom:8px;color:#111">Denver Social</h2>
             <p style="color:#888;margin-bottom:32px;font-size:14px">Your sign-in code:</p>
             <div style="background:#E0F2FE;border-radius:16px;padding:32px;text-align:center;margin-bottom:32px;">
-              <div style="font-size:48px;font-weight:900;letter-spacing:12px;color:#0EA5E9;">${otp}</div>
+              <div style="font-size:48px;font-weight:900;letter-spacing:12px;color:#7C3AED;">${otp}</div>
             </div>
             <p style="color:#888;font-size:13px;">This code expires in 10 minutes. If you didn't request this, ignore this email.</p>
           </div>
