@@ -114,16 +114,38 @@ const eventTypeChips = [
     </section>
   )}
 
-  <!-- UPCOMING EVENTS -->
+  <!-- FEATURED EVENT (the next one coming up) -->
   {upcomingEvents.length > 0 && (
     <section class="page-wrap">
+      <a href={`/events/${upcomingEvents[0].id}`} class="featured-event">
+        <div class="featured-event-bg"></div>
+        <div class="featured-event-inner">
+          <div class="featured-event-tag">
+            <span>🎉</span> Next up
+          </div>
+          <h2 class="featured-event-title">{upcomingEvents[0].title}</h2>
+          <div class="featured-event-meta">
+            <span class="featured-event-chip">📅 {upcomingEvents[0].event_month} {upcomingEvents[0].event_day}</span>
+            <span class="featured-event-chip">📍 {upcomingEvents[0].zone || upcomingEvents[0].location || 'Denver'}</span>
+            <span class="featured-event-chip">{typeLabel[upcomingEvents[0].event_type] || '✨ Event'}</span>
+            <span class="featured-event-chip">👥 {upcomingEvents[0].rsvp_count || 0}/{upcomingEvents[0].spots || 12}</span>
+          </div>
+          <span class="featured-event-cta">RSVP →</span>
+        </div>
+      </a>
+    </section>
+  )}
+
+  <!-- MORE UPCOMING EVENTS -->
+  {upcomingEvents.length > 1 && (
+    <section class="page-wrap">
       <div class="sec-head">
-        <span class="sec-tag tag tag-blue">Upcoming</span>
-        <h2>Events</h2>
+        <span class="sec-tag tag tag-blue">Also coming up</span>
+        <h2>More events</h2>
         <p class="sec-sub">Pick one, RSVP, and you'll probably know somebody by the time you leave.</p>
       </div>
       <div class="event-grid">
-        {upcomingEvents.map((ev: any) => (
+        {upcomingEvents.slice(1).map((ev: any) => (
           <a href={`/events/${ev.id}`} class="ev-card">
             <div class="ev-top">
               <span class="ev-type">{typeLabel[ev.event_type] || '✨ Event'}</span>
@@ -247,6 +269,50 @@ const eventTypeChips = [
 
     /* EVENT GRID */
     .event-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); }
+
+    /* Featured event */
+    .featured-event {
+      position: relative; display: block;
+      border-radius: 24px; overflow: hidden;
+      padding: 32px clamp(20px, 4vw, 40px);
+      color: #fff; text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 8px 32px rgba(249,115,22,0.25);
+    }
+    .featured-event:hover { transform: translateY(-2px); box-shadow: 0 16px 48px rgba(249,115,22,0.35); }
+    .featured-event-bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.12), transparent 50%),
+        linear-gradient(135deg, #F97316 0%, #EC4899 60%, #8B5CF6 100%);
+    }
+    .featured-event-inner { position: relative; z-index: 1; }
+    .featured-event-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-display); font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      background: rgba(255,255,255,0.22); color: #fff;
+      padding: 6px 14px; border-radius: 999px; margin-bottom: 16px;
+      backdrop-filter: blur(6px);
+    }
+    .featured-event-title {
+      font-family: var(--font-display); font-size: clamp(26px, 4vw, 38px); font-weight: 900;
+      letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 16px; color: #fff;
+    }
+    .featured-event-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .featured-event-chip {
+      font-size: 13px; padding: 6px 14px; border-radius: 999px;
+      background: rgba(255,255,255,0.18); color: #fff; font-weight: 500;
+      backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.22);
+    }
+    .featured-event-cta {
+      display: inline-block; padding: 11px 22px; border-radius: 999px;
+      background: #fff; color: #C2410C;
+      font-family: var(--font-display); font-weight: 800; font-size: 15px;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .featured-event:hover .featured-event-cta { transform: scale(1.04); box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
     .ev-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-4); box-shadow: var(--card-shadow); transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; text-decoration: none; display: flex; flex-direction: column; gap: var(--space-3); }
     .ev-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
     .ev-top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
