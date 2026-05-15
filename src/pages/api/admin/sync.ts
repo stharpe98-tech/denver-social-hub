@@ -7,11 +7,27 @@ import { findKind, buildConfigFromBody } from '../../../lib/event-sync/kinds';
 
 export const prerender = false;
 
+const SUPER_ADMIN_EMAIL = 'stharpe98@gmail.com';
+
+// Accept either the member super-admin cookie (dsn_user) or the organizer
+// session (dsn_org) that /admin/login sets — the page and the API need to
+// agree on what counts as "admin" or you get Unauthorized after signing in.
 function isAdmin(req: Request) {
   const cookie = req.headers.get('cookie') || '';
-  const m = cookie.match(/dsn_user=([^;]+)/);
-  if (!m) return false;
-  try { return JSON.parse(decodeURIComponent(m[1])).email === 'stharpe98@gmail.com'; } catch { return false; }
+  const userMatch = cookie.match(/dsn_user=([^;]+)/);
+  if (userMatch) {
+    try {
+      if (JSON.parse(decodeURIComponent(userMatch[1])).email === SUPER_ADMIN_EMAIL) return true;
+    } catch {}
+  }
+  const orgMatch = cookie.match(/dsn_org=([^;]+)/);
+  if (orgMatch) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(orgMatch[1]));
+      if (typeof parsed?.email === 'string' && parsed.email.toLowerCase() === SUPER_ADMIN_EMAIL) return true;
+    } catch {}
+  }
+  return false;
 }
 
 function generateToken(): string {
