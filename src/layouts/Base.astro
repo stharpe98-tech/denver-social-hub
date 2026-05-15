@@ -24,7 +24,7 @@ const showWelcomeTour = !user && !tourSeen;
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,700&family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 </head>
 <body>
 
@@ -399,49 +399,49 @@ const showWelcomeTour = !user && !tourSeen;
 <style is:global>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Design tokens — fun & happy theme: warm cream surface with sunset
-     orange + hot pink secondary accents. Sky blue stays as primary so
-     brand identity carries through navs and core CTAs. */
+  /* Design tokens — Earth Studio: parchment surface, sage + terracotta
+     accents, Cormorant Garamond display + Work Sans body. Quiet,
+     ceramic-studio energy. */
   :root {
-    /* Surface — warm cream base */
-    --bg: #FFFCF7;
-    --surface: #FFF6E9;
-    --surface-hover: #FBEFDA;
-    --border: #F0E5D1;
-    --border-hover: #E2D4B8;
+    /* Surface — parchment */
+    --bg: #F5EFE3;
+    --surface: #EDE6D6;
+    --surface-hover: #E4DBC7;
+    --border: #DDD2BB;
+    --border-hover: #C9BCA0;
 
-    /* Text — slightly warm */
-    --text: #1F1A14;
-    --text-sec: #6B5F4D;
-    --text-faint: #A8997F;
+    /* Text — warm charcoal */
+    --text: #2D2A24;
+    --text-sec: #5C574E;
+    --text-faint: #8A8478;
 
-    /* Accents */
-    --accent: #0EA5E9;       /* sky blue — kept as primary identity */
-    --accent-dim: rgba(14, 165, 233, 0.12);
-    --accent-glow: rgba(14, 165, 233, 0.28);
-    --accent2: #10B981;      /* emerald green */
-    --accent2-dim: rgba(16, 185, 129, 0.12);
-    --sunset: #F97316;       /* warm orange — secondary "fun" accent */
-    --sunset-dim: rgba(249, 115, 22, 0.14);
-    --pink: #EC4899;         /* hot pink — for gradients + delight */
-    --pink-dim: rgba(236, 72, 153, 0.14);
-    --mint: #10B981;
+    /* Accents — sage primary, clay secondary */
+    --accent: #6B8E5A;       /* sage green — primary identity */
+    --accent-dim: rgba(107, 142, 90, 0.14);
+    --accent-glow: rgba(107, 142, 90, 0.28);
+    --accent2: #C66B3D;      /* terracotta */
+    --accent2-dim: rgba(198, 107, 61, 0.14);
+    --sunset: #C66B3D;       /* terracotta (legacy name kept for callouts) */
+    --sunset-dim: rgba(198, 107, 61, 0.14);
+    --pink: #B8553D;         /* deeper clay (legacy "pink" slot) */
+    --pink-dim: rgba(184, 85, 61, 0.14);
+    --mint: #6B8E5A;
 
-    /* CTA — sunset→pink gradient */
-    --cta-bg: linear-gradient(135deg, #F97316, #EC4899);
-    --cta-bg-solid: #F97316;
-    --cta-text: #FFFFFF;
-    --cta-glow: rgba(249, 115, 22, 0.35);
+    /* CTA — terracotta */
+    --cta-bg: linear-gradient(135deg, #C66B3D, #B8553D);
+    --cta-bg-solid: #C66B3D;
+    --cta-text: #F5EFE3;
+    --cta-glow: rgba(198, 107, 61, 0.32);
 
-    /* Tags — warmer, more variety */
-    --tag-bg: #FFEDD5;       /* sunset peach */
-    --tag-text: #C2410C;
-    --tag-bg2: #FCE7F3;      /* pink */
-    --tag-text2: #BE185D;
-    --tag-bg3: #DBEAFE;      /* sky */
-    --tag-text3: #1E40AF;
-    --tag-bg4: #DCFCE7;      /* mint */
-    --tag-text4: #166534;
+    /* Tags — earthy palette */
+    --tag-bg: #E8D5A8;       /* cream */
+    --tag-text: #6B5828;
+    --tag-bg2: #E5D4C2;      /* sand */
+    --tag-text2: #8B4A2B;
+    --tag-bg3: #DDE6CC;      /* moss */
+    --tag-text3: #4A6B3A;
+    --tag-bg4: #E8D5A8;
+    --tag-text4: #6B5828;
 
     /* Status */
     --green: #10B981;
@@ -452,8 +452,8 @@ const showWelcomeTour = !user && !tourSeen;
     --yellow-dim: rgba(217, 119, 6, 0.10);
 
     /* Type */
-    --font: 'Inter', system-ui, sans-serif;
-    --font-display: 'Outfit', system-ui, sans-serif;
+    --font: 'Work Sans', system-ui, sans-serif;
+    --font-display: 'Cormorant Garamond', 'Work Sans', system-ui, serif;
 
     /* Shape */
     --radius: 14px;
