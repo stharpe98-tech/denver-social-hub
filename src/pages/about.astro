@@ -13,7 +13,7 @@ try {
 
 const faqs = [
   { q: "Is this actually free?", a: "Yep. No fees, no premium tier, no upsell." },
-  { q: "I don't know anyone — is that weird?", a: "Most people show up solo. Groups are capped at 6–12 so you actually meet everyone." },
+  { q: "I don't know anyone — is that weird?", a: "Most people show up solo. Events stay small enough that you actually meet everyone." },
   { q: "Is it safe? What about creeps?", a: "Every event has a host, locations are public so you know exactly where you're going, and we remove anyone who makes others uncomfortable." },
   { q: "How much does an event cost?", a: "Some are free (hikes, park hangs, coffee). Dinners run $20–35 a head. Price is always shown upfront." },
   { q: "Can I post my own event?", a: "Yes — hit \"Plan an event\" from /events. You don't need permission to have a good idea." },
@@ -38,7 +38,7 @@ const faqs = [
     <div class="ab-body">
       <p>I moved to Denver and had zero friends here. Bars were too loud, meetup groups had 400 people standing around awkwardly, and Bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
 
-      <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking <em>"when's the next one?"</em> — so we kept going. Bowling, hikes, pottery, game nights. There's <strong>{totalMembers || '80'}+</strong> of us now and it still feels small because every event is capped at 12.</p>
+      <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking <em>"when's the next one?"</em> — so we kept going. Bowling, hikes, pottery, game nights. There's <strong>{totalMembers || '80'}+</strong> of us now — dinners stay small, but a hike or game night might be twenty.</p>
 
       <p>The only rules: don't be a creep, show up if you say you will, don't pitch crypto at dinner. That's it.</p>
 
@@ -48,7 +48,7 @@ const faqs = [
     <footer class="ab-stats">
       <div><strong>{totalMembers || '80'}+</strong><span>members</span></div>
       <div class="ab-stats-dot"></div>
-      <div><strong>6–12</strong><span>per event</span></div>
+      <div><strong>Small</strong><span>groups</span></div>
       <div class="ab-stats-dot"></div>
       <div><strong>Free</strong><span>to join</span></div>
     </footer>
