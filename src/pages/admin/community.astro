@@ -1,0 +1,143 @@
+---
+import { requireApprovedOrg } from '../../lib/admin-auth';
+import { getDB } from '../../lib/db';
+import { ensureCommunitySchema, CALENDAR_KINDS } from '../../lib/community-schema';
+
+const gate = await requireApprovedOrg(Astro);
+if (gate instanceof Response) return gate;
+
+const db = getDB();
+let calendar: any[] = [];
+let roles: any[] = [];
+
+if (db) {
+  await ensureCommunitySchema(db);
+  const c = await db.prepare("SELECT * FROM community_calendar ORDER BY sort_month, sort_day, id").all();
+  calendar = (c.results || []) as any[];
+  const r = await db.prepare("SELECT email, name, extra_role FROM members WHERE extra_role IS NOT NULL AND extra_role != '' ORDER BY extra_role").all();
+  roles = (r.results || []) as any[];
+}
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Community · Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #FAFAF8; color: #1A1A1A; min-height: 100vh; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+    .wrap { max-width: 920px; margin: 0 auto; }
+    .back { font-size: 13px; color: #6B6560; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .sub { color: #6B6560; font-size: 14px; margin-bottom: 24px; }
+    .section { background: #fff; border: 1px solid #E8E4DE; border-radius: 14px; padding: 22px; margin-bottom: 18px; }
+    .section h2 { font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800; margin-bottom: 14px; }
+    .row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .row .input { flex: 1; min-width: 140px; padding: 9px 12px; border: 1px solid #E8E4DE; border-radius: 10px; font-size: 13px; font-family: 'Inter', sans-serif; background: #fff; }
+    .row .input.small { flex: 0 0 70px; max-width: 70px; }
+    .btn { padding: 9px 16px; border-radius: 999px; border: none; cursor: pointer; font-weight: 700; font-size: 12px; font-family: 'Inter', sans-serif; }
+    .btn-ok { background: #16A34A; color: #fff; }
+    .btn-no { background: #fff; border: 1px solid #FCA5A5; color: #B91C1C; }
+    .feed { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; background: #FAFAF8; border-radius: 10px; flex-wrap: wrap; }
+    .item-main { display: flex; gap: 8px; align-items: center; flex: 1; min-width: 0; }
+    .item-meta { font-size: 12px; color: #6B6560; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="/admin/dashboard" class="back">← Dashboard</a>
+    <h1>Community</h1>
+    <p class="sub">Manage the community calendar and named roles.</p>
+
+    <!-- CALENDAR -->
+    <div class="section">
+      <h2>Community calendar</h2>
+      <form id="cal-form">
+        <div class="row">
+          <input class="input" name="title" placeholder="Title (e.g. Cherry Creek Sneak)" required />
+          <select class="input small" name="sort_month">
+            <option value="">Mo</option>
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+            <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+            <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+          </select>
+          <input class="input small" type="number" name="sort_day" placeholder="Day" min="1" max="31" />
+        </div>
+        <div class="row">
+          <input class="input" name="date_label" placeholder="Date label (e.g. Late April)" required />
+          <select class="input" name="kind">
+            {CALENDAR_KINDS.map(k => <option value={k.key}>{k.emoji} {k.label}</option>)}
+          </select>
+          <button type="submit" class="btn btn-ok">Add</button>
+        </div>
+      </form>
+      <div class="feed">
+        {calendar.map((c: any) => (
+          <div class="item">
+            <span class="item-main">
+              <strong>{c.title}</strong>
+              <span class="item-meta">· {c.date_label} · {c.kind}</span>
+            </span>
+            <button class="btn btn-no" data-delete-cal={c.id}>Delete</button>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- ROLES -->
+    <div class="section">
+      <h2>Named roles</h2>
+      <form id="role-form">
+        <div class="row">
+          <input class="input" type="email" name="email" placeholder="member@email.com" required />
+          <input class="input" name="label" placeholder="Role (e.g. Hike captain) — blank to remove" maxlength="40" />
+          <button type="submit" class="btn btn-ok">Set</button>
+        </div>
+      </form>
+      <div class="feed">
+        {roles.map((r: any) => (
+          <div class="item">
+            <span class="item-main">
+              <strong>{r.name || r.email.split('@')[0]}</strong>
+              <span class="item-meta">· {r.email} · <em>{r.extra_role}</em></span>
+            </span>
+            <button class="btn btn-no" data-clear-role={r.email}>Clear</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    async function post(body) {
+      const res = await fetch('/api/community', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      return res.json();
+    }
+    document.getElementById('cal-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const d = await post({ action: 'create_calendar', ...Object.fromEntries(fd) });
+      if (d.ok) location.reload(); else alert('Failed: '+d.error);
+    });
+    document.getElementById('role-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const d = await post({ action: 'set_role', email: fd.get('email'), label: fd.get('label') });
+      if (d.ok) location.reload(); else alert('Failed: '+d.error);
+    });
+    document.querySelectorAll('[data-delete-cal]').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('Delete?')) return;
+      const d = await post({ action: 'delete_calendar', id: parseInt(b.getAttribute('data-delete-cal')) });
+      if (d.ok) location.reload();
+    }));
+    document.querySelectorAll('[data-clear-role]').forEach(b => b.addEventListener('click', async () => {
+      const d = await post({ action: 'set_role', email: b.getAttribute('data-clear-role'), label: '' });
+      if (d.ok) location.reload();
+    }));
+  </script>
+</body>
+</html>
