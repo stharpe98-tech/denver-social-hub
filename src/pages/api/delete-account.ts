@@ -10,6 +10,19 @@ export const POST = async ({ cookies }: { cookies: any }) => {
   }
   const email = user.email;
   if (!db || !email) return new Response(JSON.stringify({ error: "missing" }), { status: 400 });
+
+  // Refuse to delete the super-admin or any admin-role member. The site
+  // breaks if its only privileged account gets wiped — admins must
+  // demote themselves first if they really want out.
+  const isSuperAdmin = email?.toLowerCase() === 'stharpe98@gmail.com';
+  const isAdmin = user.role === 'admin';
+  if (isSuperAdmin || isAdmin) {
+    return new Response(JSON.stringify({
+      error: 'admin_cannot_delete',
+      message: 'Admin accounts can\'t be deleted from /profile. Contact stharpe98@gmail.com to demote first.',
+    }), { status: 403 });
+  }
+
   try {
     const tables = [
       "DELETE FROM members WHERE email=?",

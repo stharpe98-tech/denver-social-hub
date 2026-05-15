@@ -1,0 +1,149 @@
+---
+import { requireApprovedOrg } from '../../lib/admin-auth';
+import { getDB } from '../../lib/db';
+import { ensurePartnersSchema, categoryLabel } from '../../lib/partners-schema';
+
+const gate = await requireApprovedOrg(Astro);
+if (gate instanceof Response) return gate;
+
+const db = getDB();
+const view = Astro.url.searchParams.get('view') || 'pending';
+
+let pending: any[] = [];
+let approved: any[] = [];
+let declined: any[] = [];
+if (db) {
+  await ensurePartnersSchema(db);
+  const p = await db.prepare("SELECT * FROM partners WHERE status='pending' ORDER BY created_at DESC").all();
+  pending = (p.results || []) as any[];
+  const a = await db.prepare("SELECT * FROM partners WHERE status='approved' ORDER BY created_at DESC LIMIT 60").all();
+  approved = (a.results || []) as any[];
+  const d = await db.prepare("SELECT * FROM partners WHERE status='declined' ORDER BY created_at DESC LIMIT 30").all();
+  declined = (d.results || []) as any[];
+}
+
+const list = view === 'approved' ? approved : view === 'declined' ? declined : pending;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Partners · Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #FAFAF8; color: #1A1A1A; min-height: 100vh; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    .back { font-size: 13px; color: #6B6560; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .sub { color: #6B6560; font-size: 14px; margin-bottom: 24px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border-radius: 999px; background: #fff; border: 1px solid #E8E4DE; font-size: 13px; font-weight: 600; color: #6B6560; text-decoration: none; }
+    .tab.active { background: #1A1A1A; color: #fff; border-color: #1A1A1A; }
+    .empty { padding: 56px 24px; text-align: center; color: #A09890; background: #fff; border: 1px dashed #E8E4DE; border-radius: 14px; }
+    .feed { display: flex; flex-direction: column; gap: 12px; }
+    .row { background: #fff; border: 1px solid #E8E4DE; border-radius: 14px; padding: 18px 20px; }
+    .row-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+    .biz { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800; }
+    .meta { font-size: 12px; color: #A09890; }
+    .offer-title { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: #2D5F3F; margin-bottom: 6px; }
+    .details { font-size: 14px; color: #6B6560; line-height: 1.55; padding: 10px 12px; background: #FAFAF8; border-radius: 8px; margin-top: 8px; }
+    .info { font-size: 13px; color: #6B6560; margin-top: 6px; }
+    .info a { color: #2D5F3F; font-weight: 600; }
+    .actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+    .btn { padding: 8px 16px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; font-family: 'Inter', sans-serif; }
+    .btn-ok { background: #16A34A; color: #fff; }
+    .btn-no { background: #fff; border: 1px solid #E8E4DE; color: #6B6560; }
+    .btn-del { background: #fff; border: 1px solid #FCA5A5; color: #B91C1C; }
+    .btn-ok:hover { background: #15803D; }
+    .btn-no:hover { color: #1A1A1A; }
+    .btn-del:hover { background: #FEF2F2; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="/admin/dashboard" class="back">← Dashboard</a>
+    <h1>Partner perks</h1>
+    <p class="sub">Local businesses submitting perks via /perks/new. Approve to publish.</p>
+
+    <div class="tabs">
+      <a href="/admin/partners" class:list={["tab", { active: view === 'pending' }]}>Pending ({pending.length})</a>
+      <a href="/admin/partners?view=approved" class:list={["tab", { active: view === 'approved' }]}>Approved ({approved.length})</a>
+      <a href="/admin/partners?view=declined" class:list={["tab", { active: view === 'declined' }]}>Declined ({declined.length})</a>
+    </div>
+
+    {list.length === 0 ? (
+      <div class="empty">Nothing here. 🌿</div>
+    ) : (
+      <div class="feed">
+        {list.map((p: any) => {
+          const cat = categoryLabel(p.category);
+          return (
+            <div class="row">
+              <div class="row-top">
+                <div>
+                  <div class="biz">{p.business_name}</div>
+                  <div class="meta">
+                    {cat && <>{cat.emoji} {cat.label} · </>}
+                    {p.neighborhood && <>📍 {p.neighborhood} · </>}
+                    submitted {p.created_at}
+                  </div>
+                </div>
+              </div>
+              <div class="offer-title">{p.offer_title}</div>
+              {p.offer_details && <div class="details">{p.offer_details}</div>}
+              <div class="info">
+                {p.redemption && <><strong>How to claim:</strong> {p.redemption}<br/></>}
+                <strong>Contact:</strong> <a href={`mailto:${p.contact_email}`}>{p.contact_email}</a>
+                {p.website && <> · <a href={p.website} target="_blank" rel="noopener">{p.website}</a></>}
+                {view === 'approved' && <> · 👁 {p.view_count || 0} views · 👆 {p.claim_count || 0} click-throughs</>}
+              </div>
+              <div class="actions">
+                {p.status === 'pending' && (
+                  <>
+                    <button class="btn btn-ok" data-action="approve" data-id={p.id}>Approve & publish</button>
+                    <button class="btn btn-no" data-action="decline" data-id={p.id}>Decline</button>
+                  </>
+                )}
+                {p.status === 'approved' && (
+                  <>
+                    <a class="btn btn-no" href={`/perks#${p.slug}`} target="_blank">View live</a>
+                    <button class="btn btn-no" data-action="decline" data-id={p.id}>Unpublish</button>
+                    <button class="btn btn-del" data-action="delete" data-id={p.id}>Delete</button>
+                  </>
+                )}
+                {p.status === 'declined' && (
+                  <>
+                    <button class="btn btn-ok" data-action="approve" data-id={p.id}>Restore & approve</button>
+                    <button class="btn btn-del" data-action="delete" data-id={p.id}>Delete</button>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+
+  <script is:inline>
+    document.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const action = btn.getAttribute('data-action');
+        const id = parseInt(btn.getAttribute('data-id'));
+        if (action === 'delete' && !confirm('Delete this partner permanently?')) return;
+        btn.disabled = true;
+        const res = await fetch('/api/partners', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, id }),
+        });
+        const d = await res.json();
+        if (d.ok) location.reload();
+        else { alert('Failed: ' + d.error); btn.disabled = false; }
+      });
+    });
+  </script>
+</body>
+</html>

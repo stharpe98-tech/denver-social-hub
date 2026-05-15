@@ -1,0 +1,131 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+import { ensureDmSchema } from '../../lib/dm-schema';
+
+const db = getDB();
+let user: any = null;
+const cookie = Astro.cookies.get('dsn_user')?.value;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+if (!user) return Astro.redirect('/login?next=/messages');
+
+let conversations: any[] = [];
+if (db) {
+  await ensureDmSchema(db);
+  const me = (user.email || '').toLowerCase();
+  const r = await db.prepare(`
+    SELECT c.id, c.member_a_email, c.member_b_email, c.last_msg_at, c.last_msg_preview, c.last_msg_from,
+           m.name as other_name, m.reddit_username as other_reddit, m.discord_username as other_discord,
+           (SELECT COUNT(*) FROM dm_messages mm WHERE mm.conversation_id=c.id AND mm.from_email != ? AND mm.read_at IS NULL) AS unread
+    FROM dm_conversations c
+    LEFT JOIN members m ON LOWER(m.email) = CASE WHEN LOWER(c.member_a_email)=? THEN LOWER(c.member_b_email) ELSE LOWER(c.member_a_email) END
+    WHERE LOWER(c.member_a_email)=? OR LOWER(c.member_b_email)=?
+    ORDER BY COALESCE(c.last_msg_at, c.created_at) DESC
+  `).bind(me, me, me, me).all();
+  conversations = (r.results || []) as any[];
+}
+
+function otherName(c: any): string {
+  return c.other_name || c.other_reddit || c.other_discord
+    || (c.member_a_email?.toLowerCase() === (user.email || '').toLowerCase()
+        ? (c.member_b_email || '').split('@')[0]
+        : (c.member_a_email || '').split('@')[0])
+    || 'Member';
+}
+
+function timeAgo(iso: string): string {
+  if (!iso) return '';
+  const ms = Date.now() - new Date((iso || '').includes('Z') ? iso : iso + 'Z').getTime();
+  if (Number.isNaN(ms) || ms < 0) return '';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  return d < 30 ? `${d}d` : new Date(iso).toLocaleDateString();
+}
+---
+<Base title="Messages" description="Direct messages with other Denver Social members.">
+<div class="dm-wrap">
+  <header class="dm-head">
+    <h1>Messages</h1>
+    <p>Direct chats with other members. Private — only you two see them.</p>
+  </header>
+
+  {conversations.length === 0 ? (
+    <div class="dm-empty">
+      <div class="dm-empty-emoji">💬</div>
+      <h3>No conversations yet</h3>
+      <p>Open someone's group profile and hit Message to start a chat. Or check back when someone messages you.</p>
+    </div>
+  ) : (
+    <div class="dm-list">
+      {conversations.map((c: any) => {
+        const name = otherName(c);
+        const initial = name[0]?.toUpperCase() || '?';
+        const isUnread = (c.unread || 0) > 0;
+        const preview = c.last_msg_preview || 'Start the conversation…';
+        return (
+          <a href={`/messages/${c.id}`} class={`dm-row ${isUnread ? 'unread' : ''}`}>
+            <div class="dm-avatar">{initial}</div>
+            <div class="dm-body">
+              <div class="dm-row-top">
+                <strong>{name}</strong>
+                <span class="dm-time">{timeAgo(c.last_msg_at)}</span>
+              </div>
+              <div class="dm-preview">
+                {c.last_msg_from?.toLowerCase() === (user.email || '').toLowerCase() && <span class="dm-you">You: </span>}
+                {preview}
+              </div>
+            </div>
+            {isUnread && <span class="dm-badge">{c.unread}</span>}
+          </a>
+        );
+      })}
+    </div>
+  )}
+</div>
+
+<style>
+  .dm-wrap { max-width: 680px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+  .dm-head { margin-bottom: 24px; }
+  .dm-head h1 { font-family: var(--font-display); font-size: clamp(28px, 5vw, 38px); font-weight: 900; letter-spacing: -0.025em; margin-bottom: 6px; }
+  .dm-head p { font-size: 15px; color: var(--text-sec); }
+
+  .dm-empty { padding: 64px 24px; text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: 16px; }
+  .dm-empty-emoji { font-size: 52px; margin-bottom: 12px; }
+  .dm-empty h3 { font-family: var(--font-display); font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+  .dm-empty p { font-size: 14px; color: var(--text-sec); line-height: 1.55; max-width: 380px; margin: 0 auto; }
+
+  .dm-list { display: flex; flex-direction: column; gap: 6px; }
+  .dm-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 14px;
+    text-decoration: none; transition: background 0.15s, border-color 0.15s;
+  }
+  .dm-row:hover { background: var(--surface); border-color: var(--border-hover); }
+  .dm-row.unread { background: var(--accent-dim); border-color: var(--accent); }
+  .dm-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--sunset), var(--pink));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 800; font-size: 18px; flex-shrink: 0;
+  }
+  .dm-body { flex: 1; min-width: 0; }
+  .dm-row-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .dm-row-top strong { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); }
+  .dm-time { font-size: 12px; color: var(--text-faint); flex-shrink: 0; }
+  .dm-preview { font-size: 13px; color: var(--text-sec); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dm-row.unread .dm-preview { color: var(--text); font-weight: 500; }
+  .dm-you { color: var(--text-faint); }
+  .dm-badge {
+    min-width: 22px; padding: 3px 8px; border-radius: 999px;
+    background: var(--cta-bg); color: #fff;
+    font-family: var(--font-display); font-size: 11px; font-weight: 800;
+    text-align: center; flex-shrink: 0;
+  }
+</style>
+</Base>

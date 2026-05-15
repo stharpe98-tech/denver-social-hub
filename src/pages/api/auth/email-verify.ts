@@ -56,7 +56,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Set-Cookie': `dsn_user=${cookieVal}; Path=/; Max-Age=604800; SameSite=Lax`,
+        'Set-Cookie': `dsn_user=${cookieVal}; Path=/; Max-Age=2592000; SameSite=Lax`,
       },
     });
   } catch {

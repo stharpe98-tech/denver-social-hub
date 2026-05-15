@@ -1,0 +1,668 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+import { ensureGroupsSchema } from '../../lib/groups-schema';
+import { ensureGroupPostsSchema } from '../../lib/group-posts-schema';
+
+const db = getDB();
+const { slug } = Astro.params;
+let user: any = null;
+const cookie = Astro.cookies.get('dsn_user')?.value;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+
+let group: any = null;
+let members: any[] = [];
+let myRole: string | null = null;
+let recentInvites: any[] = [];
+let groupEvents: any[] = [];
+let posts: any[] = [];
+let myReactions = new Set<number>();
+let commentsByPost: Record<number, any[]> = {};
+
+if (db && slug) {
+  await ensureGroupsSchema(db);
+  group = await db.prepare('SELECT * FROM groups WHERE slug=?').bind(slug).first();
+  if (group) {
+    const m = await db.prepare(`
+      SELECT gm.*, mem.name as display_name, mem.reddit_username, mem.discord_username
+      FROM group_members gm
+      LEFT JOIN members mem ON LOWER(mem.email) = LOWER(gm.member_email)
+      WHERE gm.group_id = ?
+      ORDER BY CASE gm.role WHEN 'owner' THEN 0 WHEN 'organizer' THEN 1 ELSE 2 END, gm.joined_at ASC
+    `).bind(group.id).all();
+    members = (m.results || []) as any[];
+    try {
+      const ev = await db.prepare(`
+        SELECT id, title, event_type, event_month, event_day, location, zone, rsvp_count, spots, is_past
+        FROM events WHERE group_id = ? ORDER BY is_past ASC, id DESC LIMIT 30
+      `).bind(group.id).all();
+      groupEvents = (ev.results || []) as any[];
+    } catch {}
+    try {
+      await ensureGroupPostsSchema(db);
+      const p = await db.prepare(`
+        SELECT * FROM group_posts WHERE group_id=? ORDER BY pinned DESC, id DESC LIMIT 30
+      `).bind(group.id).all();
+      posts = (p.results || []) as any[];
+      if (posts.length > 0) {
+        const ids = posts.map((pp: any) => pp.id);
+        const placeholders = ids.map(() => '?').join(',');
+        const c = await db.prepare(`
+          SELECT * FROM group_post_comments WHERE post_id IN (${placeholders}) ORDER BY id ASC
+        `).bind(...ids).all();
+        ((c.results || []) as any[]).forEach((cm: any) => {
+          if (!commentsByPost[cm.post_id]) commentsByPost[cm.post_id] = [];
+          commentsByPost[cm.post_id].push(cm);
+        });
+        if (user?.email) {
+          const r = await db.prepare(`
+            SELECT post_id FROM group_post_reactions WHERE post_id IN (${placeholders}) AND LOWER(member_email)=LOWER(?)
+          `).bind(...ids, user.email).all();
+          ((r.results || []) as any[]).forEach((rr: any) => myReactions.add(rr.post_id));
+        }
+      }
+    } catch {}
+    if (user?.email) {
+      const mine = members.find((mm: any) => mm.member_email?.toLowerCase() === user.email.toLowerCase());
+      myRole = mine?.role || null;
+      if (myRole === 'owner' || myRole === 'organizer') {
+        const inv = await db.prepare(`
+          SELECT id, code, invitee_email, used_at, used_by_email, created_at
+          FROM group_invites WHERE group_id = ? ORDER BY id DESC LIMIT 10
+        `).bind(group.id).all();
+        recentInvites = (inv.results || []) as any[];
+      }
+    }
+  }
+}
+
+if (!group) return Astro.redirect('/groups');
+
+const canInvite = myRole === 'owner' || myRole === 'organizer' || (group.privacy === 'public' && myRole === 'member');
+const canJoinDirect = !myRole && group.privacy === 'public' && !!user;
+
+function isCohostOrOwner(r: string | null): boolean {
+  return r === 'owner' || r === 'organizer';
+}
+function timeAgo(iso: string): string {
+  if (!iso) return '';
+  const ms = Date.now() - new Date((iso || '').includes('Z') ? iso : iso + 'Z').getTime();
+  if (Number.isNaN(ms) || ms < 0) return iso;
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  return d < 30 ? `${d}d` : new Date(iso).toLocaleDateString();
+}
+---
+<Base title={group.name} description={group.description || `${group.name} on Denver Social`}>
+<div class="g-wrap">
+  <a href="/groups" class="g-back">← All groups</a>
+
+  <header class="g-hero">
+    <div class="g-hero-text">
+      <div class="g-hero-meta">
+        {group.privacy === 'invite_only'
+          ? <span class="g-privacy lock">🔒 Invite only</span>
+          : <span class="g-privacy">🌐 Public</span>}
+        <span class="g-count">{group.member_count} member{group.member_count === 1 ? '' : 's'}</span>
+      </div>
+      <h1 class="g-name">{group.name}</h1>
+      {group.description && <p class="g-desc">{group.description}</p>}
+    </div>
+    <div class="g-hero-actions">
+      {!user && <a href={`/login?next=/groups/${slug}`} class="btn-cta">Sign in</a>}
+      {canJoinDirect && (
+        <button class="btn-cta" id="join-btn" data-group-id={group.id}>Join group</button>
+      )}
+      {myRole && (
+        <>
+          {canInvite && <button class="btn-cta" id="invite-btn" data-group-id={group.id}>+ Invite</button>}
+          <button class="btn-sec" id="leave-btn" data-group-id={group.id}>{myRole === 'owner' ? 'Delete group' : 'Leave'}</button>
+        </>
+      )}
+      {!myRole && user && group.privacy === 'invite_only' && (
+        <span class="g-locked-hint">You need an invite to join.</span>
+      )}
+      {user && (myRole === null || myRole === 'member') && (
+        <button class="g-report-btn" data-report="group" data-id={group.id}>🚩 Report</button>
+      )}
+    </div>
+  </header>
+
+  <div class="g-cols">
+    <main class="g-main">
+      <section class="g-card">
+        <h2 class="g-h">Members ({members.length})</h2>
+        <div class="g-members">
+          {members.map((mm: any) => {
+            const name = mm.display_name || mm.reddit_username || mm.discord_username || (mm.member_email || '').split('@')[0] || 'Member';
+            const initial = name[0]?.toUpperCase() || '?';
+            const isMe = user?.email && (mm.member_email || '').toLowerCase() === user.email.toLowerCase();
+            const canDm = !!user && !isMe && mm.member_email && !mm.member_email.endsWith('@reddit.local') && !mm.member_email.endsWith('@discord.local');
+            return (
+              <div class="g-member">
+                <div class="g-avatar">{initial}</div>
+                <div class="g-member-text">
+                  <strong>{name}</strong>
+                  {mm.role !== 'member' && <span class={`g-member-role role-${mm.role}`}>{mm.role}</span>}
+                </div>
+                {canDm && (
+                  <button class="g-member-dm" data-dm={mm.member_email} title={`Message ${name}`}>💬</button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section class="g-card">
+        <div class="g-card-head-row">
+          <h2 class="g-h g-h-inline">Events ({groupEvents.length})</h2>
+          {myRole && <a href={`/events/new?group=${group.slug}`} class="g-invite-btn">+ New event</a>}
+        </div>
+        {groupEvents.length === 0 ? (
+          <p class="g-events-empty">No events yet. {myRole ? <>Be the first — <a href={`/events/new?group=${group.slug}`} class="g-events-empty-link">post one →</a></> : 'Members can post events scoped to this group.'}</p>
+        ) : (
+          <div class="g-events">
+            {groupEvents.map((ev: any) => (
+              <a href={`/events/${ev.id}`} class={`g-event ${ev.is_past ? 'past' : ''}`}>
+                <div class="g-event-date">
+                  <div class="g-event-month">{(ev.event_month || 'TBD').slice(0, 3)}</div>
+                  <div class="g-event-day">{ev.event_day || '—'}</div>
+                </div>
+                <div class="g-event-info">
+                  <div class="g-event-title">{ev.title}</div>
+                  <div class="g-event-sub">{ev.zone || ev.location || 'Denver'} · {ev.rsvp_count || 0}{ev.spots ? `/${ev.spots}` : ''} going</div>
+                </div>
+                {ev.is_past && <span class="g-event-past">Past</span>}
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <!-- POSTS -->
+      <section class="g-card">
+        <div class="g-card-head-row">
+          <h2 class="g-h g-h-inline">Posts</h2>
+          <span class="g-count-pill">{posts.length}</span>
+        </div>
+
+        {myRole && (
+          <form class="gp-composer" id="gp-composer" data-group-id={group.id}>
+            <textarea id="gp-body" class="gp-input" rows={2} maxlength="1000" placeholder="Share something with the group…"></textarea>
+            <div class="gp-composer-foot">
+              <span class="gp-hint">Members of this group see this.</span>
+              <button type="submit" class="gp-post-btn">Post</button>
+            </div>
+          </form>
+        )}
+
+        {posts.length === 0 ? (
+          <p class="g-events-empty">{myRole ? 'No posts yet — start the conversation.' : 'Members can post here.'}</p>
+        ) : (
+          <div class="gp-feed">
+            {posts.map((p: any) => {
+              const myReact = myReactions.has(p.id);
+              const isAuthor = user?.email && (p.author_email || '').toLowerCase() === user.email.toLowerCase();
+              const canMod = isCohostOrOwner(myRole) || isAuthor;
+              const comments = commentsByPost[p.id] || [];
+              return (
+                <article class={`gp-post ${p.pinned ? 'pinned' : ''}`}>
+                  {!!p.pinned && <span class="gp-pinned">📌 Pinned</span>}
+                  <header class="gp-head">
+                    <div class="gp-avatar">{(p.author_name || '?')[0]?.toUpperCase()}</div>
+                    <div class="gp-meta">
+                      <strong>{p.author_name || (p.author_email || '').split('@')[0]}</strong>
+                      <span>{timeAgo(p.created_at)}</span>
+                    </div>
+                    {canMod && (
+                      <div class="gp-actions-menu">
+                        {isCohostOrOwner(myRole) && (
+                          <button class="gp-mod-btn" data-pin={p.id} data-pinned={p.pinned ? '1' : '0'}>{p.pinned ? 'Unpin' : 'Pin'}</button>
+                        )}
+                        <button class="gp-mod-btn gp-mod-del" data-delete-post={p.id}>Delete</button>
+                      </div>
+                    )}
+                  </header>
+                  <p class="gp-body">{p.body}</p>
+                  <div class="gp-actions">
+                    {myRole ? (
+                      <button class={`gp-react ${myReact ? 'on' : ''}`} data-react={p.id}>
+                        <span>👍</span> <span>{p.reaction_count || 0}</span>
+                      </button>
+                    ) : (
+                      <span class="gp-react"><span>👍</span> <span>{p.reaction_count || 0}</span></span>
+                    )}
+                    <button class="gp-comments-toggle" data-toggle-comments={p.id}>
+                      💬 {p.comment_count || 0} {p.comment_count === 1 ? 'comment' : 'comments'}
+                    </button>
+                  </div>
+                  <div class="gp-comments" id={`gp-comments-${p.id}`} hidden>
+                    {comments.map((c: any) => {
+                      const cAuthor = user?.email && (c.author_email || '').toLowerCase() === user.email.toLowerCase();
+                      const cCanDel = isCohostOrOwner(myRole) || cAuthor;
+                      return (
+                        <div class="gp-comment">
+                          <div class="gp-avatar gp-avatar-sm">{(c.author_name || '?')[0]?.toUpperCase()}</div>
+                          <div class="gp-comment-body">
+                            <strong>{c.author_name || (c.author_email || '').split('@')[0]}</strong>
+                            <span class="gp-comment-time">· {timeAgo(c.created_at)}</span>
+                            <p>{c.body}</p>
+                          </div>
+                          {cCanDel && (
+                            <button class="gp-mod-btn gp-mod-del" data-delete-comment={c.id}>×</button>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {myRole && (
+                      <form class="gp-comment-form" data-post-id={p.id}>
+                        <input type="text" class="gp-input" maxlength="600" placeholder="Add a comment…" />
+                        <button type="submit" class="gp-comment-btn">Send</button>
+                      </form>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </main>
+
+    {canInvite && (
+      <aside class="g-side">
+        <section class="g-card">
+          <h2 class="g-h">Invite people</h2>
+          <p class="g-side-help">Generate a one-time link to share. Anyone with the link can join — so be careful where you share private group links.</p>
+          <div class="g-invite-row">
+            <input type="email" id="invite-email" placeholder="friend@example.com (optional)" class="g-input" />
+            <button class="g-invite-btn" id="gen-invite" data-group-id={group.id}>Get invite link</button>
+          </div>
+          <div id="invite-out" class="g-invite-out"></div>
+
+          {recentInvites.length > 0 && (
+            <div class="g-invite-history">
+              <h3 class="g-side-sub">Recent</h3>
+              <ul>
+                {recentInvites.map((iv: any) => (
+                  <li class={iv.used_at ? 'used' : ''}>
+                    <code>/groups/join/{iv.code}</code>
+                    {iv.invitee_email && <span> · for {iv.invitee_email}</span>}
+                    {iv.used_at && <span class="g-iv-used"> · accepted by {iv.used_by_email}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      </aside>
+    )}
+  </div>
+</div>
+
+<style>
+  .g-wrap { max-width: 1180px; margin: 0 auto; padding: 24px clamp(16px, 4vw, 40px) 80px; }
+  .g-back { font-size: 13px; color: var(--text-sec); }
+  .g-back:hover { color: var(--text); }
+
+  .g-hero {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    gap: 32px; padding: 28px 0 32px; border-bottom: 1px solid var(--border);
+    margin-bottom: 28px; flex-wrap: wrap;
+  }
+  .g-hero-text { flex: 1; min-width: 280px; }
+  .g-hero-meta { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .g-privacy {
+    font-size: 12px; padding: 5px 12px; border-radius: 999px;
+    background: var(--accent2-dim); color: #047857; font-weight: 600;
+  }
+  .g-privacy.lock { background: #FEF3C7; color: #92400E; }
+  .g-count { font-size: 13px; color: var(--text-sec); font-weight: 500; }
+  .g-name { font-family: var(--font-display); font-size: clamp(30px, 5vw, 44px); font-weight: 900; letter-spacing: -0.02em; line-height: 1.05; }
+  .g-desc { font-size: 16px; color: var(--text-sec); margin-top: 12px; line-height: 1.5; max-width: 640px; }
+  .g-hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .g-locked-hint { font-size: 13px; color: var(--text-sec); font-style: italic; }
+  .g-report-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-sec);
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .g-report-btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-hover); }
+
+  .g-cols { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .g-main, .g-side { display: flex; flex-direction: column; gap: 20px; }
+  .g-card { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 24px; box-shadow: var(--card-shadow); }
+  .g-h { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.01em; }
+  .g-empty-events p { font-size: 14px; color: var(--text-sec); line-height: 1.5; }
+
+  .g-members { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .g-member { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border-radius: 12px; }
+  .g-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 15px; font-weight: 800; flex-shrink: 0;
+  }
+  .g-member-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .g-member-text strong { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .g-member-dm {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 50%; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 14px; flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .g-member-dm:hover { background: var(--accent-dim); border-color: var(--accent); }
+  .g-member-role {
+    font-size: 10px; padding: 2px 7px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;
+    background: var(--surface); color: var(--text-sec); width: fit-content;
+  }
+  .role-owner { background: #FCE7F3; color: #9D174D; }
+  .role-organizer { background: #DBEAFE; color: #1E40AF; }
+
+  .g-side-help { font-size: 13px; color: var(--text-sec); margin-bottom: 14px; line-height: 1.5; }
+  .g-side-sub { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.06em; margin: 18px 0 8px; }
+  .g-invite-row { display: flex; flex-direction: column; gap: 8px; }
+  .g-input { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-family: var(--font); background: var(--bg); }
+  .g-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .g-invite-btn {
+    padding: 10px 14px; border-radius: 999px; background: var(--cta-bg); color: #fff;
+    font-family: var(--font-display); font-weight: 700; font-size: 13px; border: none; cursor: pointer;
+  }
+  .g-invite-btn:hover { box-shadow: 0 4px 12px var(--accent-glow); }
+  .g-invite-out { margin-top: 12px; font-size: 13px; min-height: 18px; word-break: break-all; }
+  .g-invite-out.ok { color: var(--text); }
+  .g-invite-out code { background: var(--surface); padding: 8px 10px; border-radius: 8px; display: block; margin-top: 6px; }
+  .g-invite-history ul { list-style: none; padding: 0; margin: 0; }
+  .g-invite-history li { font-size: 12px; color: var(--text-sec); padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .g-invite-history li.used { opacity: 0.6; text-decoration: line-through; }
+  .g-invite-history code { font-size: 11px; color: var(--text); background: var(--surface); padding: 2px 6px; border-radius: 4px; }
+  .g-iv-used { color: var(--accent2); font-weight: 600; }
+
+  .g-events { display: flex; flex-direction: column; gap: 8px; }
+  .g-events-empty { font-size: 14px; color: var(--text-sec); line-height: 1.5; }
+  .g-events-empty-link { color: var(--accent); font-weight: 600; }
+  .g-card-head-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+  .g-h-inline { margin-bottom: 0; }
+  .g-event { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; transition: transform 0.15s, border-color 0.15s, background 0.15s; }
+  .g-event:hover { transform: translateY(-1px); border-color: var(--border-hover); background: var(--bg); }
+  .g-event.past { opacity: 0.7; }
+  .g-event-date { width: 48px; flex-shrink: 0; text-align: center; padding: 6px 0; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; }
+  .g-event-month { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
+  .g-event-day { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text); }
+  .g-event-info { flex: 1; min-width: 0; }
+  .g-event-title { font-size: 15px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .g-event-sub { font-size: 13px; color: var(--text-sec); }
+  .g-event-past { font-size: 11px; padding: 4px 10px; border-radius: 999px; background: var(--bg); color: var(--text-sec); font-weight: 600; border: 1px solid var(--border); }
+
+  @media (max-width: 920px) { .g-cols { grid-template-columns: 1fr; } }
+
+  /* Group posts */
+  .g-count-pill { font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-dim); padding: 4px 12px; border-radius: 999px; }
+  .gp-composer {
+    padding: 14px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 14px;
+  }
+  .gp-input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 14px; font-family: var(--font); color: var(--text); background: var(--bg);
+    resize: vertical;
+  }
+  .gp-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .gp-composer-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 10px; }
+  .gp-hint { font-size: 11px; color: var(--text-faint); }
+  .gp-post-btn, .gp-comment-btn {
+    padding: 8px 16px; border-radius: 999px; border: none;
+    background: var(--cta-bg); color: #fff;
+    font-family: var(--font-display); font-weight: 700; font-size: 13px; cursor: pointer;
+  }
+
+  .gp-feed { display: flex; flex-direction: column; gap: 12px; }
+  .gp-post {
+    padding: 14px 16px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 14px;
+  }
+  .gp-post.pinned { background: linear-gradient(160deg, var(--sunset-dim), transparent); border-color: rgba(249,115,22,0.25); }
+  .gp-pinned { display: inline-block; font-size: 10px; font-weight: 700; color: var(--sunset); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .gp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .gp-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--mint));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 15px; font-weight: 800; flex-shrink: 0;
+  }
+  .gp-avatar-sm { width: 28px; height: 28px; font-size: 12px; }
+  .gp-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0; }
+  .gp-meta strong { font-family: var(--font-display); font-size: 14px; font-weight: 700; }
+  .gp-meta span { font-size: 12px; color: var(--text-faint); }
+  .gp-actions-menu { display: flex; gap: 4px; flex-shrink: 0; }
+  .gp-mod-btn {
+    background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+    font-size: 12px; color: var(--text-sec); font-family: var(--font);
+  }
+  .gp-mod-btn:hover { background: var(--surface); color: var(--text); }
+  .gp-mod-del:hover { background: #FEF2F2; color: #B91C1C; }
+  .gp-body { font-size: 14px; line-height: 1.55; color: var(--text); margin-bottom: 10px; white-space: pre-wrap; word-wrap: break-word; }
+  .gp-actions { display: flex; gap: 10px; align-items: center; padding-top: 8px; border-top: 1px solid var(--border); }
+  .gp-react, .gp-comments-toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid transparent;
+    font-size: 13px; font-weight: 600; color: var(--text-sec);
+    cursor: pointer; font-family: var(--font); transition: all 0.15s;
+  }
+  .gp-react:hover, .gp-comments-toggle:hover { background: var(--surface-hover); color: var(--text); }
+  .gp-react.on { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+
+  .gp-comments { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+  .gp-comment { display: flex; gap: 10px; align-items: flex-start; }
+  .gp-comment-body { flex: 1; min-width: 0; }
+  .gp-comment-body strong { font-family: var(--font-display); font-size: 13px; font-weight: 700; }
+  .gp-comment-time { font-size: 11px; color: var(--text-faint); margin-left: 4px; }
+  .gp-comment-body p { font-size: 13px; line-height: 1.5; color: var(--text); margin-top: 2px; white-space: pre-wrap; word-wrap: break-word; }
+  .gp-comment-form { display: flex; gap: 6px; margin-top: 4px; }
+  .gp-comment-form .gp-input { flex: 1; padding: 8px 12px; font-size: 13px; }
+  .gp-comment-btn { padding: 6px 12px; font-size: 12px; }
+</style>
+
+<script>
+  const join = document.getElementById('join-btn');
+  const leave = document.getElementById('leave-btn');
+  const inviteOpen = document.getElementById('invite-btn');
+  const genBtn = document.getElementById('gen-invite');
+  const inviteEmail = document.getElementById('invite-email') as HTMLInputElement | null;
+  const out = document.getElementById('invite-out');
+
+  async function call(body: any) {
+    const res = await fetch('/api/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  }
+
+  // ── Report group ──
+  document.querySelectorAll('[data-report]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const kind = (btn as HTMLElement).getAttribute('data-report');
+      const id = (btn as HTMLElement).getAttribute('data-id');
+      const reasons = [
+        { key: 'harassment',     label: '1) Harassment or unsafe behavior' },
+        { key: 'spam',           label: '2) Spam or selling' },
+        { key: 'inaccurate',     label: '3) Inaccurate or misleading' },
+        { key: 'inappropriate',  label: '4) Inappropriate content' },
+        { key: 'other',          label: '5) Other' },
+      ];
+      const pick = prompt('Why are you reporting this ' + kind + '?\n\n' + reasons.map(r => r.label).join('\n') + '\n\nEnter 1-5:');
+      if (!pick) return;
+      const idx = parseInt(pick) - 1;
+      if (!reasons[idx]) { alert('Pick 1-5.'); return; }
+      const details = prompt('Anything else we should know? (optional)') || '';
+      try {
+        const res = await fetch('/api/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', target_kind: kind, target_id: String(id), reason: reasons[idx].key, details }),
+        });
+        const d = await res.json();
+        if (d.ok) alert(d.already ? "You've already reported this — we're on it." : 'Thanks. We got it and a mod will review.');
+        else alert('Could not submit: ' + d.error);
+      } catch { alert('Network error.'); }
+    });
+  });
+
+  join?.addEventListener('click', async () => {
+    const id = parseInt((join as HTMLElement).dataset.groupId || '0');
+    const d = await call({ action: 'join', group_id: id });
+    if (d.ok) location.reload();
+    else alert(`Couldn't join: ${d.error}`);
+  });
+
+  leave?.addEventListener('click', async () => {
+    const id = parseInt((leave as HTMLElement).dataset.groupId || '0');
+    const isOwner = (leave as HTMLElement).textContent?.includes('Delete');
+    if (!confirm(isOwner ? 'Delete this group and remove all members?' : 'Leave this group?')) return;
+    const d = await call({ action: 'leave', group_id: id });
+    if (d.ok) location.href = '/groups';
+    else alert(`Couldn't leave: ${d.error === 'transfer_ownership_first' ? 'Transfer ownership before leaving (or remove other members first).' : d.error}`);
+  });
+
+  inviteOpen?.addEventListener('click', () => {
+    inviteEmail?.focus();
+    inviteEmail?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  genBtn?.addEventListener('click', async () => {
+    const id = parseInt((genBtn as HTMLElement).dataset.groupId || '0');
+    if (out) out.textContent = '';
+    const d = await call({ action: 'invite', group_id: id, invitee_email: inviteEmail?.value || '' });
+    if (d.ok && d.code && out) {
+      const link = `${location.origin}/groups/join/${d.code}`;
+      out.className = 'g-invite-out ok';
+      out.innerHTML = `Share this link: <code>${link}</code>`;
+      try { await navigator.clipboard.writeText(link); } catch {}
+    } else if (out) {
+      out.textContent = `Couldn't generate: ${d.error}`;
+    }
+  });
+
+  // ── Group posts ──
+  async function postCall(body: any) {
+    const res = await fetch('/api/group-posts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  }
+
+  // Create post
+  const composer = document.getElementById('gp-composer') as HTMLFormElement | null;
+  composer?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const groupId = parseInt(composer.getAttribute('data-group-id') || '0');
+    const ta = document.getElementById('gp-body') as HTMLTextAreaElement;
+    const body = (ta?.value || '').trim();
+    if (!body) return;
+    const btn = composer.querySelector('.gp-post-btn') as HTMLButtonElement;
+    btn.disabled = true;
+    const d = await postCall({ action: 'create_post', group_id: groupId, body });
+    if (d.ok) location.reload();
+    else { alert('Failed: ' + d.error); btn.disabled = false; }
+  });
+
+  // React
+  document.querySelectorAll('[data-react]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt((btn as HTMLElement).getAttribute('data-react') || '0');
+      const d = await postCall({ action: 'react', post_id: id });
+      if (d.ok) {
+        btn.classList.toggle('on', d.reacted);
+        const span = btn.querySelectorAll('span')[1];
+        if (span) span.textContent = String(d.count);
+      }
+    });
+  });
+
+  // Toggle comments
+  document.querySelectorAll('[data-toggle-comments]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = (btn as HTMLElement).getAttribute('data-toggle-comments');
+      const panel = document.getElementById(`gp-comments-${id}`);
+      if (panel) panel.toggleAttribute('hidden');
+    });
+  });
+
+  // Comment submit
+  document.querySelectorAll('.gp-comment-form').forEach(form => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const postId = parseInt((form as HTMLElement).getAttribute('data-post-id') || '0');
+      const input = (form as HTMLFormElement).querySelector('.gp-input') as HTMLInputElement;
+      const body = (input?.value || '').trim();
+      if (!body) return;
+      const d = await postCall({ action: 'create_comment', post_id: postId, body });
+      if (d.ok) location.reload();
+      else alert('Failed: ' + d.error);
+    });
+  });
+
+  // Pin
+  document.querySelectorAll('[data-pin]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt((btn as HTMLElement).getAttribute('data-pin') || '0');
+      const pinned = (btn as HTMLElement).getAttribute('data-pinned') === '1';
+      const d = await postCall({ action: pinned ? 'unpin' : 'pin', post_id: id });
+      if (d.ok) location.reload();
+      else alert('Failed: ' + d.error);
+    });
+  });
+
+  // Delete post
+  document.querySelectorAll('[data-delete-post]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this post?')) return;
+      const id = parseInt((btn as HTMLElement).getAttribute('data-delete-post') || '0');
+      const d = await postCall({ action: 'delete_post', post_id: id });
+      if (d.ok) location.reload();
+      else alert('Failed: ' + d.error);
+    });
+  });
+
+  // Start DM with a group member
+  document.querySelectorAll('[data-dm]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const email = (btn as HTMLElement).getAttribute('data-dm');
+      const res = await fetch('/api/dm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start', with: email }),
+      });
+      const d = await res.json();
+      if (d.ok && d.id) location.href = `/messages/${d.id}`;
+      else alert('Failed: ' + d.error);
+    });
+  });
+
+  // Delete comment
+  document.querySelectorAll('[data-delete-comment]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this comment?')) return;
+      const id = parseInt((btn as HTMLElement).getAttribute('data-delete-comment') || '0');
+      const d = await postCall({ action: 'delete_comment', comment_id: id });
+      if (d.ok) location.reload();
+      else alert('Failed: ' + d.error);
+    });
+  });
+</script>
+</Base>

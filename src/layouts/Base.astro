@@ -8,6 +8,12 @@ if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 const isAdmin = user?.role === 'admin' || user?.email === "stharpe98@gmail.com";
 const currentPath = Astro.url.pathname;
 const redditName = user?.reddit_username || user?.name;
+// Tour is rendered only for signed-out visitors who haven't already
+// dismissed it. The cookie is the source of truth — localStorage is a
+// client-side fallback. Skipping the markup server-side means no
+// flash-of-tour on subsequent visits and zero JS cost.
+const tourSeen = Astro.cookies.get('dsn_tour_seen')?.value === '1';
+const showWelcomeTour = !user && !tourSeen;
 ---
 <html lang="en">
 <head>
@@ -25,8 +31,14 @@ const redditName = user?.reddit_username || user?.name;
   <!-- Top nav -->
   <header class="site-header">
     <div class="site-header-inner">
+      <button class="mob-hamburger" id="mob-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mob-drawer">
+        <span></span><span></span><span></span>
+      </button>
+
       <nav class="site-nav site-nav-left">
         <a href="/events" class:list={["site-nav-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
+        <a href="/groups" class:list={["site-nav-link", { active: currentPath.startsWith("/groups") }]}>Groups</a>
+        <a href="/perks" class:list={["site-nav-link", { active: currentPath.startsWith("/perks") }]}>Perks</a>
       </nav>
 
       <a href="/" class="site-logo" aria-label="Denver Social home">
@@ -34,8 +46,14 @@ const redditName = user?.reddit_username || user?.name;
       </a>
 
       <nav class="site-nav site-nav-right">
+        {user && (
+          <a href="/messages" class:list={["site-nav-link", { active: currentPath.startsWith("/messages") }]}>💬 Messages</a>
+        )}
         <a href="/about" class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
         <a href="/help"  class:list={["site-nav-link", { active: currentPath.startsWith("/help") }]}>Help</a>
+        {isAdmin && (
+          <a href="/admin/dashboard" class:list={["site-nav-link site-nav-admin", { active: currentPath.startsWith("/admin") }]}>⚙ Admin</a>
+        )}
       </nav>
 
       <div class="site-auth">
@@ -54,6 +72,53 @@ const redditName = user?.reddit_username || user?.name;
     </div>
   </header>
 
+  <!-- Mobile drawer -->
+  <div class="mob-backdrop" id="mob-backdrop" hidden></div>
+  <aside class="mob-drawer" id="mob-drawer" hidden aria-label="Site menu">
+    <div class="mob-drawer-head">
+      <a href="/" class="mob-drawer-brand">
+        <span>🌆</span><strong>Denver Social</strong>
+      </a>
+      <button class="mob-drawer-close" id="mob-drawer-close" aria-label="Close menu">×</button>
+    </div>
+
+    {user && (
+      <a href="/profile" class="mob-drawer-user">
+        <div class="mob-drawer-avatar">{(user.name || user.email || '?')[0]?.toUpperCase()}</div>
+        <div>
+          <strong>{user.name || (redditName ? `u/${redditName}` : 'Profile')}</strong>
+          <span>View profile</span>
+        </div>
+      </a>
+    )}
+
+    <nav class="mob-drawer-nav">
+      <a href="/" class:list={["mob-drawer-link", { active: currentPath === "/" }]}><span class="mob-drawer-icon">🏠</span>Home</a>
+      <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}><span class="mob-drawer-icon">📅</span>Events</a>
+      <a href="/groups" class:list={["mob-drawer-link", { active: currentPath.startsWith("/groups") }]}><span class="mob-drawer-icon">👥</span>Groups</a>
+      <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]}><span class="mob-drawer-icon">🏪</span>Perks</a>
+      <a href="/welcome" class:list={["mob-drawer-link", { active: currentPath.startsWith("/welcome") }]}><span class="mob-drawer-icon">👋</span>New here</a>
+      <a href="/neighborhoods" class:list={["mob-drawer-link", { active: currentPath.startsWith("/neighborhoods") }]}><span class="mob-drawer-icon">📍</span>Neighborhoods</a>
+      <a href="/help-out" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help-out") }]}><span class="mob-drawer-icon">🤝</span>Help out</a>
+      <a href="/calendar" class:list={["mob-drawer-link", { active: currentPath.startsWith("/calendar") }]}><span class="mob-drawer-icon">📆</span>Calendar</a>
+      {user && (
+        <a href="/messages" class:list={["mob-drawer-link", { active: currentPath.startsWith("/messages") }]}><span class="mob-drawer-icon">💬</span>Messages</a>
+      )}
+      <a href="/about" class:list={["mob-drawer-link", { active: currentPath.startsWith("/about") }]}><span class="mob-drawer-icon">ℹ️</span>About</a>
+      <a href="/help" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help") || currentPath.startsWith("/conduct") }]}><span class="mob-drawer-icon">❓</span>Help & Safety</a>
+      <a href="/contact" class:list={["mob-drawer-link", { active: currentPath.startsWith("/contact") }]}><span class="mob-drawer-icon">✉️</span>Contact</a>
+      {isAdmin && (
+        <a href="/admin/dashboard" class:list={["mob-drawer-link mob-drawer-link-admin", { active: currentPath.startsWith("/admin") }]}><span class="mob-drawer-icon">⚙️</span>Admin</a>
+      )}
+    </nav>
+
+    <div class="mob-drawer-foot">
+      {user
+        ? <a href="/api/logout" class="mob-drawer-cta mob-drawer-cta-ghost">Sign out</a>
+        : <a href="/login" class="mob-drawer-cta">Sign in / sign up</a>}
+    </div>
+  </aside>
+
   <slot />
 
   <!-- Site footer -->
@@ -64,22 +129,23 @@ const redditName = user?.reddit_username || user?.name;
           <span class="footer-brand-icon" aria-hidden="true">🌆</span>
           <span class="footer-brand-name">Denver <span>Social</span></span>
         </a>
-        <p class="footer-tagline">No ads, no algorithms. Just locals meeting locals.</p>
+        <p class="footer-tagline">Show up. Meet people. That's it.</p>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">Explore</div>
         <a href="/events">Events</a>
-        <a href="/help">Help</a>
+        <a href="/groups">Groups</a>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">About</div>
         <a href="/about">About</a>
-        <a href="/conduct">Safety & terms</a>
+        <a href="/help">Help & Safety</a>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">Stay in touch</div>
         <a href="/contact">Contact us</a>
         <a href="/login">Sign in</a>
+        {isAdmin && <a href="/admin/dashboard">Admin dashboard</a>}
       </div>
     </div>
     <div class="site-footer-bottom">
@@ -89,26 +155,105 @@ const redditName = user?.reddit_username || user?.name;
     </div>
   </footer>
 
-  <!-- Mobile bottom nav -->
-  <nav class="mob-nav">
-    <a href="/"        class:list={["mob-link", { active: currentPath === "/" }]}>
-      <span class="mob-icon">🏠</span><span class="mob-label">Home</span>
-    </a>
-    <a href="/events"  class:list={["mob-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>
-      <span class="mob-icon">📅</span><span class="mob-label">Events</span>
-    </a>
-    <a href="/about" class:list={["mob-link", { active: currentPath.startsWith("/about") }]}>
-      <span class="mob-icon">ℹ️</span><span class="mob-label">About</span>
-    </a>
-    <a href="/me"    class:list={["mob-link", { active: currentPath === "/me" || currentPath === "/profile" }]}>
-      <span class="mob-icon">👤</span><span class="mob-label">Me</span>
-    </a>
-    {isAdmin && (
-      <a href="/admin/dashboard" class:list={["mob-link", { active: currentPath.startsWith("/admin") }]}>
-        <span class="mob-icon">⚙</span><span class="mob-label">Admin</span>
-      </a>
-    )}
-  </nav>
+  {showWelcomeTour && (
+    <div id="welcome-tour" class="wt-overlay" hidden>
+      <div class="wt-modal" role="dialog" aria-modal="true" aria-labelledby="wt-title">
+        <button class="wt-close" id="wt-close" aria-label="Close">×</button>
+
+        <div class="wt-slide wt-slide-intro" data-step="0">
+          <div class="wt-emoji">👋</div>
+          <h2 id="wt-title">First time on Denver Social?</h2>
+          <p>We do real, small-group hangouts across Denver — dinners, hikes, game nights, brewery hops. You show up, meet people, and that's it.</p>
+          <div class="wt-actions">
+            <button class="wt-btn wt-btn-primary" data-action="start">Show me around</button>
+            <button class="wt-btn wt-btn-ghost" data-action="skip">I'm good, let me explore</button>
+          </div>
+        </div>
+
+        <div class="wt-slide" data-step="1" hidden>
+          <div class="wt-emoji">📅</div>
+          <h2>Browse events</h2>
+          <p>Head to <strong>Events</strong> to see what's happening this week. Filter by type (dinner, hike, brewery…) and pick something that fits your vibe.</p>
+          <div class="wt-tip"><strong>Tip:</strong> "Vibe tags" like 🥤 Sober-friendly or 🤫 Introvert-friendly help you find the right room.</div>
+        </div>
+
+        <div class="wt-slide" data-step="2" hidden>
+          <div class="wt-emoji">🎉</div>
+          <h2>RSVP in one tap</h2>
+          <p>Click any event and pick <strong>Going</strong>, <strong>Maybe</strong>, or <strong>Can't make it</strong>. Spots are limited — when an event fills up, you'll be auto-added to a waitlist if you still want in.</p>
+          <div class="wt-tip"><strong>Add to calendar:</strong> RSVPed events give you Google and .ics one-click adds.</div>
+        </div>
+
+        <div class="wt-slide" data-step="3" hidden>
+          <div class="wt-emoji">👥</div>
+          <h2>Build your own circle</h2>
+          <p>Make a <strong>Group</strong> for your trivia crew, hiking buddies, or dinner club. Invite-only or public — your call. Post events scoped just to that group.</p>
+          <div class="wt-tip"><strong>Single-use invite links</strong> let you share carefully without random people slipping in.</div>
+        </div>
+
+        <div class="wt-slide" data-step="4" hidden>
+          <div class="wt-emoji">🏆</div>
+          <h2>Level up</h2>
+          <p>Your <strong>profile</strong> tracks every hangout you've gone to. The more you show up, the higher you level — and Denver starts knowing your name.</p>
+          <div class="wt-tip"><strong>Reliability score:</strong> show up to events you RSVPed for and your score climbs. Skip and it drops.</div>
+        </div>
+
+        <div class="wt-slide" data-step="5" hidden>
+          <div class="wt-emoji">🚀</div>
+          <h2>You're set</h2>
+          <p>Sign up free with Discord and you can RSVP, host, and start your own groups. Or just keep browsing — no pressure.</p>
+          <div class="wt-actions">
+            <button class="wt-btn wt-btn-primary" data-action="signin">Sign in / sign up</button>
+            <button class="wt-btn wt-btn-ghost" data-action="skip">Keep browsing</button>
+          </div>
+        </div>
+
+        <div class="wt-footer" id="wt-footer" hidden>
+          <button class="wt-step-btn" id="wt-prev" data-action="prev">← Back</button>
+          <div class="wt-dots">
+            <span class="wt-dot" data-dot="1"></span>
+            <span class="wt-dot" data-dot="2"></span>
+            <span class="wt-dot" data-dot="3"></span>
+            <span class="wt-dot" data-dot="4"></span>
+            <span class="wt-dot" data-dot="5"></span>
+          </div>
+          <button class="wt-step-btn wt-step-btn-primary" id="wt-next" data-action="next">Next →</button>
+        </div>
+      </div>
+    </div>
+  )}
+
+  <script is:inline>
+    (function() {
+      var burger = document.getElementById('mob-hamburger');
+      var drawer = document.getElementById('mob-drawer');
+      var backdrop = document.getElementById('mob-backdrop');
+      var closeBtn = document.getElementById('mob-drawer-close');
+      if (!burger || !drawer || !backdrop) return;
+
+      function open() {
+        drawer.removeAttribute('hidden');
+        backdrop.removeAttribute('hidden');
+        burger.setAttribute('aria-expanded', 'true');
+        document.body.classList.add('drawer-open');
+        requestAnimationFrame(function() { drawer.classList.add('open'); backdrop.classList.add('open'); });
+      }
+      function close() {
+        drawer.classList.remove('open');
+        backdrop.classList.remove('open');
+        burger.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('drawer-open');
+        setTimeout(function() {
+          drawer.setAttribute('hidden', '');
+          backdrop.setAttribute('hidden', '');
+        }, 220);
+      }
+      burger.addEventListener('click', open);
+      closeBtn && closeBtn.addEventListener('click', close);
+      backdrop.addEventListener('click', close);
+      document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close(); });
+    })();
+  </script>
 
 </body>
 </html>
@@ -116,39 +261,49 @@ const redditName = user?.reddit_username || user?.name;
 <style is:global>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* CLAUDE.md design tokens — Clean & Crisp light theme */
+  /* Design tokens — fun & happy theme: warm cream surface with sunset
+     orange + hot pink secondary accents. Sky blue stays as primary so
+     brand identity carries through navs and core CTAs. */
   :root {
-    /* Surface */
-    --bg: #FFFFFF;
-    --surface: #F8F9FB;
-    --surface-hover: #F0F2F5;
-    --border: #E5E7EB;
-    --border-hover: #D1D5DB;
+    /* Surface — warm cream base */
+    --bg: #FFFCF7;
+    --surface: #FFF6E9;
+    --surface-hover: #FBEFDA;
+    --border: #F0E5D1;
+    --border-hover: #E2D4B8;
 
-    /* Text */
-    --text: #111827;
-    --text-sec: #6B7280;
-    --text-faint: #9CA3AF;
+    /* Text — slightly warm */
+    --text: #1F1A14;
+    --text-sec: #6B5F4D;
+    --text-faint: #A8997F;
 
     /* Accents */
-    --accent: #0EA5E9;       /* sky blue primary */
-    --accent-dim: rgba(14, 165, 233, 0.10);
-    --accent-glow: rgba(14, 165, 233, 0.22);
-    --accent2: #10B981;      /* emerald green secondary */
-    --accent2-dim: rgba(16, 185, 129, 0.10);
-    --mint: #10B981;         /* alias */
+    --accent: #0EA5E9;       /* sky blue — kept as primary identity */
+    --accent-dim: rgba(14, 165, 233, 0.12);
+    --accent-glow: rgba(14, 165, 233, 0.28);
+    --accent2: #10B981;      /* emerald green */
+    --accent2-dim: rgba(16, 185, 129, 0.12);
+    --sunset: #F97316;       /* warm orange — secondary "fun" accent */
+    --sunset-dim: rgba(249, 115, 22, 0.14);
+    --pink: #EC4899;         /* hot pink — for gradients + delight */
+    --pink-dim: rgba(236, 72, 153, 0.14);
+    --mint: #10B981;
 
-    /* CTA */
-    --cta-bg: #0EA5E9;
+    /* CTA — sunset→pink gradient */
+    --cta-bg: linear-gradient(135deg, #F97316, #EC4899);
+    --cta-bg-solid: #F97316;
     --cta-text: #FFFFFF;
+    --cta-glow: rgba(249, 115, 22, 0.35);
 
-    /* Tags */
-    --tag-bg: #E0F2FE;       /* sky-100 */
-    --tag-text: #0369A1;     /* sky-700 */
-    --tag-bg2: #D1FAE5;      /* emerald-100 */
-    --tag-text2: #047857;    /* emerald-700 */
-    --tag-bg3: #FEF3C7;      /* amber-100 */
-    --tag-text3: #92400E;    /* amber-800 */
+    /* Tags — warmer, more variety */
+    --tag-bg: #FFEDD5;       /* sunset peach */
+    --tag-text: #C2410C;
+    --tag-bg2: #FCE7F3;      /* pink */
+    --tag-text2: #BE185D;
+    --tag-bg3: #DBEAFE;      /* sky */
+    --tag-text3: #1E40AF;
+    --tag-bg4: #DCFCE7;      /* mint */
+    --tag-text4: #166534;
 
     /* Status */
     --green: #10B981;
@@ -184,7 +339,7 @@ const redditName = user?.reddit_username || user?.name;
   }
 
   html { font-family: var(--font); background: var(--bg); color: var(--text); scroll-behavior: smooth; }
-  body { min-height: 100vh; padding-bottom: 72px; -webkit-font-smoothing: antialiased; -webkit-overflow-scrolling: touch; }
+  body { min-height: 100vh; -webkit-font-smoothing: antialiased; -webkit-overflow-scrolling: touch; }
   a { color: inherit; text-decoration: none; }
   img { display: block; max-width: 100%; }
   button { font-family: var(--font); }
@@ -220,6 +375,11 @@ const redditName = user?.reddit_username || user?.name;
   .site-nav-link:hover { color: #fff; background: rgba(255,255,255,0.06); }
   .site-nav-link:active { background: rgba(255,255,255,0.10); }
   .site-nav-link.active { color: var(--accent); background: rgba(14, 165, 233, 0.14); }
+  .site-nav-admin {
+    color: #c4b5fd; background: rgba(124,58,237,0.18);
+    border: 1px solid rgba(124,58,237,0.35);
+  }
+  .site-nav-admin:hover { color: #fff; background: rgba(124,58,237,0.30); }
 
   .site-logo {
     display: inline-flex; align-items: center; gap: var(--space-2);
@@ -274,26 +434,103 @@ const redditName = user?.reddit_username || user?.name;
     .site-header-inner { padding: 0 var(--space-4); }
   }
 
-  /* ── Mobile bottom nav ── */
-  .mob-nav {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-    background: rgba(255,255,255,0.96); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  /* ── Mobile hamburger + drawer ── */
+  .mob-hamburger {
+    display: none; /* mobile only — see media query */
+    width: 40px; height: 40px; border-radius: 10px;
+    background: transparent; border: none; cursor: pointer; padding: 0;
+    flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  }
+  .mob-hamburger span {
+    display: block; width: 22px; height: 2px;
+    background: rgba(255,255,255,0.92); border-radius: 2px;
+    transition: background 0.15s;
+  }
+  .mob-hamburger:hover { background: rgba(255,255,255,0.08); }
+  .mob-hamburger:active { background: rgba(255,255,255,0.14); }
+
+  .mob-backdrop {
+    position: fixed; inset: 0; z-index: 999;
+    background: rgba(15,23,42,0.55); backdrop-filter: blur(4px);
+    opacity: 0; transition: opacity 0.22s ease;
+  }
+  .mob-backdrop.open { opacity: 1; }
+
+  .mob-drawer {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 1000;
+    width: 84%; max-width: 320px;
+    background: var(--bg); color: var(--text);
+    transform: translateX(-100%); transition: transform 0.22s ease;
+    display: flex; flex-direction: column;
+    box-shadow: 8px 0 32px rgba(0,0,0,0.18);
+    overflow-y: auto;
+  }
+  .mob-drawer.open { transform: translateX(0); }
+  body.drawer-open { overflow: hidden; }
+
+  .mob-drawer-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 20px 12px; border-bottom: 1px solid var(--border);
+  }
+  .mob-drawer-brand { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+  .mob-drawer-brand span { font-size: 22px; }
+  .mob-drawer-brand strong { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+  .mob-drawer-close {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 22px; line-height: 1; color: var(--text-sec);
+    cursor: pointer; padding: 0;
+  }
+  .mob-drawer-close:hover { background: var(--surface-hover); color: var(--text); }
+
+  .mob-drawer-user {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    text-decoration: none; color: var(--text);
+  }
+  .mob-drawer-user:hover { background: var(--surface); }
+  .mob-drawer-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 17px; font-weight: 800;
+  }
+  .mob-drawer-user strong { display: block; font-size: 15px; font-weight: 700; }
+  .mob-drawer-user span { font-size: 12px; color: var(--text-sec); }
+
+  .mob-drawer-nav { display: flex; flex-direction: column; padding: 12px 12px; flex: 1; }
+  .mob-drawer-link {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 14px; border-radius: 12px;
+    font-size: 15px; font-weight: 600; color: var(--text); text-decoration: none;
+    transition: background 0.15s;
+  }
+  .mob-drawer-link:hover { background: var(--surface); }
+  .mob-drawer-link.active { background: var(--accent-dim); color: var(--accent); }
+  .mob-drawer-icon { font-size: 20px; width: 24px; text-align: center; }
+  .mob-drawer-link-admin { color: #7C3AED; }
+  .mob-drawer-link-admin.active { background: rgba(124,58,237,0.12); }
+
+  .mob-drawer-foot {
+    padding: 16px 20px max(20px, env(safe-area-inset-bottom));
     border-top: 1px solid var(--border);
-    display: flex; justify-content: space-around; align-items: center;
-    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
-    height: 60px;
   }
-  .mob-link {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    text-decoration: none; padding: 4px 10px;
-    color: var(--text-faint); transition: color 0.15s;
-    -webkit-tap-highlight-color: transparent;
-    min-width: 48px;
+  .mob-drawer-cta {
+    display: block; padding: 12px; border-radius: 999px;
+    background: var(--cta-bg); color: var(--cta-text);
+    font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    text-align: center; text-decoration: none;
   }
-  .mob-link.active { color: var(--accent); }
-  .mob-icon { font-size: 22px; line-height: 1; }
-  .mob-label { font-size: 10px; font-weight: 600; letter-spacing: 0.2px; }
-  @media(min-width: 701px) { .mob-nav { display: none; } body { padding-bottom: 0; } }
+  .mob-drawer-cta-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+  @media(max-width: 760px) {
+    .mob-hamburger { display: flex; justify-self: start; }
+    .site-header-inner { grid-template-columns: auto 1fr auto; }
+    .site-nav-left, .site-nav-right { display: none; }
+  }
+  @media(min-width: 761px) {
+    .mob-drawer, .mob-backdrop { display: none !important; }
+  }
 
   /* ── Shared components ── */
   .card {
@@ -308,15 +545,16 @@ const redditName = user?.reddit_username || user?.name;
   .btn-cta {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     padding: 12px 24px; border-radius: var(--radius-pill);
-    font-size: 15px; font-weight: 600;
+    font-size: 15px; font-weight: 700;
     background: var(--cta-bg); color: var(--cta-text); border: none;
     cursor: pointer; text-decoration: none;
-    box-shadow: 0 1px 3px rgba(14,165,233,0.25);
-    transition: all 0.15s;
+    box-shadow: 0 2px 8px rgba(249,115,22,0.25);
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
     -webkit-tap-highlight-color: transparent;
+    font-family: var(--font-display);
   }
-  .btn-cta:hover { box-shadow: 0 6px 20px rgba(14,165,233,0.35); transform: translateY(-1px); }
-  .btn-cta:active { transform: translateY(0); box-shadow: 0 1px 3px rgba(14,165,233,0.25); }
+  .btn-cta:hover { box-shadow: 0 8px 24px var(--cta-glow); transform: translateY(-2px) scale(1.02); filter: saturate(1.1); }
+  .btn-cta:active { transform: translateY(0); box-shadow: 0 2px 8px var(--cta-glow); }
 
   .btn-sec {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -400,4 +638,161 @@ const redditName = user?.reddit_username || user?.name;
     .site-footer-inner { grid-template-columns: 1fr; }
     .footer-brand-col { grid-column: auto; }
   }
+
+  /* ── Welcome tour ── */
+  /* Explicit [hidden] rules — needed because the elements below set
+     their own display, which would otherwise override the HTML hidden
+     attribute. */
+  .wt-overlay[hidden], .wt-modal[hidden], .wt-footer[hidden],
+  .wt-slide[hidden] { display: none !important; }
+
+  .wt-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--space-4);
+    animation: wt-fade 0.25s ease-out;
+  }
+  @keyframes wt-fade { from { opacity: 0; } to { opacity: 1; } }
+  .wt-modal {
+    position: relative; background: var(--bg); color: var(--text);
+    border-radius: 24px; max-width: 480px; width: 100%;
+    padding: var(--space-6);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+    animation: wt-pop 0.3s ease-out;
+  }
+  @keyframes wt-pop { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .wt-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 22px; line-height: 1; color: var(--text-sec);
+    cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wt-close:hover { background: var(--surface-hover); color: var(--text); }
+  .wt-slide { text-align: center; padding: 8px 4px 0; }
+  .wt-emoji { font-size: 56px; margin-bottom: 12px; line-height: 1; }
+  .wt-slide h2 { font-family: var(--font-display); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+  .wt-slide p { font-size: 15px; line-height: 1.55; color: var(--text-sec); margin-bottom: 14px; }
+  .wt-slide p strong { color: var(--text); font-weight: 700; }
+  .wt-tip {
+    margin-top: 12px; padding: 12px 14px;
+    background: linear-gradient(135deg, #EEF2FF, #F0FDF4);
+    border: 1px solid #C7D2FE; border-radius: 12px;
+    font-size: 13px; color: var(--text); text-align: left;
+  }
+  .wt-tip strong { font-weight: 700; }
+  .wt-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+  .wt-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 12px 22px; border-radius: 999px;
+    font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    border: none; cursor: pointer; text-decoration: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .wt-btn-primary { background: var(--cta-bg); color: var(--cta-text); }
+  .wt-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px var(--accent-glow); }
+  .wt-btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .wt-btn-ghost:hover { background: var(--surface-hover); }
+  .wt-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-top: 22px; padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  .wt-step-btn {
+    background: none; border: none; cursor: pointer;
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    color: var(--text-sec); padding: 8px 12px; border-radius: 8px;
+  }
+  .wt-step-btn:hover { color: var(--text); background: var(--surface); }
+  .wt-step-btn-primary { color: var(--accent); }
+  .wt-step-btn-primary:hover { color: var(--accent); background: var(--accent-dim); }
+  .wt-step-btn:disabled { opacity: 0.35; cursor: default; background: none; }
+  .wt-dots { display: flex; gap: 6px; }
+  .wt-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-hover); transition: background 0.2s; }
+  .wt-dot.active { background: var(--accent); }
 </style>
+
+<script is:inline>
+  (function() {
+    var tour = document.getElementById('welcome-tour');
+    if (!tour) return;
+    try {
+      if (localStorage.getItem('dsn_welcome_seen')) return;
+    } catch (e) {}
+    // Show after a brief delay so the page settles first
+    setTimeout(function() { tour.removeAttribute('hidden'); }, 500);
+
+    var slides = tour.querySelectorAll('.wt-slide');
+    var footer = document.getElementById('wt-footer');
+    var prevBtn = document.getElementById('wt-prev');
+    var nextBtn = document.getElementById('wt-next');
+    var closeBtn = document.getElementById('wt-close');
+    var dots = tour.querySelectorAll('.wt-dot');
+    var step = 0;
+    var maxStep = slides.length - 1;
+
+    function dismiss() {
+      try { localStorage.setItem('dsn_welcome_seen', '1'); } catch (e) {}
+      // Cookie is the source of truth — survives localStorage clears,
+      // Safari private mode, etc. 1 year, root path.
+      try {
+        document.cookie = 'dsn_tour_seen=1; Path=/; Max-Age=31536000; SameSite=Lax';
+      } catch (e) {}
+      tour.setAttribute('hidden', '');
+    }
+
+    function show(n) {
+      step = Math.max(0, Math.min(maxStep, n));
+      slides.forEach(function(s, i) {
+        if (i === step) s.removeAttribute('hidden');
+        else s.setAttribute('hidden', '');
+      });
+      if (step >= 1 && step <= 5) {
+        footer.removeAttribute('hidden');
+        dots.forEach(function(d, i) {
+          d.classList.toggle('active', i === step - 1);
+        });
+        prevBtn.disabled = step === 1;
+        nextBtn.textContent = step === maxStep ? 'Done' : 'Next →';
+      } else {
+        footer.setAttribute('hidden', '');
+      }
+    }
+
+    tour.addEventListener('click', function(e) {
+      // Backdrop click closes
+      if (e.target === tour) { dismiss(); return; }
+      // Walk up to find the nearest [data-action] — tap targets on
+      // mobile can land on child spans inside a button
+      var el = e.target;
+      while (el && el !== tour) {
+        var action = el.getAttribute && el.getAttribute('data-action');
+        if (action) {
+          if (action === 'start') show(1);
+          else if (action === 'skip') dismiss();
+          else if (action === 'signin') {
+            dismiss();
+            window.location.href = '/login';
+          }
+          else if (action === 'prev') show(step - 1);
+          else if (action === 'next') {
+            if (step === maxStep) dismiss();
+            else show(step + 1);
+          }
+          return;
+        }
+        el = el.parentNode;
+      }
+    });
+    closeBtn.addEventListener('click', dismiss);
+    document.addEventListener('keydown', function(e) {
+      if (tour.hasAttribute('hidden')) return;
+      if (e.key === 'Escape') dismiss();
+      else if (e.key === 'ArrowRight' && step >= 1 && step < maxStep) show(step + 1);
+      else if (e.key === 'ArrowLeft' && step > 1) show(step - 1);
+    });
+  })();
+</script>

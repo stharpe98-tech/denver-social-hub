@@ -2,6 +2,7 @@ import type { APIContext } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getDB } from '../../lib/db';
 import { mirrorEventCreate } from '../../lib/event-sync/outbound';
+import { ensureEventsSchema } from '../../lib/events-schema';
 
 async function notifyAdmin(db: D1Database, eventTitle: string, submittedBy: string) {
   try {
@@ -54,7 +55,8 @@ export async function POST({ request, cookies }: APIContext) {
   if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
 
   try {
-    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day } = await request.json() as any;
+    await ensureEventsSchema(db);
+    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day, vibe_tags, group_id: rawGroupId } = await request.json() as any;
 
     if (!title || !title.trim()) {
       return new Response(JSON.stringify({ error: 'Title is required' }), { status: 400 });
@@ -103,8 +105,24 @@ export async function POST({ request, cookies }: APIContext) {
 
     const phone = (contact_phone || '').trim();
 
+    const vibeTagsStr = Array.isArray(vibe_tags)
+      ? vibe_tags.filter((s: any) => typeof s === 'string').slice(0, 6).join(',')
+      : '';
+
+    // Group scoping (optional). Must be a member of the group to post under it.
+    let groupId: number | null = null;
+    if (rawGroupId) {
+      const gid = parseInt(rawGroupId);
+      if (gid) {
+        const isMember: any = await db.prepare(
+          'SELECT 1 FROM group_members WHERE group_id=? AND LOWER(member_email)=LOWER(?)'
+        ).bind(gid, user.email).first();
+        if (isMember) groupId = gid;
+      }
+    }
+
     const insert = await db.prepare(
-      `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, discord_link, contact_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, discord_link, contact_phone, vibe_tags, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       title.trim(),
       fullDesc,
@@ -117,7 +135,9 @@ export async function POST({ request, cookies }: APIContext) {
       priceCap,
       submittedBy,
       eventLink,
-      phone
+      phone,
+      vibeTagsStr,
+      groupId,
     ).run();
 
     // Notify Seth about new event (non-blocking)

@@ -1,6 +1,8 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
+import { parseVibeTags, vibeLabel } from '../../lib/events-schema';
+import { ensureCohostsSchema } from '../../lib/cohosts-schema';
 
 const db = getDB();
 const { id } = Astro.params;
@@ -10,19 +12,27 @@ if (cookie) { try { user = JSON.parse(cookie); } catch {} }
 
 let event: any = null;
 let rsvps: any[] = [];
+let maybeList: any[] = [];
 let waitlist: any[] = [];
+let cohosts: any[] = [];
+let eventGroup: any = null;
 let comments: any[] = [];
 let bringItems: any[] = [];
 let myRsvp: any = null;
 let myWaitlistEntry: any = null;
+let eventPhotos: any[] = [];
 
 try {
   if (db && id) {
     event = await db.prepare("SELECT * FROM events WHERE id=?").bind(id).first();
     const r = await db.prepare(
-      "SELECT r.*, m.reddit_username, m.karma, m.reliability_score, m.check_in_count FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL AND (r.status IS NULL OR r.status != 'not_going') ORDER BY r.created_at"
+      "SELECT r.*, m.reddit_username, m.karma, m.reliability_score, m.check_in_count FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL AND (r.status IS NULL OR r.status = 'going') ORDER BY r.created_at"
     ).bind(id).all();
     rsvps = r?.results || [];
+    const mb = await db.prepare(
+      "SELECT r.*, m.reddit_username FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL AND r.status='maybe' ORDER BY r.created_at"
+    ).bind(id).all();
+    maybeList = (mb?.results || []) as any[];
     const w = await db.prepare(
       "SELECT r.*, m.reddit_username, m.karma FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NOT NULL ORDER BY r.waitlist_position"
     ).bind(id).all();
@@ -31,10 +41,32 @@ try {
     comments = c?.results || [];
     const bi = await db.prepare("SELECT * FROM bring_items WHERE event_id=? ORDER BY id ASC").bind(id).all();
     bringItems = bi?.results || [];
+    try {
+      const ph = await db.prepare(
+        "SELECT id, email, name, photo_url, caption, created_at FROM event_photos WHERE event_id = ? ORDER BY created_at DESC LIMIT 60"
+      ).bind(id).all();
+      eventPhotos = ph?.results || [];
+    } catch { /* table may not exist yet on fresh deploys */ }
     if (user) {
-      myRsvp = rsvps.find((r: any) => r.member_email === user.email) || null;
+      myRsvp = rsvps.find((r: any) => r.member_email === user.email)
+        || maybeList.find((r: any) => r.member_email === user.email)
+        || null;
       myWaitlistEntry = waitlist.find((w: any) => w.member_email === user.email) || null;
     }
+    if (event.group_id) {
+      try {
+        eventGroup = await db.prepare('SELECT id, slug, name FROM groups WHERE id=?').bind(event.group_id).first();
+      } catch {}
+    }
+    await ensureCohostsSchema(db);
+    const ch = await db.prepare(`
+      SELECT ec.member_email, m.name as display_name, m.reddit_username, m.discord_username
+      FROM event_cohosts ec
+      LEFT JOIN members m ON LOWER(m.email) = LOWER(ec.member_email)
+      WHERE ec.event_id = ?
+      ORDER BY ec.added_at ASC
+    `).bind(id).all();
+    cohosts = (ch?.results || []) as any[];
   }
 } catch (err) { console.error('Event detail error:', err); }
 
@@ -52,7 +84,21 @@ const userAccountAge = user?.reddit_account_created
   ? Math.floor((Date.now() - new Date(user.reddit_account_created).getTime()) / (1000 * 60 * 60 * 24))
   : 0;
 const meetsKarmaGate = (!event.karma_min || userKarma >= event.karma_min) && (!event.account_age_min || userAccountAge >= event.account_age_min);
-const showLocation = myRsvp && meetsKarmaGate;
+
+// Permission: original host (matched by host_id = user.id) or any
+// listed co-host can manage co-hosts for this event.
+const isCreator = !!(user && event.host_id && event.host_id === user.id);
+const isCohost = !!(user?.email && cohosts.some((c: any) => (c.member_email || '').toLowerCase() === user.email.toLowerCase()));
+const isSuperAdmin = (user?.email || '').toLowerCase() === 'stharpe98@gmail.com';
+const isAdmin = isSuperAdmin || user?.role === 'admin';
+const canManageCohosts = isCreator || isCohost;
+// Owner + admins can delete any event; hosts/co-hosts can only delete their own.
+const canDeleteEvent = isAdmin || isCreator || isCohost;
+const cohostEmailSet = new Set(cohosts.map((c: any) => (c.member_email || '').toLowerCase()));
+
+// Address is visible to: hosts, co-hosts, admins (always), plus any
+// confirmed RSVP that clears the karma gate (going or maybe).
+const showLocation = isCreator || isCohost || isAdmin || (myRsvp && meetsKarmaGate);
 
 // Threaded comments
 const rootComments = comments.filter((c: any) => !c.parent_id);
@@ -88,7 +134,17 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
 <Base title={event.title}>
 <main class="ev">
   <!-- Back link -->
-  <a href="/events" class="ev-back">← Back to events</a>
+  <div class="ev-top-row">
+    <a href="/events" class="ev-back">← Back to events</a>
+    <div class="ev-top-actions">
+      {user && !canDeleteEvent && (
+        <button class="ev-report-btn" data-report="event" data-id={id}>🚩 Report</button>
+      )}
+      {canDeleteEvent && (
+        <button class="ev-delete-btn" id="ev-delete-btn" data-event-id={id}>🗑 Delete event</button>
+      )}
+    </div>
+  </div>
 
   <!-- Hero header -->
   <div class="ev-hero">
@@ -98,6 +154,10 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
       <span class="tag tag-blue">{typeLabel[event.event_type] || 'Event'}</span>
       {event.karma_min > 0 && <span class="tag tag-yellow">🔒 {event.karma_min}+ karma</span>}
       {event.account_age_min > 0 && <span class="tag tag-yellow">🔒 {event.account_age_min}d+ account</span>}
+      {parseVibeTags(event.vibe_tags).map((key:string) => {
+        const t = vibeLabel(key);
+        return t && <span class="tag tag-green">{t.emoji} {t.label}</span>;
+      })}
     </div>
   </div>
 
@@ -189,15 +249,48 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
     {user && myRsvp && (
       <div class="ev-rsvp-confirmed">
         <div class="ev-rsvp-confirmed-top">
-          <span class="ev-check">✓</span>
+          <span class="ev-check">{myRsvp.status === 'maybe' ? '🤔' : '✓'}</span>
           <div>
-            <strong>You're in!</strong>
+            <strong>{myRsvp.status === 'maybe' ? 'You said Maybe' : "You're going"}</strong>
             <span class="ev-rsvp-meta">
-              {googleCalUrl && <a href={googleCalUrl} target="_blank" rel="noopener" class="ev-cal-link">📅 Add to calendar</a>}
+              {googleCalUrl && myRsvp.status !== 'maybe' && (
+                <span class="ev-cal-links">
+                  <a href={googleCalUrl} target="_blank" rel="noopener" class="ev-cal-link">📅 Google</a>
+                  <a href={`/api/events/${id}/ics`} class="ev-cal-link">📥 .ics</a>
+                </span>
+              )}
               <button class="ev-cancel-btn" id="cancel-rsvp-btn" data-event-id={id}>Cancel RSVP</button>
             </span>
           </div>
         </div>
+        <div class="ev-rsvp-switch">
+          <button class={`ev-rsvp-switch-btn ${(myRsvp.status === 'going' || !myRsvp.status) ? 'active' : ''}`} data-switch="going" data-event-id={id}>Going</button>
+          <button class={`ev-rsvp-switch-btn ${myRsvp.status === 'maybe' ? 'active' : ''}`} data-switch="maybe" data-event-id={id}>Maybe</button>
+        </div>
+
+        {/* Check-in QR — only when going + has a token */}
+        {(myRsvp.status === 'going' || !myRsvp.status) && myRsvp.checkin_token && (
+          <div class="ev-qr">
+            {myRsvp.checked_in ? (
+              <div class="ev-qr-done">
+                <span class="ev-qr-check">✓</span>
+                <div>
+                  <strong>You're checked in!</strong>
+                  <span>Have fun at the event.</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div class="ev-qr-label">📲 Your check-in QR</div>
+                <img class="ev-qr-img"
+                  src={`https://quickchart.io/qr?size=240&margin=2&text=${encodeURIComponent(`https://denversocialhub.com/checkin/${myRsvp.checkin_token}`)}`}
+                  alt="Check-in QR code"
+                  width="200" height="200" />
+                <div class="ev-qr-hint">Show this at the door, or open <a href={`/checkin/${myRsvp.checkin_token}`}>this link</a> when you arrive.</div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Bring items — claimable after RSVP */}
         {hasUnclaimedItems && (
@@ -253,12 +346,23 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
     {/* Open to RSVP — the big moment */}
     {user && !myRsvp && !myWaitlistEntry && meetsKarmaGate && !isFull && (
       <div class="ev-rsvp-card" id="rsvp-card">
-        {/* Step 1: The big button */}
+        {/* Step 1: 3-state RSVP */}
         <div id="rsvp-step1">
-          <button class="ev-rsvp-btn" id="rsvp-go-btn" data-event-id={id}>
-            I'm in! 🎉
-          </button>
-          <span class="ev-rsvp-sub">{spotsLeft !== Infinity ? `${spotsLeft} spots left` : `${rsvps.length} going so far`}</span>
+          <div class="ev-rsvp-options">
+            <button class="ev-rsvp-btn ev-rsvp-going" data-rsvp="going" data-event-id={id}>
+              <span class="ev-rsvp-emoji">🎉</span>
+              <span>Going</span>
+            </button>
+            <button class="ev-rsvp-btn ev-rsvp-maybe" data-rsvp="maybe" data-event-id={id}>
+              <span class="ev-rsvp-emoji">🤔</span>
+              <span>Maybe</span>
+            </button>
+            <button class="ev-rsvp-btn ev-rsvp-no" data-rsvp="not_going" data-event-id={id}>
+              <span class="ev-rsvp-emoji">👋</span>
+              <span>Can't make it</span>
+            </button>
+          </div>
+          <span class="ev-rsvp-sub">{spotsLeft !== Infinity ? `${spotsLeft} spots left` : `${rsvps.length} going${maybeList.length ? ` · ${maybeList.length} maybe` : ''}`}</span>
         </div>
 
         {/* Step 2: Pick bring items (hidden initially, shown after RSVP) */}
@@ -315,6 +419,48 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
           </div>
         ))}
       </div>
+    </div>
+  )}
+
+  {eventGroup && (
+    <a href={`/groups/${eventGroup.slug}`} class="ev-group-banner">
+      <span>👥</span>
+      <span>Posted in <strong>{eventGroup.name}</strong></span>
+      <span class="ev-group-arrow">›</span>
+    </a>
+  )}
+
+  <!-- CO-HOSTS -->
+  {(cohosts.length > 0 || canManageCohosts) && (
+    <div class="ev-section">
+      <h2 class="ev-section-title">🎤 Hosts</h2>
+      <div class="ev-cohosts">
+        {event.submitted_by && (
+          <div class="ev-cohost-row">
+            <span class="ev-cohost-badge primary">Host</span>
+            <strong>{event.submitted_by}</strong>
+          </div>
+        )}
+        {cohosts.map((c: any) => {
+          const name = c.display_name || c.reddit_username || c.discord_username || (c.member_email || '').split('@')[0];
+          return (
+            <div class="ev-cohost-row">
+              <span class="ev-cohost-badge">Co-host</span>
+              <strong>{name}</strong>
+              {canManageCohosts && (
+                <button class="ev-cohost-remove" data-remove-cohost={c.member_email} data-event-id={id}>Remove</button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {canManageCohosts && (
+        <form class="ev-cohost-add" id="cohost-add-form" data-event-id={id}>
+          <input type="email" id="cohost-email-input" placeholder="member@email — add a co-host" class="ev-cohost-input" required />
+          <button type="submit" class="ev-cohost-add-btn">+ Add</button>
+        </form>
+      )}
+      <div id="cohost-err" class="ev-cohost-err"></div>
     </div>
   )}
 
@@ -393,6 +539,41 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   </div>
 
   <!-- ═══════════════════════════════════════ -->
+  <!-- PHOTOS (post-event only)                -->
+  <!-- ═══════════════════════════════════════ -->
+  {event.is_past && (
+    <div class="ev-section">
+      <h2 class="ev-section-title">📸 Photos ({eventPhotos.length})</h2>
+      {eventPhotos.length > 0 ? (
+        <div class="ev-photos-grid">
+          {eventPhotos.map((p:any) => (
+            <figure class="ev-photo">
+              <img src={p.photo_url} alt={p.caption || `Photo by ${p.name}`} loading="lazy"/>
+              <figcaption>
+                <span class="ev-photo-by">{p.name || 'Anonymous'}</span>
+                {p.caption && <span class="ev-photo-cap">{p.caption}</span>}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      ) : (
+        <p class="ev-empty">No photos yet. Be the first to share one from the event.</p>
+      )}
+      {user && myRsvp && (
+        <div class="ev-photo-upload">
+          <label class="ev-photo-upload-btn">
+            📤 Upload a photo
+            <input type="file" id="ev-photo-input" accept="image/*" hidden/>
+          </label>
+          <input type="text" id="ev-photo-caption" class="input" placeholder="Add a caption (optional)" maxlength="160"/>
+          <button type="button" class="ev-photo-submit" id="ev-photo-submit" disabled>Share</button>
+          <div id="ev-photo-status" class="ev-photo-status"></div>
+        </div>
+      )}
+    </div>
+  )}
+
+  <!-- ═══════════════════════════════════════ -->
   <!-- THREAD / COMMENTS                       -->
   <!-- ═══════════════════════════════════════ -->
   <div class="ev-section">
@@ -468,6 +649,30 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   }
 
   /* Back link */
+  .ev-top-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .ev-top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ev-report-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-sec);
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .ev-report-btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-hover); }
+
+  .ev-delete-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 999px;
+    background: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C;
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .ev-delete-btn:hover { background: #FEE2E2; border-color: #F87171; color: #991B1B; }
+  .ev-delete-btn:active { background: #FECACA; }
+
   .ev-back {
     font-size: 13px;
     font-weight: 500;
@@ -576,6 +781,52 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   .ev-rsvp-cta-text { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--text); }
   .ev-rsvp-sub { font-size: 13px; color: var(--text-sec); margin-top: 4px; }
 
+  /* 3-state RSVP buttons */
+  .ev-rsvp-options {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px; margin-bottom: 12px;
+  }
+  .ev-rsvp-options .ev-rsvp-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 14px 8px; font-size: 14px; border: 2px solid var(--border);
+    background: var(--bg); color: var(--text); border-radius: 14px;
+  }
+  .ev-rsvp-emoji { font-size: 22px; line-height: 1; }
+  .ev-rsvp-going:hover  { background: #DCFCE7; border-color: #16A34A; color: #166534; }
+  .ev-rsvp-maybe:hover  { background: #FEF3C7; border-color: #D97706; color: #92400E; }
+  .ev-rsvp-no:hover     { background: #FEE2E2; border-color: #DC2626; color: #991B1B; }
+  .ev-rsvp-options .ev-rsvp-btn.loading { opacity: 0.5; pointer-events: none; }
+  @media (max-width: 420px) {
+    .ev-rsvp-options { grid-template-columns: 1fr; }
+  }
+
+  /* Switch chips (after RSVP) */
+  /* Check-in QR */
+  .ev-qr {
+    margin-top: 14px; padding: 16px;
+    background: linear-gradient(135deg, var(--sunset-dim), var(--pink-dim));
+    border: 1px dashed var(--border); border-radius: 14px;
+    text-align: center;
+  }
+  .ev-qr-label { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .ev-qr-img { display: inline-block; background: #fff; padding: 6px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); width: 200px; height: 200px; }
+  .ev-qr-hint { font-size: 12px; color: var(--text-sec); margin-top: 10px; line-height: 1.5; }
+  .ev-qr-hint a { color: var(--accent); font-weight: 600; }
+  .ev-qr-done { display: flex; align-items: center; gap: 12px; justify-content: center; }
+  .ev-qr-check { width: 36px; height: 36px; border-radius: 50%; background: var(--mint); color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+  .ev-qr-done strong { display: block; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); }
+  .ev-qr-done span { font-size: 13px; color: var(--text-sec); }
+
+  .ev-rsvp-switch { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .ev-rsvp-switch-btn {
+    flex: 1; padding: 8px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 13px; font-weight: 600; color: var(--text-sec);
+    cursor: pointer; font-family: var(--font); transition: all 0.15s;
+  }
+  .ev-rsvp-switch-btn:hover { background: var(--surface-hover); color: var(--text); }
+  .ev-rsvp-switch-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
   /* The big RSVP button */
   .ev-rsvp-btn {
     display: inline-flex;
@@ -654,6 +905,34 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   }
   .ev-cal-link { color: var(--accent); font-weight: 500; text-decoration: none; }
   .ev-cal-link:hover { text-decoration: underline; }
+  .ev-cal-links { display: inline-flex; gap: 12px; }
+
+  /* Co-hosts */
+  .ev-cohosts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .ev-cohost-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); }
+  .ev-cohost-row strong { flex: 1; font-size: 14px; font-weight: 600; }
+  .ev-cohost-badge { font-size: 10px; padding: 3px 9px; border-radius: 999px; background: var(--bg); color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; border: 1px solid var(--border); }
+  .ev-cohost-badge.primary { background: #FCE7F3; color: #9D174D; border-color: transparent; }
+  .ev-cohost-remove { background: none; border: none; color: var(--text-sec); font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .ev-cohost-remove:hover { color: #DC2626; background: #FEF2F2; }
+  .ev-cohost-add { display: flex; gap: 8px; }
+  .ev-cohost-input { flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-family: var(--font); background: var(--bg); }
+  .ev-cohost-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .ev-cohost-add-btn { padding: 10px 16px; border-radius: 999px; background: var(--cta-bg); color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 13px; border: none; cursor: pointer; }
+  .ev-cohost-add-btn:hover { box-shadow: 0 4px 12px var(--accent-glow); }
+  .ev-cohost-err { color: #DC2626; font-size: 12px; min-height: 16px; margin-top: 6px; }
+
+  .ev-group-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; margin: 12px 0;
+    background: linear-gradient(135deg, #EEF2FF, #F0FDF4);
+    border: 1px solid #C7D2FE; border-radius: 12px;
+    font-size: 13px; color: var(--text); text-decoration: none;
+    transition: transform 0.15s;
+  }
+  .ev-group-banner:hover { transform: translateY(-1px); }
+  .ev-group-banner strong { font-weight: 700; }
+  .ev-group-arrow { margin-left: auto; font-size: 20px; color: #7C3AED; font-weight: 700; }
   .ev-cancel-btn {
     font-size: 12px;
     color: var(--text-faint);
@@ -824,6 +1103,23 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   .ev-guest-bringing { font-size: 12px; color: var(--text-sec); }
   .ev-empty { font-size: 14px; color: var(--text-faint); text-align: center; padding: 24px 0; }
 
+  /* Photos */
+  .ev-photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .ev-photo { margin: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  .ev-photo img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
+  .ev-photo figcaption { padding: 8px 10px; font-size: 12px; color: var(--text-sec); display: flex; flex-direction: column; gap: 2px; }
+  .ev-photo-by { font-weight: 600; color: var(--text); }
+  .ev-photo-cap { color: var(--text-sec); }
+  .ev-photo-upload { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 14px; background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; }
+  .ev-photo-upload-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; font-size: 13px; cursor: pointer; color: var(--text); transition: border-color 0.15s; }
+  .ev-photo-upload-btn:hover { border-color: var(--accent); }
+  .ev-photo-upload .input { flex: 1; min-width: 180px; }
+  .ev-photo-submit { padding: 9px 16px; border-radius: 999px; border: none; background: var(--accent); color: #fff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .ev-photo-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ev-photo-status { font-size: 12px; color: var(--text-sec); flex-basis: 100%; min-height: 14px; }
+  .ev-photo-status.err { color: var(--red); }
+  .ev-photo-status.ok { color: var(--mint); }
+
   /* Locked guest list (logged-out) — show an avatar cluster + "sign in" nudge */
   .ev-guests-locked {
     display: flex; align-items: center; gap: 16px;
@@ -950,54 +1246,206 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
 </style>
 
 <script is:inline>
+  // ── Confetti pop — emoji rain on successful "going" RSVP ──
+  function popConfetti() {
+    var emoji = ['🎉','✨','🥳','🎊','🌟','💫','🎈'];
+    var n = 28;
+    for (var i = 0; i < n; i++) {
+      var el = document.createElement('span');
+      el.className = 'rsvp-confetti';
+      el.textContent = emoji[Math.floor(Math.random() * emoji.length)];
+      var left = Math.random() * 100;
+      var delay = Math.random() * 0.35;
+      var dur = 1.1 + Math.random() * 0.6;
+      var rotStart = Math.random() * 360;
+      var rotEnd = rotStart + (Math.random() < 0.5 ? -360 : 360);
+      el.style.cssText =
+        'left:' + left + '%;' +
+        'animation: rsvpConfetti ' + dur + 's ease-in ' + delay + 's forwards;' +
+        '--rs:' + rotStart + 'deg; --re:' + rotEnd + 'deg;';
+      document.body.appendChild(el);
+      setTimeout(function(node) { return function() { node.remove(); }; }(el), 2200);
+    }
+  }
+</script>
+
+<style is:inline>
+  .rsvp-confetti {
+    position: fixed; top: -40px; font-size: 26px; pointer-events: none; z-index: 9999;
+    transform: translateY(0) rotate(var(--rs));
+    will-change: transform, opacity;
+  }
+  @keyframes rsvpConfetti {
+    0%   { transform: translateY(0) rotate(var(--rs)); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(var(--re)); opacity: 0.8; }
+  }
+</style>
+
+<script is:inline>
   (function() {
-    // ── RSVP: "I'm in!" button (Step 1 → Step 2) ──
-    var rsvpBtn = document.getElementById('rsvp-go-btn');
-    if (rsvpBtn) {
-      rsvpBtn.addEventListener('click', async function() {
-        var eventId = rsvpBtn.getAttribute('data-event-id');
-        rsvpBtn.classList.add('loading');
-        rsvpBtn.textContent = 'Saving…';
-        rsvpBtn.disabled = true;
+    // ── Report content ──
+    document.querySelectorAll('[data-report]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var kind = btn.getAttribute('data-report');
+        var id = btn.getAttribute('data-id');
+        var reasons = [
+          { key: 'harassment',     label: '1) Harassment or unsafe behavior' },
+          { key: 'spam',           label: '2) Spam or selling' },
+          { key: 'inaccurate',     label: '3) Inaccurate or misleading' },
+          { key: 'inappropriate',  label: '4) Inappropriate content' },
+          { key: 'other',          label: '5) Other' },
+        ];
+        var pick = prompt('Why are you reporting this ' + kind + '?\n\n' + reasons.map(function(r) { return r.label; }).join('\n') + '\n\nEnter 1-5:');
+        if (!pick) return;
+        var idx = parseInt(pick) - 1;
+        if (!reasons[idx]) { alert('Pick 1-5.'); return; }
+        var details = prompt('Anything else we should know? (optional)') || '';
+        try {
+          var res = await fetch('/api/report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'create', target_kind: kind, target_id: String(id), reason: reasons[idx].key, details: details }),
+          });
+          var d = await res.json();
+          if (d.ok) alert(d.already ? "You've already reported this — we're on it." : 'Thanks. We got it and a mod will review.');
+          else alert('Could not submit: ' + d.error);
+        } catch (e) { alert('Network error.'); }
+      });
+    });
+
+    // ── Delete event ──
+    var delBtn = document.getElementById('ev-delete-btn');
+    if (delBtn) {
+      delBtn.addEventListener('click', async function() {
+        if (!confirm('Delete this event? This wipes all RSVPs, comments, and bring-items. Cannot be undone.')) return;
+        var eventId = delBtn.getAttribute('data-event-id');
+        delBtn.disabled = true;
+        delBtn.textContent = 'Deleting…';
+        try {
+          var res = await fetch('/api/events/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: parseInt(eventId) }),
+          });
+          var data = await res.json();
+          if (data.ok) {
+            location.href = '/events';
+          } else {
+            alert('Delete failed: ' + (data.error || 'unknown'));
+            delBtn.disabled = false;
+            delBtn.textContent = '🗑 Delete event';
+          }
+        } catch (e) {
+          alert('Network error.');
+          delBtn.disabled = false;
+          delBtn.textContent = '🗑 Delete event';
+        }
+      });
+    }
+
+    // ── RSVP: 3-state Going / Maybe / Can't make it ──
+    document.querySelectorAll('[data-rsvp]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var status = btn.getAttribute('data-rsvp');
+        var eventId = btn.getAttribute('data-event-id');
+        btn.classList.add('loading');
+        btn.disabled = true;
 
         try {
           var res = await fetch('/api/rsvp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event_id: eventId, action: 'rsvp', status: 'going', party_size: 1 })
+            body: JSON.stringify({ event_id: eventId, action: 'rsvp', status: status, party_size: 1 })
           });
           var data = await res.json();
 
-          if (data.rsvped) {
-            // Success! Show Step 2
-            var step1 = document.getElementById('rsvp-step1');
-            var step2 = document.getElementById('rsvp-step2');
-            var card = document.getElementById('rsvp-card');
-            if (step1) step1.style.display = 'none';
-            if (step2) step2.style.display = 'block';
-            // Change card border to green
-            if (card) {
-              card.style.borderColor = 'var(--green)';
-              card.style.boxShadow = '0 0 0 4px var(--green-dim)';
-            }
-          } else if (data.waitlisted) {
-            window.location.reload();
+          if (data.rsvped || data.waitlisted || data.updated) {
+            // Tiny celebration on a "going" RSVP, then reload to refresh
+            // the gated server-rendered state (address, bring-items, etc).
+            if (data.rsvped && status === 'going') popConfetti();
+            setTimeout(function() { window.location.reload(); }, status === 'going' && data.rsvped ? 1100 : 0);
+            return;
           } else if (data.error === 'login_required') {
             window.location.href = '/login?next=/events/' + eventId;
           } else if (data.error) {
             alert('Could not RSVP: ' + data.error);
-            rsvpBtn.classList.remove('loading');
-            rsvpBtn.textContent = "I'm in! 🎉";
-            rsvpBtn.disabled = false;
+            btn.classList.remove('loading');
+            btn.disabled = false;
           }
         } catch (err) {
           alert('Something went wrong. Please try again.');
-          rsvpBtn.classList.remove('loading');
-          rsvpBtn.textContent = "I'm in! 🎉";
-          rsvpBtn.disabled = false;
+          btn.classList.remove('loading');
+          btn.disabled = false;
         }
       });
+    });
+
+    // ── Co-hosts: add / remove ──
+    var cohostForm = document.getElementById('cohost-add-form');
+    var cohostErr = document.getElementById('cohost-err');
+    if (cohostForm) {
+      cohostForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (cohostErr) cohostErr.textContent = '';
+        var eventId = cohostForm.getAttribute('data-event-id');
+        var input = document.getElementById('cohost-email-input');
+        var email = input ? input.value.trim() : '';
+        if (!email) return;
+        try {
+          var res = await fetch('/api/events/cohosts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'add', event_id: parseInt(eventId), email: email })
+          });
+          var data = await res.json();
+          if (data.ok) location.reload();
+          else if (cohostErr) {
+            cohostErr.textContent = data.error === 'member_not_found' ? 'No member found with that email.' :
+              data.error === 'not_authorized' ? 'Only the host or co-hosts can add.' :
+              ('Failed: ' + data.error);
+          }
+        } catch (e) { if (cohostErr) cohostErr.textContent = 'Network error.'; }
+      });
     }
+    document.querySelectorAll('[data-remove-cohost]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Remove this co-host?')) return;
+        var email = btn.getAttribute('data-remove-cohost');
+        var eventId = btn.getAttribute('data-event-id');
+        try {
+          var res = await fetch('/api/events/cohosts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'remove', event_id: parseInt(eventId), email: email })
+          });
+          var data = await res.json();
+          if (data.ok) location.reload();
+          else alert('Failed: ' + data.error);
+        } catch (e) { alert('Network error.'); }
+      });
+    });
+
+    // ── Switch between Going / Maybe after initial RSVP ──
+    document.querySelectorAll('[data-switch]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (btn.classList.contains('active')) return;
+        var status = btn.getAttribute('data-switch');
+        var eventId = btn.getAttribute('data-event-id');
+        btn.disabled = true;
+        try {
+          var res = await fetch('/api/rsvp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: eventId, action: 'update', status: status, party_size: 1 })
+          });
+          var data = await res.json();
+          if (data.updated || data.ok) window.location.reload();
+          else { alert('Update failed: ' + (data.error || 'unknown')); btn.disabled = false; }
+        } catch (e) {
+          alert('Network error.'); btn.disabled = false;
+        }
+      });
+    });
 
     // ── Step 2: Save picked items ──
     var saveBtn = document.getElementById('save-picks-btn');
@@ -1148,6 +1596,63 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
         comment.appendChild(form);
         form.querySelector('textarea').focus();
       });
+    });
+  })();
+
+  // ── Photo upload ─────────────────────────────────────
+  (function() {
+    var input = document.getElementById('ev-photo-input');
+    var submit = document.getElementById('ev-photo-submit');
+    var status = document.getElementById('ev-photo-status');
+    var caption = document.getElementById('ev-photo-caption');
+    if (!input || !submit) return;
+    var dataUrl = null;
+
+    input.addEventListener('change', function() {
+      var f = input.files && input.files[0];
+      if (!f) { submit.disabled = true; return; }
+      if (f.size > 2 * 1024 * 1024) {
+        status.className = 'ev-photo-status err';
+        status.textContent = 'Image too large (2MB max).';
+        submit.disabled = true; return;
+      }
+      var reader = new FileReader();
+      reader.onload = function() {
+        dataUrl = reader.result;
+        submit.disabled = false;
+        status.className = 'ev-photo-status';
+        status.textContent = f.name + ' ready — add a caption or just hit Share.';
+      };
+      reader.readAsDataURL(f);
+    });
+
+    submit.addEventListener('click', async function() {
+      if (!dataUrl) return;
+      submit.disabled = true;
+      status.className = 'ev-photo-status'; status.textContent = 'Uploading…';
+      try {
+        var eventId = (document.querySelector('[data-event-id]') || {}).getAttribute
+          ? document.querySelector('[data-event-id]').getAttribute('data-event-id')
+          : location.pathname.split('/').pop();
+        var res = await fetch('/api/upload-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event_id: eventId, photo: dataUrl, caption: caption.value.trim() }),
+        });
+        var data = await res.json();
+        if (data.ok) {
+          status.className = 'ev-photo-status ok'; status.textContent = 'Posted ✓ — refreshing…';
+          setTimeout(function(){ location.reload(); }, 600);
+        } else {
+          status.className = 'ev-photo-status err';
+          status.textContent = data.error || 'Upload failed.';
+          submit.disabled = false;
+        }
+      } catch {
+        status.className = 'ev-photo-status err';
+        status.textContent = 'Network error — try again.';
+        submit.disabled = false;
+      }
     });
   })();
 </script>

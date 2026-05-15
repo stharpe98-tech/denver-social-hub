@@ -62,6 +62,35 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   const url = new URL(ctx.request.url);
   const path = url.pathname;
 
+  // ── Sliding session: every signed-in page load extends the cookie
+  // back out to 30 days so daily visitors never get logged out. Skip
+  // for /_astro/, API endpoints, and static assets to avoid adding
+  // Set-Cookie headers to dozens of subresource fetches per page.
+  const sessionPathsSkipped = path.startsWith('/_astro/')
+    || path.startsWith('/api/')
+    || path === '/favicon.svg'
+    || path === '/logo.svg'
+    || path === '/logo-light.svg';
+  if (!sessionPathsSkipped) {
+    const userCookie = ctx.cookies.get('dsn_user')?.value;
+    if (userCookie && looksLikeMember(userCookie)) {
+      ctx.cookies.set('dsn_user', userCookie, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+        sameSite: 'lax',
+      });
+    }
+    const orgCookie = ctx.cookies.get('dsn_org')?.value;
+    if (orgCookie && looksLikeOrg(orgCookie)) {
+      ctx.cookies.set('dsn_org', orgCookie, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30,
+        sameSite: 'lax',
+        httpOnly: true,
+      });
+    }
+  }
+
   if (pathAlwaysAllowed(path)) return next();
 
   // Any signed-in user (organizer or member) skips the gate. The point

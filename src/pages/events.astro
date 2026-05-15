@@ -500,22 +500,9 @@ const content = await getContent();
     });
   });
 
-  // Create panel toggle
-  var createBtn = document.getElementById('createBtn');
-  var createPanel = document.getElementById('createPanel');
-  var createClose = document.getElementById('createClose');
-  if (createBtn && createPanel) {
-    createBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      createPanel.style.display = createPanel.style.display === 'none' ? 'block' : 'none';
-      // Reset to template picker
-      document.getElementById('templatePicker').style.display = 'block';
-      document.getElementById('createForm').style.display = 'none';
-    });
-  }
-  if (createClose && createPanel) {
-    createClose.addEventListener('click', function() { createPanel.style.display = 'none'; });
-  }
+  // "Post an event" button just navigates to /events/new — no JS
+  // intercept. The inline create-panel below was a legacy flow that's
+  // superseded by the dedicated /events/new page.
 
   // Event templates
   var templates = {

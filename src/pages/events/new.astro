@@ -1,154 +1,432 @@
 ---
 import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+import { ensureGroupsSchema } from '../../lib/groups-schema';
 
 const cookie = Astro.cookies.get('dsn_user')?.value;
 let user: any = null;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }
-if (!user) return Astro.redirect('/login?next=' + encodeURIComponent('/events/new'));
+const groupSlug = Astro.url.searchParams.get('group') || '';
+const nextUrl = '/events/new' + (groupSlug ? `?group=${encodeURIComponent(groupSlug)}` : '');
+if (!user) return Astro.redirect('/login?next=' + encodeURIComponent(nextUrl));
+
+let postingInGroup: any = null;
+if (groupSlug) {
+  const db = getDB();
+  if (db) {
+    await ensureGroupsSchema(db);
+    const g: any = await db.prepare('SELECT id, slug, name FROM groups WHERE slug=?').bind(groupSlug).first();
+    if (g) {
+      const member: any = await db.prepare(
+        'SELECT 1 FROM group_members WHERE group_id=? AND LOWER(member_email)=LOWER(?)'
+      ).bind(g.id, user.email).first();
+      if (member) postingInGroup = g;
+    }
+  }
+}
+
+const TYPES = [
+  { v: 'dinner',        emoji: '🍽️', label: 'Dinner' },
+  { v: 'game_night',    emoji: '🎲', label: 'Game night' },
+  { v: 'outdoor',       emoji: '🏔️', label: 'Outdoors' },
+  { v: 'brewery',       emoji: '🍺', label: 'Brewery' },
+  { v: 'coffee',        emoji: '☕', label: 'Coffee' },
+  { v: 'arts',          emoji: '🎨', label: 'Arts' },
+  { v: 'music',         emoji: '🎵', label: 'Music' },
+  { v: 'social',        emoji: '🥂', label: 'Social' },
+  { v: 'sports_outing', emoji: '⚾', label: 'Sports' },
+  { v: 'active',        emoji: '🏃', label: 'Fitness' },
+  { v: 'food_trucks',   emoji: '🌮', label: 'Food trucks' },
+  { v: 'other',         emoji: '✨', label: 'Other' },
+];
 ---
-<Base title="Create an event" description="Plan a small-group event in Denver — dinner, hike, game night, whatever.">
-  <div class="ne-wrap">
-    <div class="ne-card">
-      <a href="/events" class="ne-back">← Events</a>
-      <h1>Plan an event.</h1>
-      <p class="ne-sub">Anything — a dinner, hike, game night, brewery hop. Other locals will see it and RSVP.</p>
+<Base title="Create an event" description="Plan a small-group event in Denver.">
+<div class="ne-wrap">
+  <a href={postingInGroup ? `/groups/${postingInGroup.slug}` : '/events'} class="ne-back">← {postingInGroup ? postingInGroup.name : 'Events'}</a>
+  <h1 class="ne-title">Plan an event.</h1>
+  <p class="ne-sub">Anything — a dinner, hike, game night, brewery hop. Other locals will see it and RSVP.</p>
 
-      <form id="ne-form">
-        <label class="ne-label">What are you hosting? <span class="opt">*</span></label>
-        <input type="text" id="ne-title" class="ne-input" placeholder="Sunset hike at Mount Falcon" required maxlength="120"/>
-
-        <label class="ne-label">Describe it</label>
-        <textarea id="ne-desc" class="ne-input ne-textarea" rows="3" placeholder="What should people expect? Pace, vibe, anything to bring."></textarea>
-
-        <div class="ne-grid">
-          <div>
-            <label class="ne-label">Type</label>
-            <select id="ne-type" class="ne-input">
-              <option value="dinner">🍽 Dinner</option>
-              <option value="game_night">🎲 Game night</option>
-              <option value="outdoor">🌲 Outdoors / hike</option>
-              <option value="brewery">🍺 Brewery</option>
-              <option value="coffee">☕ Coffee</option>
-              <option value="arts">🎨 Arts / culture</option>
-              <option value="music">🎵 Music / concert</option>
-              <option value="social">🥂 Social / mixer</option>
-              <option value="sports_outing">⚾ Sports event</option>
-              <option value="active">🏃 Active / fitness</option>
-              <option value="food_trucks">🌮 Food trucks</option>
-              <option value="other">✨ Other</option>
-            </select>
-          </div>
-          <div>
-            <label class="ne-label">Spots <span class="opt">(0 = unlimited)</span></label>
-            <input type="number" id="ne-spots" class="ne-input" placeholder="12" min="0" max="200" value="12"/>
-          </div>
-        </div>
-
-        <div class="ne-grid">
-          <div>
-            <label class="ne-label">Month <span class="opt">*</span></label>
-            <select id="ne-month" class="ne-input">
-              <option value="JAN">Jan</option><option value="FEB">Feb</option><option value="MAR">Mar</option>
-              <option value="APR">Apr</option><option value="MAY">May</option><option value="JUN">Jun</option>
-              <option value="JUL">Jul</option><option value="AUG">Aug</option><option value="SEP">Sep</option>
-              <option value="OCT">Oct</option><option value="NOV">Nov</option><option value="DEC">Dec</option>
-            </select>
-          </div>
-          <div>
-            <label class="ne-label">Day <span class="opt">*</span></label>
-            <input type="number" id="ne-day" class="ne-input" placeholder="18" min="1" max="31"/>
-          </div>
-        </div>
-
-        <label class="ne-label">Neighborhood / area</label>
-        <input type="text" id="ne-loc" class="ne-input" placeholder="RiNo, Cherry Creek, Capitol Hill…"/>
-
-        <label class="ne-label">Venue <span class="opt">(optional)</span></label>
-        <input type="text" id="ne-venue" class="ne-input" placeholder="Larimer Lounge"/>
-
-        <div class="ne-grid">
-          <div>
-            <label class="ne-label">Budget</label>
-            <select id="ne-budget" class="ne-input">
-              <option>Free</option>
-              <option>$1–10</option>
-              <option>$10–25</option>
-              <option>$25–50</option>
-              <option>$50+</option>
-            </select>
-          </div>
-          <div>
-            <label class="ne-label">Contact phone <span class="opt">(optional)</span></label>
-            <input type="tel" id="ne-phone" class="ne-input" placeholder="(720) 555-1234"/>
-          </div>
-        </div>
-
-        <label class="ne-label">Link <span class="opt">(Discord, signup, anything)</span></label>
-        <input type="text" id="ne-link" class="ne-input" placeholder="https://…"/>
-
-        <button type="submit" id="ne-submit" class="btn-cta ne-submit">Post the event →</button>
-        <div id="ne-err" class="ne-err"></div>
-      </form>
+  {postingInGroup && (
+    <div class="ne-group-banner">
+      <span class="ne-group-icon">👥</span>
+      <div>
+        <strong>Posting in {postingInGroup.name}</strong>
+        <span>This event will be tagged with the group.</span>
+      </div>
     </div>
-  </div>
+  )}
 
-  <style>
-    .ne-wrap { max-width: 600px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-8); }
-    .ne-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--card-shadow-lg); padding: var(--space-6) var(--space-5); }
-    .ne-back { font-size: 13px; color: var(--text-sec); display: inline-block; margin-bottom: var(--space-3); }
-    .ne-back:hover { color: var(--text); }
-    .ne-card h1 { font-family: var(--font-display); font-size: clamp(28px, 4vw, 34px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 8px; }
-    .ne-sub { color: var(--text-sec); font-size: 15px; margin-bottom: var(--space-5); line-height: 1.55; }
-    .ne-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px; margin: var(--space-3) 0 6px; }
-    .ne-label .opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-faint); }
-    .ne-input { width: 100%; padding: 11px 13px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; font-size: 15px; color: var(--text); font-family: var(--font); outline: none; transition: border-color 0.15s, box-shadow 0.15s; -webkit-appearance: none; }
-    .ne-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-    .ne-input.invalid { border-color: var(--red); }
-    .ne-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
-    .ne-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
-    .ne-submit { width: 100%; padding: 14px; font-size: 15px; margin-top: var(--space-4); }
-    .ne-err { font-size: 13px; color: var(--red); margin-top: 10px; display: none; text-align: center; }
-    .ne-err.show { display: block; }
-  </style>
+  <form id="ne-form" data-group-id={postingInGroup?.id || ''} data-group-slug={postingInGroup?.slug || ''}>
 
-  <script is:inline>
-    document.getElementById('ne-form').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      var err = document.getElementById('ne-err');
-      err.className = 'ne-err';
-      var title = document.getElementById('ne-title').value.trim();
-      if (!title) { document.getElementById('ne-title').classList.add('invalid'); err.textContent = 'Pick a title.'; err.className = 'ne-err show'; return; }
-      document.getElementById('ne-title').classList.remove('invalid');
-      var day = document.getElementById('ne-day').value.trim();
-      if (!day) { document.getElementById('ne-day').classList.add('invalid'); err.textContent = 'Pick a day of the month.'; err.className = 'ne-err show'; return; }
-      document.getElementById('ne-day').classList.remove('invalid');
+    <!-- THE BASICS -->
+    <section class="ne-section">
+      <div class="ne-section-head">
+        <span class="ne-section-num">1</span>
+        <h2>The basics</h2>
+      </div>
 
-      var btn = document.getElementById('ne-submit'); var orig = btn.textContent;
-      btn.disabled = true; btn.textContent = 'Posting…';
-      var body = {
-        title: title,
-        description: document.getElementById('ne-desc').value.trim(),
-        type: document.getElementById('ne-type').value,
-        event_month: document.getElementById('ne-month').value,
-        event_day: day,
-        location: document.getElementById('ne-loc').value.trim(),
-        venue: document.getElementById('ne-venue').value.trim(),
-        budget: document.getElementById('ne-budget').value,
-        spots: document.getElementById('ne-spots').value.trim() || null,
-        link: document.getElementById('ne-link').value.trim(),
-        contact_phone: document.getElementById('ne-phone').value.trim(),
-      };
-      try {
-        var res = await fetch('/api/create-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        var data = await res.json();
-        if (data.ok || data.created) { location.href = '/events'; return; }
-        err.textContent = data.error || 'Could not post — try again.';
-        err.className = 'ne-err show';
-      } catch {
-        err.textContent = 'Network problem — try again.';
-        err.className = 'ne-err show';
-      }
-      btn.disabled = false; btn.textContent = orig;
+      <div class="ne-field">
+        <label class="ne-label" for="ne-title">What are you hosting? <span class="req">*</span></label>
+        <input type="text" id="ne-title" class="ne-input" placeholder="Sunset hike at Mount Falcon" required maxlength="120" />
+      </div>
+
+      <div class="ne-field">
+        <label class="ne-label">Type</label>
+        <div class="ne-types" id="ne-types">
+          {TYPES.map((t, i) => (
+            <button type="button" class={`ne-type ${i === 0 ? 'active' : ''}`} data-type={t.v}>
+              <span class="ne-type-emoji">{t.emoji}</span>
+              <span class="ne-type-label">{t.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div class="ne-field">
+        <label class="ne-label" for="ne-desc">Describe it <span class="opt">(optional)</span></label>
+        <textarea id="ne-desc" class="ne-input ne-textarea" rows="3" placeholder="What should people expect? Pace, vibe, anything to bring."></textarea>
+      </div>
+    </section>
+
+    <!-- WHEN & WHERE -->
+    <section class="ne-section">
+      <div class="ne-section-head">
+        <span class="ne-section-num">2</span>
+        <h2>When & where</h2>
+      </div>
+
+      <div class="ne-field">
+        <label class="ne-label">Date <span class="req">*</span></label>
+        <div class="cal" id="cal">
+          <div class="cal-head">
+            <div class="cal-month" id="cal-month">…</div>
+            <div class="cal-nav">
+              <button type="button" class="cal-nav-btn" id="cal-prev" aria-label="Previous month">‹</button>
+              <button type="button" class="cal-nav-btn" id="cal-next" aria-label="Next month">›</button>
+            </div>
+          </div>
+          <div class="cal-grid" id="cal-grid">
+            <div class="cal-dn">S</div><div class="cal-dn">M</div><div class="cal-dn">T</div>
+            <div class="cal-dn">W</div><div class="cal-dn">T</div><div class="cal-dn">F</div>
+            <div class="cal-dn">S</div>
+          </div>
+          <div class="cal-hint" id="cal-hint">Pick a day</div>
+        </div>
+      </div>
+
+      <div class="ne-field">
+        <label class="ne-label" for="ne-loc">Neighborhood / area</label>
+        <input type="text" id="ne-loc" class="ne-input" placeholder="RiNo, Cherry Creek, Capitol Hill…" />
+      </div>
+
+      <div class="ne-field">
+        <label class="ne-label" for="ne-venue">Venue <span class="opt">(optional)</span></label>
+        <input type="text" id="ne-venue" class="ne-input" placeholder="Larimer Lounge" />
+      </div>
+    </section>
+
+    <!-- DETAILS -->
+    <section class="ne-section">
+      <div class="ne-section-head">
+        <span class="ne-section-num">3</span>
+        <h2>Details</h2>
+      </div>
+
+      <div class="ne-grid">
+        <div class="ne-field">
+          <label class="ne-label" for="ne-spots">Spots <span class="opt">(0 = open)</span></label>
+          <input type="number" id="ne-spots" class="ne-input" placeholder="12" min="0" max="200" value="12" />
+        </div>
+        <div class="ne-field">
+          <label class="ne-label" for="ne-budget">Budget</label>
+          <select id="ne-budget" class="ne-input">
+            <option>Free</option><option>$1–10</option><option>$10–25</option><option>$25–50</option><option>$50+</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ne-field">
+        <label class="ne-label" for="ne-phone">Contact phone <span class="opt">(optional, only shown to RSVPs)</span></label>
+        <input type="tel" id="ne-phone" class="ne-input" placeholder="(720) 555-1234" />
+      </div>
+
+      <div class="ne-field">
+        <label class="ne-label" for="ne-link">Link <span class="opt">(Discord, signup, ticket page…)</span></label>
+        <input type="text" id="ne-link" class="ne-input" placeholder="https://…" />
+      </div>
+
+      <div class="ne-field">
+        <label class="ne-label">Vibe <span class="opt">(pick any that fit)</span></label>
+        <div class="ne-vibes">
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="sober" /><span>🥤 Sober-friendly</span></label>
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="introvert" /><span>🤫 Introvert-friendly</span></label>
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="kids" /><span>🧒 Kid-friendly</span></label>
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="lgbtq" /><span>🏳️‍🌈 LGBTQ+ welcome</span></label>
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="adults" /><span>🍷 21+</span></label>
+          <label class="ne-vibe"><input type="checkbox" name="vibe" value="dogs" /><span>🐕 Dog-friendly</span></label>
+        </div>
+      </div>
+    </section>
+
+    <button type="submit" id="ne-submit" class="ne-submit">Post the event 🎉</button>
+    <div id="ne-err" class="ne-err"></div>
+  </form>
+</div>
+
+<style>
+  .ne-wrap { max-width: 680px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+  .ne-back { font-size: 13px; color: var(--text-sec); text-decoration: none; }
+  .ne-back:hover { color: var(--text); }
+  .ne-title { font-family: var(--font-display); font-size: clamp(32px, 5vw, 42px); font-weight: 900; letter-spacing: -0.025em; margin: 18px 0 8px; }
+  .ne-sub { color: var(--text-sec); font-size: 16px; line-height: 1.55; margin-bottom: 28px; }
+
+  .ne-group-banner {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; margin-bottom: 24px;
+    background: linear-gradient(135deg, #EEF2FF, #F0FDF4);
+    border: 1px solid #C7D2FE; border-radius: 14px;
+  }
+  .ne-group-icon { font-size: 22px; }
+  .ne-group-banner strong { display: block; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); }
+  .ne-group-banner span { font-size: 13px; color: var(--text-sec); }
+
+  .ne-section {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 18px; padding: 24px clamp(18px, 3vw, 28px);
+    margin-bottom: 18px; box-shadow: var(--card-shadow);
+  }
+  .ne-section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .ne-section-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent-dim); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 13px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .ne-section h2 { font-family: var(--font-display); font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+
+  .ne-field { margin-bottom: 16px; }
+  .ne-field:last-child { margin-bottom: 0; }
+  .ne-label { display: block; font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .ne-label .opt, .ne-label .req { font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .ne-label .opt { color: var(--text-faint); }
+  .ne-label .req { color: var(--accent); }
+
+  .ne-input {
+    width: 100%; padding: 12px 14px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+    font-size: 15px; color: var(--text); font-family: var(--font);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+  }
+  .ne-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .ne-input.invalid { border-color: var(--red); }
+  .ne-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+  .ne-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 460px) { .ne-grid { grid-template-columns: 1fr; } }
+
+  /* Type chip grid */
+  .ne-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  @media (min-width: 540px) { .ne-types { grid-template-columns: repeat(4, 1fr); } }
+  .ne-type {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 14px 6px; border-radius: 14px;
+    background: var(--bg); border: 2px solid var(--border);
+    cursor: pointer; transition: transform 0.15s, border-color 0.15s, background 0.15s;
+    font-family: var(--font);
+  }
+  .ne-type:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+  .ne-type.active { border-color: var(--accent); background: var(--accent-dim); }
+  .ne-type-emoji { font-size: 26px; line-height: 1; }
+  .ne-type-label { font-size: 12px; font-weight: 600; color: var(--text); }
+  .ne-type.active .ne-type-label { color: var(--accent); }
+
+  /* Calendar */
+  .cal { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .cal-month { font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--text); }
+  .cal-nav { display: flex; gap: 4px; }
+  .cal-nav-btn {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    cursor: pointer; font-size: 16px; color: var(--text-sec);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font);
+  }
+  .cal-nav-btn:hover { background: var(--surface-hover); color: var(--text); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-dn { text-align: center; font-size: 10px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; padding: 4px 0; }
+  .cal-day {
+    aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center;
+    border-radius: 10px; cursor: pointer; font-family: var(--font);
+    font-size: 14px; font-weight: 600; color: var(--text);
+    border: 1px solid transparent; background: transparent;
+    transition: background 0.12s, color 0.12s;
+  }
+  .cal-day:hover { background: var(--surface); }
+  .cal-day.muted { color: var(--text-faint); opacity: 0.4; }
+  .cal-day.past { color: var(--text-faint); pointer-events: none; opacity: 0.35; text-decoration: line-through; }
+  .cal-day.today { border-color: var(--accent); }
+  .cal-day.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .cal-day.active:hover { background: var(--accent); }
+  .cal-hint { margin-top: 10px; font-size: 13px; color: var(--text-sec); text-align: center; }
+  .cal-hint strong { color: var(--text); }
+
+  /* Vibe pills */
+  .ne-vibes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ne-vibe { position: relative; display: inline-block; }
+  .ne-vibe input { position: absolute; opacity: 0; pointer-events: none; }
+  .ne-vibe span {
+    display: inline-block; padding: 8px 14px; border-radius: 999px;
+    background: var(--bg); border: 1px solid var(--border);
+    font-size: 13px; cursor: pointer; transition: all 0.15s;
+    font-family: var(--font);
+  }
+  .ne-vibe span:hover { border-color: var(--border-hover); }
+  .ne-vibe input:checked + span { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .ne-submit {
+    width: 100%; padding: 16px; margin-top: 8px;
+    border-radius: 999px; border: none; cursor: pointer;
+    background: var(--cta-bg); color: var(--cta-text);
+    font-family: var(--font-display); font-size: 16px; font-weight: 700;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .ne-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 24px var(--accent-glow); }
+  .ne-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+  .ne-err { font-size: 14px; color: var(--red); margin-top: 14px; text-align: center; min-height: 18px; }
+</style>
+
+<script is:inline>
+  // ── Type chip grid: store value on hidden state, default = "dinner" ──
+  var selectedType = 'dinner';
+  document.querySelectorAll('#ne-types .ne-type').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#ne-types .ne-type').forEach(function (x) { x.classList.remove('active'); });
+      btn.classList.add('active');
+      selectedType = btn.getAttribute('data-type') || 'dinner';
     });
-  </script>
+  });
+
+  // ── Calendar ──
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var SHORT  = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  var today = new Date();
+  today.setHours(0,0,0,0);
+  var view = new Date(today.getFullYear(), today.getMonth(), 1);
+  var selected = null;
+  var calGrid = document.getElementById('cal-grid');
+  var calMonth = document.getElementById('cal-month');
+  var calHint = document.getElementById('cal-hint');
+
+  function renderCal() {
+    calGrid.querySelectorAll('.cal-day').forEach(function (el) { el.remove(); });
+    calMonth.textContent = MONTHS[view.getMonth()] + ' ' + view.getFullYear();
+    var firstDow = new Date(view.getFullYear(), view.getMonth(), 1).getDay();
+    var daysInMonth = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+    var prevDays = new Date(view.getFullYear(), view.getMonth(), 0).getDate();
+    for (var i = firstDow - 1; i >= 0; i--) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cal-day muted';
+      btn.textContent = prevDays - i;
+      btn.disabled = true;
+      calGrid.appendChild(btn);
+    }
+    for (var d = 1; d <= daysInMonth; d++) {
+      var date = new Date(view.getFullYear(), view.getMonth(), d);
+      var btn2 = document.createElement('button');
+      btn2.type = 'button';
+      btn2.className = 'cal-day';
+      btn2.textContent = d;
+      if (date < today) btn2.classList.add('past');
+      if (date.getTime() === today.getTime()) btn2.classList.add('today');
+      if (selected && date.getTime() === selected.getTime()) btn2.classList.add('active');
+      (function (dt) {
+        btn2.addEventListener('click', function () {
+          selected = dt;
+          renderCal();
+          var dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+          calHint.innerHTML = 'Selected: <strong>' + dayName + ', ' + MONTHS[dt.getMonth()].slice(0,3) + ' ' + dt.getDate() + '</strong>';
+        });
+      })(date);
+      calGrid.appendChild(btn2);
+    }
+    var totalCells = firstDow + daysInMonth;
+    var trail = (7 - (totalCells % 7)) % 7;
+    for (var t = 1; t <= trail; t++) {
+      var btn3 = document.createElement('button');
+      btn3.type = 'button';
+      btn3.className = 'cal-day muted';
+      btn3.textContent = t;
+      btn3.disabled = true;
+      calGrid.appendChild(btn3);
+    }
+  }
+
+  document.getElementById('cal-prev').addEventListener('click', function () {
+    view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
+    renderCal();
+  });
+  document.getElementById('cal-next').addEventListener('click', function () {
+    view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+    renderCal();
+  });
+  renderCal();
+
+  // ── Submit ──
+  document.getElementById('ne-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var err = document.getElementById('ne-err');
+    err.textContent = '';
+    var titleEl = document.getElementById('ne-title');
+    var title = titleEl.value.trim();
+    if (!title) {
+      titleEl.classList.add('invalid');
+      err.textContent = 'Give your event a title.';
+      titleEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    titleEl.classList.remove('invalid');
+    if (!selected) {
+      err.textContent = 'Pick a date.';
+      document.getElementById('cal').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    var btn = document.getElementById('ne-submit');
+    var orig = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Posting…';
+    var form = document.getElementById('ne-form');
+    var groupId = form.getAttribute('data-group-id') || null;
+    var groupSlug = form.getAttribute('data-group-slug') || '';
+    var body = {
+      title: title,
+      description: document.getElementById('ne-desc').value.trim(),
+      type: selectedType,
+      event_month: SHORT[selected.getMonth()],
+      event_day: String(selected.getDate()),
+      location: document.getElementById('ne-loc').value.trim(),
+      venue: document.getElementById('ne-venue').value.trim(),
+      budget: document.getElementById('ne-budget').value,
+      spots: document.getElementById('ne-spots').value.trim() || null,
+      link: document.getElementById('ne-link').value.trim(),
+      contact_phone: document.getElementById('ne-phone').value.trim(),
+      vibe_tags: Array.from(document.querySelectorAll('input[name="vibe"]:checked')).map(function (c) { return c.value; }),
+      group_id: groupId,
+    };
+    try {
+      var res = await fetch('/api/create-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      var data = await res.json();
+      if (data.ok || data.created) {
+        location.href = groupSlug ? ('/groups/' + groupSlug) : '/events';
+        return;
+      }
+      err.textContent = data.error || 'Could not post — try again.';
+    } catch {
+      err.textContent = 'Network problem — try again.';
+    }
+    btn.disabled = false;
+    btn.textContent = orig;
+  });
+</script>
 </Base>
