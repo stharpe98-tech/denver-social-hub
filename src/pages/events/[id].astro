@@ -91,8 +91,10 @@ const showLocation = myRsvp && meetsKarmaGate;
 const isCreator = !!(user && event.host_id && event.host_id === user.id);
 const isCohost = !!(user?.email && cohosts.some((c: any) => (c.member_email || '').toLowerCase() === user.email.toLowerCase()));
 const isSuperAdmin = (user?.email || '').toLowerCase() === 'stharpe98@gmail.com';
+const isAdmin = isSuperAdmin || user?.role === 'admin';
 const canManageCohosts = isCreator || isCohost;
-const canDeleteEvent = isCreator || isCohost || isSuperAdmin;
+// Owner + admins can delete any event; hosts/co-hosts can only delete their own.
+const canDeleteEvent = isAdmin || isCreator || isCohost;
 const cohostEmailSet = new Set(cohosts.map((c: any) => (c.member_email || '').toLowerCase()));
 
 // Threaded comments
