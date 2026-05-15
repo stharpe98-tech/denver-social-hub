@@ -24,7 +24,7 @@ const showWelcomeTour = !user && !tourSeen;
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,700&family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,600;1,9..144,800&family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 </head>
 <body>
 
@@ -400,7 +400,7 @@ const showWelcomeTour = !user && !tourSeen;
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   /* Design tokens — Earth Studio: parchment surface, sage + terracotta
-     accents, Cormorant Garamond display + Work Sans body. Quiet,
+     accents + marigold pop, Fraunces display + Work Sans body. Quiet,
      ceramic-studio energy. */
   :root {
     /* Surface — parchment */
@@ -426,6 +426,8 @@ const showWelcomeTour = !user && !tourSeen;
     --pink: #B8553D;         /* deeper clay (legacy "pink" slot) */
     --pink-dim: rgba(184, 85, 61, 0.14);
     --mint: #6B8E5A;
+    --marigold: #E8A33B;     /* saffron pop — tags, stamps, "filling up" */
+    --marigold-dim: rgba(232, 163, 59, 0.16);
 
     /* CTA — terracotta */
     --cta-bg: linear-gradient(135deg, #C66B3D, #B8553D);
@@ -433,15 +435,15 @@ const showWelcomeTour = !user && !tourSeen;
     --cta-text: #F5EFE3;
     --cta-glow: rgba(198, 107, 61, 0.32);
 
-    /* Tags — earthy palette */
-    --tag-bg: #E8D5A8;       /* cream */
-    --tag-text: #6B5828;
+    /* Tags — earthy palette + marigold pop */
+    --tag-bg: #FCE3A8;       /* marigold tint */
+    --tag-text: #8B5A14;
     --tag-bg2: #E5D4C2;      /* sand */
     --tag-text2: #8B4A2B;
     --tag-bg3: #DDE6CC;      /* moss */
     --tag-text3: #4A6B3A;
-    --tag-bg4: #E8D5A8;
-    --tag-text4: #6B5828;
+    --tag-bg4: #FCE3A8;
+    --tag-text4: #8B5A14;
 
     /* Status */
     --green: #10B981;
@@ -453,7 +455,7 @@ const showWelcomeTour = !user && !tourSeen;
 
     /* Type */
     --font: 'Work Sans', system-ui, sans-serif;
-    --font-display: 'Cormorant Garamond', 'Work Sans', system-ui, serif;
+    --font-display: 'Fraunces', 'Work Sans', system-ui, serif;
 
     /* Shape */
     --radius: 14px;
