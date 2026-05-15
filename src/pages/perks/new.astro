@@ -48,6 +48,11 @@ import { PARTNER_CATEGORIES } from '../../lib/partners-schema';
         <label class="np-label">How to claim</label>
         <input type="text" name="redemption" class="np-input" maxlength="120" placeholder='Mention "Denver Social" / use code DSN15 / show this page' />
       </div>
+      <div class="np-field">
+        <label class="np-label">RSVPs to unlock</label>
+        <input type="number" name="rsvp_threshold" class="np-input" min="0" max="500" step="1" value="0" placeholder="0" />
+        <span class="np-hint">Hide the discount until this many people RSVP. Use 0 for an always-on offer. Crowd-funded perks (e.g. 10 RSVPs unlocks 15% off) build buzz before the visit.</span>
+      </div>
     </div>
 
     <div class="np-section">

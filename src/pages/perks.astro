@@ -6,11 +6,23 @@ import { ensurePartnersSchema, PARTNER_CATEGORIES, categoryLabel } from '../lib/
 const db = getDB();
 let perks: any[] = [];
 let loadError: string | null = null;
+
+let user: any = null;
+const cookie = Astro.cookies.get('dsn_user')?.value;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+const signedIn = !!user?.email;
+const userEmail = (user?.email || '').toLowerCase();
+
+let rsvpedIds = new Set<number>();
 if (db) {
   try {
     await ensurePartnersSchema(db);
     const r = await db.prepare("SELECT * FROM partners WHERE status='approved' ORDER BY id DESC").all();
     perks = (r.results || []) as any[];
+    if (signedIn && perks.length) {
+      const mine = await db.prepare("SELECT partner_id FROM perk_rsvps WHERE user_email=?").bind(userEmail).all();
+      rsvpedIds = new Set((mine.results || []).map((row: any) => row.partner_id));
+    }
   } catch (e: any) {
     console.error('/perks load failed:', e);
     loadError = e?.message || 'load_failed';
@@ -22,7 +34,7 @@ if (db) {
   <header class="px-head">
     <div class="px-eyebrow">Local partner perks</div>
     <h1>Discounts for showing up.</h1>
-    <p class="px-sub">Local businesses offering deals to Denver Social attendees. No app, no membership — just mention us when you show up (or use the code).</p>
+    <p class="px-sub">Local businesses offering deals to Denver Social attendees. Some perks unlock once enough of us RSVP — the more of us, the better the deal.</p>
     <a href="/perks/new" class="btn-cta px-cta">+ Submit your business</a>
   </header>
 
@@ -42,22 +54,52 @@ if (db) {
     <div class="px-grid">
       {perks.map((p: any) => {
         const cat = categoryLabel(p.category);
+        const threshold = p.rsvp_threshold || 0;
+        const count = p.rsvp_count || 0;
+        const unlocked = threshold === 0 || count >= threshold;
+        const userRsvped = rsvpedIds.has(p.id);
+        const pct = threshold > 0 ? Math.min(100, Math.round((count / threshold) * 100)) : 100;
         return (
-          <article class="px-card">
+          <article class="px-card" id={p.slug} data-id={p.id} data-unlocked={unlocked ? '1' : '0'}>
             <div class="px-card-head">
               {cat && <span class="px-tag">{cat.emoji} {cat.label}</span>}
               {p.neighborhood && <span class="px-loc">📍 {p.neighborhood}</span>}
             </div>
             <h3 class="px-biz">{p.business_name}</h3>
             <div class="px-offer">{p.offer_title}</div>
-            {p.offer_details && <p class="px-details">{p.offer_details}</p>}
-            {p.redemption && (
+            {p.offer_details && unlocked && <p class="px-details">{p.offer_details}</p>}
+
+            {threshold > 0 && (
+              <div class="px-rsvp-block">
+                <div class="px-rsvp-meter">
+                  <div class="px-rsvp-meter-fill" style={`width: ${pct}%`}></div>
+                </div>
+                <div class="px-rsvp-status">
+                  {unlocked ? (
+                    <span class="px-unlocked">🎉 Unlocked — <strong>{count}</strong> RSVPs in</span>
+                  ) : (
+                    <span><strong>{count}</strong> of <strong>{threshold}</strong> RSVPs to unlock</span>
+                  )}
+                </div>
+                {!unlocked && (
+                  signedIn ? (
+                    <button class="px-rsvp-btn" data-rsvp={p.id} disabled={userRsvped}>
+                      {userRsvped ? "You're in — tell a friend" : "RSVP to unlock"}
+                    </button>
+                  ) : (
+                    <a href="/login" class="px-rsvp-btn px-rsvp-btn-link">Sign in to RSVP</a>
+                  )
+                )}
+              </div>
+            )}
+
+            {p.redemption && unlocked && (
               <div class="px-redeem">
                 <span class="px-redeem-label">How to claim</span>
                 <span>{p.redemption}</span>
               </div>
             )}
-            {p.website && (
+            {p.website && unlocked && (
               <a href={p.website} target="_blank" rel="noopener" class="px-link" data-claim={p.id}>
                 Visit {p.business_name} →
               </a>
@@ -70,7 +112,7 @@ if (db) {
 
   <section class="px-pitch">
     <h2>Run a Denver business?</h2>
-    <p>Post a perk for our attendees — a discount, a happy hour, a free pastry, anything that makes locals want to walk in your door. It's free for partners. We don't take a cut.</p>
+    <p>Post a perk for our attendees — a discount, a happy hour, a free pastry, anything that makes locals want to walk in your door. Set an RSVP threshold and we'll rally the crowd before you give the deal. It's free for partners.</p>
     <a href="/perks/new" class="btn-cta">Submit your offer</a>
   </section>
 </div>
@@ -97,6 +139,7 @@ if (db) {
     display: flex; flex-direction: column;
   }
   .px-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
+  .px-card[data-unlocked="0"] .px-offer { opacity: 0.65; }
 
   .px-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .px-tag { font-size: 11px; padding: 4px 10px; border-radius: 999px; background: var(--tag-bg); color: var(--tag-text); font-weight: 600; }
@@ -105,8 +148,32 @@ if (db) {
   .px-biz { font-family: var(--font-display); font-size: 18px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 6px; }
   .px-offer { font-family: var(--font-display); font-size: 22px; font-weight: 900; color: var(--accent); margin-bottom: 10px; letter-spacing: -0.02em; }
   .px-details { font-size: 14px; line-height: 1.55; color: var(--text-sec); margin-bottom: 14px; flex: 1; }
+
+  .px-rsvp-block {
+    margin-top: auto; padding: 14px; background: var(--surface);
+    border-radius: 12px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .px-rsvp-meter { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  .px-rsvp-meter-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 999px; transition: width 0.4s ease;
+  }
+  .px-rsvp-status { font-size: 13px; color: var(--text-sec); }
+  .px-rsvp-status strong { color: var(--text); font-weight: 700; }
+  .px-unlocked { color: var(--mint); font-weight: 600; }
+  .px-rsvp-btn {
+    padding: 10px 16px; border-radius: 999px; border: none; cursor: pointer;
+    background: var(--cta-bg); color: var(--cta-text);
+    font-family: var(--font-display); font-weight: 700; font-size: 13px;
+    text-align: center; text-decoration: none; transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .px-rsvp-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px var(--accent-glow); }
+  .px-rsvp-btn:active:not(:disabled) { transform: translateY(0); }
+  .px-rsvp-btn:disabled { opacity: 0.6; cursor: default; }
+  .px-rsvp-btn-link { display: inline-block; }
+
   .px-redeem {
-    margin-top: auto; padding: 12px 14px;
+    margin-top: 12px; padding: 12px 14px;
     background: var(--surface); border-radius: 10px; font-size: 13px;
     display: flex; flex-direction: column; gap: 2px;
   }
@@ -144,13 +211,52 @@ if (db) {
   document.querySelectorAll('[data-claim]').forEach(a => {
     a.addEventListener('click', () => {
       const id = a.getAttribute('data-claim');
-      // Fire-and-forget — don't block the click
       fetch('/api/partners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'claim', id: parseInt(id) }),
         keepalive: true,
       }).catch(() => {});
+    });
+  });
+
+  document.querySelectorAll('[data-rsvp]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt(btn.getAttribute('data-rsvp'));
+      btn.disabled = true;
+      const orig = btn.textContent;
+      btn.textContent = 'Saving…';
+      try {
+        const res = await fetch('/api/partners', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'rsvp', id }),
+        });
+        const d = await res.json();
+        if (!d.ok) {
+          if (d.error === 'login_required') { location.href = '/login'; return; }
+          btn.textContent = orig;
+          btn.disabled = false;
+          return;
+        }
+        // Once we cross the threshold, the easiest correct render is a reload —
+        // it picks up redemption text, the visit link, and the full details
+        // section that were hidden server-side.
+        if (d.unlocked) { location.reload(); return; }
+        const card = btn.closest('.px-card');
+        if (card) {
+          const fill = card.querySelector('.px-rsvp-meter-fill');
+          const status = card.querySelector('.px-rsvp-status');
+          const pct = Math.min(100, Math.round((d.count / d.threshold) * 100));
+          if (fill) fill.style.width = pct + '%';
+          if (status) status.innerHTML = '<strong>' + d.count + '</strong> of <strong>' + d.threshold + '</strong> RSVPs to unlock';
+        }
+        btn.textContent = "You're in — tell a friend";
+        btn.disabled = true;
+      } catch {
+        btn.textContent = orig;
+        btn.disabled = false;
+      }
     });
   });
 </script>
