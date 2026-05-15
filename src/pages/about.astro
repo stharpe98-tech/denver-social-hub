@@ -1,7 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
-import { getContent } from '../lib/content';
 
 const db = getDB();
 let totalMembers = 0;
@@ -15,80 +14,50 @@ try {
 const faqs = [
   { q: "Is this actually free?", a: "Yep. No fees, no premium tier, no upsell." },
   { q: "I don't know anyone — is that weird?", a: "Most people show up solo. Groups are capped at 6–12 so you actually meet everyone." },
-  { q: "Is it safe? What about creeps?", a: "Locations stay hidden until you RSVP, every event has a host, and we remove anyone who makes others uncomfortable. More on our /help#safety page." },
+  { q: "Is it safe? What about creeps?", a: "Locations stay hidden until you RSVP, every event has a host, and we remove anyone who makes others uncomfortable." },
   { q: "How much does an event cost?", a: "Some are free (hikes, park hangs, coffee). Dinners run $20–35 a head. Price is always shown upfront." },
   { q: "Can I post my own event?", a: "Yes — hit \"Plan an event\" from /events. You don't need permission to have a good idea." },
   { q: "What if I RSVP and can't make it?", a: "Just cancel so someone else can grab the spot. Life happens — don't ghost repeatedly." },
 ];
-const content = await getContent();
 ---
 <Base title="About">
 <div class="ab">
 
-  <!-- HERO -->
-  <header class="ab-hero">
-    <span class="ab-eyebrow">About Denver Social</span>
-    <h1 set:html={content.about_title}></h1>
-    <p class="ab-lede">{content.about_subtitle}</p>
-  </header>
-
-  <!-- STATS — inline, no card -->
-  <div class="ab-stats">
-    <div><strong>{totalMembers || '88'}+</strong><span>members</span></div>
-    <div class="ab-stats-dot"></div>
-    <div><strong>6–12</strong><span>per event</span></div>
-    <div class="ab-stats-dot"></div>
-    <div><strong>Free</strong><span>to join</span></div>
-  </div>
-
-  <!-- FOUNDER LETTER -->
-  <section class="ab-card">
+  <!-- THE LETTER -->
+  <article class="ab-letter">
     <header class="ab-letter-head">
-      <div class="ab-letter-avatar">S</div>
+      <div class="ab-avatar">S</div>
       <div>
         <strong>Seth</strong>
         <span>the guy who texts everyone "are you coming?"</span>
       </div>
     </header>
-    <div class="ab-letter">
-      <p>I moved to Denver and had zero friends here. Bars were too loud, meetup groups had 400 people standing around awkwardly, and Bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
-      <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking "when's the next one?" — so we kept going. Bowling, hikes, pottery, game nights. There's 80+ of us now and it still feels small because every event is capped at 12.</p>
-      <p>The only rules: don't be a creep, show up if you say you will, don't pitch crypto at dinner. That's it.</p>
-    </div>
-  </section>
 
-  <!-- HOW IT WORKS -->
-  <section>
-    <h2 class="ab-h2">It's not <em>complicated.</em></h2>
-    <div class="ab-steps">
-      <div class="ab-step">
-        <div class="ab-step-num">1</div>
-        <div>
-          <strong>Make a profile</strong>
-          <p>About 60 seconds. Sign in with Discord, tell us your neighborhood and what sounds fun. No credit card, no personality quiz.</p>
-        </div>
-      </div>
-      <div class="ab-step">
-        <div class="ab-step-num">2</div>
-        <div>
-          <strong>Find something that sounds fun</strong>
-          <p>Pottery on Saturday, dinner in LoHi, bowling and cheap beer. Hit RSVP. Worst case: you eat good food with strangers.</p>
-        </div>
-      </div>
-      <div class="ab-step">
-        <div class="ab-step-num">3</div>
-        <div>
-          <strong>Actually show up</strong>
-          <p>You walk in, there's 8 people at a table, and within 20 minutes you're laughing about something dumb. No icebreakers, no name tags.</p>
-        </div>
-      </div>
+    <h1>Look — making friends after college is <em>weird.</em></h1>
+
+    <div class="ab-body">
+      <p>I moved to Denver and had zero friends here. Bars were too loud, meetup groups had 400 people standing around awkwardly, and Bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
+
+      <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking <em>"when's the next one?"</em> — so we kept going. Bowling, hikes, pottery, game nights. There's <strong>{totalMembers || '80'}+</strong> of us now and it still feels small because every event is capped at 12.</p>
+
+      <p>The only rules: don't be a creep, show up if you say you will, don't pitch crypto at dinner. That's it.</p>
+
+      <p class="ab-how">Here's the whole thing in three lines: <strong>make a profile</strong> (60 seconds, no quiz), <strong>find something that sounds fun</strong>, <strong>actually show up</strong>. You walk in, there's 8 people at a table, and 20 minutes later you're laughing about something dumb.</p>
     </div>
-  </section>
+
+    <footer class="ab-stats">
+      <div><strong>{totalMembers || '80'}+</strong><span>members</span></div>
+      <div class="ab-stats-dot"></div>
+      <div><strong>6–12</strong><span>per event</span></div>
+      <div class="ab-stats-dot"></div>
+      <div><strong>Free</strong><span>to join</span></div>
+    </footer>
+  </article>
 
   <!-- FAQ -->
-  <section>
-    <h2 class="ab-h2">Totally fair <em>questions.</em></h2>
-    <div class="ab-faq">
+  <section class="ab-faq">
+    <h2>Totally fair questions.</h2>
+    <div class="ab-faq-list">
       {faqs.map((f) => (
         <details>
           <summary>{f.q}</summary>
@@ -102,7 +71,7 @@ const content = await getContent();
   <section class="ab-closer">
     <span class="ab-closer-emoji">👋</span>
     <h2>Alright — you in?</h2>
-    <p>The Discord is where everything happens: new events, random plans, voice hangs, people just being goofy between meetups. Come lurk, or say hi.</p>
+    <p>The Discord is where everything happens between meetups: new events, random plans, voice hangs, people being goofy. Come lurk, or say hi.</p>
     <div class="ab-closer-btns">
       <a href="https://discord.gg/S8SFNkdSgK" class="btn-cta" target="_blank" rel="noopener">Join the Discord →</a>
       <a href="/contact" class="btn-sec">Contact us</a>
@@ -112,86 +81,74 @@ const content = await getContent();
 </div>
 
 <style>
-  .ab { max-width: 700px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+  .ab { max-width: 680px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
 
-  /* Hero */
-  .ab-hero { margin-bottom: 28px; }
-  .ab-eyebrow {
-    display: inline-block; font-family: var(--font-display);
-    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--accent); background: var(--accent-dim);
-    padding: 6px 14px; border-radius: 999px; margin-bottom: 16px;
+  /* The letter — main content lives here */
+  .ab-letter {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 20px;
+    padding: 28px clamp(20px, 4vw, 36px);
+    margin-bottom: 36px;
   }
-  .ab-hero h1 {
-    font-family: var(--font-display); font-size: clamp(30px, 5vw, 42px);
-    font-weight: 900; letter-spacing: -0.025em; line-height: 1.1;
-    color: var(--text); margin-bottom: 14px;
+  .ab-letter-head {
+    display: flex; align-items: center; gap: 14px;
+    padding-bottom: 18px; margin-bottom: 22px;
+    border-bottom: 1px solid var(--border);
   }
-  .ab-hero h1 em { font-style: normal; color: var(--accent); }
-  .ab-lede { font-size: 17px; color: var(--text-sec); line-height: 1.55; max-width: 540px; }
-
-  /* Inline stats — no boxed pill, just clean numbers */
-  .ab-stats {
-    display: flex; align-items: center; gap: clamp(14px, 4vw, 28px);
-    padding: 18px 0; margin-bottom: 28px;
-    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-    flex-wrap: wrap; justify-content: center;
-  }
-  .ab-stats > div { text-align: center; }
-  .ab-stats strong {
-    display: block; font-family: var(--font-display);
-    font-size: 26px; font-weight: 900; color: var(--accent); line-height: 1;
-  }
-  .ab-stats span { display: block; font-size: 12px; color: var(--text-sec); margin-top: 4px; text-transform: lowercase; }
-  .ab-stats-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border-hover); }
-
-  /* Unified card */
-  .ab-card {
-    padding: 24px clamp(20px, 4vw, 28px); margin-bottom: 32px;
-    background: var(--bg); border: 1px solid var(--border); border-radius: 18px;
-  }
-
-  /* Founder letter */
-  .ab-letter-head { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
-  .ab-letter-avatar {
-    width: 44px; height: 44px; border-radius: 50%;
+  .ab-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
     background: linear-gradient(135deg, var(--sunset), var(--pink));
     color: #fff; display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-size: 17px; font-weight: 800; flex-shrink: 0;
+    font-family: var(--font-display); font-size: 18px; font-weight: 800; flex-shrink: 0;
   }
-  .ab-letter-head strong { display: block; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); }
-  .ab-letter-head span { font-size: 12px; color: var(--text-faint); }
-  .ab-letter p { font-size: 15px; line-height: 1.65; color: var(--text-sec); margin-bottom: 10px; }
-  .ab-letter p:last-child { margin-bottom: 0; }
+  .ab-letter-head strong { display: block; font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); }
+  .ab-letter-head span { font-size: 13px; color: var(--text-faint); }
 
-  /* Section heading — same treatment for every section */
-  .ab-h2 {
-    font-family: var(--font-display); font-size: clamp(24px, 4vw, 32px);
+  .ab-letter h1 {
+    font-family: var(--font-display); font-size: clamp(28px, 4.5vw, 38px);
+    font-weight: 900; letter-spacing: -0.025em; line-height: 1.15;
+    color: var(--text); margin-bottom: 20px;
+  }
+  .ab-letter h1 em { font-style: normal; color: var(--accent); }
+
+  .ab-body p {
+    font-size: 16px; line-height: 1.7; color: var(--text);
+    margin-bottom: 14px;
+  }
+  .ab-body p:last-child { margin-bottom: 0; }
+  .ab-body em { font-style: italic; color: var(--text-sec); }
+  .ab-body strong { font-weight: 700; color: var(--text); }
+  .ab-how {
+    margin-top: 8px !important;
+    padding: 14px 16px; background: var(--surface); border-radius: 12px;
+    font-size: 15px !important; line-height: 1.6 !important;
+    color: var(--text-sec) !important;
+  }
+  .ab-how strong { color: var(--text); }
+
+  /* Stats footer — inline at bottom of the letter */
+  .ab-stats {
+    display: flex; align-items: center; justify-content: center; gap: clamp(14px, 4vw, 28px);
+    padding-top: 22px; margin-top: 24px; border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .ab-stats > div:not(.ab-stats-dot) { text-align: center; }
+  .ab-stats strong {
+    display: block; font-family: var(--font-display);
+    font-size: 22px; font-weight: 900; color: var(--accent); line-height: 1;
+  }
+  .ab-stats span { display: block; font-size: 11px; color: var(--text-sec); margin-top: 4px; text-transform: lowercase; letter-spacing: 0.04em; }
+  .ab-stats-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border-hover); }
+
+  /* FAQ */
+  .ab-faq { margin-bottom: 32px; }
+  .ab-faq h2 {
+    font-family: var(--font-display); font-size: clamp(22px, 3.5vw, 28px);
     font-weight: 900; letter-spacing: -0.02em; color: var(--text);
-    margin: 40px 0 20px;
+    margin-bottom: 16px;
   }
-  .ab-h2 em { font-style: normal; color: var(--accent); }
-
-  /* How it works */
-  .ab-steps { display: flex; flex-direction: column; gap: 10px; }
-  .ab-step {
-    display: flex; align-items: flex-start; gap: 14px;
-    padding: 16px 18px; background: var(--bg);
-    border: 1px solid var(--border); border-radius: 14px;
-  }
-  .ab-step-num {
-    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
-    background: var(--accent-dim); color: var(--accent);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-size: 14px; font-weight: 800;
-  }
-  .ab-step > div:last-child strong { display: block; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-  .ab-step p { font-size: 14px; line-height: 1.55; color: var(--text-sec); margin: 0; }
-
-  /* FAQ — same shell as steps */
-  .ab-faq { display: flex; flex-direction: column; gap: 8px; }
+  .ab-faq-list { display: flex; flex-direction: column; gap: 8px; }
   .ab-faq details {
-    background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
     overflow: hidden;
   }
   .ab-faq summary {
@@ -207,13 +164,13 @@ const content = await getContent();
 
   /* Closer */
   .ab-closer {
-    margin-top: 40px; padding: 36px clamp(20px, 4vw, 36px); border-radius: 20px;
+    padding: 32px clamp(20px, 4vw, 36px); border-radius: 20px;
     background: linear-gradient(135deg, var(--sunset-dim), var(--pink-dim));
     border: 1px solid rgba(249,115,22,0.18); text-align: center;
   }
-  .ab-closer-emoji { font-size: 40px; display: block; margin-bottom: 8px; }
-  .ab-closer h2 { font-family: var(--font-display); font-size: 26px; font-weight: 900; letter-spacing: -0.02em; color: var(--text); margin-bottom: 10px; }
-  .ab-closer p { font-size: 15px; line-height: 1.55; color: var(--text-sec); max-width: 440px; margin: 0 auto 20px; }
+  .ab-closer-emoji { font-size: 36px; display: block; margin-bottom: 8px; }
+  .ab-closer h2 { font-family: var(--font-display); font-size: 24px; font-weight: 900; letter-spacing: -0.02em; color: var(--text); margin-bottom: 10px; }
+  .ab-closer p { font-size: 15px; line-height: 1.55; color: var(--text-sec); max-width: 440px; margin: 0 auto 18px; }
   .ab-closer-btns { display: inline-flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 </style>
 </Base>
