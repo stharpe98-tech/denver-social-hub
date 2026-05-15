@@ -277,8 +277,8 @@ const connectBanner =
         ) : (
           <div class="p-empty">
             <div class="p-empty-icon">📅</div>
-            <div class="p-empty-title">Calendar's empty</div>
-            <div class="p-empty-sub">Find a hangout that fits your vibe.</div>
+            <div class="p-empty-title">Your calendar is suspiciously clear</div>
+            <div class="p-empty-sub">Either you're very chill or very busy lying about being busy. Fix it.</div>
             <a href="/events" class="p-btn p-btn-primary">Browse events</a>
           </div>
         )}
@@ -368,7 +368,7 @@ const connectBanner =
         </div>
         {member?.bio
           ? <p class="p-bio">"{member.bio}"</p>
-          : <p class="p-bio p-bio-empty">No bio yet. <button class="p-bio-link" id="addBioBtn" type="button">Add one →</button></p>}
+          : <p class="p-bio p-bio-empty">No bio yet. People are imagining it for you and the results are not flattering. <button class="p-bio-link" id="addBioBtn" type="button">Add one →</button></p>}
         {myInterests.length > 0 && (
           <div class="p-tags">
             {myInterests.map((i: string) => <span class="p-tag">{i}</span>)}
