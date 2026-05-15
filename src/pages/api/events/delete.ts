@@ -25,8 +25,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const eventId = parseInt(body?.event_id);
   if (!eventId) return new Response(JSON.stringify({ ok: false, error: 'event_id' }), { status: 400 });
 
+  // Permission model:
+  //   - super-admin (owner) and role=admin: delete any event
+  //   - host / co-hosts (mods, organizers): delete only their own events
   const isSuperAdmin = (user.email || '').toLowerCase() === SUPER_ADMIN_EMAIL;
-  if (!isSuperAdmin && !(await isHostOrCohost(db, eventId, user))) {
+  const isAdmin = isSuperAdmin || user.role === 'admin';
+  if (!isAdmin && !(await isHostOrCohost(db, eventId, user))) {
     return new Response(JSON.stringify({ ok: false, error: 'not_authorized' }), { status: 403 });
   }
 
