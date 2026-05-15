@@ -25,17 +25,8 @@ export function dateToMonthDay(d: Date | null | undefined): { month: string; day
   return { month: MONTH_ABBR[d.getUTCMonth()] || '', day: String(d.getUTCDate()) };
 }
 
-// Don't import events whose start date is more than 14 days in the past — they
-// only add noise to /events. Future and recent-past entries pass through.
-export function isRecentOrFuture(d: Date | null | undefined): boolean {
-  if (!d || isNaN(d.getTime())) return true;
-  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
-  return d.getTime() >= cutoff;
-}
-
 export async function upsertEvent(db: D1Database, ev: NormalizedEvent): Promise<'inserted' | 'updated' | 'skipped'> {
   if (!ev.title || !ev.title.trim()) return 'skipped';
-  if (!isRecentOrFuture(ev.startsAt)) return 'skipped';
 
   const { month, day } = dateToMonthDay(ev.startsAt);
   const now = new Date().toISOString();
