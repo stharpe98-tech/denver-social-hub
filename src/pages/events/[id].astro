@@ -1206,6 +1206,42 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
 </style>
 
 <script is:inline>
+  // ── Confetti pop — emoji rain on successful "going" RSVP ──
+  function popConfetti() {
+    var emoji = ['🎉','✨','🥳','🎊','🌟','💫','🎈'];
+    var n = 28;
+    for (var i = 0; i < n; i++) {
+      var el = document.createElement('span');
+      el.className = 'rsvp-confetti';
+      el.textContent = emoji[Math.floor(Math.random() * emoji.length)];
+      var left = Math.random() * 100;
+      var delay = Math.random() * 0.35;
+      var dur = 1.1 + Math.random() * 0.6;
+      var rotStart = Math.random() * 360;
+      var rotEnd = rotStart + (Math.random() < 0.5 ? -360 : 360);
+      el.style.cssText =
+        'left:' + left + '%;' +
+        'animation: rsvpConfetti ' + dur + 's ease-in ' + delay + 's forwards;' +
+        '--rs:' + rotStart + 'deg; --re:' + rotEnd + 'deg;';
+      document.body.appendChild(el);
+      setTimeout(function(node) { return function() { node.remove(); }; }(el), 2200);
+    }
+  }
+</script>
+
+<style is:inline>
+  .rsvp-confetti {
+    position: fixed; top: -40px; font-size: 26px; pointer-events: none; z-index: 9999;
+    transform: translateY(0) rotate(var(--rs));
+    will-change: transform, opacity;
+  }
+  @keyframes rsvpConfetti {
+    0%   { transform: translateY(0) rotate(var(--rs)); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(var(--re)); opacity: 0.8; }
+  }
+</style>
+
+<script is:inline>
   (function() {
     // ── Report content ──
     document.querySelectorAll('[data-report]').forEach(function(btn) {
@@ -1284,10 +1320,10 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
           var data = await res.json();
 
           if (data.rsvped || data.waitlisted || data.updated) {
-            // Reload so the address / RSVP'd state / bring-items section
-            // all reflect the new state — keeping JS-only updates in sync
-            // with the gated rendering was too error-prone.
-            window.location.reload();
+            // Tiny celebration on a "going" RSVP, then reload to refresh
+            // the gated server-rendered state (address, bring-items, etc).
+            if (data.rsvped && status === 'going') popConfetti();
+            setTimeout(function() { window.location.reload(); }, status === 'going' && data.rsvped ? 1100 : 0);
             return;
           } else if (data.error === 'login_required') {
             window.location.href = '/login?next=/events/' + eventId;
