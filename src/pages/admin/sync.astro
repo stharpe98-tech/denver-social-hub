@@ -51,6 +51,8 @@ function describeConfig(kind: string, configJson: string | null): string {
     .lh { background: #f7f5f2; border-bottom: 1px solid #e4ddd4; padding: 28px 20px; }
     .lh-in { max-width: 880px; margin: 0 auto; }
     .lh-back { color: #8a8a96; font-size: 13px; text-decoration: none; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; }
+    .lh-row { display: flex; align-items: center; gap: 14px; }
+    .lh-logo { flex-shrink: 0; width: 56px; height: 56px; border-radius: 14px; }
     .lh h1 { font-size: clamp(20px,5vw,26px); font-weight: 700; color: #1c1917; margin-bottom: 4px; }
     .lh p { font-size: 13px; color: #8a8a96; font-family: 'JetBrains Mono', monospace; }
     .lp { max-width: 880px; margin: 0 auto; padding: 20px 16px; }
@@ -137,8 +139,13 @@ function describeConfig(kind: string, configJson: string | null): string {
   <div class="lh">
     <div class="lh-in">
       <a href="/admin/dashboard" class="lh-back">← Admin</a>
-      <h1>🤖 Event Sync</h1>
-      <p>multi-source bot · pulls events into /events</p>
+      <div class="lh-row">
+        <img src="/sync-bot.svg" alt="" class="lh-logo" width="64" height="64"/>
+        <div>
+          <h1>Event Sync</h1>
+          <p>multi-source bot · pulls events into /events</p>
+        </div>
+      </div>
     </div>
   </div>
 
