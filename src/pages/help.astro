@@ -9,6 +9,7 @@ import Base from '../layouts/Base.astro';
     </header>
 
     <nav class="hp-toc" aria-label="Quick jump">
+      <a href="#why-not">Why not __?</a>
       <a href="#attendees">For attendees</a>
       <a href="#groups">Groups</a>
       <a href="#organizers">For organizers</a>
@@ -16,6 +17,40 @@ import Base from '../layouts/Base.astro';
       <a href="#reporting">Reporting</a>
       <a href="#safety">Safety & terms</a>
     </nav>
+
+    <section class="hp-sec" id="why-not">
+      <h2>Why not just use ___?</h2>
+      <p class="hp-why-intro">Honest answers. We don't think any of these are bad — they just solve a different problem.</p>
+
+      <details class="hp-q">
+        <summary>Why not Meetup?</summary>
+        <p>Meetup charges organizers $20–30/month per group and gates the experience behind paywalls. It feels corporate, the app pushes ads, and small groups end up paying real money to host free events. Denver Social is free for everyone — organizers and attendees. We're not trying to be a global platform; we just want Denver to hang out.</p>
+      </details>
+      <details class="hp-q">
+        <summary>Why not Facebook Groups?</summary>
+        <p>Facebook's algorithm decides who sees what — events get buried, RSVPs don't actually mean "I'm coming," there's no capacity or waitlist, and conversations turn into chaos. Plus a lot of people don't want to be on Facebook. Here, every event has a real RSVP, a real host, and lands at the top of the page when it's posted. No algorithm.</p>
+      </details>
+      <details class="hp-q">
+        <summary>Why not Discord?</summary>
+        <p>Discord is great for chat. It's not great for "I'm coming Tuesday and so are 8 other people." Events get buried in channels, scheduled events are clunky, and there's no public discovery — people only see events if they're already in the server. We pair with Discord (you can sign in with it, link events to a Discord), but the event surface is here so anyone can find it.</p>
+      </details>
+      <details class="hp-q">
+        <summary>Why not Sign Up Genius?</summary>
+        <p>Sign Up Genius is a sign-up sheet. There's no profile, no community, no discovery, no level system, no waitlist that auto-promotes. It's perfect for "bring a casserole to the school bake sale." We have the sign-up part (potlucks even have claimable items, like SUG), but we also have everything around it — a real community surface where people actually find each other.</p>
+      </details>
+      <details class="hp-q">
+        <summary>Why not Google Forms / Sheets?</summary>
+        <p>Both are good for collecting answers. Neither helps strangers in Denver find your hike, RSVP, see who else is going, get a reminder, add it to their calendar, or build relationships across events. You'd end up DIY-building all of this and still have to share the spreadsheet link in 5 places. Hand-rolling community infrastructure is the project. We did it so you don't have to.</p>
+      </details>
+      <details class="hp-q">
+        <summary>Why not Eventbrite or Partiful?</summary>
+        <p>Eventbrite is built for ticketed events — concerts, conferences, festivals. Great at that, overkill for a coffee meetup. Partiful is beautiful for one-off parties (we drew some inspiration from it for the new event form), but each event is isolated. There's no community surface where you can find what's happening across Denver next week. Denver Social is the discovery layer.</p>
+      </details>
+      <details class="hp-q">
+        <summary>So what's the actual point?</summary>
+        <p>One place to find real, in-person hangouts in Denver. No fees, no algorithms hiding your event, no app to download, no signup required to browse. Built specifically for the kind of small group where you'd actually remember someone's name afterward.</p>
+      </details>
+    </section>
 
     <section class="hp-sec" id="attendees">
       <h2>For attendees</h2>
@@ -214,6 +249,7 @@ import Base from '../layouts/Base.astro';
     .hp-q[open] summary { border-bottom: 1px solid var(--border); }
     .hp-q p { padding: 12px 16px 16px; color: var(--text-sec); font-size: 14px; line-height: 1.65; }
     .hp-q a { color: var(--accent); font-weight: 600; }
+    .hp-why-intro { font-size: 14px; color: var(--text-sec); margin-bottom: 12px; }
 
     /* Safety rules */
     .hp-safety-intro { font-size: 15px; color: var(--text-sec); margin-bottom: 18px; }
