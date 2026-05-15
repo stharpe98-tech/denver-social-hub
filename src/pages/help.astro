@@ -10,8 +10,10 @@ import Base from '../layouts/Base.astro';
 
     <nav class="hp-toc" aria-label="Quick jump">
       <a href="#attendees">For attendees</a>
+      <a href="#groups">Groups</a>
       <a href="#organizers">For organizers</a>
       <a href="#privacy">Privacy</a>
+      <a href="#reporting">Reporting</a>
       <a href="#safety">Safety & terms</a>
     </nav>
 
@@ -36,6 +38,30 @@ import Base from '../layouts/Base.astro';
       <details class="hp-q">
         <summary>I can't see an event's full address.</summary>
         <p>You'll see it once you RSVP and (if the organizer set a gate) meet the karma/account-age minimum. Privacy keeps casual venues safe.</p>
+      </details>
+    </section>
+
+    <section class="hp-sec" id="groups">
+      <h2>Groups</h2>
+      <details class="hp-q">
+        <summary>What's a Group?</summary>
+        <p>A smaller circle inside Denver Social — your hiking buddies, trivia crew, dinner club. Anyone can start one. Use them to post events scoped to that community instead of the whole site.</p>
+      </details>
+      <details class="hp-q">
+        <summary>Public vs invite-only?</summary>
+        <p>Public groups: anyone signed in can find them on <a href="/groups">/groups</a> and join freely. Invite-only: only people who get an invite link from a member can join.</p>
+      </details>
+      <details class="hp-q">
+        <summary>How do invites work?</summary>
+        <p>Members can generate a one-time invite link from the group page. Anyone with that link can accept and join. Each link is single-use — once someone uses it, it's gone. Be careful sharing private-group links.</p>
+      </details>
+      <details class="hp-q">
+        <summary>How do I post an event in a group?</summary>
+        <p>From the group page, hit "+ New event". The event you create gets tagged with the group, but it still shows up on the main events list (the group label is the only difference).</p>
+      </details>
+      <details class="hp-q">
+        <summary>What if I want to leave a group?</summary>
+        <p>Open the group, hit "Leave." If you're the owner and there are other members, you'll need to transfer ownership first (coming soon — for now, message us).</p>
       </details>
     </section>
 
@@ -76,6 +102,26 @@ import Base from '../layouts/Base.astro';
       <details class="hp-q">
         <summary>How do I delete my account?</summary>
         <p>Sign in, go to <a href="/profile">/profile</a>, scroll to "Delete account". Removes your member record and any RSVPs.</p>
+      </details>
+    </section>
+
+    <section class="hp-sec" id="reporting">
+      <h2>Reporting</h2>
+      <details class="hp-q">
+        <summary>How do I report someone or something?</summary>
+        <p>Every event page has a 🚩 Report button in the top-right. Group pages have one too (in the hero). Pick a reason, add a note, submit. Your report goes straight to admins.</p>
+      </details>
+      <details class="hp-q">
+        <summary>What happens after I report?</summary>
+        <p>An admin reviews the report and either takes action (warning, content removed, account suspended) or dismisses it if it's a misunderstanding. We don't tell the reported person who flagged them.</p>
+      </details>
+      <details class="hp-q">
+        <summary>Do I need proof?</summary>
+        <p>No. If someone makes you uncomfortable, that's reason enough to report. We err on the side of believing the person who spoke up.</p>
+      </details>
+      <details class="hp-q">
+        <summary>What if it's an emergency?</summary>
+        <p>Call 911. After you're safe, message us so we can act on our end.</p>
       </details>
     </section>
 

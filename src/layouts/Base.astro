@@ -185,7 +185,7 @@ const redditName = user?.reddit_username || user?.name;
           <h2>You're set</h2>
           <p>Sign up free with Discord and you can RSVP, host, and start your own groups. Or just keep browsing — no pressure.</p>
           <div class="wt-actions">
-            <a href="/login" class="wt-btn wt-btn-primary">Sign in / sign up</a>
+            <button class="wt-btn wt-btn-primary" data-action="signin">Sign in / sign up</button>
             <button class="wt-btn wt-btn-ghost" data-action="skip">Keep browsing</button>
           </div>
         </div>
@@ -611,6 +611,12 @@ const redditName = user?.reddit_username || user?.name;
   }
 
   /* ── Welcome tour ── */
+  /* Explicit [hidden] rules — needed because the elements below set
+     their own display, which would otherwise override the HTML hidden
+     attribute. */
+  .wt-overlay[hidden], .wt-modal[hidden], .wt-footer[hidden],
+  .wt-slide[hidden] { display: none !important; }
+
   .wt-overlay {
     position: fixed; inset: 0; z-index: 1000;
     background: rgba(15, 23, 42, 0.65);
@@ -723,16 +729,28 @@ const redditName = user?.reddit_username || user?.name;
     }
 
     tour.addEventListener('click', function(e) {
-      var t = e.target;
-      if (t === tour) { dismiss(); return; }
-      var action = t.getAttribute('data-action');
-      if (!action) return;
-      if (action === 'start') show(1);
-      else if (action === 'skip') dismiss();
-      else if (action === 'prev') show(step - 1);
-      else if (action === 'next') {
-        if (step === maxStep) dismiss();
-        else show(step + 1);
+      // Backdrop click closes
+      if (e.target === tour) { dismiss(); return; }
+      // Walk up to find the nearest [data-action] — tap targets on
+      // mobile can land on child spans inside a button
+      var el = e.target;
+      while (el && el !== tour) {
+        var action = el.getAttribute && el.getAttribute('data-action');
+        if (action) {
+          if (action === 'start') show(1);
+          else if (action === 'skip') dismiss();
+          else if (action === 'signin') {
+            dismiss();
+            window.location.href = '/login';
+          }
+          else if (action === 'prev') show(step - 1);
+          else if (action === 'next') {
+            if (step === maxStep) dismiss();
+            else show(step + 1);
+          }
+          return;
+        }
+        el = el.parentNode;
       }
     });
     closeBtn.addEventListener('click', dismiss);
