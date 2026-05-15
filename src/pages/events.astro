@@ -36,6 +36,8 @@ type Card = {
   karmaMin: number;
   attendeeCount: number;
   dishCount: number;
+  externalSource?: string;
+  externalUrl?: string;
 };
 
 let cards: Card[] = [];
@@ -79,6 +81,8 @@ try {
         fillPct: pct, goingCount: taken, spotsLeft: left,
         hostName: ev.host_name || '', karmaMin: ev.karma_min || 0,
         attendeeCount: 0, dishCount: 0,
+        externalSource: ev.external_source || '',
+        externalUrl: ev.external_url || '',
       });
     }
 
@@ -207,6 +211,9 @@ const content = await getContent();
                 <span class="ec-type tag tag-green">🍽 potluck</span>
               ) : (
                 <span class="ec-type tag tag-blue">{typeLabel[c.type] || 'event'}</span>
+              )}
+              {c.externalSource && (
+                <span class="tag tag-purple">via {c.externalSource}</span>
               )}
               {c.karmaMin >= 1 && <span class="tag tag-yellow">{c.karmaMin}+ karma</span>}
               {(c.kind === 'event' && c.spotsLeft !== 0 && c.spotsLeft !== -1 && 4 > c.spotsLeft) && <span class="tag tag-orange">last {c.spotsLeft} spots</span>}

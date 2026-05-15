@@ -34,6 +34,9 @@ export async function ensureEventSyncSchema(db: D1Database): Promise<void> {
     ['external_id', 'TEXT'],
     ['external_url', 'TEXT'],
     ['synced_at', 'TEXT'],
+    ['discord_mirror_event_id', 'TEXT'],
+    ['discord_mirror_message_id', 'TEXT'],
+    ['discord_mirror_guild_id', 'TEXT'],
   ];
   for (const [col, type] of adds) {
     if (!names.has(col)) {

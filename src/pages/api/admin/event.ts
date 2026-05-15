@@ -1,5 +1,7 @@
 import type { APIContext } from 'astro';
+import { env } from 'cloudflare:workers';
 import { getDB } from '../../../lib/db';
+import { mirrorEventCreate, mirrorEventUpdate, mirrorEventDelete } from '../../../lib/event-sync/outbound';
 
 export const prerender = false;
 
@@ -17,8 +19,9 @@ export async function POST({ request }: APIContext) {
   try {
     const body = await request.json() as any;
     const { action } = body;
+    const botToken = (env as any).DISCORD_BOT_TOKEN as string | undefined;
     if (action === 'create') {
-      await db.prepare(`INSERT INTO events (title,event_type,location,zone,event_month,event_day,spots,price_cap,description,featured,plus_one_allowed,difficulty,pet_friendly,cell_service,packing_list,reservation_by,price_per_person,payment_link,min_group_size,deposit_required,deposit_amount,commit_deadline,potluck_categories) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      const insert = await db.prepare(`INSERT INTO events (title,event_type,location,zone,event_month,event_day,spots,price_cap,description,featured,plus_one_allowed,difficulty,pet_friendly,cell_service,packing_list,reservation_by,price_per_person,payment_link,min_group_size,deposit_required,deposit_amount,commit_deadline,potluck_categories) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
         .bind(
           body.title, body.event_type||'social', body.location||'', body.zone||'', body.event_month||'', body.event_day||'',
           parseInt(body.spots)||10, body.price_cap||'', body.description||'', body.featured?1:0,
@@ -29,14 +32,18 @@ export async function POST({ request }: APIContext) {
           parseFloat(body.deposit_amount)||10, body.commit_deadline||'',
           body.potluck_categories||'Appetizers,Mains,Sides,Desserts,Drinks'
         ).run();
+      const newId = Number((insert as any).meta?.last_row_id) || 0;
+      if (newId) { try { await mirrorEventCreate(db, newId, botToken); } catch {} }
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
     if (action === 'update') {
       await db.prepare(`UPDATE events SET title=?,event_type=?,location=?,zone=?,event_month=?,event_day=?,spots=?,price_cap=?,description=?,featured=? WHERE id=?`)
         .bind(body.title,body.event_type||'social',body.location||'',body.zone||'',body.event_month||'',body.event_day||'',parseInt(body.spots)||10,body.price_cap||'',body.description||'',body.featured?1:0,body.id).run();
+      try { await mirrorEventUpdate(db, parseInt(body.id), botToken); } catch {}
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
     if (action === 'delete') {
+      try { await mirrorEventDelete(db, parseInt(body.id), botToken); } catch {}
       await db.prepare(`DELETE FROM events WHERE id=?`).bind(body.id).run();
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }

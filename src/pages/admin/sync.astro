@@ -23,7 +23,12 @@ function describeConfig(kind: string, configJson: string | null): string {
   if (!configJson) return '';
   try {
     const c = JSON.parse(configJson);
-    if (kind === 'discord') return `guild ${c.guild_id || '?'}`;
+    if (kind === 'discord') {
+      const parts = [`guild ${c.guild_id || '?'}`];
+      if (c.mirror_enabled) parts.push('↗ mirroring on');
+      if (c.announce_channel_id) parts.push(`📣 #${c.announce_channel_id}`);
+      return parts.join(' · ');
+    }
     if (kind === 'ics' || kind === 'rss') return c.url || '';
     if (kind === 'eventbrite') return `org ${c.organization_id || '?'}`;
     if (kind === 'luma') return `calendar ${c.calendar_api_id || '?'}`;
