@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { ensureEventRsvpsSchema, generateCheckinToken } from "../../lib/event-rsvps-schema";
 
 export const POST = async ({ request, cookies }: { request: Request; cookies: any }) => {
   const db = (env as any).DB;
@@ -118,11 +119,13 @@ export const POST = async ({ request, cookies }: { request: Request; cookies: an
       return new Response(null, { status: 302, headers: { 'Location': `/events/${event_id}` } });
     }
 
-    // Normal RSVP
+    // Normal RSVP — generate a check-in token so attendees get a QR
     const rsvpName = display_name || user.reddit_username || user.name || '';
+    await ensureEventRsvpsSchema(db);
+    const checkinToken = generateCheckinToken();
     await db.prepare(
-      "INSERT INTO event_rsvps (event_id, member_email, member_name, party_size, status, bringing) VALUES (?,?,?,?,?,?)"
-    ).bind(event_id, user.email, rsvpName, party_size, status, bringing).run();
+      "INSERT INTO event_rsvps (event_id, member_email, member_name, party_size, status, bringing, checkin_token) VALUES (?,?,?,?,?,?,?)"
+    ).bind(event_id, user.email, rsvpName, party_size, status, bringing, checkinToken).run();
 
     // Claim any selected bring items (SignUpGenius-style: claim at RSVP time)
     if (claim_item_ids.length > 0) {
