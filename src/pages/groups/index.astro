@@ -150,6 +150,26 @@ function timeAgo(iso: string): string {
           </div>
         )}
       </section>
+
+      <section class="g-section">
+        <h2 class="g-section-title">More ways to connect</h2>
+        <div class="g-side-grid">
+          <a href="/welcome" class="g-side-card">
+            <span class="g-side-emoji">👋</span>
+            <div>
+              <strong>New here?</strong>
+              <p>Drop an intro, see who else just joined.</p>
+            </div>
+          </a>
+          <a href="/help-out" class="g-side-card">
+            <span class="g-side-emoji">🤝</span>
+            <div>
+              <strong>Help out</strong>
+              <p>Favors board — give a hand, ask for one.</p>
+            </div>
+          </a>
+        </div>
+      </section>
     </>
   )}
 
@@ -221,6 +241,18 @@ function timeAgo(iso: string): string {
     transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
   }
   .g-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
+
+  .g-side-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .g-side-card {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 18px; background: var(--bg); border: 1px solid var(--border); border-radius: 16px;
+    text-decoration: none; color: var(--text);
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  }
+  .g-side-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
+  .g-side-emoji { font-size: 26px; flex-shrink: 0; }
+  .g-side-card strong { display: block; font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+  .g-side-card p { font-size: 13px; color: var(--text-sec); line-height: 1.45; }
   .g-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .g-card-name { font-family: var(--font-display); font-size: 17px; font-weight: 700; }
   .g-card-lock { font-size: 11px; color: var(--text-sec); background: var(--surface); padding: 3px 9px; border-radius: 999px; }

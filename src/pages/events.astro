@@ -141,12 +141,17 @@ const content = await getContent();
     <div class="ev-header-left">
       <span class="tag tag-orange">Events</span>
       <h1 class="ev-h1">{cards.length} events live</h1>
-      <p class="ev-sub">{content.events_subtitle || 'Small groups, real plans, no flakes.'}</p>
+      <p class="ev-sub">{content.events_subtitle || 'Small groups, real plans, no flakes.'} <a href="/calendar" class="ev-sub-link">See the shared calendar →</a></p>
     </div>
     {user && (
       <a href="/events/new" class="btn btn-primary" id="createBtn">Post an event</a>
     )}
   </div>
+
+  <style is:inline>
+    .ev-sub-link { color: var(--accent); font-weight: 600; white-space: nowrap; margin-left: 4px; }
+    .ev-sub-link:hover { text-decoration: underline; }
+  </style>
 
   <!-- Search + filter strip -->
   <div class="ev-search-row">
