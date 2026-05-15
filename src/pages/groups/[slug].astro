@@ -144,16 +144,13 @@ function timeAgo(iso: string): string {
             const isMe = user?.email && (mm.member_email || '').toLowerCase() === user.email.toLowerCase();
             const canDm = !!user && !isMe && mm.member_email && !mm.member_email.endsWith('@reddit.local') && !mm.member_email.endsWith('@discord.local');
             return (
-              <div class="g-member">
+              <button class="g-member g-member-btn" data-member-card={mm.member_email} title={`View ${name}`} type="button">
                 <div class="g-avatar">{initial}</div>
                 <div class="g-member-text">
                   <strong>{name}</strong>
                   {mm.role !== 'member' && <span class={`g-member-role role-${mm.role}`}>{mm.role}</span>}
                 </div>
-                {canDm && (
-                  <button class="g-member-dm" data-dm={mm.member_email} title={`Message ${name}`}>💬</button>
-                )}
-              </div>
+              </button>
             );
           })}
         </div>
@@ -344,7 +341,9 @@ function timeAgo(iso: string): string {
   .g-empty-events p { font-size: 14px; color: var(--text-sec); line-height: 1.5; }
 
   .g-members { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-  .g-member { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border-radius: 12px; }
+  .g-member { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border-radius: 12px; text-align: left; }
+  .g-member-btn { border: 1px solid transparent; cursor: pointer; font-family: var(--font); width: 100%; transition: border-color 0.15s, background 0.15s; }
+  .g-member-btn:hover { background: var(--surface-hover); border-color: var(--border); }
   .g-avatar {
     width: 36px; height: 36px; border-radius: 50%;
     background: linear-gradient(135deg, var(--accent), var(--accent2));

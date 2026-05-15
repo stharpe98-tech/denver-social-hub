@@ -38,6 +38,9 @@ const showWelcomeTour = !user && !tourSeen;
       <nav class="site-nav site-nav-left">
         <a href="/events" class:list={["site-nav-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
         <a href="/groups" class:list={["site-nav-link", { active: currentPath.startsWith("/groups") }]}>Groups</a>
+        {user && (
+          <a href="/messages" class:list={["site-nav-link", { active: currentPath.startsWith("/messages") }]}>💬 Messages</a>
+        )}
         <a href="/perks" class:list={["site-nav-link", { active: currentPath.startsWith("/perks") }]}>Perks</a>
       </nav>
 
@@ -46,9 +49,6 @@ const showWelcomeTour = !user && !tourSeen;
       </a>
 
       <nav class="site-nav site-nav-right">
-        {user && (
-          <a href="/messages" class:list={["site-nav-link", { active: currentPath.startsWith("/messages") }]}>💬 Messages</a>
-        )}
         <a href="/about" class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
         <a href="/help"  class:list={["site-nav-link", { active: currentPath.startsWith("/help") }]}>Help</a>
         {isAdmin && (
@@ -96,14 +96,14 @@ const showWelcomeTour = !user && !tourSeen;
       <a href="/" class:list={["mob-drawer-link", { active: currentPath === "/" }]}><span class="mob-drawer-icon">🏠</span>Home</a>
       <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}><span class="mob-drawer-icon">📅</span>Events</a>
       <a href="/groups" class:list={["mob-drawer-link", { active: currentPath.startsWith("/groups") }]}><span class="mob-drawer-icon">👥</span>Groups</a>
+      {user && (
+        <a href="/messages" class:list={["mob-drawer-link mob-drawer-link-sub", { active: currentPath.startsWith("/messages") }]}><span class="mob-drawer-icon">💬</span>Messages</a>
+      )}
       <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]}><span class="mob-drawer-icon">🏪</span>Perks</a>
       <a href="/welcome" class:list={["mob-drawer-link", { active: currentPath.startsWith("/welcome") }]}><span class="mob-drawer-icon">👋</span>New here</a>
       <a href="/neighborhoods" class:list={["mob-drawer-link", { active: currentPath.startsWith("/neighborhoods") }]}><span class="mob-drawer-icon">📍</span>Neighborhoods</a>
       <a href="/help-out" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help-out") }]}><span class="mob-drawer-icon">🤝</span>Help out</a>
       <a href="/calendar" class:list={["mob-drawer-link", { active: currentPath.startsWith("/calendar") }]}><span class="mob-drawer-icon">📆</span>Calendar</a>
-      {user && (
-        <a href="/messages" class:list={["mob-drawer-link", { active: currentPath.startsWith("/messages") }]}><span class="mob-drawer-icon">💬</span>Messages</a>
-      )}
       <a href="/about" class:list={["mob-drawer-link", { active: currentPath.startsWith("/about") }]}><span class="mob-drawer-icon">ℹ️</span>About</a>
       <a href="/help" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help") || currentPath.startsWith("/conduct") }]}><span class="mob-drawer-icon">❓</span>Help & Safety</a>
       <a href="/contact" class:list={["mob-drawer-link", { active: currentPath.startsWith("/contact") }]}><span class="mob-drawer-icon">✉️</span>Contact</a>
@@ -251,6 +251,154 @@ const showWelcomeTour = !user && !tourSeen;
       burger.addEventListener('click', open);
       closeBtn && closeBtn.addEventListener('click', close);
       backdrop.addEventListener('click', close);
+      document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close(); });
+    })();
+  </script>
+
+  {user && (
+    <div id="mc-overlay" class="mc-overlay" hidden>
+      <div class="mc-card" role="dialog" aria-modal="true">
+        <button class="mc-close" id="mc-close" aria-label="Close">×</button>
+        <div id="mc-body" class="mc-body">
+          <div class="mc-loading">Loading…</div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  <script is:inline>
+    (function() {
+      var overlay = document.getElementById('mc-overlay');
+      if (!overlay) return;
+      var body = document.getElementById('mc-body');
+      var closeBtn = document.getElementById('mc-close');
+
+      function escapeHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+          return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+        });
+      }
+
+      function close() {
+        overlay.setAttribute('hidden', '');
+      }
+      function open() {
+        overlay.removeAttribute('hidden');
+      }
+
+      function fmtDate(iso) {
+        if (!iso) return '';
+        try {
+          var d = new Date(iso);
+          return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        } catch (e) { return iso; }
+      }
+
+      function renderCard(data) {
+        var m = data.member;
+        var initial = (m.name || '?').charAt(0).toUpperCase();
+        var html = '';
+        html += '<div class="mc-avatar">' + escapeHtml(initial) + '</div>';
+        html += '<h2 class="mc-name">' + escapeHtml(m.name) + '</h2>';
+        var meta = [];
+        if (m.extra_role) meta.push('<span class="mc-role">' + escapeHtml(m.extra_role) + '</span>');
+        if (m.neighborhood) meta.push('📍 ' + escapeHtml(m.neighborhood));
+        if (m.joined_at) meta.push('Member since ' + escapeHtml(fmtDate(m.joined_at)));
+        if (meta.length) html += '<p class="mc-meta">' + meta.join(' · ') + '</p>';
+
+        if (m.bio) {
+          html += '<p class="mc-bio">"' + escapeHtml(m.bio) + '"</p>';
+        }
+
+        if (data.mutualGroups && data.mutualGroups.length) {
+          html += '<div class="mc-mutuals"><span class="mc-label">Mutual groups</span><div class="mc-mutual-list">';
+          data.mutualGroups.forEach(function(g) {
+            html += '<a href="/groups/' + escapeHtml(g.slug) + '" class="mc-mutual">' + escapeHtml(g.name) + '</a>';
+          });
+          html += '</div></div>';
+        }
+
+        html += '<div class="mc-contact"><span class="mc-label">Email</span><span class="mc-email">' + escapeHtml(m.email) + '</span></div>';
+
+        if (!data.isSelf) {
+          html += '<div class="mc-actions">';
+          html += '<button class="mc-btn mc-btn-primary" id="mc-msg" data-email="' + escapeHtml(m.email) + '">💬 Message</button>';
+
+          var sent = data.phoneRequest && data.phoneRequest.sent;
+          if (sent && sent.status === 'approved' && sent.shared_phone) {
+            html += '<div class="mc-phone-ok">📱 ' + escapeHtml(sent.shared_phone) + '</div>';
+          } else if (sent && sent.status === 'pending') {
+            html += '<button class="mc-btn mc-btn-sec" disabled>📱 Phone requested</button>';
+          } else if (sent && sent.status === 'declined') {
+            html += '<button class="mc-btn mc-btn-sec" disabled>📱 Phone request declined</button>';
+          } else {
+            html += '<button class="mc-btn mc-btn-sec" id="mc-phone" data-email="' + escapeHtml(m.email) + '">📱 Request phone</button>';
+          }
+          html += '</div>';
+        }
+
+        body.innerHTML = html;
+
+        var msgBtn = document.getElementById('mc-msg');
+        msgBtn && msgBtn.addEventListener('click', async function() {
+          var email = msgBtn.getAttribute('data-email');
+          var r = await fetch('/api/dm', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: 'start', with: email }),
+          });
+          var d = await r.json();
+          if (d.ok && d.id) window.location.href = '/messages/' + d.id;
+          else alert('Failed: ' + (d.error || 'unknown'));
+        });
+
+        var phBtn = document.getElementById('mc-phone');
+        phBtn && phBtn.addEventListener('click', async function() {
+          var email = phBtn.getAttribute('data-email');
+          var note = prompt('Optional note (e.g. "for the hike Saturday"):') || '';
+          var r = await fetch('/api/phone-requests', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: 'request', to: email, note: note }),
+          });
+          var d = await r.json();
+          if (d.ok) {
+            alert('Sent. They can approve or decline from their profile.');
+            close();
+          } else {
+            alert('Failed: ' + d.error);
+          }
+        });
+      }
+
+      async function showCard(email) {
+        body.innerHTML = '<div class="mc-loading">Loading…</div>';
+        open();
+        try {
+          var r = await fetch('/api/member-card?email=' + encodeURIComponent(email));
+          var d = await r.json();
+          if (d.ok) renderCard(d);
+          else body.innerHTML = '<p class="mc-loading">Could not load member.</p>';
+        } catch (e) {
+          body.innerHTML = '<p class="mc-loading">Network error.</p>';
+        }
+      }
+
+      // Delegate clicks on anything with [data-member-card]
+      document.body.addEventListener('click', function(e) {
+        var t = e.target;
+        while (t && t !== document.body) {
+          if (t.getAttribute && t.getAttribute('data-member-card')) {
+            e.preventDefault();
+            showCard(t.getAttribute('data-member-card'));
+            return;
+          }
+          t = t.parentNode;
+        }
+      });
+
+      closeBtn.addEventListener('click', close);
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
       document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close(); });
     })();
   </script>
@@ -713,6 +861,71 @@ const showWelcomeTour = !user && !tourSeen;
   .wt-dots { display: flex; gap: 6px; }
   .wt-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-hover); transition: background 0.2s; }
   .wt-dot.active { background: var(--accent); }
+
+  /* ── Member card modal (Discord-style profile popup) ── */
+  .mc-overlay[hidden] { display: none !important; }
+  .mc-overlay {
+    position: fixed; inset: 0; z-index: 1100;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--space-4);
+    animation: mc-fade 0.18s ease-out;
+  }
+  @keyframes mc-fade { from { opacity: 0; } to { opacity: 1; } }
+  .mc-card {
+    position: relative; background: var(--bg); color: var(--text);
+    border-radius: 20px; max-width: 420px; width: 100%;
+    padding: 28px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.32);
+    animation: mc-pop 0.22s ease-out;
+    border: 1px solid var(--border);
+  }
+  @keyframes mc-pop { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .mc-close {
+    position: absolute; top: 12px; right: 12px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 20px; line-height: 1; color: var(--text-sec);
+    cursor: pointer; padding: 0;
+  }
+  .mc-close:hover { background: var(--surface-hover); color: var(--text); }
+  .mc-loading { text-align: center; color: var(--text-faint); padding: 24px 0; font-size: 14px; }
+  .mc-body { text-align: center; }
+  .mc-avatar {
+    width: 76px; height: 76px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--sunset), var(--pink));
+    color: #fff; display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 32px; font-weight: 800;
+    margin-bottom: 12px;
+  }
+  .mc-name { font-family: var(--font-display); font-size: 22px; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .mc-meta { font-size: 13px; color: var(--text-sec); margin-bottom: 14px; }
+  .mc-role { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--accent-dim); color: var(--accent); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 4px; }
+  .mc-bio { font-size: 14px; line-height: 1.55; color: var(--text); font-style: italic; padding: 12px 14px; background: var(--surface); border-radius: 12px; margin-bottom: 14px; }
+  .mc-label { display: block; font-size: 10px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .mc-mutuals { text-align: left; margin-bottom: 14px; }
+  .mc-mutual-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mc-mutual { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--surface); color: var(--text-sec); text-decoration: none; font-weight: 600; }
+  .mc-mutual:hover { background: var(--surface-hover); color: var(--text); }
+  .mc-contact { text-align: left; margin-bottom: 14px; }
+  .mc-email { font-size: 13px; color: var(--text); padding: 8px 12px; background: var(--surface); border-radius: 8px; display: inline-block; font-family: var(--font); word-break: break-all; }
+  .mc-actions { display: flex; flex-direction: column; gap: 8px; }
+  .mc-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 11px 18px; border-radius: 999px;
+    font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    cursor: pointer; border: none; text-decoration: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .mc-btn-primary { background: var(--cta-bg); color: var(--cta-text); }
+  .mc-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px var(--cta-glow); }
+  .mc-btn-sec { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .mc-btn-sec:hover { background: var(--surface-hover); }
+  .mc-btn-sec:disabled { opacity: 0.6; cursor: not-allowed; }
+  .mc-phone-ok { padding: 10px 14px; border-radius: 999px; background: var(--accent2-dim); color: #047857; font-weight: 700; font-size: 14px; }
+
+  .mob-drawer-link-sub { margin-left: 12px; opacity: 0.9; }
 </style>
 
 <script is:inline>
