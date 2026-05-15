@@ -6,9 +6,22 @@ function getDB(): D1Database | null {
   return (env as any).DB || null;
 }
 
+async function readConfig(db: D1Database, key: string): Promise<string | null> {
+  try {
+    const row: any = await db.prepare('SELECT value FROM config WHERE key=?').bind(key).first();
+    return row?.value || null;
+  } catch { return null; }
+}
+
 export const GET = async ({ request, cookies }: { request: Request; cookies: any }) => {
-  const DISCORD_CLIENT_ID = (env as any).DISCORD_CLIENT_ID;
-  const DISCORD_CLIENT_SECRET = (env as any).DISCORD_CLIENT_SECRET;
+  const db = getDB();
+  let DISCORD_CLIENT_ID = (env as any).DISCORD_CLIENT_ID as string | undefined;
+  let DISCORD_CLIENT_SECRET = (env as any).DISCORD_CLIENT_SECRET as string | undefined;
+  // Fall back to /admin/settings values when env secrets aren't set
+  if (db) {
+    if (!DISCORD_CLIENT_ID) DISCORD_CLIENT_ID = (await readConfig(db, 'discord_client_id')) || undefined;
+    if (!DISCORD_CLIENT_SECRET) DISCORD_CLIENT_SECRET = (await readConfig(db, 'discord_client_secret')) || undefined;
+  }
   const url = new URL(request.url);
   const redirectUri = (env as any).DISCORD_REDIRECT_URI || `${url.origin}/api/auth/discord/callback`;
 
@@ -67,7 +80,6 @@ export const GET = async ({ request, cookies }: { request: Request; cookies: any
     ? `https://cdn.discordapp.com/avatars/${discordId}/${discordUser.avatar}.png?size=128`
     : null;
 
-  const db = getDB();
   if (!db) return new Response(null, { status: 302, headers: { 'Location': '/login?error=db' } });
   await ensureMemberAuthSchema(db);
 

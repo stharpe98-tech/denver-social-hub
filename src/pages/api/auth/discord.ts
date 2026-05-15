@@ -1,10 +1,22 @@
 // Discord OAuth — Step 1: redirect to Discord authorize page
 import { env } from "cloudflare:workers";
 
+async function getDiscordClientId(): Promise<string | null> {
+  const fromEnv = (env as any).DISCORD_CLIENT_ID;
+  if (fromEnv) return fromEnv;
+  // Fall back to the value saved via /admin/settings (config table)
+  const db = (env as any).DB as D1Database | undefined;
+  if (!db) return null;
+  try {
+    const row: any = await db.prepare("SELECT value FROM config WHERE key='discord_client_id'").first();
+    return row?.value || null;
+  } catch { return null; }
+}
+
 export const GET = async ({ request }: { request: Request }) => {
-  const DISCORD_CLIENT_ID = (env as any).DISCORD_CLIENT_ID;
+  const DISCORD_CLIENT_ID = await getDiscordClientId();
   if (!DISCORD_CLIENT_ID) {
-    return new Response('Discord OAuth not configured. Set DISCORD_CLIENT_ID via `wrangler secret put`.', { status: 500 });
+    return new Response('Discord OAuth not configured. Set it in /admin/settings or via `wrangler secret put DISCORD_CLIENT_ID`.', { status: 500 });
   }
 
   const url = new URL(request.url);

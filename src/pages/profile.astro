@@ -5,9 +5,15 @@ import { getLevel, getNextLevel } from '../lib/levels';
 import { env } from 'cloudflare:workers';
 
 const redditAvailable = !!(env as any).REDDIT_CLIENT_ID;
-const discordAvailable = !!(env as any).DISCORD_CLIENT_ID;
+let discordAvailable = !!(env as any).DISCORD_CLIENT_ID;
 
 const db = getDB();
+if (!discordAvailable && db) {
+  try {
+    const row: any = await db.prepare("SELECT value FROM config WHERE key='discord_client_id'").first();
+    if (row?.value) discordAvailable = true;
+  } catch {}
+}
 let user: any = null;
 const cookie = Astro.cookies.get('dsn_user')?.value;
 if (cookie) { try { user = JSON.parse(cookie); } catch {} }

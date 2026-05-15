@@ -105,6 +105,17 @@ const v = (k: string) => cfg[k] || '';
     <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
   </form>
 
+  <!-- DISCORD OAUTH -->
+  <form class="group" data-group="discord">
+    <div class="group-head">
+      <div class="group-title">💬 Discord login</div>
+      <p class="group-sub">Lets members sign in via Discord. Create an app at <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">discord.com/developers/applications</a>, then under <strong>OAuth2</strong> copy the Client ID + Client Secret. Add this redirect URL to the app's OAuth2 → Redirects list: <code>https://denversocialhub.com/api/auth/discord/callback</code></p>
+    </div>
+    <div class="row"><label>Discord Client ID</label><input type="text" name="discord_client_id" value={v('discord_client_id')} placeholder="1234567890123456789" autocomplete="off"/></div>
+    <div class="row"><label>Discord Client Secret</label><input type="password" name="discord_client_secret" value={v('discord_client_secret')} placeholder="••••••••••••••••••••••••" autocomplete="off"/></div>
+    <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
+  </form>
+
   <!-- SMS (Twilio) -->
   <form class="group" data-group="sms">
     <div class="group-head">
