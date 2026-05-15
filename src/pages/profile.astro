@@ -575,8 +575,8 @@ const connectBanner =
   .p-admin-card {
     display: flex; align-items: center; gap: 14px;
     padding: 16px 20px; margin-bottom: 20px;
-    background: linear-gradient(135deg, #F5F3FF, #ECFDF5);
-    border: 1px solid #C7D2FE; border-radius: 16px;
+    background: linear-gradient(135deg, var(--sunset-dim), var(--pink-dim));
+    border: 1px solid rgba(249,115,22,0.18); border-radius: 16px;
     color: var(--text); transition: transform 0.15s, box-shadow 0.15s;
   }
   .p-admin-card:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(124,58,237,0.15); }
@@ -671,7 +671,7 @@ const connectBanner =
   .p-idea-status.scheduled { background: #DBEAFE; color: #1E40AF; border-color: transparent; }
 
   /* Sidebar */
-  .p-level-card { background: linear-gradient(135deg, #F5F3FF, #EFF6FF); border-color: #DDD6FE; }
+  .p-level-card { background: linear-gradient(135deg, var(--sunset-dim), var(--pink-dim)); border-color: rgba(249,115,22,0.18); }
   .p-level-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
   .p-level-emoji { font-size: 36px; line-height: 1; }
   .p-level-target { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); }
