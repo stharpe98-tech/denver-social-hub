@@ -9,14 +9,86 @@ import Base from '../layouts/Base.astro';
     </header>
 
     <nav class="hp-toc" aria-label="Quick jump">
-      <a href="#why-not">Why not __?</a>
-      <a href="#attendees">For attendees</a>
-      <a href="#groups">Groups</a>
-      <a href="#organizers">For organizers</a>
-      <a href="#privacy">Privacy</a>
-      <a href="#reporting">Reporting</a>
-      <a href="#safety">Safety & terms</a>
+      <a href="#transparency">🪟 Transparency</a>
+      <a href="#why-not">🤔 Why not __?</a>
+      <a href="#attendees">🎟 Attendees</a>
+      <a href="#groups">👥 Groups</a>
+      <a href="#organizers">🎤 Organizers</a>
+      <a href="#privacy">🔒 Privacy</a>
+      <a href="#reporting">🚩 Reporting</a>
+      <a href="#safety">🛡 Safety & terms</a>
     </nav>
+
+    <section class="hp-sec" id="transparency">
+      <h2>Transparency</h2>
+      <p class="hp-section-lede">Everything we do, in plain English. No secrets, no fine print.</p>
+
+      <div class="hp-grid">
+        <div class="hp-box hp-box-ok">
+          <div class="hp-box-head">
+            <span class="hp-box-emoji">📦</span>
+            <strong>What we collect</strong>
+          </div>
+          <ul>
+            <li>Your name + email (to run your account)</li>
+            <li>Neighborhood (so events feel local)</li>
+            <li>RSVPs + check-ins (so you remember what you went to)</li>
+            <li>Reddit/Discord username + karma (if you linked them)</li>
+          </ul>
+        </div>
+
+        <div class="hp-box hp-box-no">
+          <div class="hp-box-head">
+            <span class="hp-box-emoji">🚫</span>
+            <strong>What we don't do</strong>
+          </div>
+          <ul>
+            <li>No ads, ever</li>
+            <li>No selling your data — to anyone</li>
+            <li>No algorithm deciding what you see</li>
+            <li>No engagement tricks, push notification spam, or dark patterns</li>
+            <li>No paywall, no premium tier, no upsell</li>
+          </ul>
+        </div>
+
+        <div class="hp-box">
+          <div class="hp-box-head">
+            <span class="hp-box-emoji">💸</span>
+            <strong>What it costs to run</strong>
+          </div>
+          <p>Roughly <strong>$5–15/month</strong> total: Cloudflare Workers for hosting, D1 for the database, Resend for emails. Paid out of pocket by Seth (the person who runs this). No investors, no revenue.</p>
+        </div>
+
+        <div class="hp-box">
+          <div class="hp-box-head">
+            <span class="hp-box-emoji">👤</span>
+            <strong>Who runs it</strong>
+          </div>
+          <p>Seth Tharpe, a local. Email <a href="mailto:stharpe98@gmail.com">stharpe98@gmail.com</a> or DM <code>@godtminilegs</code> on Discord. No team, no company — yet.</p>
+        </div>
+
+        <div class="hp-box">
+          <div class="hp-box-head">
+            <span class="hp-box-emoji">⚖️</span>
+            <strong>How decisions get made</strong>
+          </div>
+          <ul>
+            <li>Admins approve partner perks before they go live</li>
+            <li>Reports get reviewed within ~48 hours</li>
+            <li>Account removals happen when someone violates <a href="#safety">the rules</a> — usually after one warning</li>
+            <li>Anything bigger (new features, policy changes): announced in Discord first</li>
+          </ul>
+        </div>
+
+        <div class="hp-box">
+          <div class="hp-box-head">
+            <span class="hp-box-emoji">📂</span>
+            <strong>Your data is yours</strong>
+          </div>
+          <p>You can delete your account anytime from <a href="/profile">/profile</a> — it wipes your record and all your RSVPs. Want a copy of your data first? Email Seth.</p>
+        </div>
+      </div>
+    </section>
 
     <section class="hp-sec" id="why-not">
       <h2>Why not just use ___?</h2>
@@ -250,6 +322,32 @@ import Base from '../layouts/Base.astro';
     .hp-q p { padding: 12px 16px 16px; color: var(--text-sec); font-size: 14px; line-height: 1.65; }
     .hp-q a { color: var(--accent); font-weight: 600; }
     .hp-why-intro { font-size: 14px; color: var(--text-sec); margin-bottom: 12px; }
+
+    /* Section lede + box grid */
+    .hp-section-lede { font-size: 16px; color: var(--text-sec); line-height: 1.55; margin-bottom: 20px; max-width: 580px; }
+    .hp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .hp-box {
+      padding: 18px 20px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 16px;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .hp-box:hover { transform: translateY(-1px); box-shadow: var(--card-shadow); }
+    .hp-box-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .hp-box-head strong { font-family: var(--font-display); font-size: 15px; font-weight: 800; color: var(--text); }
+    .hp-box-emoji { font-size: 22px; line-height: 1; }
+    .hp-box p { font-size: 14px; line-height: 1.55; color: var(--text-sec); margin: 0; }
+    .hp-box p strong { color: var(--text); font-weight: 700; }
+    .hp-box ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+    .hp-box ul li {
+      font-size: 13px; color: var(--text-sec); line-height: 1.5;
+      padding-left: 18px; position: relative;
+    }
+    .hp-box-ok ul li::before { content: '✓'; position: absolute; left: 0; color: var(--mint); font-weight: 800; }
+    .hp-box-no ul li::before { content: '✕'; position: absolute; left: 0; color: var(--sunset); font-weight: 800; }
+    .hp-box-ok { background: linear-gradient(160deg, rgba(16,185,129,0.06), transparent); border-color: rgba(16,185,129,0.18); }
+    .hp-box-no { background: linear-gradient(160deg, rgba(249,115,22,0.06), transparent); border-color: rgba(249,115,22,0.18); }
+    .hp-box a { color: var(--accent); font-weight: 600; }
+    .hp-box code { background: var(--surface); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
 
     /* Safety rules */
     .hp-safety-intro { font-size: 15px; color: var(--text-sec); margin-bottom: 18px; }
