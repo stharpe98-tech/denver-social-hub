@@ -217,7 +217,7 @@ const content = await getContent();
               )}
               {c.karmaMin >= 1 && <span class="tag tag-yellow">{c.karmaMin}+ karma</span>}
               {(c.kind === 'event' && c.spotsLeft !== 0 && c.spotsLeft !== -1 && 4 > c.spotsLeft) && <span class="tag tag-orange">last {c.spotsLeft} spots</span>}
-              {c.kind === 'event' && c.spotsLeft === 0 && <span class="tag" style="background:rgba(255,71,87,0.12);color:#ff4757">Full</span>}
+              {c.kind === 'event' && c.spotsLeft === 0 && <span class="tag" style="background:#FEE2E2;color:#991B1B">Full</span>}
             </div>
             <h3 class="ec-title">{c.title}</h3>
             {c.description && <p class="ec-desc">{c.description.slice(0, 80)}</p>}
@@ -455,7 +455,7 @@ const content = await getContent();
   .cp-tpl {
     display: flex; flex-direction: column; align-items: center; gap: 4px;
     padding: 14px 8px; border-radius: 10px;
-    border: 1px solid var(--border); background: var(--bg, #0a0a0a);
+    border: 1px solid var(--border); background: var(--bg);
     cursor: pointer; transition: all .2s;
   }
   .cp-tpl:hover {
