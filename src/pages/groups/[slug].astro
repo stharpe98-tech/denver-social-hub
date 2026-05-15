@@ -141,6 +141,8 @@ function timeAgo(iso: string): string {
           {members.map((mm: any) => {
             const name = mm.display_name || mm.reddit_username || mm.discord_username || (mm.member_email || '').split('@')[0] || 'Member';
             const initial = name[0]?.toUpperCase() || '?';
+            const isMe = user?.email && (mm.member_email || '').toLowerCase() === user.email.toLowerCase();
+            const canDm = !!user && !isMe && mm.member_email && !mm.member_email.endsWith('@reddit.local') && !mm.member_email.endsWith('@discord.local');
             return (
               <div class="g-member">
                 <div class="g-avatar">{initial}</div>
@@ -148,6 +150,9 @@ function timeAgo(iso: string): string {
                   <strong>{name}</strong>
                   {mm.role !== 'member' && <span class={`g-member-role role-${mm.role}`}>{mm.role}</span>}
                 </div>
+                {canDm && (
+                  <button class="g-member-dm" data-dm={mm.member_email} title={`Message ${name}`}>💬</button>
+                )}
               </div>
             );
           })}
@@ -348,6 +353,14 @@ function timeAgo(iso: string): string {
   }
   .g-member-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .g-member-text strong { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .g-member-dm {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 50%; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 14px; flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .g-member-dm:hover { background: var(--accent-dim); border-color: var(--accent); }
   .g-member-role {
     font-size: 10px; padding: 2px 7px; border-radius: 999px;
     text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;
@@ -622,6 +635,21 @@ function timeAgo(iso: string): string {
       const id = parseInt((btn as HTMLElement).getAttribute('data-delete-post') || '0');
       const d = await postCall({ action: 'delete_post', post_id: id });
       if (d.ok) location.reload();
+      else alert('Failed: ' + d.error);
+    });
+  });
+
+  // Start DM with a group member
+  document.querySelectorAll('[data-dm]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const email = (btn as HTMLElement).getAttribute('data-dm');
+      const res = await fetch('/api/dm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start', with: email }),
+      });
+      const d = await res.json();
+      if (d.ok && d.id) location.href = `/messages/${d.id}`;
       else alert('Failed: ' + d.error);
     });
   });
