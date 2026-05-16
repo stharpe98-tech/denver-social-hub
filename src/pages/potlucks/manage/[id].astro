@@ -80,6 +80,11 @@ const dishEntries = Object.entries(dishMap);
     .empty{text-align:center;padding:32px;color:#4a3020;font-style:italic;font-size:13px}
     .hidden{display:none!important}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    @media (max-width: 640px){
+      .hero-actions{flex-wrap:wrap;gap:var(--space-2,8px)}
+      .grid2{grid-template-columns:1fr;gap:var(--space-2,8px)}
+    }
   </style>
 </head>
 <body>
@@ -127,7 +132,7 @@ const dishEntries = Object.entries(dishMap);
       </div>
       <div style="margin-top:14px;background:#fff8ec;border:1.5px dashed #fcd5a0;border-radius:10px;padding:14px">
         <div style="font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Add new item</div>
-        <div style="display:grid;grid-template-columns:120px 1fr 100px 60px auto;gap:6px;align-items:center">
+        <div class="add-new-grid">
           <input type="text" id="new-time" placeholder="Time (opt)" style="padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
           <input type="text" id="new-suggestion" placeholder="Item (e.g. Chips & dip)" style="padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
           <input type="text" id="new-category" placeholder="Category" value="Items" style="padding:8px;border:1px solid #e4ddd4;border-radius:6px;font-family:inherit;font-size:13px"/>
@@ -137,6 +142,11 @@ const dishEntries = Object.entries(dishMap);
       </div>
     </div>
     <style is:inline>
+      .add-new-grid{display:grid;grid-template-columns:120px 1fr 100px 60px auto;gap:6px;align-items:center}
+      @media (max-width: 640px){
+        .add-new-grid{grid-template-columns:1fr;gap:var(--space-2,8px)}
+        .add-new-grid > *{width:100%}
+      }
       .slot-grid-wrap{overflow-x:auto;background:#fff;border:1px solid #e4ddd4;border-radius:12px}
       .slot-table{width:100%;border-collapse:collapse;font-size:13px}
       .slot-table th{text-align:left;padding:10px 12px;font-size:11px;font-weight:700;color:#a09890;text-transform:uppercase;letter-spacing:0.5px;background:#f7f5f2;border-bottom:1px solid #e4ddd4}
@@ -185,6 +195,7 @@ const dishEntries = Object.entries(dishMap);
       {attending.length === 0
         ? <div class="empty">No sign-ups yet</div>
         : (
+          <div class="table-scroll">
           <table class="table">
             <thead><tr><th>Name</th><th>Dish</th><th>👥</th><th>From</th><th>Dietary</th><th></th></tr></thead>
             <tbody>
@@ -200,6 +211,7 @@ const dishEntries = Object.entries(dishMap);
               ))}
             </tbody>
           </table>
+          </div>
         )
       }
     </div>

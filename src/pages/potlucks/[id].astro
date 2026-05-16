@@ -174,6 +174,22 @@ slots.forEach((s:any) => {
 
     .empty { text-align: center; padding: 40px; color: #a09890; font-style: italic; font-size: 14px; }
     .hidden { display: none !important; }
+
+    /* Mobile responsiveness */
+    @media (max-width: 640px) {
+      .page { padding: 16px 12px; }
+      .item { flex-wrap: wrap; gap: 8px; padding: 12px; }
+      .item-name { flex-basis: 100%; }
+      .claim-row { flex-wrap: wrap; }
+      .claim-submit, .claim-cancel { flex: 1 1 100%; }
+      .event-meta span { display: flex; margin-left: 0 !important; }
+    }
+    @media (max-width: 380px) {
+      .view-toggle { width: 100%; }
+      .vt-btn { flex: 1; padding: 7px 8px; }
+      .tab { font-size: 12px; padding: 10px 4px; }
+      .share-row .share-btn { flex: 1 1 calc(50% - 8px); justify-content: center; }
+    }
   </style>
 </head>
 <body>

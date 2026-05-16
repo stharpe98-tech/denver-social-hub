@@ -613,6 +613,12 @@ const socialLevel = totalEvts === 0 ? "Fresh face" : totalEvts < 3 ? "Getting ou
     .p-greeting { font-size: 24px; }
     .p-stat-big { font-size: 22px; }
   }
+  @media (max-width: 380px) {
+    .p-stats { padding: 12px 8px; gap: 4px; }
+    .p-stat-big { font-size: 18px; }
+    .p-stat-label { font-size: 10px; }
+    .p-stat-divider { height: 24px; }
+  }
 </style>
 
 <script is:inline>
