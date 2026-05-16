@@ -1,0 +1,460 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDB } from '../lib/db';
+import { ensureCommunitySchema, FAVOR_KINDS } from '../lib/community-schema';
+import { ensureGroupsSchema } from '../lib/groups-schema';
+import { ensureDmSchema } from '../lib/dm-schema';
+
+const db = getDB();
+let user: any = null;
+const cookie = Astro.cookies.get('dsn_user')?.value;
+if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+
+const validTabs = new Set(['favors', 'groups', 'messages']);
+const rawTab = (Astro.url.searchParams.get('tab') || 'favors').toLowerCase();
+const tab = validTabs.has(rawTab) ? rawTab : 'favors';
+
+const filter = Astro.url.searchParams.get('kind') || 'all';
+
+let favors: any[] = [];
+let myGroups: any[] = [];
+let discoverGroups: any[] = [];
+let conversations: any[] = [];
+
+if (db) {
+  if (tab === 'favors') {
+    await ensureCommunitySchema(db);
+    let sql = "SELECT * FROM favors WHERE status='open'";
+    const binds: any[] = [];
+    if (filter === 'offer' || filter === 'need') {
+      sql += ' AND kind=?';
+      binds.push(filter);
+    }
+    sql += ' ORDER BY id DESC LIMIT 60';
+    const r = await db.prepare(sql).bind(...binds).all();
+    favors = (r.results || []) as any[];
+  } else if (tab === 'groups') {
+    await ensureGroupsSchema(db);
+    if (user?.email) {
+      const my = await db.prepare(`
+        SELECT g.*, gm.role
+        FROM groups g
+        JOIN group_members gm ON gm.group_id = g.id
+        WHERE LOWER(gm.member_email) = LOWER(?)
+        ORDER BY gm.joined_at DESC
+      `).bind(user.email).all();
+      myGroups = (my.results || []) as any[];
+    }
+    const discover = await db.prepare(`
+      SELECT g.*
+      FROM groups g
+      WHERE g.privacy = 'public'
+        AND (? IS NULL OR g.id NOT IN (SELECT group_id FROM group_members WHERE LOWER(member_email)=LOWER(?)))
+      ORDER BY g.member_count DESC, g.id DESC
+      LIMIT 24
+    `).bind(user?.email || null, user?.email || '').all();
+    discoverGroups = (discover.results || []) as any[];
+  } else if (tab === 'messages') {
+    if (user?.email) {
+      await ensureDmSchema(db);
+      const me = (user.email || '').toLowerCase();
+      const r = await db.prepare(`
+        SELECT c.id, c.member_a_email, c.member_b_email, c.last_msg_at, c.last_msg_preview, c.last_msg_from,
+               m.name as other_name, m.reddit_username as other_reddit, m.discord_username as other_discord,
+               (SELECT COUNT(*) FROM dm_messages mm WHERE mm.conversation_id=c.id AND mm.from_email != ? AND mm.read_at IS NULL) AS unread
+        FROM dm_conversations c
+        LEFT JOIN members m ON LOWER(m.email) = CASE WHEN LOWER(c.member_a_email)=? THEN LOWER(c.member_b_email) ELSE LOWER(c.member_a_email) END
+        WHERE LOWER(c.member_a_email)=? OR LOWER(c.member_b_email)=?
+        ORDER BY COALESCE(c.last_msg_at, c.created_at) DESC
+      `).bind(me, me, me, me).all();
+      conversations = (r.results || []) as any[];
+    }
+  }
+}
+
+const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unread || 0), 0);
+
+function otherName(c: any): string {
+  return c.other_name || c.other_reddit || c.other_discord
+    || (c.member_a_email?.toLowerCase() === (user?.email || '').toLowerCase()
+        ? (c.member_b_email || '').split('@')[0]
+        : (c.member_a_email || '').split('@')[0])
+    || 'Member';
+}
+
+function timeAgo(iso: string): string {
+  if (!iso) return '';
+  const ms = Date.now() - new Date((iso || '').includes('Z') ? iso : iso + 'Z').getTime();
+  if (Number.isNaN(ms) || ms < 0) return '';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return d < 30 ? `${d}d ago` : new Date(iso).toLocaleDateString();
+}
+---
+<Base title="Community Board" description="Favors, groups, and direct messages — the community side of Denver Social.">
+<div class="cb-wrap">
+  <header class="cb-head">
+    <h1>Community Board</h1>
+    <p>Trade favors, join groups, and message neighbors. All the community-side stuff lives here.</p>
+  </header>
+
+  <nav class="cb-tabs" aria-label="Section">
+    <a href="/community?tab=favors" class:list={["cb-tab", { active: tab === 'favors' }]}>🤝 Favors</a>
+    <a href="/community?tab=groups" class:list={["cb-tab", { active: tab === 'groups' }]}>👥 Groups</a>
+    <a href="/community?tab=messages" class:list={["cb-tab", { active: tab === 'messages' }]}>
+      💬 Messages
+      {totalUnread > 0 && <span class="cb-tab-badge">{totalUnread}</span>}
+    </a>
+  </nav>
+
+  {tab === 'favors' && (
+    <div class="ho-wrap-inner">
+      <div class="ho-tabs">
+        <a href="/community?tab=favors" class:list={["ho-tab", { active: filter === 'all' }]}>All</a>
+        <a href="/community?tab=favors&kind=offer" class:list={["ho-tab", { active: filter === 'offer' }]}>🤝 Offers</a>
+        <a href="/community?tab=favors&kind=need" class:list={["ho-tab", { active: filter === 'need' }]}>🙏 Needs</a>
+      </div>
+
+      {user ? (
+        <form id="ho-form" class="ho-composer">
+          <h2>Post one</h2>
+          <div class="ho-row">
+            <label class="ho-pick">
+              <input type="radio" name="kind" value="offer" checked />
+              <span>🤝 I can help with…</span>
+            </label>
+            <label class="ho-pick">
+              <input type="radio" name="kind" value="need" />
+              <span>🙏 I need help with…</span>
+            </label>
+          </div>
+          <input type="text" name="title" class="ho-input" maxlength="100" placeholder="Headline — Ride to DIA Saturday morning" required />
+          <textarea name="body" class="ho-input ho-textarea" rows={2} maxlength="600" placeholder="Optional detail. Time, place, anything else."></textarea>
+          <input type="text" name="neighborhood" class="ho-input ho-half" maxlength="40" placeholder="Neighborhood (optional)" />
+          <div class="ho-foot">
+            <span class="ho-hint">Anyone signed in can see this.</span>
+            <button type="submit" class="ho-post-btn">Post</button>
+          </div>
+        </form>
+      ) : (
+        <div class="ho-signed-out"><a href="/login?next=/community" class="btn-cta">Sign in to post or respond</a></div>
+      )}
+
+      {favors.length === 0 ? (
+        <div class="ho-empty">Empty board. Nobody needs a ride to DIA. Nobody's offering to assemble IKEA furniture. {user ? "Yet. That's where you come in." : <><a href="/login?next=/community">Sign in</a> and break the ice.</>}</div>
+      ) : (
+        <div class="ho-feed">
+          {favors.map((f: any) => {
+            const isMine = user?.email && (f.member_email || '').toLowerCase() === user.email.toLowerCase();
+            const kindInfo = FAVOR_KINDS.find(k => k.key === f.kind);
+            return (
+              <article class={`ho-card ho-${f.kind}`}>
+                <div class="ho-card-top">
+                  <span class="ho-kind">{kindInfo?.emoji} {kindInfo?.label}</span>
+                  {f.neighborhood && <span class="ho-loc">📍 {f.neighborhood}</span>}
+                </div>
+                <h3>{f.title}</h3>
+                {f.body && <p>{f.body}</p>}
+                <div class="ho-card-foot">
+                  <span class="ho-by">— {f.member_name || 'Member'} · {timeAgo(f.created_at)}</span>
+                  {isMine && (
+                    <span class="ho-mod">
+                      <button data-close-favor={f.id}>Mark resolved</button>
+                      <button data-delete-favor={f.id}>Delete</button>
+                    </span>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  )}
+
+  {tab === 'groups' && (
+    <div class="cb-section">
+      <div class="cb-section-head">
+        <h2 class="cb-section-title">Groups</h2>
+        {user ? (
+          <a href="/groups/new" class="btn-cta cb-new-btn">+ New group</a>
+        ) : (
+          <a href="/login?next=/community?tab=groups" class="btn-cta cb-new-btn">Sign in</a>
+        )}
+      </div>
+
+      {user && (
+        <section class="cb-sub-section">
+          <h3 class="cb-sub-title">Your groups</h3>
+          {myGroups.length === 0 ? (
+            <div class="cb-empty">
+              You haven't joined any groups yet. Browse below or <a href="/groups/new">make your own</a>.
+            </div>
+          ) : (
+            <div class="cb-grid">
+              {myGroups.map((g: any) => (
+                <a href={`/groups/${g.slug}`} class="cb-card">
+                  <div class="cb-card-head">
+                    <span class="cb-card-name">{g.name}</span>
+                    {g.privacy === 'invite_only' && <span class="cb-card-lock">🔒 Private</span>}
+                  </div>
+                  {g.description && <p class="cb-card-desc">{g.description}</p>}
+                  <div class="cb-card-meta">
+                    <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
+                    {g.role === 'owner' && <span class="cb-card-role">Owner</span>}
+                    {g.role === 'organizer' && <span class="cb-card-role">Organizer</span>}
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      <section class="cb-sub-section">
+        <h3 class="cb-sub-title">Discover</h3>
+        {discoverGroups.length === 0 ? (
+          <div class="cb-empty">No public groups yet. {user ? <a href="/groups/new">Start the first one →</a> : <a href="/login?next=/community?tab=groups">Sign in</a>} to create one.</div>
+        ) : (
+          <div class="cb-grid">
+            {discoverGroups.map((g: any) => (
+              <a href={`/groups/${g.slug}`} class="cb-card">
+                <div class="cb-card-head">
+                  <span class="cb-card-name">{g.name}</span>
+                </div>
+                {g.description && <p class="cb-card-desc">{g.description}</p>}
+                <div class="cb-card-meta">
+                  <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  )}
+
+  {tab === 'messages' && (
+    <div class="cb-section">
+      <h2 class="cb-section-title">Messages</h2>
+      {!user ? (
+        <div class="cb-empty">
+          <a href="/login?next=/community?tab=messages">Sign in</a> to see your conversations.
+        </div>
+      ) : conversations.length === 0 ? (
+        <div class="cb-empty">
+          No messages yet — message a neighbor from their profile.
+        </div>
+      ) : (
+        <div class="dm-list">
+          {conversations.map((c: any) => {
+            const name = otherName(c);
+            const initial = name[0]?.toUpperCase() || '?';
+            const isUnread = (c.unread || 0) > 0;
+            const preview = c.last_msg_preview || 'Start the conversation…';
+            return (
+              <a href={`/messages/${c.id}`} class={`dm-row ${isUnread ? 'unread' : ''}`}>
+                <div class="dm-avatar">{initial}</div>
+                <div class="dm-body">
+                  <div class="dm-row-top">
+                    <strong>{name}</strong>
+                    <span class="dm-time">{timeAgo(c.last_msg_at)}</span>
+                  </div>
+                  <div class="dm-preview">
+                    {c.last_msg_from?.toLowerCase() === (user.email || '').toLowerCase() && <span class="dm-you">You: </span>}
+                    {preview}
+                  </div>
+                </div>
+                {isUnread && <span class="dm-badge">{c.unread}</span>}
+              </a>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  )}
+</div>
+
+<style>
+  .cb-wrap { max-width: 900px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+  .cb-head { text-align: center; margin-bottom: 24px; }
+  .cb-head h1 { font-family: var(--font-display); font-size: clamp(30px, 5vw, 40px); font-weight: 900; letter-spacing: -0.025em; }
+  .cb-head p { font-size: 15px; color: var(--text-sec); max-width: 560px; margin: 8px auto 0; line-height: 1.55; }
+
+  /* Primary tabs — pill-style, design-system colors */
+  .cb-tabs {
+    display: flex; gap: 6px; margin: 0 auto 32px;
+    background: var(--surface); padding: 6px;
+    border-radius: 999px; width: fit-content;
+    border: 1px solid var(--border);
+    flex-wrap: wrap; justify-content: center;
+  }
+  .cb-tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 20px; border-radius: 999px;
+    font-family: var(--font-display); font-size: 14px; font-weight: 700;
+    color: var(--text-sec); text-decoration: none;
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+  }
+  .cb-tab:hover:not(.active) { color: var(--text); background: var(--surface-hover); }
+  .cb-tab:active { transform: translateY(1px); }
+  .cb-tab.active { background: var(--bg); color: var(--accent); box-shadow: var(--card-shadow); }
+  .cb-tab-badge {
+    min-width: 20px; padding: 2px 8px; border-radius: 999px;
+    background: var(--cta-bg); color: #fff;
+    font-size: 11px; font-weight: 800; text-align: center;
+  }
+
+  /* Sections shared (groups + messages) */
+  .cb-section { margin-top: 8px; }
+  .cb-section-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .cb-section-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+  .cb-new-btn { padding: 10px 20px; font-size: 14px; }
+  .cb-sub-section { margin-bottom: 32px; }
+  .cb-sub-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em; }
+  .cb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .cb-card {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 18px; background: var(--bg); border: 1px solid var(--border); border-radius: 16px;
+    text-decoration: none; color: var(--text);
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  }
+  .cb-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
+  .cb-card:active { transform: translateY(0); }
+  .cb-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .cb-card-name { font-family: var(--font-display); font-size: 17px; font-weight: 700; }
+  .cb-card-lock { font-size: 11px; color: var(--text-sec); background: var(--surface); padding: 3px 9px; border-radius: 999px; }
+  .cb-card-desc { font-size: 13px; color: var(--text-sec); line-height: 1.45; flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .cb-card-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-faint); }
+  .cb-card-role { color: var(--accent); font-weight: 700; }
+  .cb-empty {
+    padding: 32px 24px; border: 1px dashed var(--border); border-radius: 14px;
+    text-align: center; color: var(--text-sec); font-size: 14px;
+  }
+  .cb-empty a { color: var(--accent); font-weight: 600; }
+
+  /* Favors section (preserved) */
+  .ho-wrap-inner { max-width: 720px; margin: 0 auto; }
+  .ho-tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; flex-wrap: wrap; }
+  .ho-tab { padding: 8px 18px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text-sec); text-decoration: none; transition: background 0.15s, color 0.15s; }
+  .ho-tab:hover { background: var(--surface); color: var(--text); }
+  .ho-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  .ho-composer, .ho-signed-out {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 16px;
+    padding: 20px; margin-bottom: 24px;
+  }
+  .ho-signed-out { text-align: center; }
+  .ho-composer h2 { font-family: var(--font-display); font-size: 15px; font-weight: 800; margin-bottom: 12px; }
+  .ho-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .ho-pick {
+    flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px; transition: all 0.15s;
+  }
+  .ho-pick:has(input:checked) { background: var(--accent-dim); border-color: var(--accent); }
+  .ho-pick input { width: 14px; height: 14px; accent-color: var(--accent); }
+  .ho-input { width: 100%; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-family: var(--font); background: var(--bg); margin-bottom: 10px; }
+  .ho-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .ho-textarea { resize: vertical; line-height: 1.5; }
+  .ho-half { max-width: 280px; }
+  .ho-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; gap: 10px; flex-wrap: wrap; }
+  .ho-hint { font-size: 12px; color: var(--text-faint); }
+  .ho-post-btn { padding: 10px 18px; border-radius: 999px; border: none; background: var(--cta-bg); color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 13px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+  .ho-post-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--cta-glow); }
+  .ho-post-btn:active { transform: translateY(0); }
+
+  .ho-feed { display: flex; flex-direction: column; gap: 10px; }
+  .ho-card { padding: 18px 20px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; }
+  .ho-card.ho-offer { background: linear-gradient(160deg, rgba(16,185,129,0.06), transparent); border-color: rgba(16,185,129,0.20); }
+  .ho-card.ho-need { background: linear-gradient(160deg, var(--sunset-dim), transparent); border-color: rgba(249,115,22,0.25); }
+  .ho-card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .ho-kind { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.04em; }
+  .ho-loc { font-size: 12px; color: var(--text-sec); }
+  .ho-card h3 { font-family: var(--font-display); font-size: 16px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.01em; }
+  .ho-card p { font-size: 14px; line-height: 1.55; color: var(--text-sec); margin-bottom: 8px; }
+  .ho-card-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; flex-wrap: wrap; }
+  .ho-by { color: var(--text-faint); }
+  .ho-mod { display: flex; gap: 6px; }
+  .ho-mod button { background: none; border: none; cursor: pointer; color: var(--text-sec); font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 6px; }
+  .ho-mod button:hover { background: var(--surface); color: var(--text); }
+
+  .ho-empty { padding: 56px 24px; text-align: center; color: var(--text-faint); background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; }
+  .ho-empty a { color: var(--accent); font-weight: 600; }
+
+  /* DM list (mirrored from /groups) */
+  .dm-list { display: flex; flex-direction: column; gap: 6px; }
+  .dm-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 14px;
+    text-decoration: none; transition: background 0.15s, border-color 0.15s;
+  }
+  .dm-row:hover { background: var(--surface); border-color: var(--border-hover); }
+  .dm-row.unread { background: var(--accent-dim); border-color: var(--accent); }
+  .dm-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--sunset), var(--pink));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 800; font-size: 18px; flex-shrink: 0;
+  }
+  .dm-body { flex: 1; min-width: 0; }
+  .dm-row-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .dm-row-top strong { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); }
+  .dm-time { font-size: 12px; color: var(--text-faint); flex-shrink: 0; }
+  .dm-preview { font-size: 13px; color: var(--text-sec); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dm-row.unread .dm-preview { color: var(--text); font-weight: 500; }
+  .dm-you { color: var(--text-faint); }
+  .dm-badge {
+    min-width: 22px; padding: 3px 8px; border-radius: 999px;
+    background: var(--cta-bg); color: #fff;
+    font-family: var(--font-display); font-size: 11px; font-weight: 800;
+    text-align: center; flex-shrink: 0;
+  }
+
+  @media (max-width: 540px) {
+    .cb-tabs { width: 100%; justify-content: space-between; }
+    .cb-tab { flex: 1; justify-content: center; padding: 10px 8px; font-size: 13px; }
+  }
+</style>
+
+<script is:inline>
+  const form = document.getElementById('ho-form');
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const data = { action: 'create_favor', kind: fd.get('kind'), title: fd.get('title'), body: fd.get('body'), neighborhood: fd.get('neighborhood') };
+    const res = await fetch('/api/community', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+    });
+    const d = await res.json();
+    if (d.ok) location.reload();
+    else alert('Failed: ' + d.error);
+  });
+  document.querySelectorAll('[data-close-favor]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Mark this as resolved?')) return;
+      const res = await fetch('/api/community', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'close_favor', id: parseInt(btn.getAttribute('data-close-favor')) }),
+      });
+      if ((await res.json()).ok) location.reload();
+    });
+  });
+  document.querySelectorAll('[data-delete-favor]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete?')) return;
+      const res = await fetch('/api/community', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_favor', id: parseInt(btn.getAttribute('data-delete-favor')) }),
+      });
+      if ((await res.json()).ok) location.reload();
+    });
+  });
+</script>
+</Base>
