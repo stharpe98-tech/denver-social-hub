@@ -30,20 +30,36 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   // ── FAVORS (open) ──
   if (action === 'create_favor') {
-    const kind = String(body.kind || '').trim();
-    if (kind !== 'offer' && kind !== 'need') return bad('bad_kind');
+    // Accept extended board kinds (event/announce/just_because) but map
+    // them down to the legacy 'offer'/'need' column for back-compat.
+    const VALID_EXT = new Set(['need', 'offer', 'event', 'announce', 'just_because']);
+    const rawKind = String(body.kind || body.kind_extended || '').trim();
+    if (!VALID_EXT.has(rawKind)) return bad('bad_kind');
+    const kindExt = rawKind;
+    const legacyKind = rawKind === 'need' ? 'need' : 'offer';
+
     const title = String(body.title || '').trim();
     const text = String(body.body || '').trim();
     const neighborhood = String(body.neighborhood || '').trim();
-    const name = (String(body.name || body.member_name || '').trim()) || 'Community Member';
-    const email = String(body.email || '').trim().toLowerCase() || `anon:${name.toLowerCase()}`;
+    const name = (String(body.name || body.member_name || '').trim());
+    if (!name) return bad('name');
+    const email = String(body.contact_email || body.email || '').trim().toLowerCase();
+    const phone = String(body.contact_phone || '').trim();
+    if (!email && !phone) return bad('contact_required');
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad('bad_email');
     if (title.length < 3) return bad('title');
     if (title.length > 100) return bad('title_too_long');
     if (text.length > 600) return bad('body_too_long');
-    await db.prepare(
-      'INSERT INTO favors (member_email, member_name, kind, title, body, neighborhood) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(email, name, kind, title, text, neighborhood).run();
-    return ok({});
+
+    const ownerEmail = email || `anon:${name.toLowerCase()}`;
+    const r = await db.prepare(
+      `INSERT INTO favors
+         (member_email, member_name, kind, title, body, neighborhood,
+          contact_email, contact_phone, kind_extended)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(ownerEmail, name, legacyKind, title, text, neighborhood, email, phone, kindExt).run();
+    const id = (r as any)?.meta?.last_row_id || null;
+    return ok({ id });
   }
   if (action === 'close_favor' || action === 'delete_favor') {
     // Only admins can close/delete favors now — without member auth we

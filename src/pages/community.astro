@@ -1,9 +1,13 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
-import { ensureCommunitySchema, FAVOR_KINDS } from '../lib/community-schema';
+import { ensureCommunitySchema, BOARD_KINDS } from '../lib/community-schema';
 import { ensureGroupsSchema } from '../lib/groups-schema';
 import { ensureDmSchema } from '../lib/dm-schema';
+import {
+  NEIGHBORHOODS, resolveNeighborhoodSlug, getNeighborhood,
+  nearbyNeighborhoods, milesBetween,
+} from '../lib/neighborhoods';
 
 const db = getDB();
 // Accounts are offline; no logged-in viewer concept on this page.
@@ -14,8 +18,16 @@ const rawTab = (Astro.url.searchParams.get('tab') || 'favors').toLowerCase();
 const tab = validTabs.has(rawTab) ? rawTab : 'favors';
 
 const filter = Astro.url.searchParams.get('kind') || 'all';
+const nbhSlug = resolveNeighborhoodSlug(Astro.url.searchParams.get('nbh'));
+const currentNbh = getNeighborhood(nbhSlug);
+const nearby = currentNbh ? nearbyNeighborhoods(nbhSlug, 5, 5) : [];
 
 let favors: any[] = [];
+let nearbyFavors: any[] = [];
+let people: any[] = [];
+let totalFlyers = 0;
+let totalNeighbors = 0;
+let thisWeek = 0;
 const myGroups: any[] = [];
 let discoverGroups: any[] = [];
 const conversations: any[] = [];
@@ -23,15 +35,66 @@ const conversations: any[] = [];
 if (db) {
   if (tab === 'favors') {
     await ensureCommunitySchema(db);
-    let sql = "SELECT * FROM favors WHERE status='open'";
-    const binds: any[] = [];
-    if (filter === 'offer' || filter === 'need') {
-      sql += ' AND kind=?';
-      binds.push(filter);
+    // Local flyers
+    {
+      let sql = "SELECT * FROM favors WHERE status='open'";
+      const binds: any[] = [];
+      if (nbhSlug !== 'all') { sql += " AND LOWER(neighborhood)=?"; binds.push(nbhSlug); }
+      if (filter === 'offer' || filter === 'need') {
+        sql += " AND COALESCE(NULLIF(kind_extended,''), kind)=?";
+        binds.push(filter);
+      } else if (filter === 'event' || filter === 'announce' || filter === 'just_because') {
+        sql += " AND kind_extended=?";
+        binds.push(filter);
+      }
+      sql += ' ORDER BY id DESC LIMIT 60';
+      const r = await db.prepare(sql).bind(...binds).all();
+      favors = (r.results || []) as any[];
     }
-    sql += ' ORDER BY id DESC LIMIT 60';
-    const r = await db.prepare(sql).bind(...binds).all();
-    favors = (r.results || []) as any[];
+    // Nearby flyers (other neighborhoods within ~5mi) — slot in after locals
+    if (nbhSlug !== 'all' && nearby.length > 0 && filter === 'all') {
+      const slugs = nearby.map(n => n.slug);
+      const placeholders = slugs.map(() => '?').join(',');
+      const r = await db.prepare(
+        `SELECT * FROM favors WHERE status='open' AND LOWER(neighborhood) IN (${placeholders})
+         ORDER BY id DESC LIMIT 12`
+      ).bind(...slugs).all();
+      nearbyFavors = (r.results || []) as any[];
+    }
+    // People — pull profiles tagged to this neighborhood. The columns
+    // referenced (slug/display_name/photo_emoji/headline/status) may not
+    // exist on every deploy; wrap in try/catch.
+    if (nbhSlug !== 'all') {
+      try {
+        const r = await db.prepare(
+          `SELECT slug, display_name, headline, photo_emoji, neighborhood
+           FROM profiles WHERE LOWER(neighborhood)=? AND status='live'
+           ORDER BY updated_at DESC LIMIT 4`
+        ).bind(nbhSlug).all();
+        people = (r.results || []) as any[];
+      } catch { people = []; }
+    }
+    // Stats
+    try {
+      const c1: any = await db.prepare(
+        nbhSlug === 'all'
+          ? "SELECT COUNT(*) AS c FROM favors WHERE status='open'"
+          : "SELECT COUNT(*) AS c FROM favors WHERE status='open' AND LOWER(neighborhood)=?"
+      ).bind(...(nbhSlug === 'all' ? [] : [nbhSlug])).first();
+      totalFlyers = c1?.c || 0;
+      const c2: any = await db.prepare(
+        nbhSlug === 'all'
+          ? "SELECT COUNT(DISTINCT member_email) AS c FROM favors"
+          : "SELECT COUNT(DISTINCT member_email) AS c FROM favors WHERE LOWER(neighborhood)=?"
+      ).bind(...(nbhSlug === 'all' ? [] : [nbhSlug])).first();
+      totalNeighbors = c2?.c || 0;
+      const c3: any = await db.prepare(
+        nbhSlug === 'all'
+          ? "SELECT COUNT(*) AS c FROM favors WHERE status='open' AND created_at > datetime('now', '-7 days')"
+          : "SELECT COUNT(*) AS c FROM favors WHERE status='open' AND LOWER(neighborhood)=? AND created_at > datetime('now', '-7 days')"
+      ).bind(...(nbhSlug === 'all' ? [] : [nbhSlug])).first();
+      thisWeek = c3?.c || 0;
+    } catch {}
   } else if (tab === 'groups') {
     await ensureGroupsSchema(db);
     const discover = await db.prepare(`
@@ -56,6 +119,42 @@ function otherName(c: any): string {
         ? (c.member_b_email || '').split('@')[0]
         : (c.member_a_email || '').split('@')[0])
     || 'Member';
+}
+
+// Mix nearby flyers in with locals at every Nth slot so the feed
+// reads as one board, not two sections stacked.
+function buildBoardItems(locals: any[], nearbyList: any[], peopleList: any[]) {
+  const out: Array<{ type: 'flyer' | 'person'; data: any; nearby?: boolean }> = [];
+  const flyers: Array<{ data: any; nearby?: boolean }> = [
+    ...locals.map(f => ({ data: f })),
+    ...nearbyList.map(f => ({ data: f, nearby: true })),
+  ];
+  // Sort by id desc so newest still leads
+  flyers.sort((a, b) => (b.data.id || 0) - (a.data.id || 0));
+  let pIdx = 0;
+  for (let i = 0; i < flyers.length; i++) {
+    out.push({ type: 'flyer', data: flyers[i].data, nearby: flyers[i].nearby });
+    // Sprinkle a person every 4 flyers (not at top)
+    if (pIdx < peopleList.length && i > 0 && (i + 1) % 4 === 0) {
+      out.push({ type: 'person', data: peopleList[pIdx++] });
+    }
+  }
+  // Append leftover people at the end
+  while (pIdx < peopleList.length) out.push({ type: 'person', data: peopleList[pIdx++] });
+  return out;
+}
+
+function flyerKindInfo(f: any) {
+  const k = (f.kind_extended || f.kind || 'offer');
+  return BOARD_KINDS.find(x => x.key === k) || BOARD_KINDS[1];
+}
+
+function distanceFromHere(slug: string): string {
+  if (!currentNbh || !slug) return '';
+  const n = getNeighborhood(slug);
+  if (!n) return '';
+  const mi = milesBetween(currentNbh, n);
+  return mi >= 0.1 ? `${mi.toFixed(1)} mi` : '';
 }
 
 function timeAgo(iso: string): string {
@@ -89,68 +188,117 @@ function timeAgo(iso: string): string {
   </nav>
 
   {tab === 'favors' && (
-    <div class="ho-wrap-inner">
-      <div class="ho-tabs">
-        <a href="/community?tab=favors" class:list={["ho-tab", { active: filter === 'all' }]}>All</a>
-        <a href="/community?tab=favors&kind=offer" class:list={["ho-tab", { active: filter === 'offer' }]}>🤝 Offers</a>
-        <a href="/community?tab=favors&kind=need" class:list={["ho-tab", { active: filter === 'need' }]}>🙏 Needs</a>
-      </div>
+    <div class="board-wrap">
+      <section class="bd-hero">
+        <div class="bd-hero-tag">DENVER · NEIGHBORHOOD BY NEIGHBORHOOD</div>
+        <h2 class="bd-hero-h">A flyer wall for your <span>block.</span></h2>
+        <p class="bd-hero-sub">Find what's happening on your street. Offer something to your neighbors. Ask for a hand. No algorithm. No ads.</p>
 
-      {user ? (
-        <form id="ho-form" class="ho-composer">
-          <h2>Post one</h2>
-          <div class="ho-row">
-            <label class="ho-pick">
-              <input type="radio" name="kind" value="offer" checked />
-              <span>🤝 I can help with…</span>
-            </label>
-            <label class="ho-pick">
-              <input type="radio" name="kind" value="need" />
-              <span>🙏 I need help with…</span>
-            </label>
-          </div>
-          <input type="text" name="title" class="ho-input" maxlength="100" placeholder="Headline — Ride to DIA Saturday morning" required />
-          <textarea name="body" class="ho-input ho-textarea" rows={2} maxlength="600" placeholder="Optional detail. Time, place, anything else."></textarea>
-          <input type="text" name="neighborhood" class="ho-input ho-half" maxlength="40" placeholder="Neighborhood (optional)" />
-          <div class="ho-foot">
-            <span class="ho-hint">Anyone signed in can see this.</span>
-            <button type="submit" class="ho-post-btn">Post</button>
+        <form class="bd-picker" method="get" action="/community">
+          <input type="hidden" name="tab" value="favors" />
+          <div class="bd-picker-label">You're viewing</div>
+          <div class="bd-picker-row">
+            <div class="bd-picker-pin">📍</div>
+            <div class="bd-picker-info">
+              <div class="bd-picker-name">{currentNbh?.label || 'All Denver'}</div>
+              <div class="bd-picker-meta">
+                {currentNbh ? `${currentNbh.area} · ${totalFlyers} flyer${totalFlyers === 1 ? '' : 's'} active`
+                            : `All neighborhoods · ${totalFlyers} flyers`}
+              </div>
+            </div>
+            <select name="nbh" class="bd-picker-select" onchange="this.form.submit()">
+              <option value="all" selected={nbhSlug === 'all'}>All Denver</option>
+              {NEIGHBORHOODS.map(n => (
+                <option value={n.slug} selected={n.slug === nbhSlug}>{n.label}</option>
+              ))}
+            </select>
           </div>
         </form>
-      ) : (
-        <div class="ho-signed-out"><a href="/login?next=/community" class="btn-cta">Sign in to post or respond</a></div>
-      )}
 
-      {favors.length === 0 ? (
-        <div class="ho-empty">Empty board. Nobody needs a ride to DIA. Nobody's offering to assemble IKEA furniture. Break the ice — post the first one.</div>
-      ) : (
-        <div class="ho-feed">
-          {favors.map((f: any) => {
-            const isMine = false;
-            void user;
-            const kindInfo = FAVOR_KINDS.find(k => k.key === f.kind);
-            return (
-              <article class={`ho-card ho-${f.kind}`}>
-                <div class="ho-card-top">
-                  <span class="ho-kind">{kindInfo?.emoji} {kindInfo?.label}</span>
-                  {f.neighborhood && <span class="ho-loc">📍 {f.neighborhood}</span>}
-                </div>
-                <h3>{f.title}</h3>
-                {f.body && <p>{f.body}</p>}
-                <div class="ho-card-foot">
-                  <span class="ho-by">— {f.member_name || 'Member'} · {timeAgo(f.created_at)}</span>
-                  {isMine && (
-                    <span class="ho-mod">
-                      <button data-close-favor={f.id}>Mark resolved</button>
-                      <button data-delete-favor={f.id}>Delete</button>
-                    </span>
-                  )}
-                </div>
-              </article>
-            );
-          })}
+        {nearby.length > 0 && (
+          <div class="bd-nearby">
+            <span class="bd-nearby-label">Nearby:</span>
+            {nearby.map(n => (
+              <a href={`/community?nbh=${n.slug}`}>{n.label}</a>
+            ))}
+            <a href="/community?nbh=all">see all {NEIGHBORHOODS.length} →</a>
+          </div>
+        )}
+
+        <div class="bd-stats">
+          <div class="bd-stat"><div class="bd-stat-n">{totalFlyers}</div><div class="bd-stat-l">flyers</div></div>
+          <div class="bd-stat"><div class="bd-stat-n">{totalNeighbors}</div><div class="bd-stat-l">neighbors</div></div>
+          <div class="bd-stat"><div class="bd-stat-n">{thisWeek}</div><div class="bd-stat-l">this week</div></div>
         </div>
-      )}
+      </section>
+
+      <section class="bd-board-bg">
+        <div class="bd-toolbar">
+          <span class="bd-toolbar-label">{currentNbh?.label || 'All Denver'} ·</span>
+          {[
+            { k: 'all',      l: 'All' },
+            { k: 'offer',    l: '🤝 Offers' },
+            { k: 'need',     l: '🙏 Needs' },
+            { k: 'event',    l: '🎉 Events' },
+            { k: 'announce', l: '📣 Announce' },
+          ].map(f => (
+            <a href={`/community?nbh=${nbhSlug}&kind=${f.k}`}
+               class:list={['bd-filter', { on: filter === f.k }]}>{f.l}</a>
+          ))}
+          <input class="bd-search" id="bd-search" placeholder="Search board…" />
+          <a href={`/community/post/new?nbh=${nbhSlug}`} class="bd-post">+ Pin a flyer</a>
+        </div>
+
+        {(favors.length + nearbyFavors.length + people.length) === 0 ? (
+          <div class="bd-empty">
+            <p>Nothing pinned to {currentNbh?.label || 'this board'} yet.</p>
+            <a href={`/community/post/new?nbh=${nbhSlug}`} class="bd-post" style="margin-top:14px">+ Pin the first flyer</a>
+          </div>
+        ) : (
+          <div class="bd-board">
+            {buildBoardItems(favors, nearbyFavors, people).map(item => {
+              if (item.type === 'person') {
+                const p = item.data;
+                return (
+                  <a href={`/u/${p.slug}`} class="flyer flyer-person">
+                    <div class="flyer-nbh">📍 {getNeighborhood(p.neighborhood)?.label || currentNbh?.label || 'Denver'}</div>
+                    <div class="person-row">
+                      <div class="person-avatar">{p.photo_emoji || '👤'}</div>
+                      <div>
+                        <div class="person-name">{p.display_name}</div>
+                        {p.headline && <div class="person-role">{p.headline}</div>}
+                      </div>
+                    </div>
+                    <div class="flyer-cta">See {String(p.display_name || '').split(' ')[0]}'s page →</div>
+                  </a>
+                );
+              }
+              const f = item.data;
+              const ki = flyerKindInfo(f);
+              const dist = item.nearby ? distanceFromHere(f.neighborhood) : '';
+              const nbhInfo = getNeighborhood(f.neighborhood);
+              const variants = ['', 'flyer-beige', 'flyer-accent', '', 'flyer-beige'];
+              const variant = variants[(f.id || 0) % variants.length];
+              return (
+                <a href={`/community/post/${f.id}`} class:list={['flyer', variant]}>
+                  <div class:list={['flyer-nbh', { far: item.nearby }]}>
+                    📍 {nbhInfo?.label || f.neighborhood || 'Denver'}{dist ? ` · ${dist}` : ''}
+                  </div>
+                  <div class="flyer-kind">
+                    <span class:list={['dot', `dot-${ki.dot}`]}></span>{ki.label}
+                  </div>
+                  <div class="flyer-title">{f.title}</div>
+                  {f.body && <div class="flyer-body">{f.body}</div>}
+                  <div class="flyer-meta">
+                    <span class="flyer-author">{f.member_name || 'A neighbor'}</span>
+                    <span>{timeAgo(f.created_at)}</span>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   )}
 
@@ -367,39 +515,116 @@ function timeAgo(iso: string): string {
     .cb-tabs { width: 100%; justify-content: space-between; }
     .cb-tab { flex: 1; justify-content: center; padding: 10px 8px; font-size: 13px; }
   }
+
+  /* ─── Flyer board (favors tab) ─── */
+  .board-wrap { margin: 0 -16px; }
+  @media (min-width: 700px) { .board-wrap { margin: 0 -32px; } }
+
+  .bd-hero { background: #FAF8F4; padding: 40px 24px 0; text-align: center; border-top: 1px solid #E8E2D5; border-bottom: 1px solid #E8E2D5; }
+  .bd-hero-tag { font-size: 11px; letter-spacing: 3px; font-weight: 700; color: #C9A55D; margin-bottom: 12px; }
+  .bd-hero-h { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(28px, 4.4vw, 48px); font-weight: 800; color: #1A1A1A; letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 14px; max-width: 720px; margin-left: auto; margin-right: auto; }
+  .bd-hero-h span { color: #C9A55D; font-style: italic; }
+  .bd-hero-sub { font-size: 16px; color: #555; max-width: 560px; margin: 0 auto 28px; line-height: 1.5; }
+
+  .bd-picker { max-width: 540px; margin: 0 auto; background: #fff; border: 1.5px solid #E8E2D5; border-radius: 12px; padding: 16px 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.05); position: relative; }
+  .bd-picker-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #888; font-weight: 700; margin-bottom: 8px; text-align: left; }
+  .bd-picker-row { display: flex; align-items: center; gap: 12px; }
+  .bd-picker-pin { width: 36px; height: 36px; border-radius: 50%; background: #1A1A1A; color: #FFD93D; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .bd-picker-info { flex: 1; text-align: left; min-width: 0; }
+  .bd-picker-name { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 800; color: #1A1A1A; line-height: 1; }
+  .bd-picker-meta { font-size: 12px; color: #888; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bd-picker-select { font-size: 13px; font-weight: 700; color: #C9A55D; padding: 8px 12px; border: 1px solid #E8E2D5; border-radius: 999px; background: #fff; cursor: pointer; font-family: inherit; max-width: 140px; }
+
+  .bd-nearby { max-width: 760px; margin: 20px auto 0; padding: 0 12px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+  .bd-nearby-label { color: #888; padding: 6px 0; }
+  .bd-nearby a { padding: 5px 12px; background: rgba(255,255,255,0.6); border: 1px solid #E8E2D5; border-radius: 999px; color: #555; font-weight: 600; text-decoration: none; }
+  .bd-nearby a:hover { border-color: #1A1A1A; color: #1A1A1A; }
+
+  .bd-stats { max-width: 720px; margin: 32px auto 0; padding: 0 16px 48px; display: flex; justify-content: center; gap: 48px; }
+  .bd-stat { text-align: center; }
+  .bd-stat-n { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 800; color: #1A1A1A; line-height: 1; }
+  .bd-stat-l { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #888; margin-top: 4px; font-weight: 600; }
+  @media (max-width: 540px) { .bd-stats { gap: 24px; } .bd-stat-n { font-size: 22px; } }
+
+  .bd-board-bg {
+    background: #B89968;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(0,0,0,0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(0,0,0,0.04) 0%, transparent 50%),
+      repeating-linear-gradient(105deg, transparent 0, transparent 3px, rgba(0,0,0,0.025) 3px, rgba(0,0,0,0.025) 4px);
+    padding: 36px 16px 72px;
+  }
+
+  .bd-toolbar { max-width: 1100px; margin: 0 auto 28px; background: rgba(255,255,255,0.92); backdrop-filter: blur(6px); border-radius: 12px; padding: 10px 14px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .bd-toolbar-label { font-size: 12px; color: #888; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-right: 4px; }
+  .bd-filter { background: transparent; color: #555; border: 1px solid transparent; padding: 7px 14px; font-weight: 600; font-size: 13px; cursor: pointer; border-radius: 999px; text-decoration: none; }
+  .bd-filter:hover { background: #f5f0e6; color: #1A1A1A; }
+  .bd-filter.on { background: #1A1A1A; color: #fff; }
+  .bd-search { margin-left: auto; padding: 7px 14px; border: 1px solid #E8E2D5; border-radius: 999px; font-size: 13px; background: #fff; min-width: 160px; font-family: inherit; }
+  .bd-post { padding: 8px 18px; background: #FFD93D; color: #1A1A1A; border: none; border-radius: 999px; font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-block; transition: transform 0.15s, box-shadow 0.15s; }
+  .bd-post:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
+  .bd-post:active { transform: translateY(0); }
+
+  .bd-board { columns: 3; column-gap: 18px; max-width: 1100px; margin: 0 auto; }
+  @media (max-width: 900px) { .bd-board { columns: 2; } }
+  @media (max-width: 600px) { .bd-board { columns: 1; } }
+
+  .bd-empty { max-width: 540px; margin: 0 auto; background: #FFFEFA; padding: 36px 24px; border-radius: 4px; text-align: center; color: #555; box-shadow: 0 6px 20px rgba(0,0,0,0.18); position: relative; }
+  .bd-empty::before { content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ef4444, #991b1b); box-shadow: 0 2px 3px rgba(0,0,0,0.3), inset -1px -1px 2px rgba(0,0,0,0.3); }
+
+  .flyer {
+    break-inside: avoid; margin-bottom: 18px;
+    padding: 18px 18px 14px; position: relative;
+    background: #FFFEFA; border-radius: 2px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1);
+    display: block; color: inherit; text-decoration: none;
+    transition: transform 0.18s, box-shadow 0.18s;
+  }
+  .flyer::before {
+    content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    width: 14px; height: 14px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #ef4444, #991b1b);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.3), inset -1px -1px 2px rgba(0,0,0,0.3);
+  }
+  .flyer:nth-child(3n+1) { transform: rotate(-0.5deg); }
+  .flyer:nth-child(3n+2) { transform: rotate(0.4deg); }
+  .flyer:nth-child(3n+3) { transform: rotate(-0.2deg); }
+  .flyer:hover { transform: rotate(0) translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.22), 0 2px 4px rgba(0,0,0,0.12); z-index: 2; }
+
+  .flyer-beige { background: #FFF8E7; }
+  .flyer-accent { background: #FFE7C7; }
+
+  .flyer-nbh { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #C9A55D; margin-bottom: 4px; }
+  .flyer-nbh.far { color: #888; }
+  .flyer-kind { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #888; margin-bottom: 10px; }
+  .flyer-kind .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .dot-need { background: #DC2626; }
+  .dot-offer { background: #047857; }
+  .dot-event { background: #7C3AED; }
+  .dot-announce { background: #F59E0B; }
+  .dot-person { background: #C9A55D; }
+
+  .flyer-title { font-family: 'Playfair Display', Georgia, serif; font-size: 18px; font-weight: 700; line-height: 1.2; color: #1A1A1A; margin-bottom: 8px; }
+  .flyer-body { font-size: 13.5px; color: #444; line-height: 1.5; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+  .flyer-meta { display: flex; justify-content: space-between; font-size: 11px; color: #888; padding-top: 10px; border-top: 1px solid #f0e8d4; }
+  .flyer-author { font-weight: 600; color: #555; }
+
+  .flyer-person { background: #FFFEFA; padding: 16px; }
+  .flyer-person .person-row { display: flex; gap: 12px; align-items: center; margin: 8px 0 10px; }
+  .flyer-person .person-avatar { width: 44px; height: 44px; border-radius: 50%; background: #FAF8F4; border: 2px solid #C9A55D; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .flyer-person .person-name { font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-weight: 700; line-height: 1.1; }
+  .flyer-person .person-role { font-size: 12px; color: #888; font-style: italic; }
+  .flyer-person .flyer-cta { display: inline-block; color: #1A1A1A; font-size: 12px; font-weight: 700; border-bottom: 1.5px solid #1A1A1A; padding-bottom: 1px; margin-top: 4px; }
 </style>
 
 <script is:inline>
-  const form = document.getElementById('ho-form');
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fd = new FormData(form);
-    const data = { action: 'create_favor', kind: fd.get('kind'), title: fd.get('title'), body: fd.get('body'), neighborhood: fd.get('neighborhood') };
-    const res = await fetch('/api/community', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
-    });
-    const d = await res.json();
-    if (d.ok) location.reload();
-    else alert('Failed: ' + d.error);
-  });
-  document.querySelectorAll('[data-close-favor]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Mark this as resolved?')) return;
-      const res = await fetch('/api/community', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'close_favor', id: parseInt(btn.getAttribute('data-close-favor')) }),
-      });
-      if ((await res.json()).ok) location.reload();
-    });
-  });
-  document.querySelectorAll('[data-delete-favor]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Delete?')) return;
-      const res = await fetch('/api/community', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_favor', id: parseInt(btn.getAttribute('data-delete-favor')) }),
-      });
-      if ((await res.json()).ok) location.reload();
+  // Client-side board search — filters .flyer cards by visible text.
+  const search = document.getElementById('bd-search');
+  search?.addEventListener('input', () => {
+    const q = (search.value || '').toLowerCase().trim();
+    document.querySelectorAll('.bd-board .flyer').forEach(el => {
+      if (!q) { el.style.display = ''; return; }
+      el.style.display = (el.textContent || '').toLowerCase().includes(q) ? '' : 'none';
     });
   });
 </script>
