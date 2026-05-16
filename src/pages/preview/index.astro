@@ -1,0 +1,58 @@
+---
+import Base from '../../layouts/Base.astro';
+
+const previews = [
+  { slug: 'home-zine', label: 'A · Zine', desc: 'Bold + distinctive. Pink/yellow/black, big serif headlines, manifesto vibe.', color: '#FF3D7F', emoji: '📰' },
+  { slug: 'home-map', label: 'B · Map-first', desc: 'Denver map as hero. Tap a neighborhood, see what\'s near you.', color: '#7C3AED', emoji: '🗺️' },
+  { slug: 'home-potluck', label: 'C · Potluck-first', desc: 'Narrowed focus. The site is about Wednesday potlucks. Everything else is secondary.', color: '#DC2626', emoji: '🥘' },
+  { slug: 'post-center', label: 'Post Center', desc: 'How the Community Board would work — clickable posts, reveal contact, admin queue.', color: '#10B981', emoji: '📌' },
+  { slug: 'personal-page', label: 'Personal Pages', desc: 'Jimmy + Sarah profiles, claim flow, editor, admin moderation.', color: '#F59E0B', emoji: '👤' },
+];
+---
+<Base title="Preview hub">
+<div class="hub">
+  <header class="hub-head">
+    <div class="hub-tag">PREVIEW HUB</div>
+    <h1 class="hub-h1">Click around.</h1>
+    <p class="hub-sub">Five mockups. Static dummy data. Compare directions before we build the real thing.</p>
+  </header>
+
+  <div class="hub-grid">
+    {previews.map(p => (
+      <a class="hub-card" href={`/preview/${p.slug}`} style={`--card-color: ${p.color}`}>
+        <div class="hub-emoji">{p.emoji}</div>
+        <div class="hub-label">{p.label}</div>
+        <p class="hub-desc">{p.desc}</p>
+        <span class="hub-cta">Open →</span>
+      </a>
+    ))}
+  </div>
+
+  <footer class="hub-foot">
+    <p>Each mockup has a switcher at the top to hop between them — no need to come back here.</p>
+  </footer>
+</div>
+</Base>
+
+<style>
+  .hub { max-width: 900px; margin: 0 auto; padding: 64px 24px; }
+  .hub-head { text-align: center; margin-bottom: 48px; }
+  .hub-tag { font-family: 'Courier New', monospace; font-size: 12px; letter-spacing: 2px; color: var(--text-faint); margin-bottom: 16px; }
+  .hub-h1 { font-family: var(--font-display, 'Playfair Display', serif); font-size: clamp(40px, 6vw, 64px); font-weight: 900; line-height: 1; margin-bottom: 16px; }
+  .hub-sub { font-size: 18px; color: var(--text-sec); max-width: 480px; margin: 0 auto; line-height: 1.5; }
+
+  .hub-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .hub-card { display: block; background: var(--bg); border: 2px solid var(--border); border-radius: 16px; padding: 28px 24px; text-decoration: none; color: inherit; transition: transform .15s, border-color .15s, box-shadow .15s; position: relative; overflow: hidden; }
+  .hub-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--card-color); }
+  .hub-card:hover { transform: translateY(-3px); border-color: var(--card-color); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+  .hub-emoji { font-size: 36px; margin-bottom: 8px; }
+  .hub-label { font-size: 13px; font-weight: 700; color: var(--card-color); letter-spacing: 0.5px; margin-bottom: 6px; }
+  .hub-desc { font-size: 15px; color: var(--text); line-height: 1.5; margin-bottom: 12px; }
+  .hub-cta { font-size: 13px; color: var(--card-color); font-weight: 700; }
+
+  .hub-foot { text-align: center; margin-top: 48px; font-size: 13px; color: var(--text-faint); }
+
+  @media (max-width: 700px) {
+    .hub-grid { grid-template-columns: 1fr; }
+  }
+</style>

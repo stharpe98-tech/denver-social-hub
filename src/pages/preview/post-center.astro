@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import PreviewSwitcher from '../../components/PreviewSwitcher.astro';
 
 // Mock data — preview only. Real version reads from D1.
 const posts = [
@@ -11,8 +12,8 @@ const posts = [
 const detailPost = posts[1];
 ---
 <Base title="Post Center — preview">
+  <PreviewSwitcher current="post-center" />
   <div class="wrap">
-    <div class="banner">📦 PREVIEW — not connected to the DB. Showing how the post center would look.</div>
 
     <section>
       <h2 class="section-h">1. Board view <span class="muted">(/community)</span></h2>

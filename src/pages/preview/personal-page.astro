@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import PreviewSwitcher from '../../components/PreviewSwitcher.astro';
 
 // Mock — preview only. Real version reads from D1 profiles table.
 const jimmy = {
@@ -60,8 +61,8 @@ function Profile(p: any) {
 }
 ---
 <Base title="Personal pages — preview">
+  <PreviewSwitcher current="personal-page" />
   <div class="wrap">
-    <div class="banner">📦 PREVIEW — mock data. Showing two profiles + the claim flow + the editor.</div>
 
     <section>
       <h2 class="section-h">1. Jimmy's page <span class="muted">(/u/jimmy)</span></h2>
