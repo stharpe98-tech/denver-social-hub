@@ -1,0 +1,18 @@
+---
+import { getDB } from '../lib/db';
+import { POTLUCK_SLUG_RE } from '../lib/slug';
+
+const { slug } = Astro.params;
+
+if (!slug || !POTLUCK_SLUG_RE.test(slug)) {
+  return new Response(null, { status: 404 });
+}
+
+const db = getDB();
+if (!db) return new Response(null, { status: 404 });
+
+const row: any = await db.prepare(`SELECT id FROM potlucks WHERE slug = ?`).bind(slug).first();
+if (!row?.id) return new Response(null, { status: 404 });
+
+return Astro.rewrite(`/potlucks/${row.id}`);
+---

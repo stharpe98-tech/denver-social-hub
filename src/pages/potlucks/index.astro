@@ -90,7 +90,7 @@ const past = potlucks.filter((p:any) => p.status !== 'upcoming');
       <div style="margin-bottom:32px">
         <div class="hub-sec">Upcoming</div>
         {upcoming.map((p:any) => (
-          <a href={`/potlucks/${p.id}`} class="hub-card">
+          <a href={p.slug ? `/${p.slug}` : `/potlucks/${p.id}`} class="hub-card">
             <div class="hub-card-top">
               <div>
                 <div class="hub-card-title">{p.title}</div>
@@ -116,7 +116,7 @@ const past = potlucks.filter((p:any) => p.status !== 'upcoming');
       <div style="margin-bottom:32px">
         <div class="hub-sec">Past</div>
         {past.map((p:any) => (
-          <a href={`/potlucks/${p.id}`} class="hub-card">
+          <a href={p.slug ? `/${p.slug}` : `/potlucks/${p.id}`} class="hub-card">
             <div class="hub-card-top">
               <div>
                 <div class="hub-card-title" style="color:#8a7a70">{p.title}</div>
