@@ -126,6 +126,14 @@ const eventTypeChips = [
     </div>
   </section>
 
+  {/* PERSONAL PAGES CTA — subtle one-liner */}
+  <section class="page-wrap personal-page-band">
+    <a href="/u/new" class="personal-page-cta">
+      <span class="ppc-text">Get your own page on Denver Social — free, takes 2 minutes.</span>
+      <span class="ppc-arrow">→</span>
+    </a>
+  </section>
+
   {/* DISCORD LIVE CHIP — just the count, no avatars */}
   {discordOnline !== null && (
     <section class="page-wrap discord-chip-wrap">
@@ -310,6 +318,22 @@ const eventTypeChips = [
     .event-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); }
 
     /* Featured event */
+    /* Personal pages band */
+    .personal-page-band { padding-top: var(--space-4); padding-bottom: 0; }
+    .personal-page-cta {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 12px 20px; background: linear-gradient(135deg, #EEF2FF, #F0FDF4);
+      border: 1px solid #C7D2FE; border-radius: 999px;
+      font-size: 14px; color: var(--text); text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+      max-width: 600px; margin: 0 auto;
+    }
+    .personal-page-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(124,58,237,0.12); }
+    .ppc-text { font-weight: 500; }
+    .ppc-arrow { color: var(--accent, #7C3AED); font-weight: 700; }
+    @media (max-width: 480px) {
+      .personal-page-cta { font-size: 13px; padding: 10px 16px; }
+    }
     /* Discord live chip */
     .discord-chip-wrap { padding-top: var(--space-5); padding-bottom: 0; }
     .discord-chip {

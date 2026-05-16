@@ -1,0 +1,154 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Claim your page — Denver Social" description="Get your own page on Denver Social. Free, takes 2 minutes.">
+  <div class="wrap">
+    <div class="claim-box" id="step-claim">
+      <h3 class="claim-h">Get your own page on Denver Social</h3>
+      <p class="claim-sub">Free. Takes 2 minutes.</p>
+      <div class="claim-field">
+        <label>Pick your URL</label>
+        <div class="slug-row">
+          <span class="slug-prefix">denversocialhub.com/u/</span>
+          <input id="slug" type="text" placeholder="jimmy" autocomplete="off" maxlength="30"/>
+        </div>
+        <div class="slug-check" id="slug-check"></div>
+      </div>
+      <div class="claim-field">
+        <label>Your email <span class="opt">(we'll send a code, won't show publicly)</span></label>
+        <input id="email" type="email" placeholder="you@example.com"/>
+      </div>
+      <button class="claim-cta" id="send-btn">Send me a code →</button>
+      <div class="claim-err" id="send-err"></div>
+      <div class="claim-foot">By claiming a page you agree to keep it real — no spam, no impersonation. Page reviewed if reported.</div>
+    </div>
+
+    <div class="claim-box" id="step-verify" hidden>
+      <h3 class="claim-h">Enter your code</h3>
+      <p class="claim-sub" id="verify-sub">Check your email for a 6-digit code.</p>
+      <div class="claim-field">
+        <label>6-digit code</label>
+        <input id="code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="••••••"/>
+      </div>
+      <button class="claim-cta" id="verify-btn">Verify & start editing →</button>
+      <button class="claim-link" id="back-btn" type="button">Use a different email/URL</button>
+      <div class="claim-err" id="verify-err"></div>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function() {
+      var slugInput = document.getElementById('slug');
+      var emailInput = document.getElementById('email');
+      var codeInput = document.getElementById('code');
+      var slugCheck = document.getElementById('slug-check');
+      var stepClaim = document.getElementById('step-claim');
+      var stepVerify = document.getElementById('step-verify');
+      var verifySub = document.getElementById('verify-sub');
+      var SLUG_RE = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/;
+      var RESERVED = ['new','admin','api','edit','login'];
+
+      function validSlug(s) {
+        if (!s) return { ok: false, msg: '' };
+        if (s.length < 3) return { ok: false, msg: 'Too short (min 3)' };
+        if (!SLUG_RE.test(s)) return { ok: false, msg: 'Lowercase letters, numbers, hyphens only' };
+        if (RESERVED.indexOf(s) >= 0) return { ok: false, msg: 'That URL is reserved' };
+        return { ok: true, msg: '✓ looks good' };
+      }
+
+      slugInput.addEventListener('input', function() {
+        var s = slugInput.value.toLowerCase().trim();
+        slugInput.value = s;
+        var v = validSlug(s);
+        slugCheck.textContent = v.msg;
+        slugCheck.style.color = v.ok ? '#047857' : '#DC2626';
+      });
+
+      function showErr(id, msg) { var el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
+      function clearErr(id) { var el = document.getElementById(id); el.textContent=''; el.classList.remove('show'); }
+
+      document.getElementById('send-btn').addEventListener('click', async function() {
+        clearErr('send-err');
+        var slug = slugInput.value.trim().toLowerCase();
+        var email = (emailInput.value || '').trim().toLowerCase();
+        var sv = validSlug(slug);
+        if (!sv.ok) { showErr('send-err', sv.msg || 'Pick a URL.'); return; }
+        if (!email || email.indexOf('@') < 0) { showErr('send-err', 'Enter a valid email.'); return; }
+        var btn = this; var orig = btn.textContent;
+        btn.textContent = 'Sending…'; btn.disabled = true;
+        try {
+          var r = await fetch('/api/profile/code-send', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug, email: email })
+          });
+          var d = await r.json();
+          if (d.ok) {
+            stepClaim.hidden = true;
+            stepVerify.hidden = false;
+            verifySub.textContent = 'We sent a code to ' + email + ' for /u/' + slug + '. (If the URL was taken, the code goes to whoever owns it.)';
+            codeInput.focus();
+          } else {
+            showErr('send-err', d.error || 'Could not send code.');
+          }
+        } catch (e) { showErr('send-err', 'Network error.'); }
+        btn.textContent = orig; btn.disabled = false;
+      });
+
+      document.getElementById('verify-btn').addEventListener('click', async function() {
+        clearErr('verify-err');
+        var slug = slugInput.value.trim().toLowerCase();
+        var email = (emailInput.value || '').trim().toLowerCase();
+        var code = (codeInput.value || '').trim();
+        if (!/^\d{6}$/.test(code)) { showErr('verify-err', 'Enter the 6-digit code.'); return; }
+        var btn = this; var orig = btn.textContent;
+        btn.textContent = 'Verifying…'; btn.disabled = true;
+        try {
+          var r = await fetch('/api/profile/code-verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug, email: email, code: code })
+          });
+          var d = await r.json();
+          if (d.ok && d.redirect) { location.href = d.redirect; return; }
+          showErr('verify-err', d.error || 'Invalid or expired code.');
+        } catch (e) { showErr('verify-err', 'Network error.'); }
+        btn.textContent = orig; btn.disabled = false;
+      });
+
+      document.getElementById('back-btn').addEventListener('click', function() {
+        stepVerify.hidden = true;
+        stepClaim.hidden = false;
+        slugInput.focus();
+      });
+
+      codeInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('verify-btn').click(); });
+      emailInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('send-btn').click(); });
+    })();
+  </script>
+
+  <style>
+    .wrap { max-width: 760px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
+    .claim-box { background: var(--surface, #F8F9FB); border: 1.5px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-5); max-width: 480px; margin: 0 auto; }
+    .claim-h { font-family: var(--font-display, sans-serif); font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+    .claim-sub { text-align: center; font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-4); }
+    .claim-field { margin-bottom: var(--space-3); }
+    .claim-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 6px; }
+    .claim-field label .opt { font-weight: 400; color: var(--text-faint); }
+    .slug-row { display: flex; align-items: stretch; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; background: #fff; }
+    .slug-prefix { padding: 10px 12px; background: var(--surface, #F8F9FB); color: var(--text-faint); font-size: 13px; font-family: monospace; border-right: 1px solid var(--border); }
+    .slug-row input { flex: 1; border: none; padding: 10px 12px; font-size: 14px; outline: none; font-family: monospace; min-width: 0; }
+    .claim-field input[type=email], .claim-field input#code { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 14px; background: #fff; font-family: inherit; }
+    #code { font-size: 22px; letter-spacing: 8px; text-align: center; font-family: monospace; }
+    .slug-check { font-size: 12px; margin-top: 6px; min-height: 16px; }
+    .claim-cta { width: 100%; padding: 14px; border-radius: 999px; border: none; background: var(--accent, #7C3AED); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: var(--space-2); transition: filter 0.15s; }
+    .claim-cta:hover { filter: brightness(1.08); }
+    .claim-cta:active { filter: brightness(0.95); }
+    .claim-link { display: block; margin: var(--space-3) auto 0; background: none; border: none; cursor: pointer; font-size: 13px; color: var(--text-sec); text-decoration: underline; text-underline-offset: 3px; }
+    .claim-err { font-size: 13px; color: #DC2626; margin-top: var(--space-2); display: none; }
+    .claim-err.show { display: block; }
+    .claim-foot { font-size: 11px; color: var(--text-faint); text-align: center; margin-top: var(--space-3); line-height: 1.5; }
+
+    @media (max-width: 480px) {
+      .slug-prefix { font-size: 11px; padding: 10px 8px; }
+    }
+  </style>
+</Base>

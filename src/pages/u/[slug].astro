@@ -1,0 +1,150 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+import { validateSlug } from '../../lib/profile-auth';
+
+const rawSlug = Astro.params.slug || '';
+const v = validateSlug(rawSlug);
+if (!v.ok) return Astro.redirect('/404');
+
+const db = getDB();
+if (!db) return new Response('DB unavailable', { status: 500 });
+
+const profile = await db.prepare(
+  `SELECT slug, display_name, headline, bio, photo_emoji, accent_color,
+          offers_json, links_json, contact_email, contact_phone, status
+   FROM profiles WHERE slug = ?`
+).bind(v.slug).first() as any;
+
+if (!profile || profile.status !== 'live') {
+  return new Response('Not found', { status: 404 });
+}
+
+let offers: Array<{ icon?: string; label: string }> = [];
+let links: Array<{ icon?: string; label: string; url: string }> = [];
+try { const arr = JSON.parse(profile.offers_json || '[]'); if (Array.isArray(arr)) offers = arr; } catch {}
+try { const arr = JSON.parse(profile.links_json || '[]'); if (Array.isArray(arr)) links = arr; } catch {}
+
+const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.accent_color : '#7C3AED';
+const firstName = (profile.display_name || '').split(' ')[0] || 'them';
+---
+<Base title={`${profile.display_name} — Denver Social`} description={profile.headline || `${profile.display_name} on Denver Social`}>
+  <div class="wrap">
+    <div class="profile" style={`--profile-accent: ${accent}`} data-slug={profile.slug}>
+      <header class="prof-hero">
+        <div class="prof-avatar">{profile.photo_emoji || '👤'}</div>
+        <div class="prof-id">
+          <h1 class="prof-name">{profile.display_name}</h1>
+          {profile.headline && <p class="prof-headline">{profile.headline}</p>}
+        </div>
+      </header>
+
+      {profile.bio && <p class="prof-bio">{profile.bio}</p>}
+
+      {offers.length > 0 && (
+        <div class="prof-offers">
+          <h3 class="prof-h3">What I offer</h3>
+          <ul>
+            {offers.map(o => <li><span>{o.icon || '•'}</span>{o.label}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {links.length > 0 && (
+        <div class="prof-links">
+          {links.map(l => <a href={l.url} class="prof-link" target="_blank" rel="noopener nofollow">{l.icon || '🔗'} {l.label}</a>)}
+        </div>
+      )}
+
+      {(profile.contact_email || profile.contact_phone) && (
+        <div class="prof-contact">
+          <button class="prof-cta" id="prof-cta" type="button">📬 Get in touch with {firstName}</button>
+          <div class="prof-cta-hint" id="prof-cta-hint">
+            {profile.contact_email && profile.contact_phone ? 'Email + phone revealed on click' :
+             profile.contact_email ? 'Email revealed on click' : 'Phone revealed on click'}
+          </div>
+          <div class="prof-reveal" id="prof-reveal" hidden>
+            {profile.contact_email && <div class="prof-reveal-row">📧 <a href={`mailto:${profile.contact_email}`}>{profile.contact_email}</a></div>}
+            {profile.contact_phone && <div class="prof-reveal-row">📞 <a href={`tel:${profile.contact_phone}`}>{profile.contact_phone}</a></div>}
+          </div>
+        </div>
+      )}
+
+      <footer class="prof-foot">
+        <a href="#" class="prof-share" id="prof-share">🔗 Share this page</a>
+        <a href="#" class="prof-report" id="prof-report">🚩 Report</a>
+      </footer>
+    </div>
+  </div>
+
+  <script is:inline define:vars={{ slug: profile.slug }}>
+    document.addEventListener('DOMContentLoaded', function() {
+      var cta = document.getElementById('prof-cta');
+      var reveal = document.getElementById('prof-reveal');
+      var hint = document.getElementById('prof-cta-hint');
+      if (cta && reveal) {
+        cta.addEventListener('click', function() {
+          reveal.hidden = false;
+          cta.hidden = true;
+          if (hint) hint.hidden = true;
+        });
+      }
+      var share = document.getElementById('prof-share');
+      if (share) {
+        share.addEventListener('click', function(e) {
+          e.preventDefault();
+          var url = location.href;
+          if (navigator.share) {
+            navigator.share({ url: url }).catch(function(){});
+          } else if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(function() { share.textContent = '✓ Copied!'; setTimeout(function() { share.textContent = '🔗 Share this page'; }, 1500); });
+          }
+        });
+      }
+      var report = document.getElementById('prof-report');
+      if (report) {
+        report.addEventListener('click', function(e) {
+          e.preventDefault();
+          var reason = prompt('Report this page? Optionally tell us why:');
+          if (reason === null) return;
+          fetch('/api/profile/report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug, reason: reason || '' })
+          }).then(function() { report.textContent = '✓ Reported'; });
+        });
+      }
+    });
+  </script>
+
+  <style>
+    .wrap { max-width: 760px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
+    .profile { background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-lg, 20px); overflow: hidden; }
+    .prof-hero { display: flex; gap: 16px; align-items: center; padding: var(--space-4) var(--space-5); background: color-mix(in srgb, var(--profile-accent) 8%, #fff); border-bottom: 1px solid var(--border); }
+    .prof-avatar { width: 72px; height: 72px; border-radius: 50%; background: #fff; border: 3px solid var(--profile-accent); display: flex; align-items: center; justify-content: center; font-size: 36px; flex-shrink: 0; }
+    .prof-name { font-family: var(--font-display, sans-serif); font-size: 24px; font-weight: 800; color: var(--text); margin-bottom: 2px; line-height: 1.1; }
+    .prof-headline { font-size: 14px; color: var(--text-sec); }
+    .prof-bio { padding: var(--space-3) var(--space-5); font-size: 15px; color: var(--text); line-height: 1.55; white-space: pre-wrap; }
+    .prof-h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin-bottom: 8px; }
+    .prof-offers { padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); }
+    .prof-offers ul { list-style: none; padding: 0; margin: 0; }
+    .prof-offers li { display: flex; gap: 10px; align-items: center; padding: 6px 0; font-size: 14px; color: var(--text); }
+    .prof-offers li span { font-size: 18px; width: 24px; }
+    .prof-links { padding: 0 var(--space-5) var(--space-3); display: flex; gap: 8px; flex-wrap: wrap; }
+    .prof-link { padding: 6px 12px; border-radius: 999px; background: var(--surface, #F8F9FB); border: 1px solid var(--border); font-size: 13px; color: var(--text); text-decoration: none; transition: background 0.15s; }
+    .prof-link:hover { background: var(--surface-hover, #F0F2F5); }
+    .prof-contact { padding: 0 var(--space-5) var(--space-3); }
+    .prof-cta { width: 100%; padding: 13px; border-radius: 999px; border: none; background: var(--profile-accent); color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; transition: filter 0.15s; }
+    .prof-cta:hover { filter: brightness(1.08); }
+    .prof-cta:active { filter: brightness(0.95); }
+    .prof-cta-hint { font-size: 12px; color: var(--text-faint); text-align: center; margin-top: 6px; }
+    .prof-reveal { background: var(--surface, #F8F9FB); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+    .prof-reveal-row { font-size: 14px; padding: 4px 0; color: var(--text); }
+    .prof-reveal-row a { color: var(--profile-accent); text-decoration: none; font-weight: 600; }
+    .prof-foot { padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 12px; }
+    .prof-share { color: var(--text-sec); text-decoration: none; cursor: pointer; }
+    .prof-share:hover { color: var(--text); }
+    .prof-report { color: var(--text-faint); text-decoration: none; cursor: pointer; }
+    .prof-report:hover { color: var(--text-sec); }
+  </style>
+</Base>
