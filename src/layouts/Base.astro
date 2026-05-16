@@ -34,7 +34,7 @@ const showWelcomeTour = !tourSeen;
 
       <nav class="site-nav site-nav-left">
         <a href="/events" class:list={["site-nav-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
-        <a href="/neighborhoods" class:list={["site-nav-link", { active: currentPath.startsWith("/neighborhoods") }]}>Neighborhoods</a>
+        <a href="/community" class:list={["site-nav-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/neighborhoods") }]}>Community Board</a>
         <a href="/perks" class:list={["site-nav-link", { active: currentPath.startsWith("/perks") }]}>Perks</a>
       </nav>
 
@@ -43,7 +43,6 @@ const showWelcomeTour = !tourSeen;
       </a>
 
       <nav class="site-nav site-nav-right">
-        <a href="/community" class:list={["site-nav-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/groups") || currentPath.startsWith("/messages") }]}>Community</a>
         <a href="/about" class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
         <a href="/help"  class:list={["site-nav-link", { active: currentPath.startsWith("/help") }]}>Help</a>
         {isAdmin && (
@@ -70,9 +69,8 @@ const showWelcomeTour = !tourSeen;
     <nav class="mob-drawer-nav">
       <a href="/" class:list={["mob-drawer-link", { active: currentPath === "/" }]}><span class="mob-drawer-icon">🏠</span>Home</a>
       <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") || currentPath.startsWith("/calendar") }]}><span class="mob-drawer-icon">📅</span>Events</a>
-      <a href="/neighborhoods" class:list={["mob-drawer-link", { active: currentPath.startsWith("/neighborhoods") }]}><span class="mob-drawer-icon">📍</span>Neighborhoods</a>
+      <a href="/community" class:list={["mob-drawer-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/neighborhoods") }]}><span class="mob-drawer-icon">📌</span>Community Board</a>
       <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]}><span class="mob-drawer-icon">🏪</span>Perks</a>
-      <a href="/community" class:list={["mob-drawer-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/groups") || currentPath.startsWith("/messages") }]}><span class="mob-drawer-icon">🤝</span>Community</a>
       {isAdmin && (
         <a href="/admin/dashboard" class:list={["mob-drawer-link mob-drawer-link-admin", { active: currentPath.startsWith("/admin") }]}><span class="mob-drawer-icon">⚙️</span>Admin</a>
       )}
@@ -100,7 +98,7 @@ const showWelcomeTour = !tourSeen;
       <div class="footer-col">
         <div class="footer-col-title">Explore</div>
         <a href="/events">Events</a>
-        <a href="/neighborhoods">Neighborhoods</a>
+        <a href="/community">Community Board</a>
         <a href="/calendar">Shared calendar</a>
       </div>
       <div class="footer-col">
