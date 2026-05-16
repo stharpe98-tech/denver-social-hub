@@ -399,6 +399,19 @@ slots.forEach((s:any) => {
 
   <div class="toast" id="toast"></div>
 
+  <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:18px;max-width:440px;width:100%;padding:28px 26px;box-shadow:0 20px 60px rgba(0,0,0,0.25);font-family:'DM Sans',sans-serif">
+      <div style="font-size:36px;text-align:center;margin-bottom:6px">🎉</div>
+      <div id="confirm-title" style="font-size:22px;font-weight:700;text-align:center;margin-bottom:6px;color:#1c1917">You're in!</div>
+      <div id="confirm-sub" style="font-size:14px;text-align:center;color:#57524c;margin-bottom:20px">See you there!</div>
+      <div id="confirm-contact" style="background:#f7f5f2;border-radius:12px;padding:16px 18px;margin-bottom:18px;display:none">
+        <div style="font-size:11px;font-weight:700;color:#a09890;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Questions? Text me</div>
+        <div id="cc-rows" style="font-size:14px;color:#1c1917;line-height:1.9"></div>
+      </div>
+      <button id="confirm-ok" style="width:100%;padding:13px;background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;font-size:15px;font-weight:600;border:none;border-radius:10px;cursor:pointer;font-family:inherit">Got it</button>
+    </div>
+  </div>
+
   <script define:vars={{ potluckId: id }}>
     var guestCounts = {};
 
@@ -555,8 +568,7 @@ slots.forEach((s:any) => {
           });
           var data = await res.json();
           if (data.ok) {
-            showToast("You're in, " + name.split(' ')[0] + "! 🎉");
-            setTimeout(function() { location.reload(); }, 1200);
+            showConfirmation(name.split(' ')[0], data.contact || {});
           } else {
             btn.disabled = false; btn.textContent = itemId ? 'Claim it! 🎉' : 'I\'m bringing it! 🎉';
             showToast('Something went wrong — try again');
@@ -574,6 +586,25 @@ slots.forEach((s:any) => {
       setTimeout(function() { t.classList.remove('show'); }, 2500);
     }
 
+    function escHtml(s) { return String(s||'').replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+    function showConfirmation(firstName, contact) {
+      document.getElementById('confirm-title').textContent = "You're in, " + firstName + "!";
+      var ccRows = [];
+      if (contact.phone) ccRows.push('<div>📞 <a href="sms:' + escHtml(String(contact.phone).replace(/[^0-9+]/g, '')) + '" style="color:#c2410c;text-decoration:none;font-weight:600">' + escHtml(contact.phone) + '</a></div>');
+      if (contact.discord_url) ccRows.push('<div>💬 <a href="' + escHtml(contact.discord_url) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">Join Discord</a>' + (contact.discord ? ' · ' + escHtml(contact.discord) : '') + '</div>');
+      else if (contact.discord) ccRows.push('<div>💬 ' + escHtml(contact.discord) + '</div>');
+      if (ccRows.length > 0) {
+        document.getElementById('cc-rows').innerHTML = ccRows.join('');
+        document.getElementById('confirm-contact').style.display = 'block';
+      }
+      document.getElementById('confirm-overlay').style.display = 'flex';
+    }
+
+    document.getElementById('confirm-ok').addEventListener('click', function() {
+      document.getElementById('confirm-overlay').style.display = 'none';
+      location.reload();
+    });
   </script>
 </body>
 </html>
