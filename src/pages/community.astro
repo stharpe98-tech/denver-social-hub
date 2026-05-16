@@ -171,23 +171,10 @@ function timeAgo(iso: string): string {
   return d < 30 ? `${d}d ago` : new Date(iso).toLocaleDateString();
 }
 ---
-<Base title="Community Board" description="Favors, groups, and direct messages — the community side of Denver Social.">
+<Base title="Community Board" description="A flyer wall for your block. Find what's happening, offer something, ask for help.">
 <div class="cb-wrap">
-  <header class="cb-head">
-    <h1>Community Board</h1>
-    <p>Trade favors, join groups, and message neighbors. All the community-side stuff lives here.</p>
-  </header>
 
-  <nav class="cb-tabs" aria-label="Section">
-    <a href="/community?tab=favors" class:list={["cb-tab", { active: tab === 'favors' }]}>🤝 Favors</a>
-    <a href="/community?tab=groups" class:list={["cb-tab", { active: tab === 'groups' }]}>👥 Groups</a>
-    <a href="/community?tab=messages" class:list={["cb-tab", { active: tab === 'messages' }]}>
-      💬 Messages
-      {totalUnread > 0 && <span class="cb-tab-badge">{totalUnread}</span>}
-    </a>
-  </nav>
-
-  {tab === 'favors' && (
+  {true && (
     <div class="board-wrap">
       <section class="bd-hero">
         <div class="bd-hero-tag">DENVER · NEIGHBORHOOD BY NEIGHBORHOOD</div>
@@ -302,76 +289,6 @@ function timeAgo(iso: string): string {
     </div>
   )}
 
-  {tab === 'groups' && (
-    <div class="cb-section">
-      <div class="cb-section-head">
-        <h2 class="cb-section-title">Groups</h2>
-        {user ? (
-          <a href="/groups/new" class="btn-cta cb-new-btn">+ New group</a>
-        ) : (
-          <a href="/login?next=/community?tab=groups" class="btn-cta cb-new-btn">Sign in</a>
-        )}
-      </div>
-
-      {user && (
-        <section class="cb-sub-section">
-          <h3 class="cb-sub-title">Your groups</h3>
-          {myGroups.length === 0 ? (
-            <div class="cb-empty">
-              You haven't joined any groups yet. Browse below or <a href="/groups/new">make your own</a>.
-            </div>
-          ) : (
-            <div class="cb-grid">
-              {myGroups.map((g: any) => (
-                <a href={`/groups/${g.slug}`} class="cb-card">
-                  <div class="cb-card-head">
-                    <span class="cb-card-name">{g.name}</span>
-                    {g.privacy === 'invite_only' && <span class="cb-card-lock">🔒 Private</span>}
-                  </div>
-                  {g.description && <p class="cb-card-desc">{g.description}</p>}
-                  <div class="cb-card-meta">
-                    <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
-                    {g.role === 'owner' && <span class="cb-card-role">Owner</span>}
-                    {g.role === 'organizer' && <span class="cb-card-role">Organizer</span>}
-                  </div>
-                </a>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      <section class="cb-sub-section">
-        <h3 class="cb-sub-title">Discover</h3>
-        {discoverGroups.length === 0 ? (
-          <div class="cb-empty">No public groups yet. {user ? <a href="/groups/new">Start the first one →</a> : <a href="/login?next=/community?tab=groups">Sign in</a>} to create one.</div>
-        ) : (
-          <div class="cb-grid">
-            {discoverGroups.map((g: any) => (
-              <a href={`/groups/${g.slug}`} class="cb-card">
-                <div class="cb-card-head">
-                  <span class="cb-card-name">{g.name}</span>
-                </div>
-                {g.description && <p class="cb-card-desc">{g.description}</p>}
-                <div class="cb-card-meta">
-                  <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
-                </div>
-              </a>
-            ))}
-          </div>
-        )}
-      </section>
-    </div>
-  )}
-
-  {tab === 'messages' && (
-    <div class="cb-section">
-      <h2 class="cb-section-title">Messages</h2>
-      <div class="cb-empty">
-        Messaging is offline while we rework accounts. Coming back soon.
-      </div>
-    </div>
-  )}
 </div>
 
 <style>
