@@ -328,7 +328,6 @@ slots.forEach((s:any) => {
                       <button type="button" class="g-btn" data-item={item.id} data-dir="1">+</button>
                       <div class="g-note" id={`gn-${item.id}`}>just me</div>
                     </div>
-                    <input type="email" class="claim-email" id={`email-${item.id}`} placeholder="Email (optional — for a reminder)"/>
                     <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
                     <div class="claim-row">
                       <button class="claim-submit" data-id={item.id} data-dish={item.suggestion}>Claim it! 🎉</button>
@@ -367,7 +366,6 @@ slots.forEach((s:any) => {
             <button type="button" class="g-btn" id="custom-plus">+</button>
             <div class="g-note" id="custom-gn">just me</div>
           </div>
-          <input type="email" class="claim-email" id="custom-email" placeholder="Email (optional — for a reminder)"/>
           <div class="claim-hint">🧊 No fridge on site — bring cold dishes in a cooler!</div>
           <div class="claim-row">
             <button class="claim-submit" id="custom-submit">I'm bringing it! 🎉</button>
@@ -400,23 +398,6 @@ slots.forEach((s:any) => {
   </div>
 
   <div class="toast" id="toast"></div>
-
-  <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
-    <div style="background:#fff;border-radius:18px;max-width:440px;width:100%;padding:28px 26px;box-shadow:0 20px 60px rgba(0,0,0,0.25);font-family:'DM Sans',sans-serif">
-      <div style="font-size:36px;text-align:center;margin-bottom:6px">🎉</div>
-      <div id="confirm-title" style="font-size:22px;font-weight:700;text-align:center;margin-bottom:6px;color:#1c1917">You're in!</div>
-      <div id="confirm-sub" style="font-size:14px;text-align:center;color:#57524c;margin-bottom:20px">Confirmation email is on the way.</div>
-      <div id="confirm-contact" style="background:#f7f5f2;border-radius:12px;padding:16px 18px;margin-bottom:14px;display:none">
-        <div style="font-size:11px;font-weight:700;color:#a09890;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Stay in touch</div>
-        <div id="cc-rows" style="font-size:14px;color:#1c1917;line-height:1.9"></div>
-      </div>
-      <div id="confirm-pay" style="background:#fff8ec;border:1.5px solid #fcd5a0;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:none">
-        <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Want to chip in?</div>
-        <div id="cp-rows" style="font-size:14px;line-height:1.8"></div>
-      </div>
-      <button id="confirm-ok" style="width:100%;padding:13px;background:linear-gradient(135deg,#c2410c,#f77f00);color:#fff;font-size:15px;font-weight:600;border:none;border-radius:10px;cursor:pointer;font-family:inherit">Got it</button>
-    </div>
-  </div>
 
   <script define:vars={{ potluckId: id }}>
     var guestCounts = {};
@@ -538,18 +519,16 @@ slots.forEach((s:any) => {
       btn.addEventListener('click', async function() {
         var itemId = btn.dataset.id;
         var dish = btn.dataset.dish;
-        var name, guests, email;
+        var name, guests;
 
         if (itemId) {
           name = document.getElementById('name-' + itemId).value.trim();
           guests = guestCounts[itemId] || 1;
-          email = document.getElementById('email-' + itemId).value.trim();
         } else {
           // custom
           dish = document.getElementById('custom-dish').value.trim();
           name = document.getElementById('custom-name').value.trim();
           guests = customCount;
-          email = document.getElementById('custom-email').value.trim();
           if (!dish) { document.getElementById('custom-dish').focus(); return; }
         }
 
@@ -567,7 +546,7 @@ slots.forEach((s:any) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              potluckId: String(potluckId), name, email, handle: '',
+              potluckId: String(potluckId), name, email: '', handle: '',
               platforms: '', rsvp: 'yes', guestCount: String(guests),
               dish: dish, dishCategory: '', dietary: '',
               utensils: false, earlyArrive: false, seating: false,
@@ -576,7 +555,8 @@ slots.forEach((s:any) => {
           });
           var data = await res.json();
           if (data.ok) {
-            showConfirmation(name.split(' ')[0], data.contact || {});
+            showToast("You're in, " + name.split(' ')[0] + "! 🎉");
+            setTimeout(function() { location.reload(); }, 1200);
           } else {
             btn.disabled = false; btn.textContent = itemId ? 'Claim it! 🎉' : 'I\'m bringing it! 🎉';
             showToast('Something went wrong — try again');
@@ -594,34 +574,6 @@ slots.forEach((s:any) => {
       setTimeout(function() { t.classList.remove('show'); }, 2500);
     }
 
-    function escHtml(s) { return String(s||'').replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
-
-    function showConfirmation(firstName, contact) {
-      document.getElementById('confirm-title').textContent = "You're in, " + firstName + "!";
-      var ccRows = [];
-      if (contact.phone) ccRows.push('<div>📞 ' + escHtml(contact.phone) + '</div>');
-      if (contact.discord_url) ccRows.push('<div>💬 <a href="' + escHtml(contact.discord_url) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">Join Discord</a>' + (contact.discord ? ' · ' + escHtml(contact.discord) : '') + '</div>');
-      else if (contact.discord) ccRows.push('<div>💬 ' + escHtml(contact.discord) + '</div>');
-      if (ccRows.length > 0) {
-        document.getElementById('cc-rows').innerHTML = ccRows.join('');
-        document.getElementById('confirm-contact').style.display = 'block';
-      }
-      var cpRows = [];
-      if (contact.venmo) cpRows.push('<div>💸 Venmo: <a href="https://venmo.com/' + escHtml(String(contact.venmo).replace(/^@/, '')) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">' + escHtml(contact.venmo) + '</a></div>');
-      if (contact.cashapp_handle) cpRows.push('<div>💵 Cash App: <a href="https://cash.app/' + escHtml(String(contact.cashapp_handle).replace(/^\$/, '$')) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">' + escHtml(contact.cashapp_handle) + '</a></div>');
-      if (contact.stripe_link) cpRows.push('<div>💳 <a href="' + escHtml(contact.stripe_link) + '" target="_blank" rel="noopener" style="color:#c2410c;text-decoration:none;font-weight:600">Pay with card</a></div>');
-      if (cpRows.length > 0) {
-        document.getElementById('cp-rows').innerHTML = cpRows.join('');
-        document.getElementById('confirm-pay').style.display = 'block';
-      }
-      var overlay = document.getElementById('confirm-overlay');
-      overlay.style.display = 'flex';
-    }
-
-    document.getElementById('confirm-ok').addEventListener('click', function() {
-      document.getElementById('confirm-overlay').style.display = 'none';
-      location.reload();
-    });
   </script>
 </body>
 </html>
