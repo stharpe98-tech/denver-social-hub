@@ -4,11 +4,12 @@ import { getDB } from '../../lib/db';
 import { parseVibeTags, vibeLabel } from '../../lib/events-schema';
 import { ensureCohostsSchema } from '../../lib/cohosts-schema';
 
+import { isAdmin as isAdminCookie } from '../../lib/admin-auth';
 const db = getDB();
 const { id } = Astro.params;
-let user: any = null;
-const cookie = Astro.cookies.get("dsn_user")?.value;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+const user: any = null;
+const isAdmin = await isAdminCookie(Astro.cookies);
+void user;
 
 let event: any = null;
 let rsvps: any[] = [];
@@ -47,12 +48,7 @@ try {
       ).bind(id).all();
       eventPhotos = ph?.results || [];
     } catch { /* table may not exist yet on fresh deploys */ }
-    if (user) {
-      myRsvp = rsvps.find((r: any) => r.member_email === user.email)
-        || maybeList.find((r: any) => r.member_email === user.email)
-        || null;
-      myWaitlistEntry = waitlist.find((w: any) => w.member_email === user.email) || null;
-    }
+    // No logged-in viewer — myRsvp / myWaitlistEntry remain null.
     if (event.group_id) {
       try {
         eventGroup = await db.prepare('SELECT id, slug, name FROM groups WHERE id=?').bind(event.group_id).first();
@@ -78,23 +74,14 @@ const spotsLeft = totalSpots !== null ? Math.max(0, totalSpots - rsvps.length) :
 const isFull = totalSpots !== null && spotsLeft === 0;
 const fillPct = totalSpots !== null ? Math.min(100, Math.round(rsvps.length / totalSpots * 100)) : Math.min(60, rsvps.length * 8);
 
-// Karma gate
-const userKarma = user?.karma || 0;
-const userAccountAge = user?.reddit_account_created
-  ? Math.floor((Date.now() - new Date(user.reddit_account_created).getTime()) / (1000 * 60 * 60 * 24))
-  : 0;
-const meetsKarmaGate = (!event.karma_min || userKarma >= event.karma_min) && (!event.account_age_min || userAccountAge >= event.account_age_min);
+// Karma/age gates are inert without a logged-in user — always pass.
+const meetsKarmaGate = true;
 
-// Permission: original host (matched by host_id = user.id) or any
-// listed co-host can manage co-hosts for this event.
-const isCreator = !!(user && event.host_id && event.host_id === user.id);
-const isCohost = !!(user?.email && cohosts.some((c: any) => (c.member_email || '').toLowerCase() === user.email.toLowerCase()));
-const isSuperAdmin = (user?.email || '').toLowerCase() === 'stharpe98@gmail.com';
-const isAdmin = isSuperAdmin || user?.role === 'admin';
-const canManageCohosts = isCreator || isCohost;
-// Owner + admins can delete any event; hosts/co-hosts can only delete their own.
-const canDeleteEvent = isAdmin || isCreator || isCohost;
+// Without member auth, host/cohost permissions collapse to "admin only".
+const canManageCohosts = false;
+const canDeleteEvent = isAdmin;
 const cohostEmailSet = new Set(cohosts.map((c: any) => (c.member_email || '').toLowerCase()));
+void cohostEmailSet;
 
 
 // Threaded comments
@@ -233,13 +220,53 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   <!-- ═══════════════════════════════════════ -->
   <div class="ev-rsvp-section" id="rsvp-section">
 
-    {/* Not logged in */}
-    {!user && (
-      <a href={`/login?next=/events/${id}`} class="ev-rsvp-card ev-rsvp-login">
-        <span class="ev-rsvp-cta-text">Sign in to RSVP</span>
-        <span class="ev-rsvp-sub">It only takes a sec →</span>
-      </a>
+    {/* Open RSVP form (no account required) */}
+    {!isFull && (
+      <form id="open-rsvp-form" class="ev-rsvp-card" data-event-id={id} style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input class="input" type="text" name="display_name" placeholder="Your name" required maxlength="60" />
+          <input class="input" type="email" name="contact_email" placeholder="Email (optional)" maxlength="120" />
+        </div>
+        <div class="ev-rsvp-options">
+          <button class="ev-rsvp-btn ev-rsvp-going" type="submit" data-status="going">
+            <span class="ev-rsvp-emoji">🎉</span><span>I'm in</span>
+          </button>
+          <button class="ev-rsvp-btn ev-rsvp-maybe" type="submit" data-status="maybe">
+            <span class="ev-rsvp-emoji">🤔</span><span>Maybe</span>
+          </button>
+        </div>
+        <span class="ev-rsvp-sub">{spotsLeft !== Infinity ? `${spotsLeft} spots left` : `${rsvps.length} going`}</span>
+        <div id="open-rsvp-msg" style="font-size:13px;color:var(--text-sec)"></div>
+      </form>
     )}
+    <script is:inline>
+      (function() {
+        var form = document.getElementById('open-rsvp-form');
+        if (!form) return;
+        var msg = document.getElementById('open-rsvp-msg');
+        var status = 'going';
+        form.querySelectorAll('button[type="submit"]').forEach(function (b) {
+          b.addEventListener('click', function () { status = b.getAttribute('data-status') || 'going'; });
+        });
+        form.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var fd = new FormData(form);
+          var body = {
+            event_id: form.getAttribute('data-event-id'),
+            status: status,
+            display_name: fd.get('display_name'),
+            contact_email: fd.get('contact_email') || '',
+          };
+          msg.textContent = 'Submitting…';
+          try {
+            var r = await fetch('/api/rsvp', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+            var d = await r.json();
+            if (d.rsvped || d.waitlisted) { location.reload(); return; }
+            msg.textContent = d.error || 'Could not RSVP — try again.';
+          } catch { msg.textContent = 'Network error.'; }
+        });
+      })();
+    </script>
 
     {/* Already RSVP'd — show confirmed state + bring items picker */}
     {user && myRsvp && (
@@ -465,22 +492,7 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   <!-- ═══════════════════════════════════════ -->
   <div class="ev-section">
     <h2 class="ev-section-title">👋 Who's coming ({rsvps.length})</h2>
-    {!user && rsvps.length > 0 ? (
-      <div class="ev-guests-locked">
-        <div class="ev-guests-avatars">
-          {rsvps.slice(0, 6).map((r: any, i: number) => {
-            const name = r.member_name || r.reddit_username || 'Guest';
-            const initial = name[0]?.toUpperCase() || '?';
-            return <div class="ev-guest-avatar ev-guest-avatar-stack" style={`z-index:${10 - i}`}>{initial}</div>;
-          })}
-          {rsvps.length > 6 && <div class="ev-guest-avatar ev-guest-avatar-stack ev-guest-avatar-more">+{rsvps.length - 6}</div>}
-        </div>
-        <div class="ev-guests-locked-text">
-          <strong>{rsvps.length} {rsvps.length === 1 ? 'person is' : 'people are'} going</strong>
-          <a href={`/login?next=/events/${id}`}>Sign in to see who →</a>
-        </div>
-      </div>
-    ) : user && rsvps.length > 0 ? (
+    {rsvps.length > 0 ? (
       <div class="ev-guests">
         {rsvps.map((r: any) => {
           const name = r.member_name || (r.reddit_username ? `u/${r.reddit_username}` : 'Guest');
@@ -518,18 +530,14 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
     {waitlist.length > 0 && (
       <div class="ev-waitlist-section">
         <h3 class="ev-waitlist-title">Waitlist ({waitlist.length})</h3>
-        {user ? (
-          <div class="ev-waitlist">
-            {waitlist.map((w: any, i: number) => (
-              <div class="ev-wl-person">
-                <span class="ev-wl-num">#{i + 1}</span>
-                <span>{w.reddit_username ? `u/${w.reddit_username}` : w.member_name}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p class="ev-waitlist-locked">{waitlist.length} on the waitlist — <a href={`/login?next=/events/${id}`}>sign in</a> to see names.</p>
-        )}
+        <div class="ev-waitlist">
+          {waitlist.map((w: any, i: number) => (
+            <div class="ev-wl-person">
+              <span class="ev-wl-num">#{i + 1}</span>
+              <span>{w.member_name || 'Guest'}</span>
+            </div>
+          ))}
+        </div>
       </div>
     )}
   </div>

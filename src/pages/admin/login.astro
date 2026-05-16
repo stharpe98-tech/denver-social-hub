@@ -1,69 +1,38 @@
 ---
 import Base from '../../layouts/Base.astro';
-const cookie = Astro.cookies.get('dsn_org')?.value;
-if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'); } catch {} }
+import { isAdmin } from '../../lib/admin-auth';
+if (await isAdmin(Astro.cookies)) return Astro.redirect('/admin/dashboard');
 ---
-<Base title="Organizer sign in" description="Sign in to your Denver Social organizer dashboard.">
+<Base title="Admin sign in" description="Sign in to the Denver Social admin dashboard via emailed code.">
   <div class="al-wrap">
     <div class="al-card">
       <div class="al-icon" aria-hidden="true">⚙</div>
-      <h1>Organizer sign in</h1>
-      <p class="al-sub">Welcome back. Pick the way you usually sign in.</p>
+      <h1>Admin sign in</h1>
+      <p class="al-sub" id="al-sub">Enter your email — we'll send a 6-digit code.</p>
 
-      <!-- PIN banner (auto-shown on trusted devices via JS) -->
-      <div id="pin-banner" class="al-pin-banner" hidden>
-        <div class="al-pin-head">
-          <span class="al-pin-eyebrow">Trusted device</span>
-          <h2>Hi again, <span id="pin-greeting">friend</span>.</h2>
-          <p>Enter your 4–8 digit PIN.</p>
+      <div id="step-request">
+        <div class="al-field">
+          <label for="al-email">Email</label>
+          <input id="al-email" type="email" autocomplete="email" placeholder="you@example.com" />
         </div>
-        <div class="al-pin-row">
-          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="pin-input" placeholder="••••" autocomplete="off" class="al-pin-input"/>
-          <button class="btn-cta al-pin-btn" id="pin-submit-btn">→</button>
-        </div>
-        <div class="al-err" id="pin-err"></div>
-        <button type="button" class="al-link" id="pin-not-me">Not you? Use a different method</button>
+        <button class="btn-cta al-btn" id="send-btn">Send code</button>
+        <div class="al-err" id="send-err"></div>
       </div>
 
-      <!-- Default sign-in (hidden when PIN banner is showing) -->
-      <div id="default-methods" class="al-methods">
-        <!-- Passkey: primary because it's the fastest -->
-        <button class="btn-cta al-method-primary" id="passkey-btn">
-          <span aria-hidden="true">🔑</span> Sign in with passkey
-        </button>
-        <div class="al-err" id="pk-err"></div>
-
-        <!-- Email magic link: secondary -->
-        <a href="/admin" class="btn-sec al-method-secondary">
-          <span aria-hidden="true">✉</span> Email me a sign-in code
-        </a>
-
-        <!-- Password: tertiary, behind a disclosure -->
-        <details class="al-collapse">
-          <summary>Use email &amp; password</summary>
-          <div class="al-field"><label>Email</label><input type="email" id="l-email" autocomplete="email" placeholder="you@example.com"/></div>
-          <div class="al-field"><label>Password</label><input type="password" id="l-pass" autocomplete="current-password" placeholder="••••••••"/></div>
-          <button class="btn-cta al-pw-btn" id="login-btn">Sign in</button>
-          <div class="al-err" id="l-err"></div>
-        </details>
+      <div id="step-verify" hidden>
+        <div class="al-field">
+          <label for="al-code">6-digit code</label>
+          <input id="al-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="••••••" />
+        </div>
+        <button class="btn-cta al-btn" id="verify-btn">Verify & sign in</button>
+        <button class="al-link" id="back-btn" type="button">Use a different email</button>
+        <div class="al-err" id="verify-err"></div>
       </div>
-
-      <div class="al-divider"></div>
-
-      <details class="al-collapse al-register">
-        <summary>New here? Create an organizer account</summary>
-        <div class="al-field"><label>Your name (or organization)</label><input type="text" id="r-name" placeholder="Denver Social Community"/></div>
-        <div class="al-field"><label>Email</label><input type="email" id="r-email" autocomplete="email" placeholder="you@example.com"/></div>
-        <div class="al-field"><label>Password</label><input type="password" id="r-pass" autocomplete="new-password" placeholder="Choose a password"/></div>
-        <button class="btn-cta al-pw-btn" id="register-btn">Create account</button>
-        <div class="al-hint">Access to the potluck admin requires manual approval — once you register, <a href="/contact" style="color:var(--accent)">contact us</a> to request access.</div>
-        <div class="al-err" id="r-err"></div>
-      </details>
     </div>
   </div>
 
   <style>
-    .al-wrap { max-width: 460px; margin: 0 auto; padding: var(--space-7) var(--space-4) var(--space-8); }
+    .al-wrap { max-width: 440px; margin: 0 auto; padding: var(--space-7) var(--space-4) var(--space-8); }
     .al-card {
       background: var(--bg);
       border: 1px solid var(--border);
@@ -72,7 +41,7 @@ if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'
       padding: var(--space-6) var(--space-5);
     }
     .al-icon {
-      font-size: 36px; line-height: 1;
+      font-size: 32px; line-height: 1;
       display: flex; align-items: center; justify-content: center;
       width: 56px; height: 56px;
       background: var(--accent-dim); color: var(--accent);
@@ -81,87 +50,13 @@ if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'
     }
     .al-card h1 {
       font-family: var(--font-display);
-      font-size: clamp(26px, 3.5vw, 32px);
+      font-size: clamp(24px, 3.5vw, 30px);
       font-weight: 800;
       text-align: center;
-      color: var(--text);
       margin-bottom: var(--space-2);
       letter-spacing: -0.02em;
     }
     .al-sub { color: var(--text-sec); font-size: 14px; text-align: center; margin-bottom: var(--space-5); }
-
-    /* PIN banner */
-    .al-pin-banner {
-      background: linear-gradient(135deg, #F0F9FF, #ECFDF5);
-      border: 1.5px solid var(--accent);
-      border-radius: var(--radius);
-      padding: var(--space-4);
-      margin-bottom: var(--space-4);
-    }
-    .al-pin-banner[hidden] { display: none; }
-    .al-pin-head { text-align: center; margin-bottom: var(--space-3); }
-    .al-pin-eyebrow {
-      font-size: 11px; font-weight: 700;
-      letter-spacing: 1.5px; text-transform: uppercase;
-      color: var(--accent);
-    }
-    .al-pin-head h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin: 4px 0 4px; letter-spacing: -0.01em; }
-    .al-pin-head p { font-size: 13px; color: var(--text-sec); }
-    .al-pin-row { display: flex; gap: 8px; }
-    .al-pin-input {
-      flex: 1;
-      padding: 14px 16px;
-      background: var(--bg); border: 1.5px solid var(--border);
-      border-radius: 12px;
-      font-size: 22px; letter-spacing: 10px; text-align: center;
-      font-family: var(--font); font-weight: 600;
-      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .al-pin-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-    .al-pin-btn { padding: 14px 22px; font-size: 18px; }
-    .al-link {
-      display: block; margin: var(--space-2) auto 0;
-      background: none; border: none; cursor: pointer;
-      font-size: 13px; color: var(--text-sec); font-family: var(--font);
-      text-decoration: underline; text-underline-offset: 3px;
-    }
-    .al-link:hover { color: var(--text); }
-
-    /* Default methods stack */
-    .al-methods { display: flex; flex-direction: column; gap: var(--space-3); }
-    .al-method-primary { width: 100%; padding: 14px; font-size: 15px; }
-    .al-method-secondary { width: 100%; padding: 13px; font-size: 14px; text-decoration: none; }
-
-    /* Collapsibles */
-    .al-collapse {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .al-collapse summary {
-      padding: 12px 16px;
-      font-size: 14px; font-weight: 600;
-      color: var(--text-sec); cursor: pointer;
-      list-style: none;
-      display: flex; align-items: center; justify-content: space-between;
-      transition: background 0.15s;
-    }
-    .al-collapse summary::-webkit-details-marker { display: none; }
-    .al-collapse summary::after {
-      content: '▾';
-      color: var(--text-faint);
-      transition: transform 0.2s;
-    }
-    .al-collapse[open] summary { background: var(--bg); border-bottom: 1px solid var(--border); color: var(--text); }
-    .al-collapse[open] summary::after { transform: rotate(180deg); }
-    .al-collapse > .al-field,
-    .al-collapse > button,
-    .al-collapse > .al-hint,
-    .al-collapse > .al-err { margin-left: var(--space-4); margin-right: var(--space-4); }
-    .al-collapse > .al-field:first-of-type { margin-top: var(--space-4); }
-    .al-collapse > button.al-pw-btn { width: calc(100% - var(--space-5) * 2); display: block; margin-top: var(--space-3); margin-bottom: var(--space-4); }
-
     .al-field { margin-bottom: var(--space-3); }
     .al-field label {
       display: block; font-size: 11px; font-weight: 700;
@@ -169,157 +64,107 @@ if (cookie) { try { JSON.parse(cookie); return Astro.redirect('/admin/dashboard'
       text-transform: uppercase; letter-spacing: 0.5px;
     }
     .al-field input {
-      width: 100%; padding: 11px 13px;
+      width: 100%; padding: 12px 14px;
       background: var(--bg); border: 1px solid var(--border);
       border-radius: 10px; font-size: 14px; color: var(--text);
       font-family: var(--font); outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
+    #al-code { font-size: 22px; letter-spacing: 8px; text-align: center; }
     .al-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-
-    .al-pw-btn { width: 100%; padding: 12px; font-size: 14px; }
-
-    .al-divider { height: 1px; background: var(--border); margin: var(--space-5) 0; }
-    .al-register summary { color: var(--accent); }
-    .al-hint { font-size: 12px; color: var(--text-faint); margin-bottom: var(--space-4); line-height: 1.55; }
-
-    .al-err { font-size: 13px; color: var(--red); margin-top: 6px; display: none; min-height: 0; }
+    .al-btn { width: 100%; padding: 12px; font-size: 14px; margin-top: var(--space-2); }
+    .al-link {
+      display: block; margin: var(--space-3) auto 0;
+      background: none; border: none; cursor: pointer;
+      font-size: 13px; color: var(--text-sec); font-family: var(--font);
+      text-decoration: underline; text-underline-offset: 3px;
+    }
+    .al-link:hover { color: var(--text); }
+    .al-err { font-size: 13px; color: var(--red); margin-top: var(--space-2); display: none; }
     .al-err.show { display: block; }
   </style>
 
   <script is:inline>
-    function showErr(id, msg) {
-      var el = document.getElementById(id);
-      el.textContent = msg;
-      el.classList.add('show');
-    }
-    function clearErr(id) {
-      var el = document.getElementById(id);
-      el.textContent = '';
-      el.classList.remove('show');
-    }
+    (function() {
+      var stepRequest = document.getElementById('step-request');
+      var stepVerify = document.getElementById('step-verify');
+      var sub = document.getElementById('al-sub');
+      var emailInput = document.getElementById('al-email');
+      var codeInput = document.getElementById('al-code');
 
-    document.getElementById('login-btn').addEventListener('click', async function() {
-      clearErr('l-err');
-      var btn = this; var orig = btn.textContent;
-      var email = (document.getElementById('l-email').value || '').trim();
-      var password = document.getElementById('l-pass').value || '';
-      if (!email || !password) {
-        showErr('l-err', 'Enter your email and password.');
-        return;
+      function showErr(id, msg) {
+        var el = document.getElementById(id);
+        el.textContent = msg;
+        el.classList.add('show');
       }
-      btn.textContent = 'Signing in…'; btn.disabled = true;
-      try {
-        var res = await fetch('/api/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'login', email: email, password: password }),
-        });
-        var data = await res.json();
-        if (data.ok) { location.href = '/admin/dashboard'; return; }
-        showErr('l-err', data.error || 'Wrong email or password.');
-      } catch (err) {
-        showErr('l-err', 'Could not reach the server. Check your connection and try again.');
+      function clearErr(id) {
+        var el = document.getElementById(id);
+        el.textContent = '';
+        el.classList.remove('show');
       }
-      btn.textContent = orig; btn.disabled = false;
-    });
 
-    document.getElementById('register-btn').addEventListener('click', async function() {
-      clearErr('r-err');
-      var btn = this; var orig = btn.textContent;
-      var name = (document.getElementById('r-name').value || '').trim();
-      var email = (document.getElementById('r-email').value || '').trim();
-      var password = document.getElementById('r-pass').value || '';
-      if (!name || !email || !password) {
-        showErr('r-err', 'Fill in name, email, and password.');
-        return;
-      }
-      if (password.length < 6) {
-        showErr('r-err', 'Use at least 6 characters for the password.');
-        return;
-      }
-      btn.textContent = 'Creating…'; btn.disabled = true;
-      try {
-        var res = await fetch('/api/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'register', name: name, email: email, password: password }),
-        });
-        var data = await res.json();
-        if (data.ok) { location.href = '/admin/dashboard'; return; }
-        showErr('r-err', data.error || 'Could not create the account.');
-      } catch (err) {
-        showErr('r-err', 'Could not reach the server. Try again.');
-      }
-      btn.textContent = orig; btn.disabled = false;
-    });
-  </script>
+      document.getElementById('send-btn').addEventListener('click', async function() {
+        clearErr('send-err');
+        var email = (emailInput.value || '').trim().toLowerCase();
+        if (!email || email.indexOf('@') < 0) { showErr('send-err', 'Enter a valid email.'); return; }
+        var btn = this; var orig = btn.textContent;
+        btn.textContent = 'Sending…'; btn.disabled = true;
+        try {
+          var r = await fetch('/api/admin/code-send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email }),
+          });
+          var d = await r.json();
+          if (d.ok) {
+            stepRequest.hidden = true;
+            stepVerify.hidden = false;
+            sub.textContent = 'Check ' + email + ' for a 6-digit code.';
+            codeInput.focus();
+          } else {
+            showErr('send-err', d.error || 'Could not send code.');
+          }
+        } catch (e) {
+          showErr('send-err', 'Network error. Try again.');
+        }
+        btn.textContent = orig; btn.disabled = false;
+      });
 
-  <script>
-    import { startAuthentication } from '@simplewebauthn/browser';
+      document.getElementById('verify-btn').addEventListener('click', async function() {
+        clearErr('verify-err');
+        var email = (emailInput.value || '').trim().toLowerCase();
+        var code = (codeInput.value || '').trim();
+        if (!/^\d{6}$/.test(code)) { showErr('verify-err', 'Enter the 6-digit code.'); return; }
+        var btn = this; var orig = btn.textContent;
+        btn.textContent = 'Verifying…'; btn.disabled = true;
+        try {
+          var r = await fetch('/api/admin/code-verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, code: code }),
+          });
+          var d = await r.json();
+          if (d.ok) { location.href = '/admin/dashboard'; return; }
+          showErr('verify-err', d.error || 'Invalid or expired code.');
+        } catch (e) {
+          showErr('verify-err', 'Network error. Try again.');
+        }
+        btn.textContent = orig; btn.disabled = false;
+      });
 
-    // Show the PIN banner if this browser is a trusted device. Hide the
-    // default methods so PIN reads as the primary path.
-    fetch('/api/pin/check').then((r) => r.json()).then((data) => {
-      if (!data.trusted) return;
-      const banner = document.getElementById('pin-banner');
-      const defaults = document.getElementById('default-methods');
-      const greeting = document.getElementById('pin-greeting');
-      const sub = document.querySelector('.al-sub');
-      if (banner) banner.hidden = false;
-      if (defaults) defaults.style.display = 'none';
-      if (greeting && data.name) greeting.textContent = data.name.split(' ')[0];
-      if (sub) sub.textContent = 'Quick sign-in for this device.';
-      const input = document.getElementById('pin-input');
-      if (input) input.focus();
-    }).catch(() => {});
+      document.getElementById('back-btn').addEventListener('click', function() {
+        stepVerify.hidden = true;
+        stepRequest.hidden = false;
+        sub.textContent = "Enter your email — we'll send a 6-digit code.";
+        emailInput.focus();
+      });
 
-    async function submitPin() {
-      const pin = document.getElementById('pin-input').value.trim();
-      if (!/^\d{4,8}$/.test(pin)) {
-        showErr('pin-err', 'Enter 4–8 digits.'); return;
-      }
-      clearErr('pin-err');
-      const res = await fetch('/api/pin/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
-      const data = await res.json();
-      if (data.ok) { location.href = '/admin/dashboard'; return; }
-      if (data.error === 'too_many_attempts') {
-        showErr('pin-err', 'Too many wrong attempts — this device is no longer trusted. Use another sign-in method.');
-        document.getElementById('pin-banner').hidden = true;
-        document.getElementById('default-methods').style.display = '';
-        return;
-      }
-      if (data.error === 'wrong_pin') {
-        showErr('pin-err', `Wrong PIN. ${data.attempts_remaining ?? '?'} attempts left.`);
-        document.getElementById('pin-input').value = '';
-        return;
-      }
-      showErr('pin-err', data.error || 'Sign-in failed.');
-    }
-
-    document.getElementById('pin-submit-btn')?.addEventListener('click', submitPin);
-    document.getElementById('pin-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitPin(); });
-
-    // Let the trusted-device user fall through to all options if they want
-    document.getElementById('pin-not-me')?.addEventListener('click', () => {
-      document.getElementById('pin-banner').hidden = true;
-      document.getElementById('default-methods').style.display = '';
-    });
-
-    document.getElementById('passkey-btn')?.addEventListener('click', async () => {
-      clearErr('pk-err');
-      try {
-        const optsRes = await fetch('/api/passkey/auth-options', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
-        if (!optsRes.ok) throw new Error('options_failed');
-        const opts = await optsRes.json();
-        const assertion = await startAuthentication({ optionsJSON: opts });
-        const verifyRes = await fetch('/api/passkey/auth-verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ response: assertion }) });
-        const data = await verifyRes.json();
-        if (!data.ok) throw new Error(data.error || 'verify_failed');
-        location.href = '/admin/dashboard';
-      } catch (e) {
-        showErr('pk-err', 'Passkey sign-in failed: ' + ((e && e.message) || 'unknown'));
-      }
-    });
+      codeInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('verify-btn').click();
+      });
+      emailInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('send-btn').click();
+      });
+    })();
   </script>
 </Base>

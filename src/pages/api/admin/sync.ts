@@ -4,31 +4,9 @@ import { getDB } from '../../../lib/db';
 import { ensureEventSyncSchema } from '../../../lib/event-sync/schema';
 import { runAllSyncs, runOneSync } from '../../../lib/event-sync';
 import { findKind, buildConfigFromBody } from '../../../lib/event-sync/kinds';
+import { isAdmin } from '../../../lib/admin-auth';
 
 export const prerender = false;
-
-const SUPER_ADMIN_EMAIL = 'stharpe98@gmail.com';
-
-// Accept either the member super-admin cookie (dsn_user) or the organizer
-// session (dsn_org) that /admin/login sets — the page and the API need to
-// agree on what counts as "admin" or you get Unauthorized after signing in.
-function isAdmin(req: Request) {
-  const cookie = req.headers.get('cookie') || '';
-  const userMatch = cookie.match(/dsn_user=([^;]+)/);
-  if (userMatch) {
-    try {
-      if (JSON.parse(decodeURIComponent(userMatch[1])).email === SUPER_ADMIN_EMAIL) return true;
-    } catch {}
-  }
-  const orgMatch = cookie.match(/dsn_org=([^;]+)/);
-  if (orgMatch) {
-    try {
-      const parsed = JSON.parse(decodeURIComponent(orgMatch[1]));
-      if (typeof parsed?.email === 'string' && parsed.email.toLowerCase() === SUPER_ADMIN_EMAIL) return true;
-    } catch {}
-  }
-  return false;
-}
 
 function generateToken(): string {
   const bytes = new Uint8Array(24);
@@ -40,8 +18,8 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-export async function POST({ request }: APIContext) {
-  if (!isAdmin(request)) return json({ error: 'Unauthorized' }, 401);
+export async function POST({ request, cookies }: APIContext) {
+  if (!(await isAdmin(cookies))) return json({ error: 'Unauthorized' }, 401);
   const db = getDB();
   if (!db) return json({ error: 'DB unavailable' }, 500);
   await ensureEventSyncSchema(db);

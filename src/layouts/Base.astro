@@ -1,19 +1,16 @@
 ---
 const { title = "Denver Social", description = "Real small-group events across Denver. Show up, meet people." } = Astro.props;
 
-let user: any = null;
-const cookie = Astro.cookies.get("dsn_user")?.value;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
-
-const isAdmin = user?.role === 'admin' || user?.email === "stharpe98@gmail.com";
+// Auth is admin-only now (email-code gate). Public pages have no
+// concept of a "logged-in user" — we only check the dsn_admin cookie
+// to decide whether to surface the Admin link in nav.
+const adminCookie = Astro.cookies.get('dsn_admin')?.value || '';
+const isAdmin = adminCookie.split('.').length >= 3; // lightweight signal; real check is server-side via isAdmin()
 const currentPath = Astro.url.pathname;
-const redditName = user?.reddit_username || user?.name;
-// Tour is rendered only for signed-out visitors who haven't already
-// dismissed it. The cookie is the source of truth — localStorage is a
-// client-side fallback. Skipping the markup server-side means no
-// flash-of-tour on subsequent visits and zero JS cost.
+// Tour is rendered for visitors who haven't dismissed it. Cookie is
+// the source of truth — localStorage is a client-side fallback.
 const tourSeen = Astro.cookies.get('dsn_tour_seen')?.value === '1';
-const showWelcomeTour = !user && !tourSeen;
+const showWelcomeTour = !tourSeen;
 ---
 <html lang="en">
 <head>
@@ -55,17 +52,7 @@ const showWelcomeTour = !user && !tourSeen;
       </nav>
 
       <div class="site-auth">
-        {user ? (
-          <>
-            <a href="/profile" class="site-user">
-              <span class="site-user-name">{redditName ? `u/${redditName}` : 'Profile'}</span>
-              {typeof user.karma === 'number' && <span class="site-user-karma">{user.karma} karma</span>}
-            </a>
-            <a href="/api/logout" class="site-logout">Sign out</a>
-          </>
-        ) : (
-          <a href="/login" class="site-cta">Sign in</a>
-        )}
+        {isAdmin && <a href="/api/admin/logout" class="site-logout">Admin sign out</a>}
       </div>
     </div>
   </header>
@@ -80,16 +67,6 @@ const showWelcomeTour = !user && !tourSeen;
       <button class="mob-drawer-close" id="mob-drawer-close" aria-label="Close menu">×</button>
     </div>
 
-    {user && (
-      <a href="/profile" class="mob-drawer-user">
-        <div class="mob-drawer-avatar">{(user.name || user.email || '?')[0]?.toUpperCase()}</div>
-        <div>
-          <strong>{user.name || (redditName ? `u/${redditName}` : 'Profile')}</strong>
-          <span>View profile</span>
-        </div>
-      </a>
-    )}
-
     <nav class="mob-drawer-nav">
       <a href="/" class:list={["mob-drawer-link", { active: currentPath === "/" }]}><span class="mob-drawer-icon">🏠</span>Home</a>
       <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") || currentPath.startsWith("/calendar") }]}><span class="mob-drawer-icon">📅</span>Events</a>
@@ -101,11 +78,11 @@ const showWelcomeTour = !user && !tourSeen;
       )}
     </nav>
 
-    <div class="mob-drawer-foot">
-      {user
-        ? <a href="/api/logout" class="mob-drawer-cta mob-drawer-cta-ghost">Sign out</a>
-        : <a href="/login" class="mob-drawer-cta">Sign in / sign up</a>}
-    </div>
+    {isAdmin && (
+      <div class="mob-drawer-foot">
+        <a href="/api/admin/logout" class="mob-drawer-cta mob-drawer-cta-ghost">Admin sign out</a>
+      </div>
+    )}
   </aside>
 
   <slot />
@@ -247,7 +224,7 @@ const showWelcomeTour = !user && !tourSeen;
     })();
   </script>
 
-  {user && (
+  {false && (
     <div id="mc-overlay" class="mc-overlay" hidden>
       <div class="mc-card" role="dialog" aria-modal="true">
         <button class="mc-close" id="mc-close" aria-label="Close">×</button>
@@ -982,7 +959,6 @@ const showWelcomeTour = !user && !tourSeen;
           else if (action === 'skip') dismiss();
           else if (action === 'signin') {
             dismiss();
-            window.location.href = '/login';
           }
           else if (action === 'prev') show(step - 1);
           else if (action === 'next') {

@@ -6,9 +6,8 @@ import { ensureGroupsSchema } from '../lib/groups-schema';
 import { ensureDmSchema } from '../lib/dm-schema';
 
 const db = getDB();
-let user: any = null;
-const cookie = Astro.cookies.get('dsn_user')?.value;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+// Accounts are offline; no logged-in viewer concept on this page.
+const user: any = null;
 
 const validTabs = new Set(['favors', 'groups', 'messages']);
 const rawTab = (Astro.url.searchParams.get('tab') || 'favors').toLowerCase();
@@ -17,9 +16,9 @@ const tab = validTabs.has(rawTab) ? rawTab : 'favors';
 const filter = Astro.url.searchParams.get('kind') || 'all';
 
 let favors: any[] = [];
-let myGroups: any[] = [];
+const myGroups: any[] = [];
 let discoverGroups: any[] = [];
-let conversations: any[] = [];
+const conversations: any[] = [];
 
 if (db) {
   if (tab === 'favors') {
@@ -35,44 +34,21 @@ if (db) {
     favors = (r.results || []) as any[];
   } else if (tab === 'groups') {
     await ensureGroupsSchema(db);
-    if (user?.email) {
-      const my = await db.prepare(`
-        SELECT g.*, gm.role
-        FROM groups g
-        JOIN group_members gm ON gm.group_id = g.id
-        WHERE LOWER(gm.member_email) = LOWER(?)
-        ORDER BY gm.joined_at DESC
-      `).bind(user.email).all();
-      myGroups = (my.results || []) as any[];
-    }
     const discover = await db.prepare(`
       SELECT g.*
       FROM groups g
       WHERE g.privacy = 'public'
-        AND (? IS NULL OR g.id NOT IN (SELECT group_id FROM group_members WHERE LOWER(member_email)=LOWER(?)))
       ORDER BY g.member_count DESC, g.id DESC
       LIMIT 24
-    `).bind(user?.email || null, user?.email || '').all();
+    `).all();
     discoverGroups = (discover.results || []) as any[];
   } else if (tab === 'messages') {
-    if (user?.email) {
-      await ensureDmSchema(db);
-      const me = (user.email || '').toLowerCase();
-      const r = await db.prepare(`
-        SELECT c.id, c.member_a_email, c.member_b_email, c.last_msg_at, c.last_msg_preview, c.last_msg_from,
-               m.name as other_name, m.reddit_username as other_reddit, m.discord_username as other_discord,
-               (SELECT COUNT(*) FROM dm_messages mm WHERE mm.conversation_id=c.id AND mm.from_email != ? AND mm.read_at IS NULL) AS unread
-        FROM dm_conversations c
-        LEFT JOIN members m ON LOWER(m.email) = CASE WHEN LOWER(c.member_a_email)=? THEN LOWER(c.member_b_email) ELSE LOWER(c.member_a_email) END
-        WHERE LOWER(c.member_a_email)=? OR LOWER(c.member_b_email)=?
-        ORDER BY COALESCE(c.last_msg_at, c.created_at) DESC
-      `).bind(me, me, me, me).all();
-      conversations = (r.results || []) as any[];
-    }
+    // Messaging is offline while accounts are reworked.
+    await ensureDmSchema(db);
   }
 }
 
-const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unread || 0), 0);
+const totalUnread = 0;
 
 function otherName(c: any): string {
   return c.other_name || c.other_reddit || c.other_discord
@@ -146,11 +122,12 @@ function timeAgo(iso: string): string {
       )}
 
       {favors.length === 0 ? (
-        <div class="ho-empty">Empty board. Nobody needs a ride to DIA. Nobody's offering to assemble IKEA furniture. {user ? "Yet. That's where you come in." : <><a href="/login?next=/community">Sign in</a> and break the ice.</>}</div>
+        <div class="ho-empty">Empty board. Nobody needs a ride to DIA. Nobody's offering to assemble IKEA furniture. Break the ice — post the first one.</div>
       ) : (
         <div class="ho-feed">
           {favors.map((f: any) => {
-            const isMine = user?.email && (f.member_email || '').toLowerCase() === user.email.toLowerCase();
+            const isMine = false;
+            void user;
             const kindInfo = FAVOR_KINDS.find(k => k.key === f.kind);
             return (
               <article class={`ho-card ho-${f.kind}`}>
@@ -242,40 +219,9 @@ function timeAgo(iso: string): string {
   {tab === 'messages' && (
     <div class="cb-section">
       <h2 class="cb-section-title">Messages</h2>
-      {!user ? (
-        <div class="cb-empty">
-          <a href="/login?next=/community?tab=messages">Sign in</a> to see your conversations.
-        </div>
-      ) : conversations.length === 0 ? (
-        <div class="cb-empty">
-          No messages yet — message a neighbor from their profile.
-        </div>
-      ) : (
-        <div class="dm-list">
-          {conversations.map((c: any) => {
-            const name = otherName(c);
-            const initial = name[0]?.toUpperCase() || '?';
-            const isUnread = (c.unread || 0) > 0;
-            const preview = c.last_msg_preview || 'Start the conversation…';
-            return (
-              <a href={`/messages/${c.id}`} class={`dm-row ${isUnread ? 'unread' : ''}`}>
-                <div class="dm-avatar">{initial}</div>
-                <div class="dm-body">
-                  <div class="dm-row-top">
-                    <strong>{name}</strong>
-                    <span class="dm-time">{timeAgo(c.last_msg_at)}</span>
-                  </div>
-                  <div class="dm-preview">
-                    {c.last_msg_from?.toLowerCase() === (user.email || '').toLowerCase() && <span class="dm-you">You: </span>}
-                    {preview}
-                  </div>
-                </div>
-                {isUnread && <span class="dm-badge">{c.unread}</span>}
-              </a>
-            );
-          })}
-        </div>
-      )}
+      <div class="cb-empty">
+        Messaging is offline while we rework accounts. Coming back soon.
+      </div>
     </div>
   )}
 </div>
