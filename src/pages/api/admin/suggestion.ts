@@ -1,17 +1,12 @@
 import type { APIContext } from 'astro';
 import { getDB } from '../../../lib/db';
+import { isAdmin } from '../../../lib/admin-auth';
 
 export const prerender = false;
 
-function isAdmin(req: Request) {
-  const cookie = req.headers.get('cookie') || '';
-  const m = cookie.match(/dsn_user=([^;]+)/);
-  if (!m) return false;
-  try { return JSON.parse(decodeURIComponent(m[1])).email === 'stharpe98@gmail.com'; } catch { return false; }
-}
 
-export async function POST({ request }: APIContext) {
-  if (!isAdmin(request)) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+export async function POST({ request, cookies }: APIContext) {
+  if (!(await isAdmin(cookies))) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   const db = getDB();
   if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
   try {

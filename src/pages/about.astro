@@ -1,7 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
-import { getContent } from '../lib/content';
 
 const db = getDB();
 let totalMembers = 0;
@@ -14,95 +13,53 @@ try {
 
 const faqs = [
   { q: "Is this actually free?", a: "Yep. No fees, no premium tier, no upsell." },
-  { q: "I don't know anyone — is that weird?", a: "Most people show up solo. Groups are capped at 6–12 so you actually meet everyone." },
-  { q: "Is it safe? What about creeps?", a: "Locations stay hidden until you RSVP, every event has a host, and we remove anyone who makes others uncomfortable. More on our /conduct page." },
+  { q: "I don't know anyone — is that weird?", a: "Most people show up solo. Events stay small enough that you actually meet everyone." },
+  { q: "Is it safe? What about creeps?", a: "Every event has a host, locations are public so you know exactly where you're going, and we remove anyone who makes others uncomfortable." },
   { q: "How much does an event cost?", a: "Some are free (hikes, park hangs, coffee). Dinners run $20–35 a head. Price is always shown upfront." },
   { q: "Can I post my own event?", a: "Yes — hit \"Plan an event\" from /events. You don't need permission to have a good idea." },
   { q: "What if I RSVP and can't make it?", a: "Just cancel so someone else can grab the spot. Life happens — don't ghost repeatedly." },
 ];
-const content = await getContent();
 ---
 <Base title="About">
+<div class="ab">
 
-<div class="about-page">
-
-  <!-- HERO -->
-  <section class="about-hero">
-    <div class="about-hero-tag">About Denver Social</div>
-    <h1 class="about-hero-h1" set:html={content.about_title}></h1>
-    <p class="about-hero-sub">{content.about_subtitle}</p>
-  </section>
-
-  <!-- STATS -->
-  <section class="about-stats">
-    <div class="about-stat">
-      <span class="about-stat-num">{totalMembers || '88'}+</span>
-      <span class="about-stat-label">Members</span>
-    </div>
-    <div class="about-stat-divider"></div>
-    <div class="about-stat">
-      <span class="about-stat-num">6–12</span>
-      <span class="about-stat-label">People per event</span>
-    </div>
-    <div class="about-stat-divider"></div>
-    <div class="about-stat">
-      <span class="about-stat-num">Free</span>
-      <span class="about-stat-label">To join</span>
-    </div>
-  </section>
-
-  <!-- FOUNDER STORY -->
-  <section class="about-story">
-    <div class="about-story-head">
-      <div class="about-story-avatar">S</div>
+  <!-- THE LETTER -->
+  <article class="ab-letter">
+    <header class="ab-letter-head">
+      <div class="ab-avatar">S</div>
       <div>
         <strong>Seth</strong>
         <span>the guy who texts everyone "are you coming?"</span>
       </div>
-    </div>
-    <div class="about-story-body">
-      <p>I moved to Denver and had zero friends here. Bars were too loud, meetup groups had 400 people standing around awkwardly, and bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
-      <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking "when's the next one?" — so we kept going. Bowling, hikes, pottery, game nights. There's 80+ of us now and it still feels small because every event is capped at 12.</p>
-      <p>The only rules: don't be a creep, show up if you say you will, don't pitch crypto at dinner. That's it.</p>
-    </div>
-  </section>
+    </header>
 
-  <!-- HOW IT WORKS -->
-  <section class="about-how">
-    <div class="about-section-tag">How it works</div>
-    <h2 class="about-section-h2">It's not <em>complicated.</em></h2>
-    <div class="about-steps">
-      <div class="about-step">
-        <div class="about-step-num">1</div>
-        <div class="about-step-text">
-          <h3>Make a profile</h3>
-          <p>Takes like 60 seconds. Sign in with Discord, tell us your neighborhood and what sounds fun. No credit card, no personality quiz, no "tell us your love language." We're not that deep.</p>
-        </div>
-      </div>
-      <div class="about-step">
-        <div class="about-step-num">2</div>
-        <div class="about-step-text">
-          <h3>Find something that sounds fun</h3>
-          <p>We post new events every week. Pottery on Saturday? A dinner in LoHi? Bowling and cheap beer? Just hit RSVP. Worst case scenario, you eat good food with strangers. The horror.</p>
-        </div>
-      </div>
-      <div class="about-step">
-        <div class="about-step-num">3</div>
-        <div class="about-step-text">
-          <h3>Actually show up</h3>
-          <p>That's the whole thing. You walk in, there's 8 people at a table, and within 20 minutes you're laughing about something dumb. No icebreakers. No name tags.</p>
-        </div>
-      </div>
+    <h1>Look — making friends after college is <em>weird.</em></h1>
+
+    <div class="ab-body">
+      <p>I moved to Denver and had zero friends here. Bars were too loud, meetup groups had 400 people standing around awkwardly, and Bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
+
+      <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking <em>"when's the next one?"</em> — so we kept going. Bowling, hikes, pottery, game nights. There's <strong>{totalMembers || '80'}+</strong> of us now — dinners stay small, but a hike or game night might be twenty.</p>
+
+      <p>The only rules: don't be a creep, show up if you say you will, don't pitch crypto at dinner. That's it.</p>
+
+      <p class="ab-how">Here's the whole thing in three lines: <strong>make a profile</strong> (60 seconds, no quiz), <strong>find something that sounds fun</strong>, <strong>actually show up</strong>. You walk in, there's 8 people at a table, and 20 minutes later you're laughing about something dumb.</p>
     </div>
-  </section>
+
+    <footer class="ab-stats">
+      <div><strong>{totalMembers || '80'}+</strong><span>members</span></div>
+      <div class="ab-stats-dot"></div>
+      <div><strong>Small</strong><span>groups</span></div>
+      <div class="ab-stats-dot"></div>
+      <div><strong>Free</strong><span>to join</span></div>
+    </footer>
+  </article>
 
   <!-- FAQ -->
-  <section class="about-faq">
-    <div class="about-section-tag">You're probably wondering</div>
-    <h2 class="about-section-h2">Totally fair <em>questions.</em></h2>
-    <div class="about-faq-list">
+  <section class="ab-faq">
+    <h2>Totally fair questions.</h2>
+    <div class="ab-faq-list">
       {faqs.map((f) => (
-        <details class="about-faq-item">
+        <details>
           <summary>{f.q}</summary>
           <p>{f.a}</p>
         </details>
@@ -110,152 +67,110 @@ const content = await getContent();
     </div>
   </section>
 
-  <!-- CONTACT / CTA -->
-  <section class="about-contact">
-    <div class="about-contact-card">
-      <span class="about-contact-icon">👋</span>
-      <h2>Alright, you in?</h2>
-      <p>The Discord is where everything happens — new events, random plans, voice chat hangs, people just being goofy between meetups. Come lurk if you want. Or just say hi.</p>
-      <div class="about-contact-btns">
-        <a href="https://discord.gg/S8SFNkdSgK" class="about-btn-cta" target="_blank" rel="noopener">Join the Discord →</a>
-        <a href="/contact" class="about-btn-ghost">Contact us</a>
-      </div>
+  <!-- CLOSER -->
+  <section class="ab-closer">
+    <span class="ab-closer-emoji">👋</span>
+    <h2>Alright — you in?</h2>
+    <p>The Discord is where everything happens between meetups: new events, random plans, voice hangs, people being goofy. Come lurk, or say hi.</p>
+    <div class="ab-closer-btns">
+      <a href="https://discord.gg/S8SFNkdSgK" class="btn-cta" target="_blank" rel="noopener">Join the Discord →</a>
+      <a href="/contact" class="btn-sec">Contact us</a>
     </div>
   </section>
 
 </div>
 
-<style is:inline>
-  .about-page { max-width: 700px; margin: 0 auto; padding: 0 24px; }
+<style>
+  .ab { max-width: 680px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
 
-  /* ─── HERO ─── */
-  .about-hero { padding: 36px 0 28px; }
-  .about-hero-tag {
-    display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
-    color: #0EA5E9; font-weight: 700; margin-bottom: 14px;
-    padding: 5px 12px; background: rgba(14,165,233,0.06); border-radius: 50px;
-    font-family: 'Outfit', sans-serif;
+  /* The letter — main content lives here */
+  .ab-letter {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 20px;
+    padding: 28px clamp(20px, 4vw, 36px);
+    margin-bottom: 36px;
   }
-  .about-hero-h1 {
-    font-family: 'Outfit', sans-serif; font-size: clamp(26px, 4vw, 36px);
-    color: #111827; line-height: 1.15; margin-bottom: 14px; font-weight: 900;
-    letter-spacing: -0.02em;
-  }
-  .about-hero-h1 em { font-style: normal; color: #0EA5E9; }
-  .about-hero-sub { font-size: 14px; color: #6B7280; line-height: 1.7; max-width: 480px; }
-
-  /* ─── STATS ─── */
-  .about-stats {
-    display: flex; align-items: center; justify-content: center;
-    padding: 24px; border-radius: 16px; margin-bottom: 36px;
-    background: #F8F9FB; border: 1px solid #E5E7EB;
-  }
-  .about-stat { flex: 1; text-align: center; }
-  .about-stat-num { display: block; font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900; color: #0EA5E9; line-height: 1; margin-bottom: 4px; }
-  .about-stat-label { font-size: 11px; color: #9CA3AF; font-weight: 500; }
-  .about-stat-divider { width: 1px; height: 36px; background: #E5E7EB; flex-shrink: 0; }
-
-  /* ─── STORY ─── */
-  .about-story {
-    padding: 28px; border-radius: 18px; margin-bottom: 36px;
-    background: #F8F9FB; border: 1px solid #E5E7EB;
-  }
-  .about-story-head {
+  .ab-letter-head {
     display: flex; align-items: center; gap: 14px;
-    padding-bottom: 18px; margin-bottom: 18px;
-    border-bottom: 1px solid #E5E7EB;
+    padding-bottom: 18px; margin-bottom: 22px;
+    border-bottom: 1px solid var(--border);
   }
-  .about-story-avatar {
-    width: 44px; height: 44px; border-radius: 50%; background: rgba(14,165,233,0.1);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 700; color: #0EA5E9; flex-shrink: 0;
-    font-family: 'Outfit', sans-serif;
+  .ab-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--sunset), var(--pink));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 18px; font-weight: 800; flex-shrink: 0;
   }
-  .about-story-head strong { display: block; font-family: 'Outfit', sans-serif; font-size: 15px; color: #111827; font-weight: 700; }
-  .about-story-head span { font-size: 12px; color: #9CA3AF; }
-  .about-story-body h2 { font-family: 'Outfit', sans-serif; font-size: 18px; color: #111827; margin: 20px 0 8px; font-weight: 700; }
-  .about-story-body h2:first-child { margin-top: 0; }
-  .about-story-body p { font-size: 13px; color: #6B7280; line-height: 1.8; margin-bottom: 8px; }
+  .ab-letter-head strong { display: block; font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); }
+  .ab-letter-head span { font-size: 13px; color: var(--text-faint); }
 
-  /* ─── SECTION HEADS ─── */
-  .about-section-tag {
-    display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
-    color: #047857; font-weight: 700; margin-bottom: 8px;
-    padding: 4px 12px; background: #F0FDF4; border-radius: 50px;
-    font-family: 'Outfit', sans-serif;
+  .ab-letter h1 {
+    font-family: var(--font-display); font-size: clamp(28px, 4.5vw, 38px);
+    font-weight: 900; letter-spacing: -0.025em; line-height: 1.15;
+    color: var(--text); margin-bottom: 20px;
   }
-  .about-section-h2 {
-    font-family: 'Outfit', sans-serif; font-size: clamp(22px, 3.5vw, 30px);
-    color: #111827; margin-bottom: 20px; font-weight: 800; letter-spacing: -0.02em;
-  }
-  .about-section-h2 em { font-style: normal; color: #0EA5E9; }
+  .ab-letter h1 em { font-style: normal; color: var(--accent); }
 
-  /* ─── HOW IT WORKS ─── */
-  .about-how { margin-bottom: 36px; }
-  .about-steps { display: flex; flex-direction: column; gap: 12px; }
-  .about-step {
-    display: flex; align-items: flex-start; gap: 14px;
-    padding: 18px; border-radius: 14px;
-    background: #F8F9FB; border: 1px solid #E5E7EB;
+  .ab-body p {
+    font-size: 16px; line-height: 1.7; color: var(--text);
+    margin-bottom: 14px;
   }
-  .about-step-num {
-    width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px;
-    background: rgba(14,165,233,0.06); border: 1px solid rgba(14,165,233,0.12);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #0EA5E9;
+  .ab-body p:last-child { margin-bottom: 0; }
+  .ab-body em { font-style: italic; color: var(--text-sec); }
+  .ab-body strong { font-weight: 700; color: var(--text); }
+  .ab-how {
+    margin-top: 8px !important;
+    padding: 14px 16px; background: var(--surface); border-radius: 12px;
+    font-size: 15px !important; line-height: 1.6 !important;
+    color: var(--text-sec) !important;
   }
-  .about-step-text h3 { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px; }
-  .about-step-text p { font-size: 12px; color: #6B7280; line-height: 1.6; }
+  .ab-how strong { color: var(--text); }
 
-  /* ─── TRUST ─── */
-  /* ─── FAQ ─── */
-  .about-faq { margin-bottom: 36px; }
-  .about-faq-list { display: flex; flex-direction: column; gap: 8px; }
-  .about-faq-item {
-    border-radius: 14px; background: #F8F9FB; border: 1px solid #E5E7EB;
-    overflow: hidden; transition: border-color .2s;
+  /* Stats footer — inline at bottom of the letter */
+  .ab-stats {
+    display: flex; align-items: center; justify-content: center; gap: clamp(14px, 4vw, 28px);
+    padding-top: 22px; margin-top: 24px; border-top: 1px solid var(--border);
+    flex-wrap: wrap;
   }
-  .about-faq-item[open] { border-color: #D1D5DB; }
-  .about-faq-item summary {
-    padding: 14px 18px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; color: #111827;
-    cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between;
-    transition: background .2s;
+  .ab-stats > div:not(.ab-stats-dot) { text-align: center; }
+  .ab-stats strong {
+    display: block; font-family: var(--font-display);
+    font-size: 22px; font-weight: 900; color: var(--accent); line-height: 1;
   }
-  .about-faq-item summary:hover { background: #F0F2F5; }
-  .about-faq-item summary::after { content: '+'; font-size: 18px; color: #9CA3AF; flex-shrink: 0; margin-left: 12px; }
-  .about-faq-item[open] summary::after { content: '−'; color: #0EA5E9; }
-  .about-faq-item summary::-webkit-details-marker { display: none; }
-  .about-faq-item p { padding: 0 18px 14px; font-size: 12px; color: #6B7280; line-height: 1.7; }
+  .ab-stats span { display: block; font-size: 11px; color: var(--text-sec); margin-top: 4px; text-transform: lowercase; letter-spacing: 0.04em; }
+  .ab-stats-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border-hover); }
 
-  /* ─── CONTACT ─── */
-  .about-contact { margin-bottom: 40px; }
-  .about-contact-card {
-    padding: 32px; border-radius: 20px; text-align: center;
-    background: linear-gradient(135deg, rgba(14,165,233,0.04), rgba(16,185,129,0.04));
-    border: 1px solid rgba(14,165,233,0.1);
+  /* FAQ */
+  .ab-faq { margin-bottom: 32px; }
+  .ab-faq h2 {
+    font-family: var(--font-display); font-size: clamp(22px, 3.5vw, 28px);
+    font-weight: 900; letter-spacing: -0.02em; color: var(--text);
+    margin-bottom: 16px;
   }
-  .about-contact-icon { font-size: 32px; display: block; margin-bottom: 12px; }
-  .about-contact-card h2 { font-family: 'Outfit', sans-serif; font-size: 22px; color: #111827; margin-bottom: 8px; font-weight: 800; }
-  .about-contact-card p { font-size: 13px; color: #6B7280; line-height: 1.7; margin-bottom: 20px; max-width: 400px; margin-left: auto; margin-right: auto; }
-  .about-contact-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .about-btn-cta {
-    display: inline-block; padding: 12px 24px; border-radius: 50px;
-    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
-    background: #0EA5E9; color: #fff; transition: all .2s;
+  .ab-faq-list { display: flex; flex-direction: column; gap: 8px; }
+  .ab-faq details {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden;
   }
-  .about-btn-cta:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(14,165,233,0.2); }
-  .about-btn-ghost {
-    display: inline-block; padding: 12px 24px; border-radius: 50px;
-    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
-    background: #F8F9FB; color: #6B7280; border: 1px solid #E5E7EB; transition: all .2s;
+  .ab-faq summary {
+    padding: 14px 18px; font-family: var(--font-display); font-size: 14px;
+    font-weight: 700; color: var(--text); cursor: pointer;
+    list-style: none; display: flex; align-items: center; justify-content: space-between;
   }
-  .about-btn-ghost:hover { border-color: #D1D5DB; color: #111827; }
+  .ab-faq summary::-webkit-details-marker { display: none; }
+  .ab-faq summary::after { content: '+'; color: var(--text-faint); font-size: 18px; flex-shrink: 0; }
+  .ab-faq details[open] summary::after { content: '−'; color: var(--accent); }
+  .ab-faq summary:hover { background: var(--surface); }
+  .ab-faq p { padding: 0 18px 14px; font-size: 14px; line-height: 1.6; color: var(--text-sec); margin: 0; }
 
-  @media (max-width: 600px) {
-    .about-stats { flex-direction: column; gap: 16px; }
-    .about-stat-divider { width: 60px; height: 1px; }
+  /* Closer */
+  .ab-closer {
+    padding: 32px clamp(20px, 4vw, 36px); border-radius: 20px;
+    background: linear-gradient(135deg, var(--sunset-dim), var(--pink-dim));
+    border: 1px solid rgba(249,115,22,0.18); text-align: center;
   }
+  .ab-closer-emoji { font-size: 36px; display: block; margin-bottom: 8px; }
+  .ab-closer h2 { font-family: var(--font-display); font-size: 24px; font-weight: 900; letter-spacing: -0.02em; color: var(--text); margin-bottom: 10px; }
+  .ab-closer p { font-size: 15px; line-height: 1.55; color: var(--text-sec); max-width: 440px; margin: 0 auto 18px; }
+  .ab-closer-btns { display: inline-flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 </style>
-
 </Base>
-

@@ -33,31 +33,31 @@ const list = view === 'approved' ? approved : view === 'declined' ? declined : p
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', sans-serif; background: #FAFAF8; color: #1A1A1A; min-height: 100vh; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+    body { font-family: 'Inter', sans-serif; background: #F5EFE3; color: #2A2730; min-height: 100vh; padding: 32px clamp(16px, 4vw, 40px) 80px; }
     .wrap { max-width: 980px; margin: 0 auto; }
-    .back { font-size: 13px; color: #6B6560; text-decoration: none; display: inline-block; margin-bottom: 16px; }
-    h1 { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; }
-    .sub { color: #6B6560; font-size: 14px; margin-bottom: 24px; }
+    .back { font-size: 13px; color: #2A2730; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+    h1 { font-family: 'Fraunces', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .sub { color: #2A2730; font-size: 14px; margin-bottom: 24px; }
     .tabs { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
-    .tab { padding: 8px 16px; border-radius: 999px; background: #fff; border: 1px solid #E8E4DE; font-size: 13px; font-weight: 600; color: #6B6560; text-decoration: none; }
-    .tab.active { background: #1A1A1A; color: #fff; border-color: #1A1A1A; }
-    .empty { padding: 56px 24px; text-align: center; color: #A09890; background: #fff; border: 1px dashed #E8E4DE; border-radius: 14px; }
+    .tab { padding: 8px 16px; border-radius: 999px; background: #fff; border: 1px solid #DDD2BB; font-size: 13px; font-weight: 600; color: #2A2730; text-decoration: none; }
+    .tab.active { background: #2A2730; color: #fff; border-color: #2A2730; }
+    .empty { padding: 56px 24px; text-align: center; color: #6B6B73; background: #fff; border: 1px dashed #DDD2BB; border-radius: 14px; }
     .feed { display: flex; flex-direction: column; gap: 12px; }
-    .row { background: #fff; border: 1px solid #E8E4DE; border-radius: 14px; padding: 18px 20px; }
+    .row { background: #fff; border: 1px solid #DDD2BB; border-radius: 14px; padding: 18px 20px; }
     .row-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
-    .biz { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800; }
-    .meta { font-size: 12px; color: #A09890; }
-    .offer-title { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: #2D5F3F; margin-bottom: 6px; }
-    .details { font-size: 14px; color: #6B6560; line-height: 1.55; padding: 10px 12px; background: #FAFAF8; border-radius: 8px; margin-top: 8px; }
-    .info { font-size: 13px; color: #6B6560; margin-top: 6px; }
+    .biz { font-family: 'Fraunces', sans-serif; font-size: 18px; font-weight: 800; }
+    .meta { font-size: 12px; color: #6B6B73; }
+    .offer-title { font-family: 'Fraunces', sans-serif; font-size: 16px; font-weight: 700; color: #2D5F3F; margin-bottom: 6px; }
+    .details { font-size: 14px; color: #2A2730; line-height: 1.55; padding: 10px 12px; background: #F5EFE3; border-radius: 8px; margin-top: 8px; }
+    .info { font-size: 13px; color: #2A2730; margin-top: 6px; }
     .info a { color: #2D5F3F; font-weight: 600; }
     .actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
     .btn { padding: 8px 16px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; font-family: 'Inter', sans-serif; }
     .btn-ok { background: #16A34A; color: #fff; }
-    .btn-no { background: #fff; border: 1px solid #E8E4DE; color: #6B6560; }
+    .btn-no { background: #fff; border: 1px solid #DDD2BB; color: #2A2730; }
     .btn-del { background: #fff; border: 1px solid #FCA5A5; color: #B91C1C; }
     .btn-ok:hover { background: #15803D; }
-    .btn-no:hover { color: #1A1A1A; }
+    .btn-no:hover { color: #2A2730; }
     .btn-del:hover { background: #FEF2F2; }
   </style>
 </head>

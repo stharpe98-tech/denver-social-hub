@@ -1,0 +1,42 @@
+---
+const { current } = Astro.props as { current: string };
+const links = [
+  { slug: 'home-zine', label: 'A · Zine' },
+  { slug: 'home-map', label: 'B · Map' },
+  { slug: 'home-potluck', label: 'C · Potluck' },
+  { slug: 'post-center', label: 'Posts' },
+];
+---
+<div class="ps">
+  <a href="/preview" class="ps-home">← hub</a>
+  <div class="ps-divider"></div>
+  {links.map(l => (
+    <a href={`/preview/${l.slug}`} class:list={["ps-link", { 'ps-on': l.slug === current }]}>{l.label}</a>
+  ))}
+</div>
+
+<style>
+  .ps {
+    position: fixed;
+    top: 12px; left: 50%; transform: translateX(-50%);
+    z-index: 9999;
+    background: rgba(26,26,26,0.92);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    border-radius: 999px;
+    padding: 6px 8px;
+    display: flex; gap: 4px; align-items: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    max-width: calc(100vw - 24px);
+    overflow-x: auto;
+  }
+  .ps-home { color: rgba(255,255,255,0.7); text-decoration: none; padding: 6px 10px; font-weight: 600; white-space: nowrap; }
+  .ps-home:hover { color: #fff; }
+  .ps-divider { width: 1px; height: 16px; background: rgba(255,255,255,0.2); flex-shrink: 0; }
+  .ps-link { color: rgba(255,255,255,0.7); text-decoration: none; padding: 6px 12px; border-radius: 999px; white-space: nowrap; transition: background .15s, color .15s; }
+  .ps-link:hover { color: #fff; background: rgba(255,255,255,0.08); }
+  .ps-on { background: #fff; color: #1A1A1A !important; font-weight: 700; }
+  @media print { .ps { display: none; } }
+</style>

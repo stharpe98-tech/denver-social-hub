@@ -9,6 +9,32 @@ let eventCount = 0;
 let upcomingPotluck: any = null;
 let suggestions: any[] = []; // FIX: was undeclared
 
+// Pull Discord guild_id from event-sync config and fetch the live online count.
+// Cached at the worker fetch layer so we don't hammer Discord on every render.
+let discordOnline: number | null = null;
+let discordInvite: string | null = null;
+let discordName: string = '';
+if (db) {
+  try {
+    const src: any = await db.prepare(
+      "SELECT config FROM event_sources WHERE kind='discord' AND enabled=1 ORDER BY id LIMIT 1"
+    ).first();
+    const guildId = src?.config ? (() => { try { return (JSON.parse(src.config).guild_id || '').toString() || null; } catch { return null; } })() : null;
+    if (guildId) {
+      const r = await fetch(`https://discord.com/api/guilds/${encodeURIComponent(guildId)}/widget.json`, {
+        headers: { 'User-Agent': 'DenverSocialHub/1.0' },
+        cf: { cacheTtl: 60, cacheEverything: true } as any,
+      });
+      if (r.ok) {
+        const w: any = await r.json();
+        if (typeof w?.presence_count === 'number') discordOnline = w.presence_count;
+        discordInvite = w?.instant_invite || null;
+        discordName = w?.name || '';
+      }
+    }
+  } catch {}
+}
+
 try {
   if (db) {
     const now = new Date();
@@ -93,12 +119,48 @@ const eventTypeChips = [
         </div>
         <span class="hero-dot"></span>
         <div class="hero-stat">
-          <strong>6–12</strong>
-          <span>per event</span>
+          <strong>Small</strong>
+          <span>groups</span>
         </div>
       </div>
     </div>
   </section>
+
+  {/* PERSONAL PAGES CTA — full card */}
+  <section class="page-wrap personal-page-band">
+    <div class="pp-card">
+      <div class="pp-card-left">
+        <div class="pp-avatars">
+          <span class="pp-av pp-av-1">👨🏽‍💼</span>
+          <span class="pp-av pp-av-2">🧘🏻‍♀️</span>
+          <span class="pp-av pp-av-3">👨‍🍳</span>
+        </div>
+        <div class="pp-card-text">
+          <h3 class="pp-h">Have something you offer Denver?</h3>
+          <p class="pp-p">Free landing page for realtors, instructors, makers, dog-walkers — anyone with skills, services, or a side hustle. Your own URL, your contact info, your face on the neighborhood map.</p>
+          <ul class="pp-bullets">
+            <li>✓ Pick your own URL — <span class="mono">denversocialhub.com/u/yourname</span></li>
+            <li>✓ Free forever — no credit card, no account</li>
+            <li>✓ Live in 2 minutes — email yourself a code, edit, publish</li>
+          </ul>
+        </div>
+      </div>
+      <a href="/u/new" class="pp-card-cta">Make my page →</a>
+    </div>
+  </section>
+
+  {/* DISCORD LIVE CHIP — just the count, no avatars */}
+  {discordOnline !== null && (
+    <section class="page-wrap discord-chip-wrap">
+      <a href="/discord" class="discord-chip">
+        <span class="discord-pulse"></span>
+        <span class="discord-text">
+          <strong>{discordOnline}</strong> online in the Discord{discordName ? ` · ${discordName}` : ''}
+        </span>
+        <span class="discord-arrow">→</span>
+      </a>
+    </section>
+  )}
 
   <!-- UPCOMING POTLUCK SPOTLIGHT -->
   {upcomingPotluck && (
@@ -271,6 +333,57 @@ const eventTypeChips = [
     .event-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); }
 
     /* Featured event */
+    /* Personal pages card */
+    .personal-page-band { padding-top: var(--space-5); padding-bottom: var(--space-3); }
+    .pp-card { display: grid; grid-template-columns: 1fr auto; gap: var(--space-4); align-items: center; padding: var(--space-5); background: linear-gradient(135deg, #FAF5FF 0%, #ECFDF5 50%, #EFF6FF 100%); border: 1.5px solid #DDD6FE; border-radius: 20px; }
+    .pp-card-left { display: flex; gap: var(--space-3); align-items: flex-start; }
+    .pp-avatars { display: flex; flex-shrink: 0; }
+    .pp-av { width: 48px; height: 48px; border-radius: 50%; background: #fff; border: 3px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .pp-av-1 { z-index: 3; }
+    .pp-av-2 { z-index: 2; margin-left: -14px; }
+    .pp-av-3 { z-index: 1; margin-left: -14px; }
+    .pp-card-text { flex: 1; }
+    .pp-h { font-family: var(--font-display, 'Playfair Display', serif); font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 6px; line-height: 1.2; }
+    .pp-p { font-size: 14px; color: var(--text-sec, #4B5563); line-height: 1.5; margin-bottom: 10px; }
+    .pp-bullets { list-style: none; padding: 0; margin: 0; font-size: 13px; color: var(--text); line-height: 1.7; }
+    .pp-bullets li { margin-bottom: 2px; }
+    .pp-bullets .mono { font-family: 'SF Mono', Menlo, monospace; background: rgba(124,58,237,0.08); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: var(--accent, #7C3AED); }
+    .pp-card-cta { display: inline-block; padding: 14px 24px; background: var(--accent, #7C3AED); color: #fff; border-radius: 999px; font-weight: 700; font-size: 15px; text-decoration: none; box-shadow: 0 4px 14px rgba(124,58,237,0.25); transition: transform 0.15s, box-shadow 0.15s; white-space: nowrap; }
+    .pp-card-cta:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,58,237,0.35); }
+    @media (max-width: 700px) {
+      .pp-card { grid-template-columns: 1fr; text-align: left; }
+      .pp-card-cta { width: 100%; text-align: center; }
+    }
+    @media (max-width: 480px) {
+      .pp-h { font-size: 19px; }
+      .pp-card { padding: var(--space-4); }
+    }
+    /* Discord live chip */
+    .discord-chip-wrap { padding-top: var(--space-5); padding-bottom: 0; }
+    .discord-chip {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 10px 18px 10px 14px; border-radius: 999px;
+      background: linear-gradient(135deg, rgba(88,101,242,0.10), rgba(88,101,242,0.04));
+      border: 1px solid rgba(88,101,242,0.25);
+      color: var(--text); text-decoration: none;
+      font-size: 14px; font-family: var(--font);
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .discord-chip:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(88,101,242,0.18); border-color: rgba(88,101,242,0.4); }
+    .discord-pulse {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #57F287;
+      box-shadow: 0 0 0 0 rgba(87,242,135,0.6);
+      animation: discord-pulse 1.8s ease-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes discord-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(87,242,135,0.6); }
+      100% { box-shadow: 0 0 0 10px rgba(87,242,135,0); }
+    }
+    .discord-text strong { font-family: var(--font-display); font-weight: 800; color: #5865F2; }
+    .discord-arrow { color: #5865F2; font-weight: 700; }
+
     .featured-event {
       position: relative; display: block;
       border-radius: 24px; overflow: hidden;
@@ -308,7 +421,7 @@ const eventTypeChips = [
     }
     .featured-event-cta {
       display: inline-block; padding: 11px 22px; border-radius: 999px;
-      background: #fff; color: #C2410C;
+      background: #fff; color: #5B21B6;
       font-family: var(--font-display); font-weight: 800; font-size: 15px;
       transition: transform 0.15s, box-shadow 0.15s;
     }
@@ -350,8 +463,8 @@ const eventTypeChips = [
     .host-slot {
       display: flex; align-items: center; gap: var(--space-4);
       padding: var(--space-5);
-      background: linear-gradient(135deg, #E0F2FE 0%, #F0F9FF 100%);
-      border: 1.5px dashed #38BDF8;
+      background: linear-gradient(135deg, var(--sunset-dim) 0%, var(--pink-dim) 100%);
+      border: 1.5px dashed rgba(249,115,22,0.45);
       border-radius: var(--radius-lg);
       text-decoration: none;
       transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
@@ -359,7 +472,7 @@ const eventTypeChips = [
     .host-slot:hover {
       transform: translateY(-2px);
       box-shadow: var(--card-shadow-lg);
-      border-color: #0EA5E9;
+      border-color: #7C3AED;
     }
     .host-slot-icon {
       width: 56px; height: 56px;
@@ -367,7 +480,7 @@ const eventTypeChips = [
       border: 1.5px dashed #38BDF8;
       border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 30px; font-weight: 300; color: #0EA5E9;
+      font-size: 30px; font-weight: 300; color: #7C3AED;
       flex-shrink: 0; line-height: 1;
     }
     .host-slot-text { flex: 1; min-width: 0; }
@@ -384,7 +497,7 @@ const eventTypeChips = [
       margin-bottom: 4px; letter-spacing: -0.01em;
     }
     .host-slot p { font-size: 14px; color: var(--text-sec); line-height: 1.5; }
-    .host-slot-arrow { font-size: 28px; color: #0EA5E9; flex-shrink: 0; }
+    .host-slot-arrow { font-size: 28px; color: #7C3AED; flex-shrink: 0; }
 
     @media (max-width: 700px) {
       .host-slot { flex-direction: column; align-items: flex-start; gap: var(--space-3); }

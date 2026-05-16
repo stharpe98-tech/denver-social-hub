@@ -1,22 +1,17 @@
 import type { APIContext } from 'astro';
 import { getDB } from '../../../lib/db';
+import { isAdmin } from '../../../lib/admin-auth';
 
 export const prerender = false;
 
-function isAdmin(req: Request) {
-  const cookie = req.headers.get('cookie') || '';
-  const m = cookie.match(/dsn_user=([^;]+)/);
-  if (!m) return false;
-  try { return JSON.parse(decodeURIComponent(m[1])).email === 'stharpe98@gmail.com'; } catch { return false; }
-}
 
 function json(data: any, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
 // GET /api/admin/data?table=xxx — fetch data from various tables
-export async function GET({ request }: APIContext) {
-  if (!isAdmin(request)) return json({ error: 'Unauthorized' }, 401);
+export async function GET({ request, cookies }: APIContext) {
+  if (!(await isAdmin(cookies))) return json({ error: 'Unauthorized' }, 401);
   const db = getDB();
   if (!db) return json({ error: 'DB unavailable' }, 500);
   const url = new URL(request.url);
@@ -191,8 +186,8 @@ export async function GET({ request }: APIContext) {
 }
 
 // POST /api/admin/data — perform actions
-export async function POST({ request }: APIContext) {
-  if (!isAdmin(request)) return json({ error: 'Unauthorized' }, 401);
+export async function POST({ request, cookies }: APIContext) {
+  if (!(await isAdmin(cookies))) return json({ error: 'Unauthorized' }, 401);
   const db = getDB();
   if (!db) return json({ error: 'DB unavailable' }, 500);
 

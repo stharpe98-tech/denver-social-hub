@@ -7,22 +7,17 @@ const db = getDB();
 let perks: any[] = [];
 let loadError: string | null = null;
 
-let user: any = null;
-const cookie = Astro.cookies.get('dsn_user')?.value;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
-const signedIn = !!user?.email;
-const userEmail = (user?.email || '').toLowerCase();
+const user: any = null;
+const signedIn = false;
+const userEmail = '';
+void user; void signedIn; void userEmail;
 
-let rsvpedIds = new Set<number>();
+const rsvpedIds = new Set<number>();
 if (db) {
   try {
     await ensurePartnersSchema(db);
     const r = await db.prepare("SELECT * FROM partners WHERE status='approved' ORDER BY id DESC").all();
     perks = (r.results || []) as any[];
-    if (signedIn && perks.length) {
-      const mine = await db.prepare("SELECT partner_id FROM perk_rsvps WHERE user_email=?").bind(userEmail).all();
-      rsvpedIds = new Set((mine.results || []).map((row: any) => row.partner_id));
-    }
   } catch (e: any) {
     console.error('/perks load failed:', e);
     loadError = e?.message || 'load_failed';
@@ -47,8 +42,8 @@ if (db) {
   ) : perks.length === 0 ? (
     <div class="px-empty">
       <div class="px-empty-emoji">🏪</div>
-      <h3>No perks yet — but we're building this.</h3>
-      <p>If you run a Denver business and want locals to find you, <a href="/perks/new">submit your offer</a>. We review and post for free.</p>
+      <h3>Cricket noises. No perks yet.</h3>
+      <p>Every Denver business is fully booked, deeply mysterious, or hasn't found us. If you run one — <a href="/perks/new">submit your offer</a>. We review and post for free, and locals walking through your door is a pretty good outcome.</p>
     </div>
   ) : (
     <div class="px-grid">
@@ -58,6 +53,7 @@ if (db) {
         const count = p.rsvp_count || 0;
         const unlocked = threshold === 0 || count >= threshold;
         const userRsvped = rsvpedIds.has(p.id);
+        void userRsvped;
         const pct = threshold > 0 ? Math.min(100, Math.round((count / threshold) * 100)) : 100;
         return (
           <article class="px-card" id={p.slug} data-id={p.id} data-unlocked={unlocked ? '1' : '0'}>
@@ -83,13 +79,7 @@ if (db) {
                   )}
                 </div>
                 {!unlocked && (
-                  signedIn ? (
-                    <button class="px-rsvp-btn" data-rsvp={p.id} disabled={userRsvped}>
-                      {userRsvped ? "You're in — tell a friend" : "RSVP to unlock"}
-                    </button>
-                  ) : (
-                    <a href="/login" class="px-rsvp-btn px-rsvp-btn-link">Sign in to RSVP</a>
-                  )
+                  <button class="px-rsvp-btn" disabled>RSVP unlocking is offline</button>
                 )}
               </div>
             )}
@@ -212,8 +202,8 @@ if (db) {
 
   .px-pitch {
     padding: 36px clamp(20px, 4vw, 36px); border-radius: 20px;
-    background: linear-gradient(135deg, #F0F9FF, #ECFDF5);
-    border: 1px solid #BAE6FD;
+    background: linear-gradient(135deg, var(--sunset-dim), var(--pink-dim));
+    border: 1px solid rgba(249,115,22,0.18);
     text-align: center;
   }
   .px-pitch h2 { font-family: var(--font-display); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }

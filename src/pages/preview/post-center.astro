@@ -1,0 +1,224 @@
+---
+import Base from '../../layouts/Base.astro';
+import PreviewSwitcher from '../../components/PreviewSwitcher.astro';
+
+// Mock data — preview only. Real version reads from D1.
+const posts = [
+  { id: 1, kind: 'need', title: 'Ride to DIA on Friday 7am', body: 'Heading to a wedding in Austin. Happy to chip in $20 for gas. I live near Cap Hill.', name: 'Jenna', neighborhood: 'Capitol Hill', created_at: '2h ago', contact_email: 'jenna@example.com', contact_phone: '' },
+  { id: 2, kind: 'offer', title: 'Free moving boxes — apartment cleanout', body: 'Just finished moving. ~30 banker-size boxes + a few wardrobe boxes. First come first serve in Sunnyside. Will hold for 48hr.', name: 'Marcus', neighborhood: 'Sunnyside', created_at: '5h ago', contact_email: '', contact_phone: '720-555-0123' },
+  { id: 3, kind: 'need', title: 'Looking for a climbing partner Saturday', body: 'Mid-5.10 leader, indoor or outdoor (Clear Creek). Tired of climbing alone.', name: 'Devi', neighborhood: 'Highlands', created_at: '1d ago', contact_email: 'devi.r@example.com', contact_phone: '' },
+  { id: 4, kind: 'offer', title: 'Can dog-sit for a long weekend', body: 'Have a yard, work from home, two friendly dogs of my own. No charge, just love big dogs. May 23-26.', name: 'Tomás', neighborhood: 'Berkeley', created_at: '2d ago', contact_email: 'tomas@example.com', contact_phone: '303-555-9988' },
+];
+const detailPost = posts[1];
+---
+<Base title="Post Center — preview">
+  <PreviewSwitcher current="post-center" />
+  <div class="wrap">
+
+    <section>
+      <h2 class="section-h">1. Board view <span class="muted">(/community)</span></h2>
+      <p class="section-sub">Every card is clickable. Kind chip on the left, posted-by + when on the right. Contact info is hidden until you click a card.</p>
+
+      <div class="filters">
+        <button class="fpill active">All</button>
+        <button class="fpill">🤝 Offers</button>
+        <button class="fpill">🙏 Needs</button>
+        <button class="post-cta">+ Post something</button>
+      </div>
+
+      <div class="board">
+        {posts.map(p => (
+          <a href="#detail-anchor" class="post-card">
+            <div class="post-top">
+              <span class={`chip chip-${p.kind}`}>{p.kind === 'offer' ? '🤝 Offer' : '🙏 Need'}</span>
+              <span class="post-meta">{p.created_at} · {p.neighborhood}</span>
+            </div>
+            <h3 class="post-title">{p.title}</h3>
+            <p class="post-body">{p.body}</p>
+            <div class="post-foot">
+              <span class="post-author">— {p.name}</span>
+              <span class="post-reply">Reply →</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section id="detail-anchor">
+      <h2 class="section-h">2. Detail view <span class="muted">(/community/post/2)</span></h2>
+      <p class="section-sub">Click a card → full post. "Reveal contact" button unlocks the email or phone — keeps contacts out of scrapers and bots.</p>
+
+      <article class="detail">
+        <a href="#top" class="back">← back to board</a>
+        <div class="detail-top">
+          <span class={`chip chip-${detailPost.kind}`}>{detailPost.kind === 'offer' ? '🤝 Offer' : '🙏 Need'}</span>
+          <span class="post-meta">{detailPost.created_at} · {detailPost.neighborhood}</span>
+        </div>
+        <h1 class="detail-title">{detailPost.title}</h1>
+        <div class="detail-author">Posted by <strong>{detailPost.name}</strong></div>
+        <p class="detail-body">{detailPost.body}</p>
+
+        <div class="reveal">
+          <button class="reveal-btn" id="revealBtn">📬 Reveal contact</button>
+          <div class="reveal-content" id="revealContent" hidden>
+            {detailPost.contact_email && (
+              <a href={`mailto:${detailPost.contact_email}`} class="contact-row">📧 {detailPost.contact_email}</a>
+            )}
+            {detailPost.contact_phone && (
+              <a href={`sms:${detailPost.contact_phone.replace(/[^0-9+]/g,'')}`} class="contact-row">📱 {detailPost.contact_phone}</a>
+            )}
+            <div class="contact-hint">Reach out directly. Mention you saw it on Denver Social.</div>
+          </div>
+        </div>
+
+        <div class="report-row">
+          <button class="report-btn">🚩 Report this post</button>
+        </div>
+      </article>
+    </section>
+
+    <section>
+      <h2 class="section-h">3. Admin view <span class="muted">(/admin/board)</span></h2>
+      <p class="section-sub">You see every post's contact, can mark resolved, or remove. Fastest path to message a poster yourself.</p>
+
+      <div class="admin-table">
+        <div class="admin-row admin-head">
+          <div>Kind</div><div>Title</div><div>By</div><div>Contact</div><div>Action</div>
+        </div>
+        {posts.map(p => (
+          <div class="admin-row">
+            <div><span class={`chip chip-${p.kind}`}>{p.kind === 'offer' ? '🤝' : '🙏'}</span></div>
+            <div class="admin-title-cell">{p.title}</div>
+            <div>{p.name}</div>
+            <div class="admin-contact">
+              {p.contact_email && <a href={`mailto:${p.contact_email}`}>{p.contact_email}</a>}
+              {p.contact_phone && <a href={`sms:${p.contact_phone}`}>{p.contact_phone}</a>}
+            </div>
+            <div class="admin-actions">
+              <button class="mini">✓ Resolve</button>
+              <button class="mini mini-danger">🗑</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-h">4. Posting form</h2>
+      <p class="section-sub">No login. Name + contact required. Either email OR phone — not both required.</p>
+
+      <form class="form" onsubmit="event.preventDefault(); alert('(preview only — not wired up)')">
+        <div class="field-row">
+          <label>I'm posting an…
+            <select>
+              <option>🙏 Need (asking for help)</option>
+              <option>🤝 Offer (offering help)</option>
+            </select>
+          </label>
+        </div>
+        <div class="field-row">
+          <label>Title
+            <input type="text" placeholder="What do you need / offer?" />
+          </label>
+        </div>
+        <div class="field-row">
+          <label>Details
+            <textarea rows="4" placeholder="Time, place, anything else…"></textarea>
+          </label>
+        </div>
+        <div class="field-row two-col">
+          <label>Your name<input type="text" placeholder="First name is fine" /></label>
+          <label>Neighborhood<input type="text" placeholder="e.g. Cap Hill" /></label>
+        </div>
+        <div class="contact-block">
+          <div class="contact-hint">📬 How should people reach you? At least one:</div>
+          <div class="field-row two-col">
+            <label>Email<input type="email" placeholder="you@example.com" /></label>
+            <label>Phone<input type="tel" placeholder="(720) 555-0123" /></label>
+          </div>
+        </div>
+        <button type="submit" class="submit-btn">Post it</button>
+      </form>
+    </section>
+  </div>
+</Base>
+
+<script is:inline>
+  const btn = document.getElementById('revealBtn');
+  const out = document.getElementById('revealContent');
+  if (btn) btn.addEventListener('click', () => { out.hidden = false; btn.style.display = 'none'; });
+</script>
+
+<style>
+  .wrap { max-width: 760px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
+  .banner { background: #FEF3C7; border: 1px solid #FCD34D; color: #92400E; padding: var(--space-2) var(--space-3); border-radius: 10px; font-size: 13px; margin-bottom: var(--space-5); text-align: center; }
+  section { margin-bottom: var(--space-7); }
+  .section-h { font-family: var(--font-display, sans-serif); font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .section-h .muted { font-family: var(--mono, monospace); font-size: 13px; color: var(--text-faint); font-weight: 400; margin-left: 6px; }
+  .section-sub { font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-3); line-height: 1.5; }
+
+  /* Filters */
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: var(--space-3); align-items: center; }
+  .fpill { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); font-size: 13px; cursor: pointer; color: var(--text-sec); }
+  .fpill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .post-cta { margin-left: auto; padding: 8px 16px; border-radius: 999px; border: none; background: var(--accent); color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; }
+
+  /* Board cards */
+  .board { display: grid; gap: var(--space-3); }
+  .post-card { display: block; background: var(--bg); border: 1.5px solid var(--border); border-radius: 14px; padding: var(--space-3) var(--space-4); text-decoration: none; color: inherit; transition: border-color .15s, transform .1s, box-shadow .15s; }
+  .post-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(124,58,237,0.08); transform: translateY(-1px); }
+  .post-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .chip { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .chip-offer { background: #F0FDF4; color: #047857; }
+  .chip-need { background: #EEF2FF; color: #4338CA; }
+  .post-meta { font-size: 12px; color: var(--text-faint); }
+  .post-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .post-body { font-size: 14px; color: var(--text-sec); line-height: 1.5; margin-bottom: 8px; }
+  .post-foot { display: flex; justify-content: space-between; font-size: 13px; }
+  .post-author { color: var(--text-faint); }
+  .post-reply { color: var(--accent); font-weight: 600; }
+
+  /* Detail */
+  .detail { background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-4) var(--space-5); }
+  .back { font-size: 13px; color: var(--text-sec); text-decoration: none; margin-bottom: var(--space-2); display: inline-block; }
+  .detail-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2); }
+  .detail-title { font-family: var(--font-display, sans-serif); font-size: 26px; font-weight: 800; color: var(--text); margin-bottom: 4px; line-height: 1.2; }
+  .detail-author { font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-3); }
+  .detail-body { font-size: 15px; color: var(--text); line-height: 1.6; margin-bottom: var(--space-4); }
+
+  .reveal { background: #FAF5FF; border: 1.5px solid #E9D5FF; border-radius: 14px; padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); }
+  .reveal-btn { width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .reveal-btn:hover { background: #6D28D9; }
+  .contact-row { display: block; padding: 8px 0; color: var(--accent); text-decoration: none; font-weight: 600; font-size: 16px; }
+  .contact-hint { font-size: 12px; color: var(--text-faint); margin-top: 6px; }
+
+  .report-row { text-align: right; }
+  .report-btn { background: none; border: none; color: var(--text-faint); font-size: 12px; cursor: pointer; }
+
+  /* Admin table */
+  .admin-table { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: 13px; }
+  .admin-row { display: grid; grid-template-columns: 60px 1fr 100px 1.2fr 110px; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); align-items: center; }
+  .admin-row:last-child { border-bottom: none; }
+  .admin-head { background: var(--surface, #F8F9FB); font-weight: 700; font-size: 11px; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.5px; }
+  .admin-title-cell { font-weight: 600; }
+  .admin-contact a { color: var(--accent); text-decoration: none; font-size: 12px; display: block; }
+  .admin-actions { display: flex; gap: 4px; }
+  .mini { padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); font-size: 11px; cursor: pointer; }
+  .mini-danger { color: #DC2626; border-color: #FECACA; }
+
+  /* Form */
+  .form { background: var(--surface, #F8F9FB); border: 1.5px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-4) var(--space-5); }
+  .field-row { margin-bottom: var(--space-3); }
+  .field-row.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+  .form label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 6px; }
+  .form input, .form select, .form textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 14px; font-family: inherit; background: var(--bg); }
+  .contact-block { background: #FAF5FF; border: 1px solid #E9D5FF; border-radius: 12px; padding: var(--space-3); margin-bottom: var(--space-3); }
+  .contact-block .contact-hint { font-size: 12px; color: #6D28D9; margin-bottom: 8px; font-weight: 600; }
+  .submit-btn { width: 100%; padding: 14px; border-radius: 999px; border: none; background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+
+  @media (max-width: 600px) {
+    .admin-row { grid-template-columns: 40px 1fr 80px; gap: 8px; }
+    .admin-row > div:nth-child(4), .admin-row > div:nth-child(5) { display: none; }
+    .field-row.two-col { grid-template-columns: 1fr; }
+  }
+</style>

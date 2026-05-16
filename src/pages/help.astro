@@ -10,11 +10,9 @@ import Base from '../layouts/Base.astro';
 
     <nav class="hp-toc" aria-label="Quick jump">
       <a href="#transparency">🪟 Transparency</a>
-      <a href="#why-not">🤔 Why not __?</a>
       <a href="#attendees">🎟 Attendees</a>
       <a href="#groups">👥 Groups</a>
       <a href="#organizers">🎤 Organizers</a>
-      <a href="#privacy">🔒 Privacy</a>
       <a href="#reporting">🚩 Reporting</a>
       <a href="#safety">🛡 Safety & terms</a>
     </nav>
@@ -53,80 +51,12 @@ import Base from '../layouts/Base.astro';
 
         <div class="hp-box">
           <div class="hp-box-head">
-            <span class="hp-box-emoji">💸</span>
-            <strong>What it costs to run</strong>
-          </div>
-          <p>Right now, basically <strong>nothing</strong>. We sit inside the free tiers of everything we use. If the site grows enough that those tiers run out, we'll start paying — and when that happens, the actual bill will go here. No investors, no revenue, no plan to take any.</p>
-          <ul>
-            <li>Cloudflare Workers + D1 + KV — hosting + database (free tier)</li>
-            <li>Resend — RSVP confirmations + reminder emails (free tier)</li>
-            <li>Domain — denversocialhub.com (the only real recurring expense)</li>
-          </ul>
-        </div>
-
-        <div class="hp-box">
-          <div class="hp-box-head">
-            <span class="hp-box-emoji">👤</span>
-            <strong>Who runs it</strong>
-          </div>
-          <p>Seth Tharpe, a local. Email <a href="mailto:stharpe98@gmail.com">stharpe98@gmail.com</a> or DM <code>@godtminilegs</code> on Discord. No team, no company — yet.</p>
-        </div>
-
-        <div class="hp-box">
-          <div class="hp-box-head">
-            <span class="hp-box-emoji">⚖️</span>
-            <strong>How decisions get made</strong>
-          </div>
-          <ul>
-            <li>Admins approve partner perks before they go live</li>
-            <li>Reports get reviewed within ~48 hours</li>
-            <li>Account removals happen when someone violates <a href="#safety">the rules</a> — usually after one warning</li>
-            <li>Anything bigger (new features, policy changes): announced in Discord first</li>
-          </ul>
-        </div>
-
-        <div class="hp-box">
-          <div class="hp-box-head">
             <span class="hp-box-emoji">📂</span>
             <strong>Your data is yours</strong>
           </div>
           <p>You can delete your account anytime from <a href="/profile">/profile</a> — it wipes your record and all your RSVPs. Want a copy of your data first? Email Seth.</p>
         </div>
       </div>
-    </section>
-
-    <section class="hp-sec" id="why-not">
-      <h2>Why not just use ___?</h2>
-      <p class="hp-why-intro">Honest answers. We don't think any of these are bad — they just solve a different problem.</p>
-
-      <details class="hp-q">
-        <summary>Why not Meetup?</summary>
-        <p>Meetup charges organizers $20–30/month per group and gates the experience behind paywalls. It feels corporate, the app pushes ads, and small groups end up paying real money to host free events. Denver Social is free for everyone — organizers and attendees. We're not trying to be a global platform; we just want Denver to hang out.</p>
-      </details>
-      <details class="hp-q">
-        <summary>Why not Facebook Groups?</summary>
-        <p>Facebook's algorithm decides who sees what — events get buried, RSVPs don't actually mean "I'm coming," there's no capacity or waitlist, and conversations turn into chaos. Plus a lot of people don't want to be on Facebook. Here, every event has a real RSVP, a real host, and lands at the top of the page when it's posted. No algorithm.</p>
-      </details>
-      <details class="hp-q">
-        <summary>Why not Discord?</summary>
-        <p>Discord is great for chat. It's not great for "I'm coming Tuesday and so are 8 other people." Events get buried in channels, scheduled events are clunky, and there's no public discovery — people only see events if they're already in the server. We pair with Discord (you can sign in with it, link events to a Discord), but the event surface is here so anyone can find it.</p>
-      </details>
-      <details class="hp-q">
-        <summary>Why not Sign Up Genius?</summary>
-        <p>Sign Up Genius is a sign-up sheet. There's no profile, no community, no discovery, no level system, no waitlist that auto-promotes. It's perfect for "bring a casserole to the school bake sale." We have the sign-up part (potlucks even have claimable items, like SUG), but we also have everything around it — a real community surface where people actually find each other.</p>
-      </details>
-      <details class="hp-q">
-        <summary>Why not Google Forms / Sheets?</summary>
-        <p>Both are good for collecting answers. Neither helps strangers in Denver find your hike, RSVP, see who else is going, get a reminder, add it to their calendar, or build relationships across events. You'd end up DIY-building all of this and still have to share the spreadsheet link in 5 places. Hand-rolling community infrastructure is the project. We did it so you don't have to.</p>
-      </details>
-      <details class="hp-q">
-        <summary>Why not Eventbrite or Partiful?</summary>
-        <p>Eventbrite is built for ticketed events — concerts, conferences, festivals. Great at that, overkill for a coffee meetup. Partiful is beautiful for one-off parties (we drew some inspiration from it for the new event form), but each event is isolated. There's no community surface where you can find what's happening across Denver next week. Denver Social is the discovery layer.</p>
-      </details>
-      <details class="hp-q">
-        <summary>So what's the actual point?</summary>
-        <p>One place to find real, in-person hangouts in Denver. No fees, no algorithms hiding your event, no app to download, no signup required to browse. Built specifically for the kind of small group where you'd actually remember someone's name afterward.</p>
-      </details>
     </section>
 
     <section class="hp-sec" id="attendees">
@@ -145,11 +75,7 @@ import Base from '../layouts/Base.astro';
       </details>
       <details class="hp-q">
         <summary>Where are events held?</summary>
-        <p>Across Denver — RiNo, Cap Hill, Cheesman, Cherry Creek, the foothills. Specific addresses are shared with confirmed RSVPs only.</p>
-      </details>
-      <details class="hp-q">
-        <summary>I can't see an event's full address.</summary>
-        <p>You'll see it once you RSVP and (if the organizer set a gate) meet the karma/account-age minimum. Privacy keeps casual venues safe.</p>
+        <p>Across Denver — RiNo, Cap Hill, Cheesman, Cherry Creek, the foothills. Addresses are public on every event page so you always know where you're going.</p>
       </details>
     </section>
 
@@ -205,35 +131,11 @@ import Base from '../layouts/Base.astro';
       </details>
     </section>
 
-    <section class="hp-sec" id="privacy">
-      <h2>Privacy</h2>
-      <details class="hp-q">
-        <summary>Who can see my email or phone?</summary>
-        <p>Only the organizer of the event you signed up for. We don't share it across events and we don't sell anything to advertisers.</p>
-      </details>
-      <details class="hp-q">
-        <summary>How do I delete my account?</summary>
-        <p>Sign in, go to <a href="/profile">/profile</a>, scroll to "Delete account". Removes your member record and any RSVPs.</p>
-      </details>
-    </section>
-
     <section class="hp-sec" id="reporting">
       <h2>Reporting</h2>
       <details class="hp-q">
         <summary>How do I report someone or something?</summary>
-        <p>Every event page has a 🚩 Report button in the top-right. Group pages have one too (in the hero). Pick a reason, add a note, submit. Your report goes straight to admins.</p>
-      </details>
-      <details class="hp-q">
-        <summary>What happens after I report?</summary>
-        <p>An admin reviews the report and either takes action (warning, content removed, account suspended) or dismisses it if it's a misunderstanding. We don't tell the reported person who flagged them.</p>
-      </details>
-      <details class="hp-q">
-        <summary>Do I need proof?</summary>
-        <p>No. If someone makes you uncomfortable, that's reason enough to report. We err on the side of believing the person who spoke up.</p>
-      </details>
-      <details class="hp-q">
-        <summary>What if it's an emergency?</summary>
-        <p>Call 911. After you're safe, message us so we can act on our end.</p>
+        <p>Hit the 🚩 Report button on any event or group page — pick a reason, add a note, submit. An admin reviews it and either acts (warning, content removed, account suspended) or dismisses it; we don't tell the reported person who flagged them. You don't need proof — if it made you uncomfortable, that's reason enough. <strong>Emergency?</strong> Call 911 first, then message us after you're safe.</p>
       </details>
     </section>
 
@@ -253,7 +155,7 @@ import Base from '../layouts/Base.astro';
           <span class="hp-rule-icon">🔒</span>
           <div>
             <strong>Your info stays private.</strong>
-            <p>Locations and host phone numbers are hidden until you RSVP. Other members only see your first name and neighborhood.</p>
+            <p>Host phone numbers stay private until you ask and they approve. Other members only see your first name and neighborhood.</p>
           </div>
         </li>
         <li class="hp-rule">

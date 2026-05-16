@@ -1,18 +1,46 @@
 ---
 import Base from '../layouts/Base.astro';
+
+// Pick a random joke at request time so it feels alive
+const JOKES = [
+  { emoji: '🥾', title: 'Wrong trailhead.', sub: "This page isn't on the map. AllTrails lied to you again." },
+  { emoji: '🍺', title: 'Closed for the season.', sub: "404 brewery — they ran out of this URL. Try the next one over." },
+  { emoji: '🌵', title: 'You took the I-25 of links.', sub: "It looked like a shortcut. It wasn't." },
+  { emoji: '🦌', title: 'There used to be a page here.', sub: "Then a deer ate it. We don't have proof, but we're like 80% sure." },
+  { emoji: '🏔', title: 'You hiked too far.', sub: "Turn around. Your event is back at base camp." },
+  { emoji: '🌭', title: '404 hotdog not found.', sub: "And yet, somewhere, a hotdog absolutely exists. Just not here." },
+  { emoji: '🪂', title: 'Soft landing, wrong page.', sub: "But hey — at least you're alive and the wifi's still good." },
+  { emoji: '🎲', title: 'Roll for navigation.', sub: "You got a 1. Bad news: page doesn't exist. Good news: free re-roll." },
+  { emoji: '☕', title: "Page hasn't had its coffee yet.", sub: "Frankly, neither have we. We'll both be fine after some Huckleberry." },
+  { emoji: '🛼', title: 'You skated past the page.', sub: "Happens. Glide back to safety." },
+];
+const j = JOKES[Math.floor(Math.random() * JOKES.length)];
 ---
-<Base title="Not Found" description="That page doesn't exist.">
+<Base title="Lost in Denver" description="404 — that page doesn't exist.">
   <div class="nf-wrap">
-    <div class="nf-emoji">🏔️</div>
-    <h1>Lost in Denver</h1>
-    <p>That page doesn't exist. Happens to the best of us.</p>
-    <a href="/" class="btn-cta">Back home →</a>
+    <div class="nf-emoji">{j.emoji}</div>
+    <span class="nf-code">404</span>
+    <h1>{j.title}</h1>
+    <p>{j.sub}</p>
+    <div class="nf-actions">
+      <a href="/" class="btn-cta">Back home →</a>
+      <a href="/events" class="btn-sec">See what's happening</a>
+    </div>
+    <p class="nf-fine">Refresh this page for a different excuse.</p>
   </div>
 
   <style>
-    .nf-wrap { max-width: 480px; margin: 0 auto; padding: var(--space-8) var(--space-5); text-align: center; }
-    .nf-emoji { font-size: 64px; margin-bottom: var(--space-3); }
-    .nf-wrap h1 { font-family: var(--font-display); font-size: clamp(28px, 4vw, 36px); font-weight: 800; color: var(--text); margin-bottom: var(--space-2); letter-spacing: -0.02em; }
-    .nf-wrap p { color: var(--text-sec); font-size: 16px; margin-bottom: var(--space-5); }
+    .nf-wrap { max-width: 520px; margin: 0 auto; padding: var(--space-8) var(--space-5) var(--space-9); text-align: center; }
+    .nf-emoji { font-size: 80px; margin-bottom: var(--space-3); }
+    .nf-code {
+      display: inline-block; padding: 4px 12px; border-radius: 999px;
+      background: var(--sunset-dim); color: var(--sunset);
+      font-family: var(--font-display); font-size: 11px; font-weight: 800;
+      letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px;
+    }
+    .nf-wrap h1 { font-family: var(--font-display); font-size: clamp(30px, 5vw, 40px); font-weight: 900; color: var(--text); margin-bottom: var(--space-3); letter-spacing: -0.025em; line-height: 1.1; }
+    .nf-wrap p { color: var(--text-sec); font-size: 17px; line-height: 1.55; margin-bottom: var(--space-5); }
+    .nf-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: var(--space-5); }
+    .nf-fine { font-size: 13px !important; color: var(--text-faint) !important; font-style: italic; margin-bottom: 0 !important; }
   </style>
 </Base>

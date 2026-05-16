@@ -1,19 +1,16 @@
 ---
 const { title = "Denver Social", description = "Real small-group events across Denver. Show up, meet people." } = Astro.props;
 
-let user: any = null;
-const cookie = Astro.cookies.get("dsn_user")?.value;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
-
-const isAdmin = user?.role === 'admin' || user?.email === "stharpe98@gmail.com";
+// Auth is admin-only now (email-code gate). Public pages have no
+// concept of a "logged-in user" — we only check the dsn_admin cookie
+// to decide whether to surface the Admin link in nav.
+const adminCookie = Astro.cookies.get('dsn_admin')?.value || '';
+const isAdmin = adminCookie.split('.').length >= 3; // lightweight signal; real check is server-side via isAdmin()
 const currentPath = Astro.url.pathname;
-const redditName = user?.reddit_username || user?.name;
-// Tour is rendered only for signed-out visitors who haven't already
-// dismissed it. The cookie is the source of truth — localStorage is a
-// client-side fallback. Skipping the markup server-side means no
-// flash-of-tour on subsequent visits and zero JS cost.
+// Tour is rendered for visitors who haven't dismissed it. Cookie is
+// the source of truth — localStorage is a client-side fallback.
 const tourSeen = Astro.cookies.get('dsn_tour_seen')?.value === '1';
-const showWelcomeTour = !user && !tourSeen;
+const showWelcomeTour = !tourSeen;
 ---
 <html lang="en">
 <head>
@@ -24,7 +21,7 @@ const showWelcomeTour = !user && !tourSeen;
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,600;1,9..144,800&family=Work+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800;900&family=Caveat:wght@600&display=swap" rel="stylesheet" />
 </head>
 <body>
 
@@ -37,8 +34,7 @@ const showWelcomeTour = !user && !tourSeen;
 
       <nav class="site-nav site-nav-left">
         <a href="/events" class:list={["site-nav-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
-        <a href="/groups" class:list={["site-nav-link", { active: currentPath.startsWith("/groups") || currentPath.startsWith("/messages") }]}>Groups & DMs</a>
-        <a href="/discord" class:list={["site-nav-link", { active: currentPath.startsWith("/discord") }]}>Discord</a>
+        <a href="/neighborhoods" class:list={["site-nav-link", { active: currentPath.startsWith("/neighborhoods") }]}>Neighborhoods</a>
         <a href="/perks" class:list={["site-nav-link", { active: currentPath.startsWith("/perks") }]}>Perks</a>
       </nav>
 
@@ -47,6 +43,7 @@ const showWelcomeTour = !user && !tourSeen;
       </a>
 
       <nav class="site-nav site-nav-right">
+        <a href="/community" class:list={["site-nav-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/groups") || currentPath.startsWith("/messages") }]}>Community</a>
         <a href="/about" class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
         <a href="/help"  class:list={["site-nav-link", { active: currentPath.startsWith("/help") }]}>Help</a>
         {isAdmin && (
@@ -55,17 +52,7 @@ const showWelcomeTour = !user && !tourSeen;
       </nav>
 
       <div class="site-auth">
-        {user ? (
-          <>
-            <a href="/profile" class="site-user">
-              <span class="site-user-name">{redditName ? `u/${redditName}` : 'Profile'}</span>
-              {typeof user.karma === 'number' && <span class="site-user-karma">{user.karma} karma</span>}
-            </a>
-            <a href="/api/logout" class="site-logout">Sign out</a>
-          </>
-        ) : (
-          <a href="/login" class="site-cta">Sign in</a>
-        )}
+        {isAdmin && <a href="/api/admin/logout" class="site-logout">Admin sign out</a>}
       </div>
     </div>
   </header>
@@ -80,39 +67,22 @@ const showWelcomeTour = !user && !tourSeen;
       <button class="mob-drawer-close" id="mob-drawer-close" aria-label="Close menu">×</button>
     </div>
 
-    {user && (
-      <a href="/profile" class="mob-drawer-user">
-        <div class="mob-drawer-avatar">{(user.name || user.email || '?')[0]?.toUpperCase()}</div>
-        <div>
-          <strong>{user.name || (redditName ? `u/${redditName}` : 'Profile')}</strong>
-          <span>View profile</span>
-        </div>
-      </a>
-    )}
-
     <nav class="mob-drawer-nav">
       <a href="/" class:list={["mob-drawer-link", { active: currentPath === "/" }]}><span class="mob-drawer-icon">🏠</span>Home</a>
-      <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}><span class="mob-drawer-icon">📅</span>Events</a>
-      <a href="/groups" class:list={["mob-drawer-link", { active: currentPath.startsWith("/groups") || currentPath.startsWith("/messages") }]}><span class="mob-drawer-icon">👥</span>Groups & DMs</a>
-      <a href="/discord" class:list={["mob-drawer-link", { active: currentPath.startsWith("/discord") }]}><span class="mob-drawer-icon">💬</span>Discord</a>
-      <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]}><span class="mob-drawer-icon">🏪</span>Perks</a>
-      <a href="/welcome" class:list={["mob-drawer-link", { active: currentPath.startsWith("/welcome") }]}><span class="mob-drawer-icon">👋</span>New here</a>
+      <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") || currentPath.startsWith("/calendar") }]}><span class="mob-drawer-icon">📅</span>Events</a>
       <a href="/neighborhoods" class:list={["mob-drawer-link", { active: currentPath.startsWith("/neighborhoods") }]}><span class="mob-drawer-icon">📍</span>Neighborhoods</a>
-      <a href="/help-out" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help-out") }]}><span class="mob-drawer-icon">🤝</span>Help out</a>
-      <a href="/calendar" class:list={["mob-drawer-link", { active: currentPath.startsWith("/calendar") }]}><span class="mob-drawer-icon">📆</span>Calendar</a>
-      <a href="/about" class:list={["mob-drawer-link", { active: currentPath.startsWith("/about") }]}><span class="mob-drawer-icon">ℹ️</span>About</a>
-      <a href="/help" class:list={["mob-drawer-link", { active: currentPath.startsWith("/help") || currentPath.startsWith("/conduct") }]}><span class="mob-drawer-icon">❓</span>Help & Safety</a>
-      <a href="/contact" class:list={["mob-drawer-link", { active: currentPath.startsWith("/contact") }]}><span class="mob-drawer-icon">✉️</span>Contact</a>
+      <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]}><span class="mob-drawer-icon">🏪</span>Perks</a>
+      <a href="/community" class:list={["mob-drawer-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/groups") || currentPath.startsWith("/messages") }]}><span class="mob-drawer-icon">🤝</span>Community</a>
       {isAdmin && (
         <a href="/admin/dashboard" class:list={["mob-drawer-link mob-drawer-link-admin", { active: currentPath.startsWith("/admin") }]}><span class="mob-drawer-icon">⚙️</span>Admin</a>
       )}
     </nav>
 
-    <div class="mob-drawer-foot">
-      {user
-        ? <a href="/api/logout" class="mob-drawer-cta mob-drawer-cta-ghost">Sign out</a>
-        : <a href="/login" class="mob-drawer-cta">Sign in / sign up</a>}
-    </div>
+    {isAdmin && (
+      <div class="mob-drawer-foot">
+        <a href="/api/admin/logout" class="mob-drawer-cta mob-drawer-cta-ghost">Admin sign out</a>
+      </div>
+    )}
   </aside>
 
   <slot />
@@ -130,17 +100,20 @@ const showWelcomeTour = !user && !tourSeen;
       <div class="footer-col">
         <div class="footer-col-title">Explore</div>
         <a href="/events">Events</a>
-        <a href="/groups">Groups</a>
+        <a href="/neighborhoods">Neighborhoods</a>
+        <a href="/calendar">Shared calendar</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Community</div>
+        <a href="/welcome">Say hi</a>
+        <a href="/community">Community Board</a>
+        <a href="/perks">Perks</a>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">About</div>
         <a href="/about">About</a>
         <a href="/help">Help & Safety</a>
-      </div>
-      <div class="footer-col">
-        <div class="footer-col-title">Stay in touch</div>
         <a href="/contact">Contact us</a>
-        <a href="/login">Sign in</a>
         {isAdmin && <a href="/admin/dashboard">Admin dashboard</a>}
       </div>
     </div>
@@ -158,8 +131,8 @@ const showWelcomeTour = !user && !tourSeen;
 
         <div class="wt-slide wt-slide-intro" data-step="0">
           <div class="wt-emoji">👋</div>
-          <h2 id="wt-title">First time on Denver Social?</h2>
-          <p>We do real, small-group hangouts across Denver — dinners, hikes, game nights, brewery hops. You show up, meet people, and that's it.</p>
+          <h2 id="wt-title">Hey. You new here?</h2>
+          <p>This is where Denver people meet other Denver people. Hikes, dinners, game nights, brewery hops, whatever. You show up, you meet people, you go home. We promise it's less awkward than it sounds.</p>
           <div class="wt-actions">
             <button class="wt-btn wt-btn-primary" data-action="start">Show me around</button>
             <button class="wt-btn wt-btn-ghost" data-action="skip">I'm good, let me explore</button>
@@ -251,7 +224,7 @@ const showWelcomeTour = !user && !tourSeen;
     })();
   </script>
 
-  {user && (
+  {false && (
     <div id="mc-overlay" class="mc-overlay" hidden>
       <div class="mc-card" role="dialog" aria-modal="true">
         <button class="mc-close" id="mc-close" aria-label="Close">×</button>
@@ -405,49 +378,51 @@ const showWelcomeTour = !user && !tourSeen;
 <style is:global>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Design tokens — fun & happy theme: warm cream surface with sunset
-     orange + hot pink secondary accents. Sky blue stays as primary so
-     brand identity carries through navs and core CTAs. */
+  /* Design tokens — parchment paper background with a purple + pink
+     duo and warm grey for secondary text. Fraunces display + Work Sans
+     body. Fun but restrained. */
   :root {
-    /* Surface — warm cream base */
-    --bg: #FFFCF7;
-    --surface: #FFF6E9;
-    --surface-hover: #FBEFDA;
-    --border: #F0E5D1;
-    --border-hover: #E2D4B8;
+    /* Surface — parchment */
+    --bg: #F5EFE3;
+    --surface: #EDE6D6;
+    --surface-hover: #E4DBC7;
+    --border: #DDD2BB;
+    --border-hover: #C9BCA0;
 
-    /* Text — slightly warm */
-    --text: #1F1A14;
-    --text-sec: #6B5F4D;
-    --text-faint: #A8997F;
+    /* Text — ink + warm grey */
+    --text: #2A2730;
+    --text-sec: #6B6B73;
+    --text-faint: #9B9AA0;
 
-    /* Accents */
-    --accent: #0EA5E9;       /* sky blue — kept as primary identity */
-    --accent-dim: rgba(14, 165, 233, 0.12);
-    --accent-glow: rgba(14, 165, 233, 0.28);
-    --accent2: #10B981;      /* emerald green */
-    --accent2-dim: rgba(16, 185, 129, 0.12);
-    --sunset: #F97316;       /* warm orange — secondary "fun" accent */
-    --sunset-dim: rgba(249, 115, 22, 0.14);
-    --pink: #EC4899;         /* hot pink — for gradients + delight */
+    /* Accents — purple primary, pink secondary */
+    --accent: #7C3AED;       /* deep purple — primary */
+    --accent-dim: rgba(124, 58, 237, 0.14);
+    --accent-glow: rgba(124, 58, 237, 0.28);
+    --accent2: #EC4899;      /* hot pink */
+    --accent2-dim: rgba(236, 72, 153, 0.14);
+    --sunset: #EC4899;       /* legacy slot — pink */
+    --sunset-dim: rgba(236, 72, 153, 0.14);
+    --pink: #EC4899;
     --pink-dim: rgba(236, 72, 153, 0.14);
-    --mint: #10B981;
+    --mint: #7C3AED;
+    --marigold: #EC4899;     /* legacy slot — pink */
+    --marigold-dim: rgba(236, 72, 153, 0.16);
 
-    /* CTA — sunset→pink gradient */
-    --cta-bg: linear-gradient(135deg, #F97316, #EC4899);
-    --cta-bg-solid: #F97316;
+    /* CTA — purple → pink */
+    --cta-bg: linear-gradient(135deg, #7C3AED, #EC4899);
+    --cta-bg-solid: #7C3AED;
     --cta-text: #FFFFFF;
-    --cta-glow: rgba(249, 115, 22, 0.35);
+    --cta-glow: rgba(124, 58, 237, 0.32);
 
-    /* Tags — warmer, more variety */
-    --tag-bg: #FFEDD5;       /* sunset peach */
-    --tag-text: #C2410C;
-    --tag-bg2: #FCE7F3;      /* pink */
-    --tag-text2: #BE185D;
-    --tag-bg3: #DBEAFE;      /* sky */
-    --tag-text3: #1E40AF;
-    --tag-bg4: #DCFCE7;      /* mint */
-    --tag-text4: #166534;
+    /* Tags */
+    --tag-bg: #EDE9FE;       /* lilac */
+    --tag-text: #5B21B6;
+    --tag-bg2: #FCE7F3;      /* blush */
+    --tag-text2: #9D174D;
+    --tag-bg3: #EAE6DE;      /* warm grey */
+    --tag-text3: #52525B;
+    --tag-bg4: #EDE9FE;
+    --tag-text4: #5B21B6;
 
     /* Status */
     --green: #10B981;
@@ -458,8 +433,8 @@ const showWelcomeTour = !user && !tourSeen;
     --yellow-dim: rgba(217, 119, 6, 0.10);
 
     /* Type */
-    --font: 'Inter', system-ui, sans-serif;
-    --font-display: 'Outfit', system-ui, sans-serif;
+    --font: 'Work Sans', system-ui, sans-serif;
+    --font-display: 'Fraunces', 'Work Sans', system-ui, serif;
 
     /* Shape */
     --radius: 14px;
@@ -984,7 +959,6 @@ const showWelcomeTour = !user && !tourSeen;
           else if (action === 'skip') dismiss();
           else if (action === 'signin') {
             dismiss();
-            window.location.href = '/login';
           }
           else if (action === 'prev') show(step - 1);
           else if (action === 'next') {

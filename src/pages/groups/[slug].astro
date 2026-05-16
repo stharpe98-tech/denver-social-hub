@@ -6,9 +6,9 @@ import { ensureGroupPostsSchema } from '../../lib/group-posts-schema';
 
 const db = getDB();
 const { slug } = Astro.params;
-let user: any = null;
-const cookie = Astro.cookies.get('dsn_user')?.value;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+// Accounts are offline — viewers are always anonymous on group pages.
+const user: any = null;
+void user;
 
 let group: any = null;
 let members: any[] = [];
@@ -114,7 +114,7 @@ function timeAgo(iso: string): string {
       {group.description && <p class="g-desc">{group.description}</p>}
     </div>
     <div class="g-hero-actions">
-      {!user && <a href={`/login?next=/groups/${slug}`} class="btn-cta">Sign in</a>}
+      {/* group join is offline */}
       {canJoinDirect && (
         <button class="btn-cta" id="join-btn" data-group-id={group.id}>Join group</button>
       )}
@@ -319,7 +319,7 @@ function timeAgo(iso: string): string {
     font-size: 12px; padding: 5px 12px; border-radius: 999px;
     background: var(--accent2-dim); color: #047857; font-weight: 600;
   }
-  .g-privacy.lock { background: #FEF3C7; color: #92400E; }
+  .g-privacy.lock { background: #EDE9FE; color: #5B21B6; }
   .g-count { font-size: 13px; color: var(--text-sec); font-weight: 500; }
   .g-name { font-family: var(--font-display); font-size: clamp(30px, 5vw, 44px); font-weight: 900; letter-spacing: -0.02em; line-height: 1.05; }
   .g-desc { font-size: 16px; color: var(--text-sec); margin-top: 12px; line-height: 1.5; max-width: 640px; }

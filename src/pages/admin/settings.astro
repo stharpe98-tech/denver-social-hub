@@ -25,9 +25,9 @@ const v = (k: string) => cfg[k] || '';
   <style>
     *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #FAFAF8; --surface: #FFFFFF; --border: #E8E4DE;
-      --text: #1A1A1A; --text-sec: #6B6560; --text-faint: #A09890;
-      --accent: #0EA5E9; --accent-dim: rgba(14,165,233,0.10);
+      --bg: #F5EFE3; --surface: #FFFFFF; --border: #DDD2BB;
+      --text: #2A2730; --text-sec: #2A2730; --text-faint: #6B6B73;
+      --accent: #7C3AED; --accent-dim: rgba(14,165,233,0.10);
       --mint: #10B981; --red: #DC2626;
     }
     html, body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; font-size: 14px; padding-bottom: 60px; }
@@ -36,13 +36,13 @@ const v = (k: string) => cfg[k] || '';
     .topbar-left { display: flex; align-items: center; gap: 16px; }
     .back-link { color: var(--text-sec); text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); }
     .back-link:hover { background: var(--bg); color: var(--text); }
-    .topbar h1 { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; }
+    .topbar h1 { font-family: 'Fraunces', sans-serif; font-size: 18px; font-weight: 700; }
 
     .page { max-width: 760px; margin: 0 auto; padding: 28px 20px; }
 
     .group { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 18px; }
     .group-head { margin-bottom: 16px; }
-    .group-title { font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .group-title { font-family: 'Fraunces', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
     .group-sub { font-size: 13px; color: var(--text-sec); line-height: 1.5; }
     .group-sub a { color: var(--accent); font-weight: 600; }
 
@@ -63,7 +63,19 @@ const v = (k: string) => cfg[k] || '';
     .check-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
     .check-row input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
 
-    .save-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+    .save-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+    .test-btn {
+      padding: 10px 18px; border-radius: 999px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--text-sec);
+      font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .test-btn:hover { border-color: var(--text-faint); color: var(--text); }
+    .test-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .test-result { font-size: 13px; padding: 8px 12px; border-radius: 8px; flex-basis: 100%; display: none; line-height: 1.45; }
+    .test-result.show { display: block; }
+    .test-result.ok { background: rgba(16,185,129,0.10); color: #047857; border: 1px solid rgba(16,185,129,0.25); }
+    .test-result.err { background: rgba(220,38,38,0.08); color: var(--red); border: 1px solid rgba(220,38,38,0.20); }
     .save-btn {
       padding: 10px 20px; border-radius: 999px; border: none;
       background: var(--accent); color: #fff;
@@ -77,6 +89,40 @@ const v = (k: string) => cfg[k] || '';
     .save-note.show { opacity: 1; }
 
     code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 12px; color: var(--text-sec); }
+
+    /* Step-by-step setup blocks */
+    .steps {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 16px;
+      margin-top: 12px; margin-bottom: 14px;
+    }
+    .steps-title { font-family: 'Fraunces', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-sec); margin-bottom: 10px; }
+    .steps ol { list-style: none; padding: 0; margin: 0; counter-reset: step; display: flex; flex-direction: column; gap: 10px; }
+    .steps ol li {
+      counter-increment: step;
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 13px; line-height: 1.5; color: var(--text-sec);
+    }
+    .steps ol li::before {
+      content: counter(step);
+      flex-shrink: 0; width: 22px; height: 22px;
+      background: var(--accent-dim); color: var(--accent);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-family: 'Fraunces', sans-serif; font-size: 11px; font-weight: 800;
+    }
+    .steps strong { color: var(--text); font-weight: 600; }
+    .steps code { font-size: 12px; }
+    .step-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 12px; border-radius: 999px;
+      background: var(--accent); color: #fff;
+      font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
+      text-decoration: none; margin-left: 6px;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+    .step-btn:hover { box-shadow: 0 4px 12px rgba(14,165,233,0.32); transform: translateY(-1px); }
+    .step-btn-ghost { background: var(--bg); color: var(--text-sec); border: 1px solid var(--border); }
+    .step-btn-ghost:hover { box-shadow: none; color: var(--text); border-color: var(--text-faint); }
   </style>
 </head>
 <body>
@@ -95,21 +141,68 @@ const v = (k: string) => cfg[k] || '';
   <form class="group" data-group="email">
     <div class="group-head">
       <div class="group-title">📧 Email (Resend)</div>
-      <p class="group-sub">Powers every email the site sends: RSVP confirmations, organizer notifications, daily reminders, email magic-code login, admin OTP. Get a free key at <a href="https://resend.com" target="_blank" rel="noopener">resend.com</a>.</p>
+      <p class="group-sub">Powers RSVP confirmations, daily reminders, email magic-code login, and admin OTP. Free tier covers 100 emails/day.</p>
+    </div>
+    <div class="steps">
+      <div class="steps-title">Set up in 3 steps</div>
+      <ol>
+        <li>Sign up at Resend (free) <a href="https://resend.com/signup" target="_blank" rel="noopener" class="step-btn">Open Resend →</a></li>
+        <li>In Resend, go to <strong>API Keys</strong> → <strong>Create API Key</strong> → name it "Denver Social". Copy the <code>re_…</code> key. <a href="https://resend.com/api-keys" target="_blank" rel="noopener" class="step-btn-ghost step-btn">API Keys page →</a></li>
+        <li>Paste below + set your <strong>From email</strong>. Use <code>onboarding@resend.dev</code> while testing, then add and verify your own domain later. <a href="https://resend.com/domains" target="_blank" rel="noopener" class="step-btn-ghost step-btn">Verify a domain →</a></li>
+      </ol>
     </div>
     <div class="row"><label>Resend API Key</label><input type="password" name="resend_api_key" value={v('resend_api_key')} placeholder="re_xxxxxxxxxxxxxxx" autocomplete="off"/></div>
     <div class="row-2">
       <div class="row"><label>From email</label><input type="text" name="from_email" value={v('from_email')} placeholder="Denver Social <onboarding@resend.dev>"/></div>
       <div class="row"><label>Site URL <span class="opt">(used in email links)</span></label><input type="text" name="site_url" value={v('site_url')} placeholder="https://denversocialhub.com"/></div>
     </div>
-    <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
+    <div class="save-row">
+      <button class="save-btn" type="submit">Save</button>
+      <button class="test-btn" type="button" data-test="resend">Test connection</button>
+      <span class="save-note">Saved ✓</span>
+      <span class="test-result"></span>
+    </div>
+  </form>
+
+  <!-- DISCORD OAUTH -->
+  <form class="group" data-group="discord">
+    <div class="group-head">
+      <div class="group-title">💬 Discord login</div>
+      <p class="group-sub">Lets members sign in with their Discord account.</p>
+    </div>
+    <div class="steps">
+      <div class="steps-title">Set up in 4 steps</div>
+      <ol>
+        <li>Open Discord Developer Portal → <strong>New Application</strong> → name it "Denver Social". <a href="https://discord.com/developers/applications" target="_blank" rel="noopener" class="step-btn">Developer Portal →</a></li>
+        <li>In the app's sidebar, click <strong>OAuth2</strong>. Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> (you may need to "Reset Secret" the first time).</li>
+        <li>In <strong>OAuth2 → Redirects</strong>, click <strong>Add Redirect</strong> and paste exactly: <code>https://denversocialhub.com/api/auth/discord/callback</code> → Save Changes.</li>
+        <li>Paste the Client ID + Secret below and hit Save. The "Continue with Discord" button shows up immediately on /login.</li>
+      </ol>
+    </div>
+    <div class="row"><label>Discord Client ID</label><input type="text" name="discord_client_id" value={v('discord_client_id')} placeholder="1234567890123456789" autocomplete="off"/></div>
+    <div class="row"><label>Discord Client Secret</label><input type="password" name="discord_client_secret" value={v('discord_client_secret')} placeholder="••••••••••••••••••••••••" autocomplete="off"/></div>
+    <div class="save-row">
+      <button class="save-btn" type="submit">Save</button>
+      <button class="test-btn" type="button" data-test="discord">Test connection</button>
+      <span class="save-note">Saved ✓</span>
+      <span class="test-result"></span>
+    </div>
   </form>
 
   <!-- SMS (Twilio) -->
   <form class="group" data-group="sms">
     <div class="group-head">
       <div class="group-title">📱 SMS (Twilio)</div>
-      <p class="group-sub">Sends a one-line text to your phone every time someone RSVPs. Optional. Twilio gives you a free trial number.</p>
+      <p class="group-sub">Texts you a one-liner whenever someone RSVPs. Optional. Twilio gives you a free trial number + ~$15 credit.</p>
+    </div>
+    <div class="steps">
+      <div class="steps-title">Set up in 4 steps</div>
+      <ol>
+        <li>Sign up for Twilio. <a href="https://www.twilio.com/try-twilio" target="_blank" rel="noopener" class="step-btn">Start Twilio →</a></li>
+        <li>On your Twilio <strong>Console dashboard</strong>, copy the <strong>Account SID</strong> and <strong>Auth Token</strong>. <a href="https://console.twilio.com" target="_blank" rel="noopener" class="step-btn-ghost step-btn">Twilio Console →</a></li>
+        <li>Get a phone number to send from: <strong>Phone Numbers → Buy a number</strong> (or use the free trial number Twilio gives you). <a href="https://console.twilio.com/us1/develop/phone-numbers/manage/search" target="_blank" rel="noopener" class="step-btn-ghost step-btn">Buy a number →</a></li>
+        <li>Paste Account SID, Auth Token, the From number (E.164: <code>+15551234567</code>), and your personal phone where you want notifications.</li>
+      </ol>
     </div>
     <div class="row-2">
       <div class="row"><label>Account SID</label><input type="text" name="twilio_account_sid" value={v('twilio_account_sid')} placeholder="AC…"/></div>
@@ -119,17 +212,35 @@ const v = (k: string) => cfg[k] || '';
       <div class="row"><label>From number <span class="opt">(E.164)</span></label><input type="text" name="twilio_from" value={v('twilio_from')} placeholder="+15551234567"/></div>
       <div class="row"><label>Your phone <span class="opt">(where notifications go)</span></label><input type="text" name="twilio_to" value={v('twilio_to')} placeholder="+17205551234"/></div>
     </div>
-    <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
+    <div class="save-row">
+      <button class="save-btn" type="submit">Save</button>
+      <button class="test-btn" type="button" data-test="twilio">Test connection</button>
+      <span class="save-note">Saved ✓</span>
+      <span class="test-result"></span>
+    </div>
   </form>
 
   <!-- BOT PROTECTION -->
   <form class="group" data-group="turnstile">
     <div class="group-head">
       <div class="group-title">🛡 Bot protection (Cloudflare Turnstile)</div>
-      <p class="group-sub">Prevents spam sign-ups. Get the secret key from <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">Cloudflare → Turnstile</a>. The site key is already wired in code.</p>
+      <p class="group-sub">Stops bots from spamming sign-ups. Free, invisible to real visitors.</p>
+    </div>
+    <div class="steps">
+      <div class="steps-title">Set up in 3 steps</div>
+      <ol>
+        <li>Open Cloudflare dashboard → <strong>Turnstile</strong>. <a href="https://dash.cloudflare.com/?to=/:account/turnstile" target="_blank" rel="noopener" class="step-btn">Open Turnstile →</a></li>
+        <li>Click <strong>Add site</strong>. Name it "Denver Social", add domains <code>denversocialhub.com</code> + your worker preview domain, choose <strong>Managed</strong> widget mode → Save.</li>
+        <li>Copy the <strong>Secret key</strong> (not site key — that's already wired) and paste below.</li>
+      </ol>
     </div>
     <div class="row"><label>Turnstile secret key</label><input type="password" name="turnstile_secret_key" value={v('turnstile_secret_key')} placeholder="0x4AAAAAAA…" autocomplete="off"/></div>
-    <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
+    <div class="save-row">
+      <button class="save-btn" type="submit">Save</button>
+      <button class="test-btn" type="button" data-test="turnstile">Test connection</button>
+      <span class="save-note">Saved ✓</span>
+      <span class="test-result"></span>
+    </div>
   </form>
 
   <!-- CONTACT & PAYMENT DEFAULTS -->
@@ -156,10 +267,23 @@ const v = (k: string) => cfg[k] || '';
   <form class="group" data-group="webhook">
     <div class="group-head">
       <div class="group-title">⚡ Zapier / webhook</div>
-      <p class="group-sub">Every confirmed sign-up POSTs JSON here. Useful for Google Sheets or Slack via Zapier "Catch Hook".</p>
+      <p class="group-sub">Every confirmed sign-up POSTs JSON to a URL you choose. Pipes RSVPs into Google Sheets, Slack, Notion, anything.</p>
+    </div>
+    <div class="steps">
+      <div class="steps-title">Set up in 3 steps</div>
+      <ol>
+        <li>Open Zapier → create a new Zap. Trigger: <strong>Webhooks by Zapier → Catch Hook</strong>. <a href="https://zapier.com/app/zaps" target="_blank" rel="noopener" class="step-btn">Open Zapier →</a></li>
+        <li>Copy the URL Zapier shows (looks like <code>https://hooks.zapier.com/hooks/catch/…</code>).</li>
+        <li>Paste below + add an action (e.g. <em>"Add row to Google Sheet"</em>) in Zapier to send RSVPs anywhere.</li>
+      </ol>
     </div>
     <div class="row"><label>Webhook URL</label><input type="text" name="webhook_url" value={v('webhook_url')} placeholder="https://hooks.zapier.com/hooks/catch/…"/></div>
-    <div class="save-row"><button class="save-btn" type="submit">Save</button><span class="save-note">Saved ✓</span></div>
+    <div class="save-row">
+      <button class="save-btn" type="submit">Save</button>
+      <button class="test-btn" type="button" data-test="webhook">Test connection</button>
+      <span class="save-note">Saved ✓</span>
+      <span class="test-result"></span>
+    </div>
   </form>
 
   {isSuper && (
@@ -222,6 +346,40 @@ const v = (k: string) => cfg[k] || '';
         note.classList.add('show');
       }
       btn.disabled = false; btn.textContent = origText;
+    });
+  });
+
+  // Test buttons — hit /api/admin/test-integration and show result inline
+  document.querySelectorAll('.test-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var kind = btn.getAttribute('data-test');
+      var form = btn.closest('form');
+      var result = form.querySelector('.test-result');
+      result.className = 'test-result';
+      result.textContent = '';
+      btn.disabled = true;
+      var orig = btn.textContent;
+      btn.textContent = 'Testing…';
+      try {
+        var r = await fetch('/api/admin/test-integration', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind: kind }),
+        });
+        var d = await r.json();
+        if (d.ok) {
+          result.className = 'test-result show ok';
+          result.textContent = d.message || 'Works ✓';
+        } else {
+          result.className = 'test-result show err';
+          result.textContent = d.error || 'Test failed.';
+        }
+      } catch (e) {
+        result.className = 'test-result show err';
+        result.textContent = 'Network error: ' + (e && e.message ? e.message : 'unknown');
+      }
+      btn.disabled = false;
+      btn.textContent = orig;
     });
   });
 </script>

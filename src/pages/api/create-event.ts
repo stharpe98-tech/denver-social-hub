@@ -30,7 +30,7 @@ async function notifyAdmin(db: D1Database, eventTitle: string, submittedBy: stri
               <p style="font-size:18px;font-weight:700;color:#1a1a1a;margin:0 0 8px;">${eventTitle}</p>
               <p style="font-size:14px;color:#666;margin:0;">Posted by: ${submittedBy}</p>
             </div>
-            <a href="https://denversocialhub.com/events" style="display:inline-block;background:#0EA5E9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">View Events</a>
+            <a href="https://denversocialhub.com/events" style="display:inline-block;background:#7C3AED;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">View Events</a>
           </div>
         `,
       }),
@@ -42,21 +42,13 @@ async function notifyAdmin(db: D1Database, eventTitle: string, submittedBy: stri
 
 export const prerender = false;
 
-export async function POST({ request, cookies }: APIContext) {
-  const cookie = cookies.get("dsn_user")?.value;
-  let user: any = null;
-  if (cookie) { try { user = JSON.parse(cookie); } catch {} }
-
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'You must be logged in to create an event.' }), { status: 401 });
-  }
-
+export async function POST({ request }: APIContext) {
   const db = getDB();
   if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
 
   try {
     await ensureEventsSchema(db);
-    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day, vibe_tags, group_id: rawGroupId } = await request.json() as any;
+    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day, vibe_tags, group_id: rawGroupId, submitted_by } = await request.json() as any;
 
     if (!title || !title.trim()) {
       return new Response(JSON.stringify({ error: 'Title is required' }), { status: 400 });
@@ -70,7 +62,7 @@ export async function POST({ request, cookies }: APIContext) {
     // Use venue as location if provided, otherwise use area
     const finalLocation = venueName || loc || '';
     const zone = loc || 'TBD';
-    const submittedBy = user.name || 'Community Member';
+    const submittedBy = (submitted_by || '').toString().trim() || 'Community Member';
 
     // Map budget string to price_cap
     const budgetMap: Record<string, string> = {
@@ -109,17 +101,10 @@ export async function POST({ request, cookies }: APIContext) {
       ? vibe_tags.filter((s: any) => typeof s === 'string').slice(0, 6).join(',')
       : '';
 
-    // Group scoping (optional). Must be a member of the group to post under it.
-    let groupId: number | null = null;
-    if (rawGroupId) {
-      const gid = parseInt(rawGroupId);
-      if (gid) {
-        const isMember: any = await db.prepare(
-          'SELECT 1 FROM group_members WHERE group_id=? AND LOWER(member_email)=LOWER(?)'
-        ).bind(gid, user.email).first();
-        if (isMember) groupId = gid;
-      }
-    }
+    // Group scoping is currently disabled — group membership requires
+    // an account, which we've removed. Posts are always global.
+    const groupId: number | null = null;
+    void rawGroupId;
 
     const insert = await db.prepare(
       `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, discord_link, contact_phone, vibe_tags, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`

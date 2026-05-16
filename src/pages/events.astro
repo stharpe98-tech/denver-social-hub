@@ -3,9 +3,8 @@ import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
 import { getContent } from '../lib/content';
 
-let user: any = null;
-const cookie = Astro.cookies.get("dsn_user")?.value;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+const user: any = null;
+void user;
 
 const db = getDB();
 const now = new Date();
@@ -141,12 +140,15 @@ const content = await getContent();
     <div class="ev-header-left">
       <span class="tag tag-orange">Events</span>
       <h1 class="ev-h1">{cards.length} events live</h1>
-      <p class="ev-sub">{content.events_subtitle || 'Small groups, real plans, no flakes.'}</p>
+      <p class="ev-sub">{content.events_subtitle || 'Small groups, real plans, no flakes.'} <a href="/calendar" class="ev-sub-link">See the shared calendar →</a></p>
     </div>
-    {user && (
-      <a href="/events/new" class="btn btn-primary" id="createBtn">Post an event</a>
-    )}
+    <a href="/events/new" class="btn btn-primary" id="createBtn">Post an event</a>
   </div>
+
+  <style is:inline>
+    .ev-sub-link { color: var(--accent); font-weight: 600; white-space: nowrap; margin-left: 4px; }
+    .ev-sub-link:hover { text-decoration: underline; }
+  </style>
 
   <!-- Search + filter strip -->
   <div class="ev-search-row">
@@ -173,7 +175,7 @@ const content = await getContent();
       -webkit-appearance: none;
     }
     .ev-search-input:focus {
-      border-color: var(--accent, #0EA5E9);
+      border-color: var(--accent, #7C3AED);
       box-shadow: 0 0 0 3px var(--accent-dim, rgba(14,165,233,0.10));
     }
     .ec.hidden { display: none !important; }
@@ -217,7 +219,7 @@ const content = await getContent();
               )}
               {c.karmaMin >= 1 && <span class="tag tag-yellow">{c.karmaMin}+ karma</span>}
               {(c.kind === 'event' && c.spotsLeft !== 0 && c.spotsLeft !== -1 && 4 > c.spotsLeft) && <span class="tag tag-orange">last {c.spotsLeft} spots</span>}
-              {c.kind === 'event' && c.spotsLeft === 0 && <span class="tag" style="background:rgba(255,71,87,0.12);color:#ff4757">Full</span>}
+              {c.kind === 'event' && c.spotsLeft === 0 && <span class="tag" style="background:#FEE2E2;color:#991B1B">Full</span>}
             </div>
             <h3 class="ec-title">{c.title}</h3>
             {c.description && <p class="ec-desc">{c.description.slice(0, 80)}</p>}
@@ -248,10 +250,10 @@ const content = await getContent();
     <div class="ev-empty">
       <div class="ev-empty-term">
         <span class="term-prompt">$</span> <span class="term-cmd">What's happening</span><br/>
-        <span class="term-output">No events right now — check back soon.</span>
+        <span class="term-output">No events posted. The calendar's a blank canvas. Could be you, could be Marcus, could be a deer who got a Discord account.</span>
       </div>
       <p>{content.events_empty || 'Check back soon or post your own event.'}</p>
-      {!user && <a href="/login" class="btn btn-primary">sign in to post</a>}
+      <a href="/events/new" class="btn btn-primary">Post the first event</a>
     </div>
   )}
 
@@ -455,7 +457,7 @@ const content = await getContent();
   .cp-tpl {
     display: flex; flex-direction: column; align-items: center; gap: 4px;
     padding: 14px 8px; border-radius: 10px;
-    border: 1px solid var(--border); background: var(--bg, #0a0a0a);
+    border: 1px solid var(--border); background: var(--bg);
     cursor: pointer; transition: all .2s;
   }
   .cp-tpl:hover {

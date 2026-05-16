@@ -35,6 +35,28 @@ export async function ensureCommunitySchema(db: D1Database): Promise<void> {
   `).run();
   await db.prepare(`CREATE INDEX IF NOT EXISTS idx_favors_status ON favors(status, created_at)`).run();
 
+  // Extended fields for the flyer-board direction. Adds are idempotent
+  // — wrap each in try/catch because D1 ALTER lacks IF NOT EXISTS.
+  const favorCols = await db.prepare("PRAGMA table_info(favors)").all();
+  const favorNames = new Set((favorCols.results ?? []).map((r: any) => r.name));
+  for (const [col, type] of [
+    ['contact_email', "TEXT DEFAULT ''"],
+    ['contact_phone', "TEXT DEFAULT ''"],
+    ['kind_extended', "TEXT DEFAULT ''"],
+  ] as const) {
+    if (!favorNames.has(col)) {
+      try { await db.prepare(`ALTER TABLE favors ADD COLUMN ${col} ${type}`).run(); } catch {}
+    }
+  }
+  // profiles.neighborhood (board mixes person cards in)
+  try {
+    const pCols = await db.prepare("PRAGMA table_info(profiles)").all();
+    const pNames = new Set((pCols.results ?? []).map((r: any) => r.name));
+    if (!pNames.has('neighborhood')) {
+      try { await db.prepare("ALTER TABLE profiles ADD COLUMN neighborhood TEXT DEFAULT ''").run(); } catch {}
+    }
+  } catch {}
+
   // 3. Community calendar
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS community_calendar (
@@ -63,6 +85,17 @@ export const FAVOR_KINDS = [
   { key: 'offer', label: 'I can help with', emoji: '🤝' },
   { key: 'need',  label: 'I need help with', emoji: '🙏' },
 ];
+
+// Extended kind taxonomy used by the flyer-board (stored in
+// favors.kind_extended). The legacy `kind` column stays 'offer'/'need'
+// for back-compat; events/announcements/just-because default to 'offer'.
+export const BOARD_KINDS = [
+  { key: 'need',         label: 'Need',         emoji: '🙏', dot: 'need',     legacy: 'need'  },
+  { key: 'offer',        label: 'Offer',        emoji: '🤝', dot: 'offer',    legacy: 'offer' },
+  { key: 'event',        label: 'Event',        emoji: '🎉', dot: 'event',    legacy: 'offer' },
+  { key: 'announce',     label: 'Announcement', emoji: '📣', dot: 'announce', legacy: 'offer' },
+  { key: 'just_because', label: 'Just because', emoji: '💛', dot: 'announce', legacy: 'offer' },
+] as const;
 
 export const CALENDAR_KINDS = [
   { key: 'holiday',    label: 'Holiday',         emoji: '🎉' },

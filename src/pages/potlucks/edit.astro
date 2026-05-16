@@ -8,7 +8,7 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
     body { padding: var(--space-7) var(--space-4) var(--space-8); }
     .wrap { max-width: 520px; margin: 0 auto; }
     .card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--card-shadow-lg); overflow: hidden; }
-    .card-header { background: linear-gradient(135deg, var(--accent), var(--accent2)); padding: var(--space-5) var(--space-5) var(--space-4); }
+    .card-header { background: linear-gradient(135deg, var(--sunset), var(--pink)); padding: var(--space-5) var(--space-5) var(--space-4); }
     .card-header h1 { font-family: var(--font-display); font-size: 22px; color: #fff; margin-bottom: 4px; font-weight: 700; }
     .card-header p { font-size: 13px; color: rgba(255,255,255,0.92); }
     .card-body { padding: var(--space-5); }
@@ -20,8 +20,8 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
     .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
     .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 36px; }
     .field textarea { resize: vertical; min-height: 64px; }
-    .btn-save { width: 100%; padding: 13px; border-radius: var(--radius-pill); border: none; background: var(--cta-bg); color: var(--cta-text); font-family: var(--font); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; box-shadow: 0 1px 3px rgba(14,165,233,0.25); transition: all 0.15s; }
-    .btn-save:hover { box-shadow: 0 6px 20px rgba(14,165,233,0.35); transform: translateY(-1px); }
+    .btn-save { width: 100%; padding: 13px; border-radius: var(--radius-pill); border: none; background: var(--cta-bg); color: var(--cta-text); font-family: var(--font); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; box-shadow: 0 1px 3px rgba(249,115,22,0.25); transition: all 0.15s; }
+    .btn-save:hover { box-shadow: 0 6px 20px rgba(249,115,22,0.35); transform: translateY(-1px); }
     .btn-cancel { width: 100%; padding: 11px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--bg); color: var(--red); font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 10px; transition: background 0.15s; }
     .btn-cancel:hover { background: var(--red-dim); }
     .divider { height: 1px; background: var(--border); margin: var(--space-4) 0; }
@@ -32,13 +32,11 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
     .hidden { display: none !important; }
     .loading { text-align: center; padding: var(--space-6); color: var(--text-faint); font-style: italic; }
     .guest-row { display: flex; align-items: center; gap: 12px; }
-    .g-btn { width: 40px; height: 40px; border-radius: 8px; border: 1.5px solid #e4ddd4; background: #fafaf8; font-size: 18px; color: #57524c; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .g-count { flex: 1; text-align: center; font-size: 20px; font-weight: 600; color: #1c1917; }
-    .g-note { font-size: 13px; color: #a09890; }
+    .g-btn { width: 40px; height: 40px; border-radius: 8px; border: 1.5px solid #DDD2BB; background: #F5EFE3; font-size: 18px; color: #2A2730; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .g-count { flex: 1; text-align: center; font-size: 20px; font-weight: 600; color: #2A2730; }
+    .g-note { font-size: 13px; color: #6B6B73; }
   </style>
   <div class="wrap">
-    <div class="logo"><a href="/">🏔 <span>Denver</span> Social</a></div>
-
     <div class="card">
       <div class="card-header">
         <h1 id="page-title">Loading…</h1>
@@ -91,7 +89,7 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
         <div id="notfound-wrap" class="result hidden">
           <span class="result-emoji">🤔</span>
           <div class="result-title">Link not found</div>
-          <p class="result-sub">This link may have expired or already been used. <a href="/events" style="color:#f77f00">Browse events →</a></p>
+          <p class="result-sub">This link may have expired or already been used. <a href="/events" style="color:#7C3AED">Browse events →</a></p>
         </div>
       </div>
     </div>
@@ -113,7 +111,7 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
         document.getElementById('page-sub').textContent = (rsvpData.date_label || '') + (rsvpData.time_label ? ' · ' + rsvpData.time_label : '');
 
         var details = document.getElementById('event-details');
-        details.innerHTML = '<div style="font-size:13px;color:#a09890;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Your sign-up</div>'
+        details.innerHTML = '<div style="font-size:13px;color:#6B6B73;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Your sign-up</div>'
           + '<div class="detail-row">📅 <strong>' + (rsvpData.date_label||'') + (rsvpData.time_label ? ' · ' + rsvpData.time_label : '') + '</strong></div>'
           + '<div class="detail-row">📍 <strong>' + (rsvpData.location||'') + '</strong></div>'
           + '<div class="detail-row">👤 <strong>' + rsvpData.name + '</strong></div>';

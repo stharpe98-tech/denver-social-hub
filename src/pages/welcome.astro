@@ -4,19 +4,13 @@ import { getDB } from '../lib/db';
 import { ensureCommunitySchema } from '../lib/community-schema';
 
 const db = getDB();
-let user: any = null;
-const cookie = Astro.cookies.get('dsn_user')?.value;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
-
+const user: any = null;
 let intros: any[] = [];
-let myIntro: any = null;
+const myIntro: any = null;
 if (db) {
   await ensureCommunitySchema(db);
   const r = await db.prepare('SELECT * FROM member_intros ORDER BY id DESC LIMIT 60').all();
   intros = (r.results || []) as any[];
-  if (user?.email) {
-    myIntro = intros.find((i: any) => (i.member_email || '').toLowerCase() === user.email.toLowerCase());
-  }
 }
 
 function timeAgo(iso: string): string {
@@ -65,11 +59,12 @@ function timeAgo(iso: string): string {
   )}
 
   {intros.length === 0 ? (
-    <div class="wel-empty">Nobody's introduced themselves yet. Be first?</div>
+    <div class="wel-empty">Crickets. No introductions yet. Someone's gotta be first — could be you, could be the person right after you who's about to scroll past this page muttering about how nobody ever goes first.</div>
   ) : (
     <div class="wel-feed">
       {intros.map((i: any) => {
-        const isMine = user?.email && (i.member_email || '').toLowerCase() === user.email.toLowerCase();
+        const isMine = false;
+        void user;
         const initial = (i.member_name || '?')[0]?.toUpperCase();
         return (
           <article class="wel-card">
