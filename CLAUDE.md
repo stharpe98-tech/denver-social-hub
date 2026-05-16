@@ -28,13 +28,25 @@
 - `RESEND_API_KEY`
 - `DISCORD_CLIENT_ID`
 - `DISCORD_CLIENT_SECRET`
+- `DISCORD_PUBLIC_KEY` — Ed25519 public key from the Discord application; verifies slash-command webhooks
+- `DISCORD_BOT_TOKEN` — only needed locally for `scripts/register-discord-commands.mjs`
+- `DISCORD_APP_ID` — same; for the registration script
 
 ## File Layout
 - `src/layouts/Base.astro` — shared nav + global styles; wrap every page
 - `src/pages/` — `.astro` routes (index, discover, events, events/[id], members, fund, about, login, profile, onboarding/)
 - `src/pages/api/` — TypeScript endpoints (rsvp.ts, vote.ts, rate.ts, notify.ts, logout.ts)
+- `src/pages/api/discord/interactions.ts` — Discord slash-command webhook (HTTP interactions)
 - `src/lib/db.ts` — D1 helper (all DB access goes through this)
+- `src/lib/discord.ts` — Ed25519 signature verification + reply helpers
 - `src/lib/levels.ts` — member level system
+- `scripts/register-discord-commands.mjs` — one-shot script to PUT slash commands to Discord
+
+## Discord Bot
+- HTTP-interactions only (no gateway/WebSocket — Workers can't hold one).
+- Discord Developer Portal → Interactions Endpoint URL = `https://<site>/api/discord/interactions`.
+- Slash commands: `/denver`, `/site`, `/events`, `/potlucks`, `/event id:<n>`.
+- Reads events/potlucks straight from D1; deep links use `PUBLIC_SITE_URL` (wrangler.toml `[vars]`).
 
 ## Rules for "Perfection"
 - **Mobile First:** Always design for small screens before desktop. Base styles target mobile; use `@media (min-width: ...)` to scale up.

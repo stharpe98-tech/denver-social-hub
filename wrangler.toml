@@ -17,6 +17,8 @@ binding = "ASSETS"
 directory = "./dist"
 run_worker_first = true
 
+[vars]
+PUBLIC_SITE_URL = "https://denversocial.com"
 
 [triggers]
 crons = [
