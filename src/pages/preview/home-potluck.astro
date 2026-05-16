@@ -1,0 +1,183 @@
+---
+import Base from '../../layouts/Base.astro';
+import PreviewSwitcher from '../../components/PreviewSwitcher.astro';
+---
+<Base title="Denver Social — potluck-first">
+<PreviewSwitcher current="home-potluck" />
+<div class="pk">
+  <section class="pk-hero">
+    <div class="pk-tag">DENVER'S POTLUCK NIGHT</div>
+    <h1 class="pk-h1">Bring a dish.<br/><span class="acc">Meet your neighbors.</span></h1>
+    <p class="pk-sub">Every Wednesday, someone in Denver opens their kitchen. Anyone can come. Anyone can host. <strong>Always Wednesdays. Always 7pm.</strong></p>
+    <div class="pk-cta-row">
+      <a href="#" class="pk-cta">🥘 Find this week's potluck</a>
+      <a href="#" class="pk-cta-ghost">Host yours →</a>
+    </div>
+    <div class="pk-ticker">
+      <span class="pk-ticker-num">142</span> potlucks hosted ·
+      <span class="pk-ticker-num">2,847</span> dishes brought ·
+      <span class="pk-ticker-num">1,238</span> neighbors at the table
+    </div>
+  </section>
+
+  <section class="pk-this-week">
+    <div class="pk-week-label">↘ THIS WEDNESDAY · MAY 21 · 7:00 PM</div>
+    <div class="pk-week-card">
+      <div class="pk-week-left">
+        <div class="pk-host-avatar">👩🏽‍🍳</div>
+        <div>
+          <div class="pk-host-name">Marisol's backyard</div>
+          <div class="pk-host-where">Wash Park · S Pearl St</div>
+        </div>
+      </div>
+      <h2 class="pk-week-title">🥟 Dumpling Night</h2>
+      <p class="pk-week-desc">"I'm doing pork & chive. Bring a different filling, a side, or a dessert. I'll have wrappers and steamers ready."</p>
+
+      <div class="pk-slots">
+        <div class="pk-slots-head">9 of 12 spots claimed · 4 dishes signed up</div>
+        <div class="pk-slots-grid">
+          <div class="pk-slot claimed"><span class="pk-slot-icon">🥟</span><div><div class="pk-slot-cat">Filling</div><div class="pk-slot-by">Tomás — beef bulgogi</div></div></div>
+          <div class="pk-slot claimed"><span class="pk-slot-icon">🥬</span><div><div class="pk-slot-cat">Side</div><div class="pk-slot-by">Jen — kimchi</div></div></div>
+          <div class="pk-slot claimed"><span class="pk-slot-icon">🍰</span><div><div class="pk-slot-cat">Dessert</div><div class="pk-slot-by">Devi — mango sticky rice</div></div></div>
+          <div class="pk-slot"><span class="pk-slot-icon">🍷</span><div><div class="pk-slot-cat">Drink</div><div class="pk-slot-by pk-slot-open">Claim this →</div></div></div>
+        </div>
+      </div>
+
+      <a class="pk-week-cta" href="#">Claim a spot — bring a dish →</a>
+    </div>
+  </section>
+
+  <section class="pk-coming">
+    <h2 class="pk-h2">Coming up</h2>
+    <div class="pk-coming-grid">
+      <a class="pk-mini">
+        <div class="pk-mini-date">MAY<br/><strong>28</strong></div>
+        <div>
+          <div class="pk-mini-title">Pasta night at the Brawley's</div>
+          <div class="pk-mini-meta">Highlands · 3 of 10 spots</div>
+        </div>
+      </a>
+      <a class="pk-mini">
+        <div class="pk-mini-date">JUN<br/><strong>4</strong></div>
+        <div>
+          <div class="pk-mini-title">Soup season — Tomás hosts</div>
+          <div class="pk-mini-meta">RiNo · 1 of 8 spots</div>
+        </div>
+      </a>
+      <a class="pk-mini">
+        <div class="pk-mini-date">JUN<br/><strong>11</strong></div>
+        <div>
+          <div class="pk-mini-title">Open — needs a host</div>
+          <div class="pk-mini-meta pk-mini-empty">→ Host this week</div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section class="pk-how">
+    <h2 class="pk-h2">How it works</h2>
+    <div class="pk-how-grid">
+      <div class="pk-step"><div class="pk-step-num">1</div><h3>Someone opens their kitchen.</h3><p>A backyard. A dining room. Even a rooftop. The host picks a theme (or doesn't).</p></div>
+      <div class="pk-step"><div class="pk-step-num">2</div><h3>You claim a dish.</h3><p>Appetizer, main, side, dessert, drinks. Sign up for whatever you're bringing. Tell us what.</p></div>
+      <div class="pk-step"><div class="pk-step-num">3</div><h3>Show up. Eat. Stay.</h3><p>Wednesday. 7pm. The address gets sent the morning of. Bring your dish. Stay till you don't want to.</p></div>
+    </div>
+  </section>
+
+  <section class="pk-rules">
+    <h2 class="pk-h2-light">The rules of the table</h2>
+    <ul class="pk-rules-list">
+      <li><strong>You can't show up empty-handed.</strong> Bringing a dish is the price of entry. It can be a bag of chips. It just has to be something.</li>
+      <li><strong>Hosts cap headcount.</strong> First-come, first-claimed. No drop-ins.</li>
+      <li><strong>No money changes hands.</strong> No Venmo. No covers. Hosts host because they want to.</li>
+      <li><strong>If you claim a slot, you show up.</strong> Flake twice, you lose the next 4 weeks.</li>
+    </ul>
+  </section>
+
+  <section class="pk-also">
+    <div class="pk-also-row">
+      <div class="pk-also-h">Other stuff that lives here too:</div>
+      <a class="pk-also-pill">🏃 Events</a>
+      <a class="pk-also-pill">🤝 Community Board</a>
+      <a class="pk-also-pill">📍 Neighbor pages</a>
+    </div>
+    <p class="pk-also-foot">But the table is the heart of it.</p>
+  </section>
+</div>
+</Base>
+
+<style>
+  .pk { background: #FFFBF5; color: #1A1A1A; font-family: 'Inter', sans-serif; --acc: #DC2626; --warm: #F59E0B; }
+  .pk a { color: inherit; text-decoration: none; }
+  .pk .acc { color: var(--acc); }
+
+  .pk-hero { max-width: 900px; margin: 0 auto; padding: 80px 24px 48px; text-align: center; }
+  .pk-tag { font-family: 'Courier New', monospace; font-size: 12px; letter-spacing: 3px; color: var(--acc); font-weight: 700; margin-bottom: 20px; }
+  .pk-h1 { font-family: 'Playfair Display', serif; font-size: clamp(44px, 7vw, 80px); font-weight: 900; line-height: 1; letter-spacing: -0.02em; margin-bottom: 24px; }
+  .pk-sub { font-size: 19px; line-height: 1.5; color: #444; max-width: 600px; margin: 0 auto 32px; }
+  .pk-cta-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; }
+  .pk-cta { background: var(--acc); color: #fff; padding: 16px 32px; border-radius: 999px; font-weight: 700; font-size: 16px; box-shadow: 0 6px 24px rgba(220,38,38,0.25); transition: transform .15s; display: inline-block; }
+  .pk-cta:hover { transform: translateY(-2px); }
+  .pk-cta-ghost { padding: 16px 0; font-weight: 600; text-decoration: underline; }
+  .pk-ticker { font-family: 'Courier New', monospace; font-size: 13px; color: #777; }
+  .pk-ticker-num { color: #1A1A1A; font-weight: 700; }
+
+  .pk-this-week { max-width: 800px; margin: 32px auto 64px; padding: 0 24px; }
+  .pk-week-label { font-family: 'Courier New', monospace; font-size: 12px; letter-spacing: 2px; color: var(--acc); font-weight: 700; margin-bottom: 12px; }
+  .pk-week-card { background: #fff; border: 2px solid var(--warm); border-radius: 20px; padding: 32px; box-shadow: 0 8px 32px rgba(245,158,11,0.12); }
+  .pk-week-left { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+  .pk-host-avatar { width: 56px; height: 56px; border-radius: 50%; background: #FEF3C7; display: flex; align-items: center; justify-content: center; font-size: 28px; border: 3px solid var(--warm); }
+  .pk-host-name { font-size: 16px; font-weight: 700; }
+  .pk-host-where { font-size: 13px; color: #777; }
+  .pk-week-title { font-family: 'Playfair Display', serif; font-size: 40px; font-weight: 900; line-height: 1.1; margin-bottom: 12px; }
+  .pk-week-desc { font-size: 15px; color: #444; line-height: 1.6; margin-bottom: 24px; font-style: italic; padding-left: 16px; border-left: 3px solid var(--warm); }
+
+  .pk-slots { background: #FFFBF5; border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; }
+  .pk-slots-head { font-family: 'Courier New', monospace; font-size: 12px; letter-spacing: 1px; color: #777; margin-bottom: 12px; }
+  .pk-slots-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pk-slot { display: flex; gap: 10px; align-items: center; padding: 8px 10px; background: #fff; border-radius: 10px; }
+  .pk-slot.claimed { opacity: 0.65; }
+  .pk-slot-icon { font-size: 24px; }
+  .pk-slot-cat { font-size: 11px; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: 0.5px; }
+  .pk-slot-by { font-size: 13px; color: #1A1A1A; }
+  .pk-slot-open { color: var(--acc); font-weight: 700; }
+
+  .pk-week-cta { display: block; background: #1A1A1A; color: #fff; padding: 16px; border-radius: 12px; text-align: center; font-weight: 700; font-size: 16px; transition: transform .15s; }
+  .pk-week-cta:hover { transform: translateY(-2px); }
+
+  .pk-coming { max-width: 900px; margin: 32px auto; padding: 0 24px; }
+  .pk-h2 { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 800; margin-bottom: 16px; }
+  .pk-coming-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .pk-mini { display: flex; gap: 14px; background: #fff; border-radius: 14px; padding: 16px; align-items: center; border: 1px solid #FEF3C7; transition: border-color .15s; }
+  .pk-mini:hover { border-color: var(--warm); }
+  .pk-mini-date { font-family: 'Courier New', monospace; font-size: 11px; color: #777; text-align: center; line-height: 1.2; min-width: 36px; }
+  .pk-mini-date strong { font-family: 'Playfair Display', serif; font-size: 28px; color: #1A1A1A; font-weight: 900; display: block; }
+  .pk-mini-title { font-weight: 700; font-size: 15px; line-height: 1.2; margin-bottom: 2px; }
+  .pk-mini-meta { font-size: 12px; color: #777; }
+  .pk-mini-empty { color: var(--acc); font-weight: 700; }
+
+  .pk-how { max-width: 1000px; margin: 64px auto 32px; padding: 0 24px; }
+  .pk-how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .pk-step { background: #fff; border-radius: 16px; padding: 28px 24px; border: 1px solid #FEF3C7; }
+  .pk-step-num { font-family: 'Playfair Display', serif; font-size: 56px; font-weight: 900; color: var(--warm); line-height: 1; margin-bottom: 12px; }
+  .pk-step h3 { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 800; margin-bottom: 6px; }
+  .pk-step p { font-size: 14px; color: #555; line-height: 1.5; }
+
+  .pk-rules { background: #1A1A1A; color: #FFFBF5; padding: 56px 24px; margin: 48px 0; }
+  .pk-h2-light { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 800; max-width: 700px; margin: 0 auto 24px; }
+  .pk-rules-list { max-width: 700px; margin: 0 auto; padding: 0; list-style: none; }
+  .pk-rules-list li { font-size: 16px; line-height: 1.6; padding: 12px 0; border-bottom: 1px solid #333; }
+  .pk-rules-list li:last-child { border: none; }
+  .pk-rules-list strong { color: var(--warm); }
+
+  .pk-also { max-width: 800px; margin: 32px auto 64px; padding: 0 24px; text-align: center; }
+  .pk-also-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .pk-also-h { font-size: 14px; color: #777; }
+  .pk-also-pill { padding: 8px 16px; border-radius: 999px; background: #fff; border: 1px solid #E5E7EB; font-size: 13px; font-weight: 600; }
+  .pk-also-foot { font-family: 'Playfair Display', serif; font-style: italic; font-size: 17px; color: #777; }
+
+  @media (max-width: 700px) {
+    .pk-slots-grid { grid-template-columns: 1fr; }
+    .pk-coming-grid { grid-template-columns: 1fr; }
+    .pk-how-grid { grid-template-columns: 1fr; }
+  }
+</style>

@@ -3,25 +3,16 @@ import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
 import { ensureGroupsSchema } from '../../lib/groups-schema';
 
-const cookie = Astro.cookies.get('dsn_user')?.value;
-let user: any = null;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+// Posting is open to everyone — no account required. We do show the
+// group banner if a slug is in the URL, but group-scoped posting is
+// disabled while we rework accounts.
 const groupSlug = Astro.url.searchParams.get('group') || '';
-const nextUrl = '/events/new' + (groupSlug ? `?group=${encodeURIComponent(groupSlug)}` : '');
-if (!user) return Astro.redirect('/login?next=' + encodeURIComponent(nextUrl));
-
 let postingInGroup: any = null;
 if (groupSlug) {
   const db = getDB();
   if (db) {
     await ensureGroupsSchema(db);
-    const g: any = await db.prepare('SELECT id, slug, name FROM groups WHERE slug=?').bind(groupSlug).first();
-    if (g) {
-      const member: any = await db.prepare(
-        'SELECT 1 FROM group_members WHERE group_id=? AND LOWER(member_email)=LOWER(?)'
-      ).bind(g.id, user.email).first();
-      if (member) postingInGroup = g;
-    }
+    postingInGroup = await db.prepare('SELECT id, slug, name FROM groups WHERE slug=?').bind(groupSlug).first();
   }
 }
 
@@ -68,6 +59,11 @@ const TYPES = [
       <div class="ne-field">
         <label class="ne-label" for="ne-title">What are you hosting? <span class="req">*</span></label>
         <input type="text" id="ne-title" class="ne-input" placeholder="Sunset hike at Mount Falcon" required maxlength="120" />
+      </div>
+
+      <div class="ne-field">
+        <label class="ne-label" for="ne-host">Your name</label>
+        <input type="text" id="ne-host" class="ne-input" placeholder="How you'd like to be credited (optional)" maxlength="60" />
       </div>
 
       <div class="ne-field">
@@ -413,6 +409,7 @@ const TYPES = [
       contact_phone: document.getElementById('ne-phone').value.trim(),
       vibe_tags: Array.from(document.querySelectorAll('input[name="vibe"]:checked')).map(function (c) { return c.value; }),
       group_id: groupId,
+      submitted_by: (document.getElementById('ne-host') && document.getElementById('ne-host').value.trim()) || '',
     };
     try {
       var res = await fetch('/api/create-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

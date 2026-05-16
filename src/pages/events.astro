@@ -3,9 +3,8 @@ import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
 import { getContent } from '../lib/content';
 
-let user: any = null;
-const cookie = Astro.cookies.get("dsn_user")?.value;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+const user: any = null;
+void user;
 
 const db = getDB();
 const now = new Date();
@@ -143,9 +142,7 @@ const content = await getContent();
       <h1 class="ev-h1">{cards.length} events live</h1>
       <p class="ev-sub">{content.events_subtitle || 'Small groups, real plans, no flakes.'} <a href="/calendar" class="ev-sub-link">See the shared calendar →</a></p>
     </div>
-    {user && (
-      <a href="/events/new" class="btn btn-primary" id="createBtn">Post an event</a>
-    )}
+    <a href="/events/new" class="btn btn-primary" id="createBtn">Post an event</a>
   </div>
 
   <style is:inline>
@@ -256,7 +253,7 @@ const content = await getContent();
         <span class="term-output">No events posted. The calendar's a blank canvas. Could be you, could be Marcus, could be a deer who got a Discord account.</span>
       </div>
       <p>{content.events_empty || 'Check back soon or post your own event.'}</p>
-      {!user && <a href="/login" class="btn btn-primary">sign in to post</a>}
+      <a href="/events/new" class="btn btn-primary">Post the first event</a>
     </div>
   )}
 

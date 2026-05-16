@@ -126,6 +126,29 @@ const eventTypeChips = [
     </div>
   </section>
 
+  {/* PERSONAL PAGES CTA — full card */}
+  <section class="page-wrap personal-page-band">
+    <div class="pp-card">
+      <div class="pp-card-left">
+        <div class="pp-avatars">
+          <span class="pp-av pp-av-1">👨🏽‍💼</span>
+          <span class="pp-av pp-av-2">🧘🏻‍♀️</span>
+          <span class="pp-av pp-av-3">👨‍🍳</span>
+        </div>
+        <div class="pp-card-text">
+          <h3 class="pp-h">Have something you offer Denver?</h3>
+          <p class="pp-p">Free landing page for realtors, instructors, makers, dog-walkers — anyone with skills, services, or a side hustle. Your own URL, your contact info, your face on the neighborhood map.</p>
+          <ul class="pp-bullets">
+            <li>✓ Pick your own URL — <span class="mono">denversocialhub.com/u/yourname</span></li>
+            <li>✓ Free forever — no credit card, no account</li>
+            <li>✓ Live in 2 minutes — email yourself a code, edit, publish</li>
+          </ul>
+        </div>
+      </div>
+      <a href="/u/new" class="pp-card-cta">Make my page →</a>
+    </div>
+  </section>
+
   {/* DISCORD LIVE CHIP — just the count, no avatars */}
   {discordOnline !== null && (
     <section class="page-wrap discord-chip-wrap">
@@ -310,6 +333,31 @@ const eventTypeChips = [
     .event-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); }
 
     /* Featured event */
+    /* Personal pages card */
+    .personal-page-band { padding-top: var(--space-5); padding-bottom: var(--space-3); }
+    .pp-card { display: grid; grid-template-columns: 1fr auto; gap: var(--space-4); align-items: center; padding: var(--space-5); background: linear-gradient(135deg, #FAF5FF 0%, #ECFDF5 50%, #EFF6FF 100%); border: 1.5px solid #DDD6FE; border-radius: 20px; }
+    .pp-card-left { display: flex; gap: var(--space-3); align-items: flex-start; }
+    .pp-avatars { display: flex; flex-shrink: 0; }
+    .pp-av { width: 48px; height: 48px; border-radius: 50%; background: #fff; border: 3px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .pp-av-1 { z-index: 3; }
+    .pp-av-2 { z-index: 2; margin-left: -14px; }
+    .pp-av-3 { z-index: 1; margin-left: -14px; }
+    .pp-card-text { flex: 1; }
+    .pp-h { font-family: var(--font-display, 'Playfair Display', serif); font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 6px; line-height: 1.2; }
+    .pp-p { font-size: 14px; color: var(--text-sec, #4B5563); line-height: 1.5; margin-bottom: 10px; }
+    .pp-bullets { list-style: none; padding: 0; margin: 0; font-size: 13px; color: var(--text); line-height: 1.7; }
+    .pp-bullets li { margin-bottom: 2px; }
+    .pp-bullets .mono { font-family: 'SF Mono', Menlo, monospace; background: rgba(124,58,237,0.08); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: var(--accent, #7C3AED); }
+    .pp-card-cta { display: inline-block; padding: 14px 24px; background: var(--accent, #7C3AED); color: #fff; border-radius: 999px; font-weight: 700; font-size: 15px; text-decoration: none; box-shadow: 0 4px 14px rgba(124,58,237,0.25); transition: transform 0.15s, box-shadow 0.15s; white-space: nowrap; }
+    .pp-card-cta:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,58,237,0.35); }
+    @media (max-width: 700px) {
+      .pp-card { grid-template-columns: 1fr; text-align: left; }
+      .pp-card-cta { width: 100%; text-align: center; }
+    }
+    @media (max-width: 480px) {
+      .pp-h { font-size: 19px; }
+      .pp-card { padding: var(--space-4); }
+    }
     /* Discord live chip */
     .discord-chip-wrap { padding-top: var(--space-5); padding-bottom: 0; }
     .discord-chip {

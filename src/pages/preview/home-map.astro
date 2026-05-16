@@ -1,0 +1,176 @@
+---
+import Base from '../../layouts/Base.astro';
+import PreviewSwitcher from '../../components/PreviewSwitcher.astro';
+---
+<Base title="Denver Social — map direction">
+<PreviewSwitcher current="home-map" />
+<div class="mp">
+  <section class="mp-hero">
+    <div class="mp-hero-text">
+      <h1 class="mp-h1">What's happening <span class="acc">near you</span>, Denver?</h1>
+      <p class="mp-sub">Tap your neighborhood. Find the people next door.</p>
+    </div>
+
+    <div class="mp-map">
+      <svg viewBox="0 0 400 300" class="mp-svg" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="400" height="300" fill="#EEF2FF"/>
+        <path d="M50 100 L120 80 L130 130 L60 150 Z" fill="#A78BFA" opacity="0.7"/>
+        <path d="M120 80 L200 90 L210 140 L130 130 Z" fill="#7C3AED" opacity="0.85"/>
+        <path d="M200 90 L280 100 L290 150 L210 140 Z" fill="#A78BFA" opacity="0.7"/>
+        <path d="M280 100 L360 110 L370 160 L290 150 Z" fill="#C4B5FD" opacity="0.7"/>
+        <path d="M60 150 L130 130 L140 200 L70 220 Z" fill="#10B981" opacity="0.75"/>
+        <path d="M130 130 L210 140 L220 210 L140 200 Z" fill="#34D399" opacity="0.7"/>
+        <path d="M210 140 L290 150 L300 220 L220 210 Z" fill="#10B981" opacity="0.75"/>
+        <path d="M290 150 L370 160 L380 230 L300 220 Z" fill="#A7F3D0" opacity="0.7"/>
+        <path d="M70 220 L140 200 L150 270 L80 285 Z" fill="#F59E0B" opacity="0.7"/>
+        <path d="M140 200 L220 210 L230 280 L150 270 Z" fill="#FBBF24" opacity="0.75"/>
+        <path d="M220 210 L300 220 L310 285 L230 280 Z" fill="#F59E0B" opacity="0.7"/>
+
+        <circle cx="165" cy="115" r="14" fill="#1A1A1A"/>
+        <text x="165" y="120" text-anchor="middle" font-family="Inter" font-size="12" fill="#fff" font-weight="700">7</text>
+        <circle cx="250" cy="180" r="12" fill="#1A1A1A"/>
+        <text x="250" y="184" text-anchor="middle" font-family="Inter" font-size="11" fill="#fff" font-weight="700">4</text>
+        <circle cx="100" cy="180" r="10" fill="#1A1A1A"/>
+        <text x="100" y="184" text-anchor="middle" font-family="Inter" font-size="10" fill="#fff" font-weight="700">2</text>
+        <circle cx="330" cy="130" r="9" fill="#1A1A1A"/>
+        <text x="330" y="134" text-anchor="middle" font-family="Inter" font-size="10" fill="#fff" font-weight="700">3</text>
+        <circle cx="180" cy="240" r="11" fill="#FF3D7F"/>
+        <text x="180" y="244" text-anchor="middle" font-family="Inter" font-size="10" fill="#fff" font-weight="700">5</text>
+
+        <text x="160" y="80" font-family="Inter" font-size="9" font-weight="600" fill="#1A1A1A" opacity="0.7">HIGHLANDS</text>
+        <text x="240" y="80" font-family="Inter" font-size="9" font-weight="600" fill="#1A1A1A" opacity="0.7">RINO</text>
+        <text x="155" y="170" font-family="Inter" font-size="9" font-weight="600" fill="#1A1A1A" opacity="0.7">CAP HILL</text>
+        <text x="240" y="170" font-family="Inter" font-size="9" font-weight="600" fill="#1A1A1A" opacity="0.7">CHERRY CK</text>
+        <text x="150" y="260" font-family="Inter" font-size="9" font-weight="600" fill="#1A1A1A" opacity="0.7">WASH PARK</text>
+      </svg>
+      <div class="mp-legend"><span class="dot"></span> dot = events live this week · <span class="dot pink"></span> = happening tonight</div>
+    </div>
+  </section>
+
+  <section class="mp-feed">
+    <div class="mp-feed-head">
+      <h2 class="mp-h2">Happening in <span class="acc">Wash Park</span> <span class="muted">(switch neighborhood ↑)</span></h2>
+      <div class="mp-tabs"><button class="tab tab-on">Tonight</button><button class="tab">This week</button><button class="tab">Weekend</button></div>
+    </div>
+
+    <div class="mp-cards">
+      <a class="mp-card mp-card-tonight">
+        <div class="mp-card-stripe"></div>
+        <div class="mp-card-body">
+          <div class="mp-card-when">TONIGHT · 7:00 PM · 0.4 mi away</div>
+          <h3 class="mp-card-title">Backyard dumpling night</h3>
+          <p class="mp-card-host">Marisol · 9 of 12 spots claimed</p>
+          <div class="mp-card-foot"><span class="mp-tag">🥟 potluck</span><span class="mp-tag">🏡 home</span></div>
+        </div>
+      </a>
+      <a class="mp-card">
+        <div class="mp-card-stripe stripe-blue"></div>
+        <div class="mp-card-body">
+          <div class="mp-card-when">SAT 5/24 · 9:00 AM · 0.8 mi</div>
+          <h3 class="mp-card-title">Sloan's Lake trail run + breakfast</h3>
+          <p class="mp-card-host">Sarah · 6 going</p>
+          <div class="mp-card-foot"><span class="mp-tag">🏃 outdoors</span></div>
+        </div>
+      </a>
+      <a class="mp-card">
+        <div class="mp-card-stripe stripe-green"></div>
+        <div class="mp-card-body">
+          <div class="mp-card-when">SUN 5/25 · 6:00 PM · 1.2 mi</div>
+          <h3 class="mp-card-title">First-time buyer Q&A</h3>
+          <p class="mp-card-host">Jimmy · 14 going</p>
+          <div class="mp-card-foot"><span class="mp-tag">💼 informational</span></div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section class="mp-neighbors">
+    <h2 class="mp-h2">Your neighbors</h2>
+    <p class="mp-sub2">People in Wash Park with public pages — say hi, book a service, or join a group.</p>
+    <div class="mp-people">
+      <a class="mp-person"><div class="mp-avatar p-purple">👨🏽‍💼</div><div class="mp-pname">Jimmy</div><div class="mp-prole">Realtor</div></a>
+      <a class="mp-person"><div class="mp-avatar p-green">🧘🏻‍♀️</div><div class="mp-pname">Sarah</div><div class="mp-prole">Yoga & dogs</div></a>
+      <a class="mp-person"><div class="mp-avatar p-orange">👨‍🍳</div><div class="mp-pname">Marcus</div><div class="mp-prole">Pop-up chef</div></a>
+      <a class="mp-person"><div class="mp-avatar p-pink">🎨</div><div class="mp-pname">Devi</div><div class="mp-prole">Muralist</div></a>
+      <a class="mp-person mp-add"><div class="mp-avatar p-faint">+</div><div class="mp-pname">Add yours</div><div class="mp-prole">Free page</div></a>
+    </div>
+  </section>
+
+  <section class="mp-board">
+    <h2 class="mp-h2">Wash Park board</h2>
+    <div class="mp-board-rows">
+      <div class="mp-board-row"><span class="kind kind-need">NEED</span><span>Ride to DIA Fri 7am</span><span class="when">— Jenna · 2h</span></div>
+      <div class="mp-board-row"><span class="kind kind-offer">OFFER</span><span>Free moving boxes (~30)</span><span class="when">— Marcus · 5h</span></div>
+      <div class="mp-board-row"><span class="kind kind-need">NEED</span><span>Climbing partner Saturday</span><span class="when">— Devi · 1d</span></div>
+    </div>
+    <a href="#" class="mp-board-more">See all 47 posts in Wash Park →</a>
+  </section>
+</div>
+</Base>
+
+<style>
+  .mp { background: #FAFAF7; color: #1A1A1A; font-family: 'Inter', sans-serif; --acc: #7C3AED; }
+  .mp .acc { color: var(--acc); }
+  .mp a { color: inherit; text-decoration: none; }
+
+  .mp-hero { max-width: 1100px; margin: 0 auto; padding: 56px 24px 32px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 48px; align-items: center; }
+  .mp-h1 { font-family: 'Playfair Display', serif; font-size: clamp(36px, 5vw, 56px); font-weight: 800; line-height: 1.05; margin-bottom: 16px; }
+  .mp-sub { font-size: 18px; color: #555; line-height: 1.5; }
+  .mp-map { background: #fff; border-radius: 18px; padding: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+  .mp-svg { width: 100%; height: auto; border-radius: 12px; cursor: pointer; }
+  .mp-legend { font-size: 12px; color: #777; margin-top: 8px; display: flex; gap: 16px; align-items: center; }
+  .mp-legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #1A1A1A; margin-right: 4px; vertical-align: middle; }
+  .mp-legend .dot.pink { background: #FF3D7F; }
+
+  .mp-feed { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
+  .mp-feed-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .mp-h2 { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 800; }
+  .mp-h2 .muted { font-family: 'Inter', sans-serif; font-size: 13px; color: #999; font-weight: 400; margin-left: 8px; }
+  .mp-tabs { display: flex; gap: 6px; }
+  .tab { padding: 8px 14px; border-radius: 999px; border: 1px solid #E5E7EB; background: #fff; font-size: 13px; cursor: pointer; }
+  .tab-on { background: #1A1A1A; color: #fff; border-color: #1A1A1A; }
+  .mp-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .mp-card { display: flex; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.04); transition: transform .15s, box-shadow .15s; }
+  .mp-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+  .mp-card-stripe { width: 6px; background: var(--acc); flex-shrink: 0; }
+  .mp-card-stripe.stripe-blue { background: #3B82F6; }
+  .mp-card-stripe.stripe-green { background: #10B981; }
+  .mp-card-tonight { border: 2px solid #FF3D7F; }
+  .mp-card-body { padding: 16px 18px; }
+  .mp-card-when { font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 1px; color: #777; margin-bottom: 6px; }
+  .mp-card-title { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 800; line-height: 1.2; margin-bottom: 4px; }
+  .mp-card-host { font-size: 13px; color: #555; margin-bottom: 8px; }
+  .mp-card-foot { display: flex; gap: 6px; flex-wrap: wrap; }
+  .mp-tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #F3F4F6; color: #555; }
+
+  .mp-neighbors { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
+  .mp-sub2 { font-size: 14px; color: #777; margin-bottom: 16px; }
+  .mp-people { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .mp-person { background: #fff; border-radius: 14px; padding: 16px 12px; text-align: center; box-shadow: 0 1px 6px rgba(0,0,0,0.04); transition: transform .15s; }
+  .mp-person:hover { transform: translateY(-2px); }
+  .mp-avatar { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; border: 3px solid; }
+  .p-purple { border-color: #7C3AED; background: #FAF5FF; }
+  .p-green { border-color: #10B981; background: #ECFDF5; }
+  .p-orange { border-color: #F59E0B; background: #FFFBEB; }
+  .p-pink { border-color: #FF3D7F; background: #FDF2F8; }
+  .p-faint { border-color: #D1D5DB; background: #F3F4F6; color: #6B7280; font-weight: 700; font-size: 24px; }
+  .mp-pname { font-weight: 700; font-size: 14px; }
+  .mp-prole { font-size: 12px; color: #777; }
+  .mp-add { border: 2px dashed #D1D5DB; box-shadow: none; }
+
+  .mp-board { max-width: 1100px; margin: 32px auto; padding: 0 24px 56px; }
+  .mp-board-rows { background: #fff; border-radius: 14px; box-shadow: 0 1px 6px rgba(0,0,0,0.04); padding: 4px 16px; margin-top: 16px; }
+  .mp-board-row { display: grid; grid-template-columns: 70px 1fr auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid #F3F4F6; align-items: center; font-size: 14px; }
+  .mp-board-row:last-child { border-bottom: none; }
+  .kind { font-family: 'Courier New', monospace; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+  .kind-need { color: #FF3D7F; }
+  .kind-offer { color: #10B981; }
+  .when { font-size: 12px; color: #999; }
+  .mp-board-more { display: inline-block; margin-top: 16px; font-size: 14px; color: var(--acc); font-weight: 600; }
+
+  @media (max-width: 800px) {
+    .mp-hero { grid-template-columns: 1fr; gap: 24px; }
+    .mp-cards { grid-template-columns: 1fr; }
+    .mp-people { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>

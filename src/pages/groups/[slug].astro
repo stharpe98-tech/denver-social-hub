@@ -6,9 +6,9 @@ import { ensureGroupPostsSchema } from '../../lib/group-posts-schema';
 
 const db = getDB();
 const { slug } = Astro.params;
-let user: any = null;
-const cookie = Astro.cookies.get('dsn_user')?.value;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+// Accounts are offline — viewers are always anonymous on group pages.
+const user: any = null;
+void user;
 
 let group: any = null;
 let members: any[] = [];
@@ -114,7 +114,7 @@ function timeAgo(iso: string): string {
       {group.description && <p class="g-desc">{group.description}</p>}
     </div>
     <div class="g-hero-actions">
-      {!user && <a href={`/login?next=/groups/${slug}`} class="btn-cta">Sign in</a>}
+      {/* group join is offline */}
       {canJoinDirect && (
         <button class="btn-cta" id="join-btn" data-group-id={group.id}>Join group</button>
       )}

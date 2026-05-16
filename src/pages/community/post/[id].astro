@@ -1,0 +1,192 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { getDB } from '../../../lib/db';
+import { ensureCommunitySchema, BOARD_KINDS } from '../../../lib/community-schema';
+import { getNeighborhood } from '../../../lib/neighborhoods';
+
+const rawId = (Astro.params.id || '').toString();
+const id = parseInt(rawId, 10);
+if (!Number.isFinite(id) || id <= 0) return Astro.redirect('/community');
+
+const db = getDB();
+if (!db) return new Response('DB unavailable', { status: 500 });
+await ensureCommunitySchema(db);
+
+const f: any = await db.prepare(
+  `SELECT id, member_email, member_name, kind, kind_extended, title, body,
+          neighborhood, contact_email, contact_phone, status, created_at
+   FROM favors WHERE id = ?`
+).bind(id).first();
+
+if (!f || f.status === 'closed') return new Response('Not found', { status: 404 });
+
+const kindKey = f.kind_extended || f.kind || 'offer';
+const kindInfo = BOARD_KINDS.find(k => k.key === kindKey) || BOARD_KINDS[1];
+const nbh = getNeighborhood(f.neighborhood);
+const nbhLabel = nbh?.label || f.neighborhood || 'Denver';
+const backUrl = f.neighborhood ? `/community?nbh=${encodeURIComponent(f.neighborhood)}` : '/community';
+
+function timeAgo(iso: string): string {
+  if (!iso) return '';
+  const ms = Date.now() - new Date((iso || '').includes('Z') ? iso : iso + 'Z').getTime();
+  if (Number.isNaN(ms) || ms < 0) return '';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return d < 30 ? `${d}d ago` : new Date(iso).toLocaleDateString();
+}
+
+const firstName = (f.member_name || 'them').split(' ')[0];
+const hasContact = !!(f.contact_email || f.contact_phone);
+---
+<Base title={f.title} description={(f.body || '').slice(0, 160)}>
+  <section class="board-bg">
+    <article class="flyer-detail">
+      <span class="flyer-pin" aria-hidden="true"></span>
+
+      <a href={backUrl} class="back-link">← back to {nbhLabel} board</a>
+
+      <div class="d-nbh">📍 {nbhLabel} · {timeAgo(f.created_at)}</div>
+      <div class="d-kind">
+        <span class={`dot dot-${kindInfo.dot}`}></span>{kindInfo.label}
+      </div>
+
+      <h1 class="d-title">{f.title}</h1>
+      {f.body && <p class="d-body">{f.body}</p>}
+
+      <div class="d-author">
+        <div class="d-avatar">{firstName.charAt(0).toUpperCase() || '👤'}</div>
+        <div class="d-author-info">
+          <div class="d-author-name">{f.member_name || 'A neighbor'}</div>
+          <div class="d-author-meta">{nbhLabel}</div>
+        </div>
+      </div>
+
+      {hasContact ? (
+        <>
+          <button id="reveal-btn" class="d-cta" type="button">📬 Get in touch with {firstName}</button>
+          <div class="d-cta-hint" id="reveal-hint">
+            Email & phone show after you click — keeps contacts off Google
+          </div>
+          <div class="d-reveal" id="reveal" hidden>
+            <div class="d-reveal-label">Reach {firstName}</div>
+            {f.contact_email && (
+              <a href={`mailto:${f.contact_email}?subject=${encodeURIComponent('Re: ' + f.title)}`} class="d-reveal-row">
+                <span>📧</span> {f.contact_email}
+              </a>
+            )}
+            {f.contact_phone && (
+              <a href={`sms:${f.contact_phone.replace(/[^+\d]/g, '')}`} class="d-reveal-row">
+                <span>📱</span> {f.contact_phone}
+              </a>
+            )}
+            <div class="d-reveal-tip">Tip: mention "{f.title}" so {firstName} knows where you saw it.</div>
+          </div>
+        </>
+      ) : (
+        <div class="d-no-contact">No contact info posted. Try again later or check the board.</div>
+      )}
+
+      <footer class="d-foot">
+        <a href="#" id="share-btn">🔗 Share this flyer</a>
+        <a href="#" id="report-btn">🚩 Report</a>
+      </footer>
+    </article>
+  </section>
+
+  <script is:inline define:vars={{ favorId: f.id }}>
+    const btn = document.getElementById('reveal-btn');
+    const reveal = document.getElementById('reveal');
+    const hint = document.getElementById('reveal-hint');
+    btn?.addEventListener('click', () => {
+      if (!reveal) return;
+      reveal.hidden = false;
+      btn.style.display = 'none';
+      if (hint) hint.style.display = 'none';
+    });
+    document.getElementById('share-btn')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const url = window.location.href;
+      if (navigator.share) {
+        try { await navigator.share({ url, title: document.title }); } catch {}
+      } else {
+        try { await navigator.clipboard.writeText(url); alert('Link copied'); } catch {}
+      }
+    });
+    document.getElementById('report-btn')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const reason = prompt('Why are you reporting this flyer? (harassment / spam / inaccurate / inappropriate / other)');
+      if (!reason) return;
+      try {
+        const res = await fetch('/api/report', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', target_kind: 'comment', target_id: String(favorId), reason: reason.toLowerCase().trim() }),
+        });
+        const d = await res.json().catch(() => ({}));
+        alert(d?.ok ? 'Thanks — we\'ll take a look.' : 'Report failed.');
+      } catch { alert('Report failed.'); }
+    });
+  </script>
+
+  <style>
+    .board-bg {
+      background: #B89968;
+      background-image:
+        radial-gradient(circle at 20% 30%, rgba(0,0,0,0.04) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(0,0,0,0.04) 0%, transparent 50%),
+        repeating-linear-gradient(105deg, transparent 0, transparent 3px, rgba(0,0,0,0.025) 3px, rgba(0,0,0,0.025) 4px);
+      padding: 48px 16px 72px;
+      display: flex; justify-content: center;
+      min-height: 70vh;
+    }
+    .flyer-detail {
+      background: #FFFEFA; width: 100%; max-width: 540px;
+      border-radius: 4px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2);
+      position: relative; padding: 32px 28px 28px;
+    }
+    .flyer-pin {
+      position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+      width: 18px; height: 18px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ef4444, #991b1b);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset -1px -1px 2px rgba(0,0,0,0.3);
+    }
+    .back-link { font-size: 12px; color: #888; font-weight: 600; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+    .back-link:hover { color: #1A1A1A; }
+    .d-nbh { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #C9A55D; margin-bottom: 6px; }
+    .d-kind { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #888; margin-bottom: 12px; }
+    .d-kind .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+    .dot-need { background: #DC2626; } .dot-offer { background: #047857; }
+    .dot-event { background: #7C3AED; } .dot-announce { background: #F59E0B; }
+    .d-title { font-family: 'Playfair Display', Georgia, serif; font-size: 32px; font-weight: 800; line-height: 1.15; color: #1A1A1A; margin-bottom: 12px; }
+    .d-body { font-size: 15px; color: #444; line-height: 1.6; margin-bottom: 24px; white-space: pre-wrap; }
+    .d-author { background: #FAF8F4; border: 1px solid #E8E2D5; border-radius: 8px; padding: 16px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px; }
+    .d-avatar { width: 44px; height: 44px; border-radius: 50%; background: #1A1A1A; color: #FFD93D; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; flex-shrink: 0; }
+    .d-author-name { font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-weight: 700; color: #1A1A1A; line-height: 1; }
+    .d-author-meta { font-size: 12px; color: #888; margin-top: 2px; }
+    .d-cta {
+      width: 100%; padding: 16px; background: #1A1A1A; color: #FFD93D;
+      border: none; border-radius: 4px; font-weight: 700; font-size: 15px;
+      letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+      font-family: inherit; transition: background 0.15s;
+    }
+    .d-cta:hover { background: #000; }
+    .d-cta:active { transform: translateY(1px); }
+    .d-cta-hint { font-size: 11px; color: #888; text-align: center; margin-top: 10px; }
+    .d-reveal { background: #FFFAEB; border: 1.5px solid #FFD93D; border-radius: 8px; padding: 18px 20px; margin-top: 6px; }
+    .d-reveal-label { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #92400E; margin-bottom: 10px; }
+    .d-reveal-row { display: flex; align-items: center; gap: 10px; color: #1A1A1A; text-decoration: none; font-weight: 600; font-size: 15px; padding: 10px 0; border-bottom: 1px solid #FFF8E7; }
+    .d-reveal-row:last-of-type { border-bottom: none; }
+    .d-reveal-row:hover { color: #92400E; }
+    .d-reveal-row span { font-size: 18px; }
+    .d-reveal-tip { font-size: 11px; color: #888; margin-top: 6px; font-style: italic; }
+    .d-no-contact { padding: 16px; background: #FAF8F4; border-radius: 8px; color: #888; text-align: center; font-size: 13px; }
+    .d-foot { margin-top: 24px; padding-top: 16px; border-top: 1px dashed #E8E2D5; display: flex; justify-content: space-between; font-size: 11px; }
+    .d-foot a { color: #888; text-decoration: none; }
+    .d-foot a:hover { color: #1A1A1A; }
+  </style>
+</Base>

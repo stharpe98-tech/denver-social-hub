@@ -2,12 +2,9 @@
 //
 // While the site is in pre-launch mode, every visitor sees /coming-soon
 // EXCEPT:
-//   - logged-in organizers (dsn_org cookie present + parses)
-//   - logged-in members with role=admin (dsn_user cookie present)
-//   - requests for the login pages, APIs, and static assets (so admins
-//     can actually sign in to bypass the gate)
-//   - requests with ?preview=<key> matching config.preview_key (lets
-//     you share a private preview link with a few people)
+//   - logged-in admins (dsn_admin cookie present)
+//   - requests for the login pages, APIs, and static assets
+//   - requests with ?preview=<key> matching config.preview_key
 //
 // To turn the gate off, set config.coming_soon_mode='off' from the
 // admin dashboard. While 'on' (default), the rewrite is active.
@@ -27,81 +24,28 @@ const ALWAYS_ALLOWED = [
 ];
 
 function pathAlwaysAllowed(p: string): boolean {
-  if (p === '/login') return true; // member login form
   for (const prefix of ALWAYS_ALLOWED) {
     if (p === prefix || p.startsWith(prefix)) return true;
   }
   return false;
 }
 
-function looksLikeOrg(cookieVal: string | undefined): boolean {
+function looksLikeAdmin(cookieVal: string | undefined): boolean {
   if (!cookieVal) return false;
-  try {
-    const parsed = JSON.parse(decodeURIComponent(cookieVal));
-    return typeof parsed?.id === 'number' || typeof parsed?.id === 'string';
-  } catch { return false; }
-}
-
-function looksLikeMember(cookieVal: string | undefined): boolean {
-  if (!cookieVal) return false;
-  try {
-    const parsed = JSON.parse(decodeURIComponent(cookieVal));
-    return typeof parsed?.id !== 'undefined' || typeof parsed?.email === 'string';
-  } catch { return false; }
-}
-
-function looksLikeAdminMember(cookieVal: string | undefined): boolean {
-  if (!cookieVal) return false;
-  try {
-    const parsed = JSON.parse(decodeURIComponent(cookieVal));
-    return parsed?.role === 'admin' || parsed?.email === 'stharpe98@gmail.com';
-  } catch { return false; }
+  // Three dot-separated parts: email, expires, hmac. Real verification
+  // happens server-side in isAdmin(); this is just the gate signal.
+  return cookieVal.split('.').length >= 3;
 }
 
 export const onRequest = defineMiddleware(async (ctx, next) => {
   const url = new URL(ctx.request.url);
   const path = url.pathname;
 
-  // ── Sliding session: every signed-in page load extends the cookie
-  // back out to 30 days so daily visitors never get logged out. Skip
-  // for /_astro/, API endpoints, and static assets to avoid adding
-  // Set-Cookie headers to dozens of subresource fetches per page.
-  const sessionPathsSkipped = path.startsWith('/_astro/')
-    || path.startsWith('/api/')
-    || path === '/favicon.svg'
-    || path === '/logo.svg'
-    || path === '/logo-light.svg';
-  if (!sessionPathsSkipped) {
-    const userCookie = ctx.cookies.get('dsn_user')?.value;
-    if (userCookie && looksLikeMember(userCookie)) {
-      ctx.cookies.set('dsn_user', userCookie, {
-        path: '/',
-        maxAge: 60 * 60 * 24 * 30, // 30 days
-        sameSite: 'lax',
-      });
-    }
-    const orgCookie = ctx.cookies.get('dsn_org')?.value;
-    if (orgCookie && looksLikeOrg(orgCookie)) {
-      ctx.cookies.set('dsn_org', orgCookie, {
-        path: '/',
-        maxAge: 60 * 60 * 24 * 30,
-        sameSite: 'lax',
-        httpOnly: true,
-      });
-    }
-  }
-
   if (pathAlwaysAllowed(path)) return next();
 
-  // Any signed-in user (organizer or member) skips the gate. The point
-  // of the coming-soon splash is to gate the *public*, not the people
-  // who already have accounts.
-  const orgCookie = ctx.cookies.get('dsn_org')?.value;
-  if (looksLikeOrg(orgCookie)) return next();
-  const userCookie = ctx.cookies.get('dsn_user')?.value;
-  if (looksLikeMember(userCookie)) return next();
+  const adminCookie = ctx.cookies.get('dsn_admin')?.value;
+  if (looksLikeAdmin(adminCookie)) return next();
 
-  // Check the config flag. If unreachable or 'off', let the request through.
   const db = (ctx.locals as any)?.runtime?.env?.DB as D1Database | undefined;
   if (!db) return next();
   try {
@@ -109,8 +53,6 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
     const mode = (row?.value ?? 'on').toString().toLowerCase();
     if (mode === 'off') return next();
 
-    // Preview-key bypass: ?preview=<key> sets a 30-day cookie so subsequent
-    // visits without the query param still bypass the gate.
     const previewParam = url.searchParams.get('preview');
     const previewCookie = ctx.cookies.get('dsn_preview')?.value;
     if (previewParam || previewCookie) {

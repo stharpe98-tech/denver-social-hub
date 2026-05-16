@@ -21,15 +21,15 @@ export async function GET({ url }: APIContext) {
   }
 }
 
-// POST — host posts an update to their event
-export async function POST({ request, cookies }: APIContext) {
-  const cookie = cookies.get("dsn_user")?.value;
-  let user: any = null;
-  if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+// POST — admin posts an update to an event. (With member accounts
+// gone, only the email-code admin can post updates.)
+import { isAdmin as isAdminCookie, getAdminEmail } from '../../lib/admin-auth';
 
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'You must be logged in' }), { status: 401 });
+export async function POST({ request, cookies }: APIContext) {
+  if (!(await isAdminCookie(cookies))) {
+    return new Response(JSON.stringify({ error: 'admin only' }), { status: 401 });
   }
+  const adminEmail = (await getAdminEmail(cookies)) || 'admin';
 
   const db = getDB();
   if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
@@ -42,25 +42,16 @@ export async function POST({ request, cookies }: APIContext) {
       return new Response(JSON.stringify({ error: 'Event ID and message are required' }), { status: 400 });
     }
 
-    // Verify this user is the host (or admin)
-    const event: any = await db.prepare("SELECT host_id, submitted_by FROM events WHERE id = ?").bind(event_id).first();
+    const event: any = await db.prepare("SELECT host_id FROM events WHERE id = ?").bind(event_id).first();
     if (!event) {
       return new Response(JSON.stringify({ error: 'Event not found' }), { status: 404 });
     }
 
-    const isHost = event.host_id && event.host_id === user.id;
-    const isAdmin = user.role === 'admin';
-
-    if (!isHost && !isAdmin) {
-      return new Response(JSON.stringify({ error: 'Only the event host can post updates' }), { status: 403 });
-    }
-
-    // Sanitize message (strip HTML, limit length)
     const cleanMessage = message.trim().slice(0, 500);
 
     await db.prepare(
       "INSERT INTO event_updates (event_id, author_id, author_name, message) VALUES (?, ?, ?, ?)"
-    ).bind(event_id, user.id, user.name || 'Host', cleanMessage).run();
+    ).bind(event_id, null, adminEmail.split('@')[0] || 'Host', cleanMessage).run();
 
     return new Response(JSON.stringify({ ok: true }));
   } catch (e: any) {

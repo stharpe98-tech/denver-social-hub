@@ -3,10 +3,9 @@
 // get sent — we just hit lightweight info/verify endpoints).
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
+import { isAdmin } from '../../../lib/admin-auth';
 
 export const prerender = false;
-
-const SUPER_ADMIN_EMAIL = 'stharpe98@gmail.com';
 
 function ok(d: any = {}) { return new Response(JSON.stringify({ ok: true, ...d }), { headers: { 'Content-Type': 'application/json' } }); }
 function bad(error: string, status = 400) { return new Response(JSON.stringify({ ok: false, error }), { status, headers: { 'Content-Type': 'application/json' } }); }
@@ -19,12 +18,7 @@ async function readCfg(db: D1Database, key: string): Promise<string> {
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const cookie = cookies.get('dsn_user')?.value;
-  let user: any = null;
-  try { if (cookie) user = JSON.parse(cookie); } catch {}
-  const isSuperAdmin = (user?.email || '').toLowerCase() === SUPER_ADMIN_EMAIL;
-  const isAdmin = isSuperAdmin || user?.role === 'admin';
-  if (!isAdmin) return bad('not_authorized', 403);
+  if (!(await isAdmin(cookies))) return bad('not_authorized', 403);
 
   const db = getDB();
   if (!db) return bad('db', 500);

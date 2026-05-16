@@ -1,0 +1,106 @@
+---
+import Base from '../../layouts/Base.astro';
+import { requireApprovedOrg } from '../../lib/admin-auth';
+import { getDB } from '../../lib/db';
+
+const gate = await requireApprovedOrg(Astro);
+if (gate instanceof Response) return gate;
+
+const db = getDB();
+let rows: any[] = [];
+if (db) {
+  const r = await db.prepare(
+    `SELECT p.slug, p.display_name, p.email, p.status, p.created_at,
+       (SELECT COUNT(*) FROM profile_reports r WHERE r.slug = p.slug) AS report_count
+     FROM profiles p
+     ORDER BY report_count DESC, p.created_at DESC
+     LIMIT 200`
+  ).all();
+  rows = (r.results || []) as any[];
+}
+---
+<Base title="Personal pages — Admin" description="Moderate /u/ personal pages.">
+  <div class="wrap">
+    <div class="hd">
+      <h1>Personal pages</h1>
+      <p class="sub">Every claimed page, its reports, and a one-click take-offline.</p>
+    </div>
+
+    <div class="mod-table">
+      <div class="mod-row mod-head">
+        <div>Slug</div><div>Name</div><div>Email</div><div>Reports</div><div>Action</div>
+      </div>
+      {rows.length === 0 && (
+        <div class="mod-row"><div colspan="5" style="grid-column: 1 / -1; text-align: center; color: var(--text-faint); padding: 24px;">No pages claimed yet.</div></div>
+      )}
+      {rows.map((r: any) => (
+        <div class:list={["mod-row", { "mod-flagged": (r.report_count || 0) > 0, "mod-offline": r.status === 'offline' }]} data-slug={r.slug}>
+          <div><a href={`/u/${r.slug}`} target="_blank">/u/{r.slug}</a></div>
+          <div>{r.display_name || '(no name)'}</div>
+          <div class="cell-email">{r.email}</div>
+          <div>{(r.report_count || 0) > 0 ? `${r.report_count} 🚩` : '0'}</div>
+          <div class="cell-actions">
+            <a class="mini" href={`/u/${r.slug}`} target="_blank">View</a>
+            {r.status === 'live' ? (
+              <button class="mini mini-danger" data-action="toggle" data-status="offline">Take offline</button>
+            ) : (
+              <button class="mini" data-action="toggle" data-status="live">Bring back</button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <p class="back"><a href="/admin/dashboard">← Back to dashboard</a></p>
+  </div>
+
+  <script is:inline>
+    document.querySelectorAll('[data-action=toggle]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var row = btn.closest('.mod-row');
+        var slug = row.getAttribute('data-slug');
+        var status = btn.getAttribute('data-status');
+        if (status === 'offline' && !confirm('Take /u/' + slug + ' offline?')) return;
+        btn.disabled = true; var orig = btn.textContent; btn.textContent = '…';
+        try {
+          var r = await fetch('/api/admin/profile-toggle', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug, status: status })
+          });
+          var d = await r.json();
+          if (d.ok) location.reload(); else { alert(d.error || 'Failed'); btn.disabled = false; btn.textContent = orig; }
+        } catch (e) { alert('Network error'); btn.disabled = false; btn.textContent = orig; }
+      });
+    });
+  </script>
+
+  <style>
+    .wrap { max-width: 980px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
+    .hd { margin-bottom: var(--space-4); }
+    .hd h1 { font-family: var(--font-display, sans-serif); font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+    .sub { font-size: 14px; color: var(--text-sec); }
+    .mod-table { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: 13px; background: var(--bg); }
+    .mod-row { display: grid; grid-template-columns: 130px 1fr 1.3fr 90px 220px; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); align-items: center; }
+    .mod-row:last-child { border-bottom: none; }
+    .mod-row a { color: var(--accent, #7C3AED); text-decoration: none; }
+    .mod-row a:hover { text-decoration: underline; }
+    .mod-head { background: var(--surface, #F8F9FB); font-weight: 700; font-size: 11px; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.5px; }
+    .mod-flagged { background: #FEF2F2; }
+    .mod-offline { opacity: 0.6; }
+    .cell-email { color: var(--text-sec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cell-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+    .mini { padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); font-size: 11px; cursor: pointer; text-decoration: none; color: var(--text); display: inline-block; font-family: inherit; }
+    .mini:hover { background: var(--surface, #F8F9FB); }
+    .mini-danger { color: #DC2626; border-color: #FECACA; }
+    .mini-danger:hover { background: #FEF2F2; }
+    .back { margin-top: var(--space-4); font-size: 13px; }
+    .back a { color: var(--text-sec); text-decoration: none; }
+    .back a:hover { color: var(--text); }
+
+    @media (max-width: 700px) {
+      .mod-row { grid-template-columns: 1fr 1fr; }
+      .mod-row > div:nth-child(3), .mod-row > div:nth-child(5) { display: none; }
+      .mod-row > .cell-actions { display: flex; grid-column: 1 / -1; }
+    }
+  </style>
+</Base>

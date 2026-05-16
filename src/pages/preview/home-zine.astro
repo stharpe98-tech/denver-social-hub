@@ -1,0 +1,174 @@
+---
+import Base from '../../layouts/Base.astro';
+import PreviewSwitcher from '../../components/PreviewSwitcher.astro';
+---
+<Base title="Denver Social — zine direction">
+<PreviewSwitcher current="home-zine" />
+<div class="zine">
+  <header class="z-hero">
+    <div class="z-tag">↘ ISSUE 47 · MAY 2026</div>
+    <h1 class="z-h1">
+      <span class="z-h1-line z-h1-line-1">DENVER</span>
+      <span class="z-h1-line z-h1-line-2"><em>is hosting</em></span>
+      <span class="z-h1-line z-h1-line-3">YOU.</span>
+    </h1>
+    <p class="z-deck">A real-people events board for the Front Range. Potlucks, dinners, hikes, weird ideas. <strong>No flakes. No algorithms. No ads.</strong></p>
+    <div class="z-cta-row">
+      <a href="#" class="z-cta">▶ See what's on this week</a>
+      <a href="#" class="z-cta-ghost">Host something →</a>
+    </div>
+  </header>
+
+  <section class="z-rail">
+    <div class="z-rail-item"><span class="z-rail-num">47</span><span class="z-rail-label">events live</span></div>
+    <div class="z-rail-divider"></div>
+    <div class="z-rail-item"><span class="z-rail-num">1,238</span><span class="z-rail-label">neighbors</span></div>
+    <div class="z-rail-divider"></div>
+    <div class="z-rail-item"><span class="z-rail-num">12</span><span class="z-rail-label">neighborhoods</span></div>
+    <div class="z-rail-divider"></div>
+    <div class="z-rail-item"><span class="z-rail-num">$0</span><span class="z-rail-label">to join</span></div>
+  </section>
+
+  <section class="z-feat">
+    <div class="z-feat-label">THIS WEEK'S COVER STORY</div>
+    <div class="z-feat-card">
+      <div class="z-feat-img">🥟</div>
+      <div class="z-feat-body">
+        <div class="z-feat-when">WED · MAY 21 · 7PM</div>
+        <h2 class="z-feat-title">Dumpling Night at Marisol's place</h2>
+        <p class="z-feat-desc">Bring a filling, leave with new friends. Wash Park backyard. 12 spots. Already 9 in.</p>
+        <a href="#" class="z-feat-cta">Claim a spot →</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="z-grid-wrap">
+    <h2 class="z-h2">What's on <span class="z-h2-acc">/</span> Top picks</h2>
+    <div class="z-grid">
+      <a class="z-card z-card-pink">
+        <div class="z-card-when">FRI 5/16 · 8PM</div>
+        <h3 class="z-card-title">Bowling at Bowlero Cherry Creek</h3>
+        <p class="z-card-host">hosted by Marcus</p>
+      </a>
+      <a class="z-card z-card-yellow">
+        <div class="z-card-when">SAT 5/24 · 9AM</div>
+        <h3 class="z-card-title">Sloan's trail run + breakfast</h3>
+        <p class="z-card-host">hosted by Sarah</p>
+      </a>
+      <a class="z-card z-card-blue">
+        <div class="z-card-when">SUN 5/25 · 6PM</div>
+        <h3 class="z-card-title">First-time buyer Q&A</h3>
+        <p class="z-card-host">hosted by Jimmy</p>
+      </a>
+      <a class="z-card z-card-green">
+        <div class="z-card-when">THU 5/29 · 7PM</div>
+        <h3 class="z-card-title">Reading night @ Stem Ciders</h3>
+        <p class="z-card-host">hosted by the book club</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="z-manifesto">
+    <div class="z-manifesto-mark">¶</div>
+    <h2 class="z-manifesto-h">The deal.</h2>
+    <p class="z-manifesto-p"><strong>We don't sell ads.</strong> We don't sell your data. We don't push notifications at you. We don't gamify your friendships.</p>
+    <p class="z-manifesto-p"><strong>What we do:</strong> Help you find 6 people to eat dinner with, run a trail with, or argue about books with. That's it. That's the site.</p>
+    <p class="z-manifesto-sign">— Seth, Denver, 2026</p>
+  </section>
+
+  <section class="z-board">
+    <div class="z-board-head">
+      <h2 class="z-h2">Community Board <span class="z-h2-acc">/</span> needs &amp; offers</h2>
+      <a href="#" class="z-board-all">all →</a>
+    </div>
+    <div class="z-board-rows">
+      <div class="z-board-row"><span class="z-board-kind z-kind-need">NEED</span><span class="z-board-title">Ride to DIA Fri 7am · Cap Hill</span><span class="z-board-when">2h</span></div>
+      <div class="z-board-row"><span class="z-board-kind z-kind-offer">OFFER</span><span class="z-board-title">Free moving boxes · Sunnyside</span><span class="z-board-when">5h</span></div>
+      <div class="z-board-row"><span class="z-board-kind z-kind-need">NEED</span><span class="z-board-title">Climbing partner Saturday 5.10</span><span class="z-board-when">1d</span></div>
+      <div class="z-board-row"><span class="z-board-kind z-kind-offer">OFFER</span><span class="z-board-title">Dog-sitting May 23–26 · Berkeley</span><span class="z-board-when">2d</span></div>
+    </div>
+  </section>
+
+  <footer class="z-foot">
+    <div class="z-foot-mark">DSN</div>
+    <div class="z-foot-line">Made in Denver. Read it. Show up.</div>
+  </footer>
+</div>
+</Base>
+
+<style>
+  .zine { --pink: #FF3D7F; --yellow: #FFD93D; --blue: #3B82F6; --green: #10B981; --ink: #1A1A1A; --paper: #FAF7F0; background: var(--paper); color: var(--ink); font-family: 'Inter', sans-serif; }
+  .zine a { color: inherit; }
+
+  .z-hero { padding: 64px 24px 32px; max-width: 1000px; margin: 0 auto; }
+  .z-tag { font-family: 'Courier New', monospace; font-size: 12px; letter-spacing: 2px; color: var(--ink); opacity: 0.6; margin-bottom: 32px; }
+  .z-h1 { font-family: 'Playfair Display', Georgia, serif; line-height: 0.9; margin-bottom: 24px; }
+  .z-h1-line { display: block; font-weight: 900; }
+  .z-h1-line-1 { font-size: clamp(56px, 11vw, 130px); letter-spacing: -0.04em; }
+  .z-h1-line-2 { font-size: clamp(36px, 7vw, 78px); font-style: italic; font-weight: 400; color: var(--pink); padding-left: 8%; }
+  .z-h1-line-3 { font-size: clamp(56px, 11vw, 130px); letter-spacing: -0.04em; padding-left: 16%; }
+  .z-deck { font-size: 20px; line-height: 1.4; max-width: 540px; margin-bottom: 32px; }
+  .z-cta-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .z-cta { display: inline-block; background: var(--ink); color: var(--paper); padding: 14px 28px; border-radius: 4px; text-decoration: none; font-weight: 700; font-size: 15px; transform: rotate(-1deg); transition: transform .15s; }
+  .z-cta:hover { transform: rotate(0) translateY(-2px); }
+  .z-cta-ghost { padding: 14px 0; text-decoration: underline; font-weight: 600; }
+
+  .z-rail { max-width: 1000px; margin: 0 auto; padding: 0 24px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); padding-top: 16px; padding-bottom: 16px; }
+  .z-rail-item { display: flex; flex-direction: column; }
+  .z-rail-num { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 900; line-height: 1; }
+  .z-rail-label { font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 1.5px; opacity: 0.7; text-transform: uppercase; margin-top: 4px; }
+  .z-rail-divider { width: 1px; height: 30px; background: var(--ink); opacity: 0.2; }
+
+  .z-feat { max-width: 1000px; margin: 64px auto; padding: 0 24px; }
+  .z-feat-label { font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 2px; opacity: 0.6; margin-bottom: 12px; }
+  .z-feat-card { display: grid; grid-template-columns: 280px 1fr; gap: 32px; background: var(--ink); color: var(--paper); border-radius: 8px; padding: 32px; transform: rotate(-0.5deg); }
+  .z-feat-img { font-size: 140px; line-height: 1; text-align: center; align-self: center; background: var(--yellow); border-radius: 8px; padding: 40px 20px; }
+  .z-feat-when { font-family: 'Courier New', monospace; font-size: 12px; letter-spacing: 2px; color: var(--yellow); margin-bottom: 12px; }
+  .z-feat-title { font-family: 'Playfair Display', serif; font-size: 40px; font-weight: 900; line-height: 1.05; margin-bottom: 12px; }
+  .z-feat-desc { font-size: 16px; line-height: 1.5; margin-bottom: 20px; opacity: 0.9; }
+  .z-feat-cta { background: var(--pink); color: var(--ink); padding: 12px 24px; border-radius: 4px; font-weight: 700; text-decoration: none; display: inline-block; font-size: 15px; }
+
+  .z-grid-wrap { max-width: 1000px; margin: 64px auto; padding: 0 24px; }
+  .z-h2 { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 900; margin-bottom: 24px; }
+  .z-h2-acc { color: var(--pink); }
+  .z-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .z-card { display: block; padding: 24px; border-radius: 8px; text-decoration: none; transition: transform .15s; border: 2px solid var(--ink); }
+  .z-card:nth-child(odd) { transform: rotate(-0.5deg); }
+  .z-card:nth-child(even) { transform: rotate(0.5deg); }
+  .z-card:hover { transform: rotate(0) translateY(-3px); }
+  .z-card-pink { background: var(--pink); color: #fff; }
+  .z-card-yellow { background: var(--yellow); }
+  .z-card-blue { background: var(--blue); color: #fff; }
+  .z-card-green { background: var(--green); color: #fff; }
+  .z-card-when { font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 1.5px; opacity: 0.85; margin-bottom: 8px; }
+  .z-card-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 900; line-height: 1.15; margin-bottom: 6px; }
+  .z-card-host { font-size: 13px; opacity: 0.85; }
+
+  .z-manifesto { background: var(--ink); color: var(--paper); padding: 64px 24px; margin: 64px 0; }
+  .z-manifesto-mark { font-family: 'Playfair Display', serif; font-size: 80px; font-weight: 900; color: var(--pink); line-height: 1; max-width: 1000px; margin: 0 auto 16px; padding: 0 24px; }
+  .z-manifesto-h { font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 900; max-width: 1000px; margin: 0 auto 24px; padding: 0 24px; }
+  .z-manifesto-p { font-size: 20px; line-height: 1.5; max-width: 700px; margin: 0 auto 16px; padding: 0 24px; }
+  .z-manifesto-sign { font-family: 'Courier New', monospace; font-size: 13px; opacity: 0.6; max-width: 1000px; margin: 24px auto 0; padding: 0 24px; }
+
+  .z-board { max-width: 1000px; margin: 64px auto; padding: 0 24px 32px; }
+  .z-board-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: 16px; }
+  .z-board-all { font-family: 'Courier New', monospace; font-size: 13px; text-decoration: underline; }
+  .z-board-rows { border-top: 2px solid var(--ink); }
+  .z-board-row { display: grid; grid-template-columns: 80px 1fr 60px; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--ink); align-items: center; }
+  .z-board-kind { font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+  .z-kind-need { color: var(--pink); }
+  .z-kind-offer { color: var(--green); }
+  .z-board-title { font-weight: 600; }
+  .z-board-when { font-family: 'Courier New', monospace; font-size: 12px; opacity: 0.6; text-align: right; }
+
+  .z-foot { background: var(--ink); color: var(--paper); padding: 48px 24px; text-align: center; }
+  .z-foot-mark { font-family: 'Playfair Display', serif; font-size: 56px; font-weight: 900; color: var(--pink); margin-bottom: 8px; }
+  .z-foot-line { font-family: 'Courier New', monospace; font-size: 13px; letter-spacing: 2px; opacity: 0.7; }
+
+  @media (max-width: 700px) {
+    .z-feat-card { grid-template-columns: 1fr; }
+    .z-grid { grid-template-columns: 1fr; }
+    .z-rail { flex-wrap: wrap; gap: 16px; }
+    .z-rail-divider { display: none; }
+  }
+</style>

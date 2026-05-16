@@ -1,0 +1,344 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { getDB } from '../../../lib/db';
+import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
+
+const rawSlug = Astro.params.slug || '';
+const v = validateSlug(rawSlug);
+if (!v.ok) return Astro.redirect('/404');
+const slug = v.slug;
+
+const db = getDB();
+if (!db) return new Response('DB unavailable', { status: 500 });
+
+const profile = await db.prepare(
+  `SELECT slug, display_name, email, headline, bio, photo_emoji, accent_color,
+          offers_json, links_json, contact_email, contact_phone, status
+   FROM profiles WHERE slug = ?`
+).bind(slug).first() as any;
+
+if (!profile) return new Response('Not found', { status: 404 });
+
+const authed = await canEditProfile(Astro.cookies, slug);
+
+let offers: Array<{ icon?: string; label: string }> = [];
+let links: Array<{ icon?: string; label: string; url: string }> = [];
+try { const a = JSON.parse(profile.offers_json || '[]'); if (Array.isArray(a)) offers = a; } catch {}
+try { const a = JSON.parse(profile.links_json || '[]'); if (Array.isArray(a)) links = a; } catch {}
+
+// Masked email hint for the re-auth screen
+const e = profile.email || '';
+const atIdx = e.indexOf('@');
+const maskedEmail = atIdx > 1 ? e[0] + '***' + e.slice(atIdx - 1) : e;
+
+const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.accent_color : '#7C3AED';
+const SWATCHES = [
+  { name: 'purple', hex: '#7C3AED' },
+  { name: 'blue',   hex: '#3B82F6' },
+  { name: 'green',  hex: '#10B981' },
+  { name: 'orange', hex: '#F59E0B' },
+  { name: 'pink',   hex: '#EC4899' },
+];
+---
+<Base title={`Edit /u/${slug}`} description="Edit your Denver Social page.">
+  <div class="wrap">
+    {!authed ? (
+      <div class="claim-box">
+        <h3 class="claim-h">Edit /u/{slug}</h3>
+        <p class="claim-sub">We'll send a code to the email on file ({maskedEmail}).</p>
+        <div id="reauth-step1">
+          <button class="claim-cta" id="reauth-send">Send me a code</button>
+          <div class="claim-err" id="reauth-send-err"></div>
+        </div>
+        <div id="reauth-step2" hidden>
+          <div class="claim-field" style="margin-top:16px">
+            <label>6-digit code</label>
+            <input id="reauth-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="••••••"/>
+          </div>
+          <input id="reauth-email" type="email" placeholder="Email on file" autocomplete="email"/>
+          <button class="claim-cta" id="reauth-verify" style="margin-top:8px">Verify & edit →</button>
+          <div class="claim-err" id="reauth-verify-err"></div>
+        </div>
+        <div class="claim-foot"><a href={`/u/${slug}`} style="color:var(--text-sec)">← View public page</a></div>
+      </div>
+    ) : (
+      <div class="editor" data-slug={slug}>
+        <div class="editor-toolbar">
+          <span class="editor-status" id="editor-status">● Saved</span>
+          <a href={`/u/${slug}`} class="editor-preview" target="_blank">👁 Preview public page</a>
+          <a href="#" class="editor-out" id="editor-out">Sign out of editor</a>
+        </div>
+
+        <div class="editor-field"><label>Display name</label>
+          <input data-field="display_name" type="text" value={profile.display_name || ''} maxlength="80"/>
+        </div>
+        <div class="editor-field"><label>Headline</label>
+          <input data-field="headline" type="text" value={profile.headline || ''} maxlength="140" placeholder="What you do, in one line"/>
+        </div>
+        <div class="editor-field"><label>Bio</label>
+          <textarea data-field="bio" rows="4" maxlength="2000" placeholder="Who you are, where you are, what you're up to.">{profile.bio || ''}</textarea>
+        </div>
+
+        <div class="editor-field"><label>Accent color</label>
+          <div class="color-row" id="color-row" data-accent={accent}>
+            {SWATCHES.map(s => (
+              <span class:list={["swatch", `swatch-${s.name}`, { 'swatch-active': s.hex.toLowerCase() === accent.toLowerCase() }]}
+                    data-hex={s.hex} role="button" tabindex="0" aria-label={`Accent ${s.name}`}></span>
+            ))}
+          </div>
+        </div>
+
+        <div class="editor-field"><label>Photo / avatar emoji</label>
+          <input data-field="photo_emoji" type="text" value={profile.photo_emoji || '👤'} maxlength="16"/>
+        </div>
+
+        <div class="editor-field two">
+          <div><label>Email shown after Reveal</label>
+            <input data-field="contact_email" type="email" value={profile.contact_email || ''} maxlength="120"/>
+          </div>
+          <div><label>Phone shown after Reveal</label>
+            <input data-field="contact_phone" type="text" value={profile.contact_phone || ''} maxlength="40"/>
+          </div>
+        </div>
+
+        <div class="editor-section" id="offers-section">
+          <label>What you offer</label>
+          <div id="offers-list">
+            {offers.map((o, i) => (
+              <div class="editor-offer" data-offer-idx={i}>
+                <input class="offer-icon" value={o.icon || ''} placeholder="🏠" maxlength="4"/>
+                <input class="offer-label" value={o.label || ''} placeholder="What you offer" maxlength="120"/>
+                <button class="x" type="button" data-action="remove-offer">×</button>
+              </div>
+            ))}
+          </div>
+          <button class="add" type="button" id="add-offer">+ Add an offer</button>
+        </div>
+
+        <div class="editor-section" id="links-section">
+          <label>Links</label>
+          <div id="links-list">
+            {links.map((l, i) => (
+              <div class="editor-offer" data-link-idx={i}>
+                <input class="link-icon" value={l.icon || ''} placeholder="🌐" maxlength="4"/>
+                <input class="link-label" value={l.label || ''} placeholder="Label" maxlength="40"/>
+                <input class="link-url" value={l.url || ''} placeholder="https://…" maxlength="300"/>
+                <button class="x" type="button" data-action="remove-link">×</button>
+              </div>
+            ))}
+          </div>
+          <button class="add" type="button" id="add-link">+ Add a link</button>
+        </div>
+      </div>
+    )}
+  </div>
+
+  {authed && (
+    <script is:inline define:vars={{ slug }}>
+      (function() {
+        var status = document.getElementById('editor-status');
+        function setStatus(s, color) {
+          status.textContent = s;
+          status.style.color = color || '#047857';
+        }
+        function setSaving() { setStatus('● Saving…', '#6B7280'); }
+        function setSaved() { setStatus('● Saved', '#047857'); }
+        function setError(e) { setStatus('● Error: ' + e, '#DC2626'); }
+
+        async function save(field, value) {
+          setSaving();
+          try {
+            var r = await fetch('/api/profile/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ slug: slug, field: field, value: value })
+            });
+            var d = await r.json();
+            if (d.ok) setSaved(); else setError(d.error || 'save failed');
+          } catch (e) { setError('network'); }
+        }
+
+        // Wire all data-field inputs
+        document.querySelectorAll('[data-field]').forEach(function(el) {
+          el.addEventListener('blur', function() {
+            save(el.getAttribute('data-field'), el.value);
+          });
+        });
+
+        // Swatches
+        var row = document.getElementById('color-row');
+        row.querySelectorAll('.swatch').forEach(function(sw) {
+          sw.addEventListener('click', function() {
+            row.querySelectorAll('.swatch').forEach(function(s){ s.classList.remove('swatch-active'); });
+            sw.classList.add('swatch-active');
+            save('accent_color', sw.getAttribute('data-hex'));
+          });
+        });
+
+        // Offers list
+        function readOffers() {
+          var rows = document.querySelectorAll('#offers-list .editor-offer');
+          var out = [];
+          rows.forEach(function(r) {
+            var icon = r.querySelector('.offer-icon').value.trim();
+            var label = r.querySelector('.offer-label').value.trim();
+            if (icon || label) out.push({ icon: icon, label: label });
+          });
+          return out;
+        }
+        function saveOffers() { save('offers_json', JSON.stringify(readOffers())); }
+
+        function attachOfferRow(r) {
+          r.querySelectorAll('input').forEach(function(i){ i.addEventListener('blur', saveOffers); });
+          var rm = r.querySelector('[data-action=remove-offer]');
+          if (rm) rm.addEventListener('click', function() { r.remove(); saveOffers(); });
+        }
+        document.querySelectorAll('#offers-list .editor-offer').forEach(attachOfferRow);
+        document.getElementById('add-offer').addEventListener('click', function() {
+          var d = document.createElement('div');
+          d.className = 'editor-offer';
+          d.innerHTML = '<input class="offer-icon" placeholder="🏠" maxlength="4"/><input class="offer-label" placeholder="What you offer" maxlength="120"/><button class="x" type="button" data-action="remove-offer">×</button>';
+          document.getElementById('offers-list').appendChild(d);
+          attachOfferRow(d);
+          d.querySelector('.offer-icon').focus();
+        });
+
+        // Links list
+        function readLinks() {
+          var rows = document.querySelectorAll('#links-list .editor-offer');
+          var out = [];
+          rows.forEach(function(r) {
+            var icon = r.querySelector('.link-icon').value.trim();
+            var label = r.querySelector('.link-label').value.trim();
+            var url = r.querySelector('.link-url').value.trim();
+            if (label || url) out.push({ icon: icon, label: label, url: url });
+          });
+          return out;
+        }
+        function saveLinks() { save('links_json', JSON.stringify(readLinks())); }
+        function attachLinkRow(r) {
+          r.querySelectorAll('input').forEach(function(i){ i.addEventListener('blur', saveLinks); });
+          var rm = r.querySelector('[data-action=remove-link]');
+          if (rm) rm.addEventListener('click', function() { r.remove(); saveLinks(); });
+        }
+        document.querySelectorAll('#links-list .editor-offer').forEach(attachLinkRow);
+        document.getElementById('add-link').addEventListener('click', function() {
+          var d = document.createElement('div');
+          d.className = 'editor-offer';
+          d.innerHTML = '<input class="link-icon" placeholder="🌐" maxlength="4"/><input class="link-label" placeholder="Label" maxlength="40"/><input class="link-url" placeholder="https://…" maxlength="300"/><button class="x" type="button" data-action="remove-link">×</button>';
+          document.getElementById('links-list').appendChild(d);
+          attachLinkRow(d);
+          d.querySelector('.link-icon').focus();
+        });
+
+        // Sign out
+        document.getElementById('editor-out').addEventListener('click', async function(e) {
+          e.preventDefault();
+          await fetch('/api/profile/logout', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug })
+          });
+          location.href = '/u/' + slug;
+        });
+      })();
+    </script>
+  )}
+  {!authed && (
+    <script is:inline define:vars={{ slug }}>
+      (function() {
+        var step1 = document.getElementById('reauth-step1');
+        var step2 = document.getElementById('reauth-step2');
+        function showErr(id, msg) { var el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
+        function clearErr(id) { var el = document.getElementById(id); el.textContent=''; el.classList.remove('show'); }
+        document.getElementById('reauth-send').addEventListener('click', async function() {
+          clearErr('reauth-send-err');
+          var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Sending…';
+          try {
+            var r = await fetch('/api/profile/edit-code-send', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ slug: slug })
+            });
+            var d = await r.json();
+            if (d.ok) { step1.hidden = true; step2.hidden = false; document.getElementById('reauth-email').focus(); }
+            else showErr('reauth-send-err', d.error || 'Could not send code.');
+          } catch (e) { showErr('reauth-send-err', 'Network error.'); }
+          btn.disabled = false; btn.textContent = orig;
+        });
+        document.getElementById('reauth-verify').addEventListener('click', async function() {
+          clearErr('reauth-verify-err');
+          var email = (document.getElementById('reauth-email').value || '').trim().toLowerCase();
+          var code = (document.getElementById('reauth-code').value || '').trim();
+          if (!email) { showErr('reauth-verify-err', 'Enter the email on file.'); return; }
+          if (!/^\d{6}$/.test(code)) { showErr('reauth-verify-err', 'Enter the 6-digit code.'); return; }
+          var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Verifying…';
+          try {
+            var r = await fetch('/api/profile/code-verify', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ slug: slug, email: email, code: code })
+            });
+            var d = await r.json();
+            if (d.ok && d.redirect) { location.href = d.redirect; return; }
+            showErr('reauth-verify-err', d.error || 'Invalid or expired code.');
+          } catch (e) { showErr('reauth-verify-err', 'Network error.'); }
+          btn.disabled = false; btn.textContent = orig;
+        });
+      })();
+    </script>
+  )}
+
+  <style>
+    .wrap { max-width: 760px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
+
+    /* Claim/re-auth box */
+    .claim-box { background: var(--surface, #F8F9FB); border: 1.5px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-5); max-width: 480px; margin: 0 auto; }
+    .claim-h { font-family: var(--font-display, sans-serif); font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+    .claim-sub { text-align: center; font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-4); }
+    .claim-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 6px; }
+    .claim-box input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 14px; background: #fff; font-family: inherit; }
+    #reauth-code { font-size: 22px; letter-spacing: 8px; text-align: center; font-family: monospace; }
+    .claim-cta { width: 100%; padding: 14px; border-radius: 999px; border: none; background: var(--accent, #7C3AED); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; transition: filter 0.15s; }
+    .claim-cta:hover { filter: brightness(1.08); }
+    .claim-cta:active { filter: brightness(0.95); }
+    .claim-err { font-size: 13px; color: #DC2626; margin-top: var(--space-2); display: none; }
+    .claim-err.show { display: block; }
+    .claim-foot { font-size: 12px; color: var(--text-faint); text-align: center; margin-top: var(--space-3); }
+
+    /* Editor */
+    .editor { background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-4); }
+    .editor-toolbar { display: flex; gap: 16px; padding-bottom: var(--space-3); margin-bottom: var(--space-3); border-bottom: 1px solid var(--border); align-items: center; font-size: 12px; flex-wrap: wrap; }
+    .editor-status { color: #047857; }
+    .editor-preview { margin-left: auto; color: var(--accent, #7C3AED); text-decoration: none; }
+    .editor-preview:hover { text-decoration: underline; }
+    .editor-out { color: var(--text-faint); text-decoration: none; cursor: pointer; }
+    .editor-out:hover { color: var(--text-sec); }
+    .editor-field { margin-bottom: var(--space-3); }
+    .editor-field.two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+    .editor-field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint); margin-bottom: 4px; }
+    .editor-field input, .editor-field textarea { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 14px; background: var(--surface, #F8F9FB); font-family: inherit; }
+    .color-row { display: flex; gap: 8px; }
+    .swatch { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.1s; }
+    .swatch:hover { transform: scale(1.1); }
+    .swatch-purple { background: #7C3AED; }
+    .swatch-blue { background: #3B82F6; }
+    .swatch-green { background: #10B981; }
+    .swatch-orange { background: #F59E0B; }
+    .swatch-pink { background: #EC4899; }
+    .swatch-active { border-color: var(--text); }
+    .editor-section { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px dashed var(--border); }
+    .editor-section > label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint); margin-bottom: 8px; }
+    .editor-offer { display: flex; gap: 8px; margin-bottom: 6px; }
+    .editor-offer input { padding: 8px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 14px; background: #fff; font-family: inherit; }
+    .editor-offer .offer-icon, .editor-offer .link-icon { flex: 0 0 56px; text-align: center; }
+    .editor-offer .offer-label, .editor-offer .link-label, .editor-offer .link-url { flex: 1; min-width: 0; }
+    .x { width: 32px; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; color: var(--text-faint); }
+    .x:hover { color: #DC2626; border-color: #FECACA; }
+    .add { background: none; border: 1px dashed var(--border); padding: 8px; width: 100%; border-radius: 8px; color: var(--text-sec); font-size: 13px; cursor: pointer; margin-top: 4px; }
+    .add:hover { color: var(--text); border-color: var(--border-hover); }
+
+    @media (max-width: 600px) {
+      .editor-field.two { grid-template-columns: 1fr; }
+      .editor-offer { flex-wrap: wrap; }
+      .editor-offer .link-url { flex-basis: 100%; }
+    }
+  </style>
+</Base>

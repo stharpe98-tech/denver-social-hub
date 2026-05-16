@@ -5,61 +5,35 @@ import { ensureGroupsSchema } from '../../lib/groups-schema';
 import { ensureDmSchema } from '../../lib/dm-schema';
 
 const db = getDB();
-let user: any = null;
-const cookie = Astro.cookies.get('dsn_user')?.value;
-if (cookie) { try { user = JSON.parse(cookie); } catch {} }
+// Accounts are offline; only public group browsing works.
+const user: any = null;
+void user;
 
 const tab = (Astro.url.searchParams.get('tab') || 'groups').toLowerCase();
 
-let myGroups: any[] = [];
+const myGroups: any[] = [];
 let discoverGroups: any[] = [];
-let conversations: any[] = [];
+const conversations: any[] = [];
 
 if (db) {
   await ensureGroupsSchema(db);
-  if (user?.email) {
-    const my = await db.prepare(`
-      SELECT g.*, gm.role
-      FROM groups g
-      JOIN group_members gm ON gm.group_id = g.id
-      WHERE LOWER(gm.member_email) = LOWER(?)
-      ORDER BY gm.joined_at DESC
-    `).bind(user.email).all();
-    myGroups = (my.results || []) as any[];
-  }
   const discover = await db.prepare(`
     SELECT g.*
     FROM groups g
     WHERE g.privacy = 'public'
-      AND (? IS NULL OR g.id NOT IN (SELECT group_id FROM group_members WHERE LOWER(member_email)=LOWER(?)))
     ORDER BY g.member_count DESC, g.id DESC
     LIMIT 24
-  `).bind(user?.email || null, user?.email || '').all();
+  `).all();
   discoverGroups = (discover.results || []) as any[];
-
-  if (user?.email) {
-    await ensureDmSchema(db);
-    const me = (user.email || '').toLowerCase();
-    const r = await db.prepare(`
-      SELECT c.id, c.member_a_email, c.member_b_email, c.last_msg_at, c.last_msg_preview, c.last_msg_from,
-             m.name as other_name, m.reddit_username as other_reddit, m.discord_username as other_discord,
-             (SELECT COUNT(*) FROM dm_messages mm WHERE mm.conversation_id=c.id AND mm.from_email != ? AND mm.read_at IS NULL) AS unread
-      FROM dm_conversations c
-      LEFT JOIN members m ON LOWER(m.email) = CASE WHEN LOWER(c.member_a_email)=? THEN LOWER(c.member_b_email) ELSE LOWER(c.member_a_email) END
-      WHERE LOWER(c.member_a_email)=? OR LOWER(c.member_b_email)=?
-      ORDER BY COALESCE(c.last_msg_at, c.created_at) DESC
-    `).bind(me, me, me, me).all();
-    conversations = (r.results || []) as any[];
-  }
+  // Messaging is offline — skip ensuring schema beyond what's needed.
+  void ensureDmSchema;
 }
 
-const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unread || 0), 0);
+const totalUnread = 0;
 
 function otherName(c: any): string {
   return c.other_name || c.other_reddit || c.other_discord
-    || (c.member_a_email?.toLowerCase() === (user?.email || '').toLowerCase()
-        ? (c.member_b_email || '').split('@')[0]
-        : (c.member_a_email || '').split('@')[0])
+    || (c.member_a_email || '').split('@')[0]
     || 'Member';
 }
 
@@ -84,8 +58,7 @@ function timeAgo(iso: string): string {
       <h1>Groups & messages</h1>
       <p class="g-sub">Smaller circles inside Denver Social, and private chats with the people in them.</p>
     </div>
-    {user && tab === 'groups' && <a href="/groups/new" class="btn-cta">+ New group</a>}
-    {!user && <a href="/login?next=/groups" class="btn-cta">Sign in</a>}
+    {/* Group creation is offline while we rework accounts. */}
   </header>
 
   {user && (
@@ -133,7 +106,7 @@ function timeAgo(iso: string): string {
       <section class="g-section">
         <h2 class="g-section-title">Discover</h2>
         {discoverGroups.length === 0 ? (
-          <div class="g-empty">No public groups yet. {user ? <a href="/groups/new">Start the first one →</a> : <a href="/login?next=/groups">Sign in</a>} to create one.</div>
+          <div class="g-empty">No public groups yet. Group creation is offline while we rework accounts.</div>
         ) : (
           <div class="g-grid">
             {discoverGroups.map((g: any) => (
@@ -161,11 +134,11 @@ function timeAgo(iso: string): string {
               <p>Drop an intro, see who else just joined.</p>
             </div>
           </a>
-          <a href="/help-out" class="g-side-card">
+          <a href="/community" class="g-side-card">
             <span class="g-side-emoji">🤝</span>
             <div>
-              <strong>Help out</strong>
-              <p>Favors board — give a hand, ask for one.</p>
+              <strong>Community Board</strong>
+              <p>Favors, groups, messages — all in one place.</p>
             </div>
           </a>
         </div>
