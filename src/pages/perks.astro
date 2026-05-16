@@ -61,6 +61,7 @@ if (db) {
               {cat && <span class="px-tag">{cat.emoji} {cat.label}</span>}
               {p.neighborhood && <span class="px-loc">📍 {p.neighborhood}</span>}
             </div>
+            {p.booking_url && <div class="px-booking-flag">📅 Booking required</div>}
             <h3 class="px-biz">{p.business_name}</h3>
             <div class="px-offer">{p.offer_title}</div>
             {p.offer_details && unlocked && <p class="px-details">{p.offer_details}</p>}
@@ -83,13 +84,17 @@ if (db) {
               </div>
             )}
 
-            {p.redemption && unlocked && (
+            {unlocked && (p.redemption || p.booking_url) && (
               <div class="px-redeem">
                 <span class="px-redeem-label">How to claim</span>
-                <span>{p.redemption}</span>
+                <span>{p.booking_url ? (p.redemption || 'Book through the link below — discount applied at checkout.') : p.redemption}</span>
               </div>
             )}
-            {p.website && unlocked && (
+            {unlocked && p.booking_url ? (
+              <a href={p.booking_url} target="_blank" rel="noopener" class="px-link px-link-book" data-claim={p.id}>
+                Book to claim →
+              </a>
+            ) : p.website && unlocked && (
               <a href={p.website} target="_blank" rel="noopener" class="px-link" data-claim={p.id}>
                 Visit {p.business_name} →
               </a>
@@ -177,6 +182,14 @@ if (db) {
     text-decoration: none;
   }
   .px-link:hover { box-shadow: 0 4px 12px var(--accent-glow); }
+  .px-link-book { background: var(--mint); }
+  .px-link-book:hover { box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35); }
+  .px-booking-flag {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    color: var(--tag-text2); background: var(--tag-bg2);
+    padding: 4px 10px; border-radius: 999px;
+    margin-bottom: 10px; align-self: flex-start;
+  }
 
   .px-empty {
     padding: 56px 24px; text-align: center; background: var(--surface);

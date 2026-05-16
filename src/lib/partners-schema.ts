@@ -23,12 +23,13 @@ export async function ensurePartnersSchema(db: D1Database): Promise<void> {
       claim_count INTEGER DEFAULT 0,
       rsvp_threshold INTEGER DEFAULT 0,
       rsvp_count INTEGER DEFAULT 0,
+      booking_url TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `).run();
   await db.prepare(`CREATE INDEX IF NOT EXISTS idx_partners_status ON partners(status, created_at)`).run();
 
-  // Migrations for existing tables that were created before the RSVP-threshold feature.
+  // Migrations for existing tables created before later columns landed.
   const cols = await db.prepare("PRAGMA table_info(partners)").all();
   const names = new Set((cols.results ?? []).map((r: any) => r.name));
   if (!names.has('rsvp_threshold')) {
@@ -36,6 +37,9 @@ export async function ensurePartnersSchema(db: D1Database): Promise<void> {
   }
   if (!names.has('rsvp_count')) {
     await db.prepare("ALTER TABLE partners ADD COLUMN rsvp_count INTEGER DEFAULT 0").run();
+  }
+  if (!names.has('booking_url')) {
+    await db.prepare("ALTER TABLE partners ADD COLUMN booking_url TEXT").run();
   }
 
   // One row per (perk, attendee). Unique constraint blocks double-RSVPs so
