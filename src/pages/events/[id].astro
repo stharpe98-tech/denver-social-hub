@@ -110,7 +110,7 @@ if (mo && d !== '00') {
           {isFull && <span class="di-full">(full — join waitlist)</span>}
         </span>
       </div>
-      {event.price_cap && event.price_cap !== 'Free' && event.price_cap !== '$0' && (
+      {event.price_cap && event.price_cap.trim() && event.price_cap !== 'Free' && event.price_cap !== '$0' && event.price_cap !== 'TBD' && (
         <div class="di-row">
           <span class="di-label">cost</span>
           <span class="di-value">{event.price_cap}</span>

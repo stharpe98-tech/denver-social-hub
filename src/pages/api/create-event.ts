@@ -45,7 +45,7 @@ export async function POST({ request, cookies }: APIContext) {
       '$25–50': '$25–50',
       '$50+': '$50+',
     };
-    const priceCap = budgetMap[budget] || 'Free';
+    const priceCap = budgetMap[budget] || '';
 
     // Map group size to spots
     const sizeMap: Record<string, number> = {
