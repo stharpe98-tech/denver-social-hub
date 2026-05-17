@@ -174,9 +174,9 @@ const SWATCHES = [
           <input data-field="neighborhood" type="text" value={profile.neighborhood || ''} maxlength="80" placeholder="Wash Park, Cap Hill, etc."/>
         </div>
 
-        <!-- Advanced: template settings -->
-        <details class="more">
-          <summary>Show template settings</summary>
+        <!-- Template settings — open by default for organizers (templates are core to their page) -->
+        <details class="more" open={isOrganizer}>
+          <summary>Page template &amp; styling</summary>
 
           <div class="editor-field"><label>Page template</label>
             <div class="tpl-grid" id="tpl-grid">
