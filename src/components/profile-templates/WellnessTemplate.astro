@@ -1,0 +1,47 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const certs: string[] = Array.isArray(templateData.certifications) ? templateData.certifications : [];
+const sched: any[] = Array.isArray(templateData.weekly_schedule) ? templateData.weekly_schedule : [];
+---
+<div class="t7">
+  <div class="hero">
+    <div class="av">{profile.photo_emoji || '🧘'}</div>
+    <h1>{profile.display_name}</h1>
+    {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  </div>
+  {templateData.philosophy_quote && (
+    <div class="quote">"{templateData.philosophy_quote}"
+      <div class="quote-sig">— TEACHING PHILOSOPHY</div>
+    </div>
+  )}
+  {certs.length > 0 && (
+    <div class="cert">{certs.map(c => <span class="ct">{c}</span>)}</div>
+  )}
+  {sched.length > 0 && (
+    <div class="sched">
+      <div class="h">— This week's schedule</div>
+      {sched.map(r => <div class="row"><span class="day">{r.day}</span><span>{r.time}</span></div>)}
+    </div>
+  )}
+  {templateData.pricing && <div class="price">{templateData.pricing}</div>}
+  {profile.bio && <p class="bio">{profile.bio}</p>}
+</div>
+<style>
+  .t7 { padding: 44px 32px; background: linear-gradient(170deg, #F4F7F2 0%, #E0E9D9 100%); font-family: 'Lora', Georgia, serif; color: #2C3A2C; border-radius: 18px; }
+  .t7 .hero { text-align: center; margin-bottom: 22px; }
+  .t7 .av { width: 92px; height: 92px; border-radius: 50%; background: #fff; border: 3px solid #7BA17B; display: flex; align-items: center; justify-content: center; font-size: 44px; margin: 0 auto 14px; }
+  .t7 h1 { font-size: 32px; font-weight: 700; margin-bottom: 4px; }
+  .t7 .caveat { font-family: 'Caveat', cursive; color: #6B7E6B; font-size: 18px; }
+  .t7 .quote { background: #fff; border-left: 4px solid #7BA17B; padding: 16px 22px; margin: 18px 0; font-style: italic; font-size: 16px; line-height: 1.5; border-radius: 0 8px 8px 0; }
+  .t7 .quote-sig { font-family: 'Inter', sans-serif; font-size: 11px; color: #6B7E6B; margin-top: 8px; letter-spacing: 1.5px; font-weight: 700; font-style: normal; }
+  .t7 .cert { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
+  .t7 .ct { background: rgba(123,161,123,0.18); color: #2C3A2C; font-size: 10px; padding: 4px 10px; border-radius: 999px; font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: 0.5px; }
+  .t7 .sched { background: #fff; border-radius: 12px; padding: 18px; font-family: 'Inter', sans-serif; box-shadow: 0 6px 20px rgba(0,0,0,0.05); }
+  .t7 .h { font-size: 11px; letter-spacing: 2px; font-weight: 700; color: #6B7E6B; text-transform: uppercase; margin-bottom: 10px; }
+  .t7 .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E0E9D9; font-size: 13px; }
+  .t7 .row:last-child { border-bottom: none; }
+  .t7 .day { font-weight: 700; }
+  .t7 .price { background: #2C3A2C; color: #F4F7F2; padding: 14px 20px; border-radius: 12px; margin-top: 14px; font-family: 'Inter', sans-serif; font-size: 13px; text-align: center; }
+  .t7 .bio { margin-top: 16px; font-size: 15px; line-height: 1.6; }
+</style>

@@ -1,0 +1,38 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const verse = templateData.verse || {};
+---
+<div class="t3">
+  {profile.neighborhood && <div class="eb">{profile.neighborhood.toUpperCase()}</div>}
+  <div class="sym">✝</div>
+  <h1>{profile.display_name}</h1>
+  {profile.headline && <div class="caveat">— {profile.headline} —</div>}
+  {(verse.text || verse.reference) && (
+    <div class="verse">
+      <div class="verse-t">"{verse.text || ''}"</div>
+      <div class="verse-r">{(verse.reference || '').toUpperCase()}</div>
+    </div>
+  )}
+  <div class="meta3">
+    {templateData.currently_in && <div><div class="l">Currently in</div><div class="v">{templateData.currently_in}</div></div>}
+    {templateData.cadence && <div><div class="l">Cadence</div><div class="v">{templateData.cadence}</div></div>}
+    {templateData.tradition && <div><div class="l">Tradition</div><div class="v">{templateData.tradition}</div></div>}
+  </div>
+  {profile.bio && <p class="bio">{profile.bio}</p>}
+</div>
+<style>
+  .t3 { padding: 48px 36px; background: #FBF7F0; color: #2C2416; font-family: 'Cormorant Garamond', Georgia, serif; text-align: center; border-radius: 18px; }
+  .t3 .eb { font-size: 11px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; color: #8B7A5F; font-family: 'Inter', sans-serif; margin-bottom: 8px; }
+  .t3 .sym { font-size: 26px; color: #6B4423; margin-bottom: 6px; }
+  .t3 h1 { font-size: 36px; font-weight: 600; color: #2C2416; margin-bottom: 6px; }
+  .t3 .caveat { color: #8B7A5F; font-style: italic; font-size: 18px; margin-bottom: 22px; }
+  .t3 .verse { background: #fff; border-top: 2px solid #C9A55D; border-bottom: 2px solid #C9A55D; padding: 22px 28px; margin: 20px auto; max-width: 540px; }
+  .t3 .verse-t { font-size: 19px; line-height: 1.5; font-style: italic; margin-bottom: 8px; }
+  .t3 .verse-r { font-family: 'Inter', sans-serif; font-size: 11px; letter-spacing: 2px; color: #8B7A5F; font-weight: 700; }
+  .t3 .meta3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 540px; margin: 20px auto 0; font-family: 'Inter', sans-serif; }
+  .t3 .meta3 .l { font-size: 10px; letter-spacing: 1.5px; color: #8B7A5F; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+  .t3 .meta3 .v { font-size: 14px; color: #2C2416; font-weight: 600; }
+  .t3 .bio { margin-top: 22px; font-size: 16px; line-height: 1.6; }
+  @media (max-width: 600px) { .t3 .meta3 { grid-template-columns: 1fr; } }
+</style>

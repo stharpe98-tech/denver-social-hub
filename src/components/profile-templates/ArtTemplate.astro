@@ -1,0 +1,42 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const meds: string[] = Array.isArray(templateData.mediums) ? templateData.mediums : [];
+const samples: any[] = Array.isArray(templateData.sample_works) ? templateData.sample_works.slice(0, 4) : [];
+const ns = templateData.next_session || {};
+---
+<div class="t14">
+  <div class="eb">PLEIN AIR + STUDIO · ALL LEVELS</div>
+  <h1>{profile.display_name}</h1>
+  {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  {meds.length > 0 && <div class="mediums">{meds.map(m => <span class="med">{m}</span>)}</div>}
+  {profile.bio && <p class="bio">{profile.bio}</p>}
+  {(ns.title || ns.date) && (
+    <div class="next">
+      <div class="next-l">— NEXT SESSION</div>
+      <div class="next-t">{ns.title || ''}</div>
+      <div class="next-m">{[ns.date, ns.location].filter(Boolean).join(' · ')}</div>
+    </div>
+  )}
+  {samples.length > 0 && (
+    <div class="samples">{samples.map((s, i) => <div class={`sample s${i+1}`}>{s.emoji || '🎨'}</div>)}</div>
+  )}
+</div>
+<style>
+  .t14 { padding: 44px 32px; background: #FAFAF7; color: #1A1A1A; border-radius: 18px; }
+  .t14 .eb { font-size: 11px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: #B85C38; }
+  .t14 h1 { font-family: 'DM Serif Display', serif; font-size: 42px; line-height: 1; margin-bottom: 4px; }
+  .t14 .caveat { font-family: 'Caveat', cursive; color: #B85C38; font-size: 22px; display: inline-block; transform: rotate(-1deg); margin-bottom: 14px; }
+  .t14 .mediums { display: flex; gap: 6px; flex-wrap: wrap; margin: 16px 0; }
+  .t14 .med { font-size: 11px; padding: 5px 12px; background: #1A1A1A; color: #fff; border-radius: 2px; font-weight: 800; letter-spacing: 0.5px; }
+  .t14 .med:nth-child(even) { background: #B85C38; }
+  .t14 .bio { font-size: 15px; line-height: 1.7; margin-bottom: 18px; max-width: 600px; }
+  .t14 .next { background: #fff; border: 2px solid #1A1A1A; padding: 16px 22px; margin-bottom: 16px; }
+  .t14 .next-l { font-size: 10px; letter-spacing: 2px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
+  .t14 .next-t { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 4px; }
+  .t14 .next-m { font-size: 13px; color: #555; }
+  .t14 .samples { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .t14 .sample { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+  .t14 .s1 { background: #E6CCB5; } .t14 .s2 { background: #B8A88F; } .t14 .s3 { background: #5A3825; color: #fff; } .t14 .s4 { background: #B85C38; color: #fff; }
+  @media (max-width: 600px) { .t14 .samples { grid-template-columns: 1fr 1fr; } }
+</style>

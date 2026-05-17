@@ -1,0 +1,53 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const tp = templateData.training_plan || {};
+const planPct = (tp.week && tp.total_weeks) ? Math.min(100, Math.round((tp.week / tp.total_weeks) * 100)) : 0;
+---
+<div class="t6">
+  <span class="pill">NEW MEMBERS WELCOME ✓</span>
+  <h1>{(profile.display_name || '').toUpperCase()}</h1>
+  {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  <div class="stats">
+    {templateData.members_count != null && <div class="stat"><div class="stat-n">{templateData.members_count}</div><div class="stat-l">runners</div></div>}
+    {templateData.pace && <div class="stat"><div class="stat-n">{templateData.pace}</div><div class="stat-l">avg pace</div></div>}
+    {templateData.weekly_miles != null && <div class="stat"><div class="stat-n">{templateData.weekly_miles}</div><div class="stat-l">mi / week</div></div>}
+  </div>
+  {tp.name && (
+    <div class="plan">
+      <div class="plan-l">▶ TRAINING PLAN</div>
+      <div class="plan-t">{tp.name}</div>
+      <div class="plan-bar"><div style={`width:${planPct}%`}></div></div>
+      <div style="font-size:13px;opacity:0.9">week {tp.week || 0} of {tp.total_weeks || 0}</div>
+    </div>
+  )}
+  {templateData.meet && (
+    <div class="meet">
+      <div class="meet-i">☕</div>
+      <div><div class="meet-t">{templateData.meet}</div></div>
+    </div>
+  )}
+  {profile.bio && <p class="bio">{profile.bio}</p>}
+</div>
+<style>
+  .t6 { padding: 44px 32px; background: linear-gradient(160deg, #0F2D1A 0%, #1A4A2A 100%); color: #fff; position: relative; overflow: hidden; border-radius: 18px; }
+  .t6::before { content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px; border-radius: 50%; background: rgba(255,217,61,0.15); }
+  .t6 > * { position: relative; }
+  .t6 .pill { display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 1px; transform: rotate(-2deg); margin-bottom: 14px; background: #FFD93D; color: #0F2D1A; }
+  .t6 h1 { font-family: 'Bebas Neue', sans-serif; font-size: 56px; line-height: 0.9; letter-spacing: 1px; color: #FFD93D; margin-bottom: 8px; }
+  .t6 .caveat { font-family: 'Caveat', cursive; color: #fff; font-size: 22px; display: inline-block; transform: rotate(-1deg); margin-bottom: 22px; }
+  .t6 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .t6 .stat { background: rgba(255,255,255,0.1); padding: 14px; border-radius: 12px; text-align: center; }
+  .t6 .stat-n { font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: #FFD93D; line-height: 1; }
+  .t6 .stat-l { font-size: 11px; letter-spacing: 1.5px; opacity: 0.8; text-transform: uppercase; margin-top: 4px; font-weight: 600; }
+  .t6 .plan { background: #FF3D7F; padding: 18px 22px; border-radius: 14px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(255,61,127,0.3); }
+  .t6 .plan-l { font-size: 10px; letter-spacing: 2px; opacity: 0.85; font-weight: 700; }
+  .t6 .plan-t { font-family: 'Bebas Neue', sans-serif; font-size: 26px; line-height: 1; margin: 4px 0 8px; }
+  .t6 .plan-bar { background: rgba(0,0,0,0.25); height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 6px; }
+  .t6 .plan-bar div { height: 100%; background: #FFD93D; }
+  .t6 .meet { background: #fff; color: #0F2D1A; padding: 16px 20px; border-radius: 12px; display: flex; gap: 14px; align-items: center; }
+  .t6 .meet-i { width: 44px; height: 44px; border-radius: 50%; background: #FFD93D; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .t6 .meet-t { font-weight: 700; font-size: 14px; }
+  .t6 .bio { margin-top: 16px; font-size: 14px; line-height: 1.6; color: #E0F0DD; }
+  @media (max-width: 600px) { .t6 .stats { grid-template-columns: 1fr; } }
+</style>

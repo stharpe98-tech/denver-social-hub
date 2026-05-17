@@ -1,0 +1,33 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const offered: string[] = Array.isArray(templateData.offered) ? templateData.offered : [];
+const wanted: string[] = Array.isArray(templateData.wanted) ? templateData.wanted : [];
+---
+<div class="t15">
+  <span class="pill">CASUAL · DROP-IN · ALL LEVELS</span>
+  <h1>{profile.display_name}</h1>
+  {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  <div class="matrix">
+    <div class="col"><div class="l">OFFERED</div><div class="v">{offered.join(' · ')}</div></div>
+    <div class="col"><div class="l">WANTED</div><div class="v">{wanted.join(' · ')}</div></div>
+  </div>
+  <div class="meta">
+    {templateData.meet_info && <span class="mt">{templateData.meet_info}</span>}
+    {templateData.level_range && <span class="mt">🎯 {templateData.level_range}</span>}
+  </div>
+  {profile.bio && <p class="bio">{profile.bio}</p>}
+</div>
+<style>
+  .t15 { padding: 44px 32px; background: linear-gradient(145deg, #FFF4D6 0%, #FFD93D 100%); color: #1A1A1A; border-radius: 18px; }
+  .t15 .pill { display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 1px; transform: rotate(-2deg); margin-bottom: 14px; background: #1A1A1A; color: #FFD93D; }
+  .t15 h1 { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+  .t15 .caveat { font-family: 'Caveat', cursive; color: #1A1A1A; font-size: 22px; display: inline-block; transform: rotate(-1deg); margin-bottom: 16px; }
+  .t15 .matrix { background: #1A1A1A; color: #FFD93D; padding: 20px 22px; border-radius: 14px; margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .t15 .col .l { font-size: 10px; letter-spacing: 2px; font-weight: 800; opacity: 0.7; margin-bottom: 6px; }
+  .t15 .col .v { font-size: 15px; font-weight: 700; }
+  .t15 .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .t15 .mt { background: #fff; padding: 6px 12px; border: 1.5px solid #1A1A1A; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .t15 .bio { font-size: 14px; line-height: 1.6; }
+  @media (max-width: 600px) { .t15 .matrix { grid-template-columns: 1fr; } }
+</style>

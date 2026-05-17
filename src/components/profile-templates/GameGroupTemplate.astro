@@ -1,0 +1,43 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const games: string[] = Array.isArray(templateData.favorite_games) ? templateData.favorite_games : [];
+---
+<div class="t2">
+  {profile.neighborhood && <div class="eb">{profile.neighborhood.toUpperCase()} · WEEKLY</div>}
+  <h1>{profile.display_name}</h1>
+  {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  {templateData.next_night && (
+    <div class="night">
+      <div class="night-l">▶ NEXT GAME NIGHT</div>
+      <div class="night-t">{templateData.next_night}</div>
+    </div>
+  )}
+  <div class="grid">
+    {games.length > 0 && (
+      <div class="gcard"><div class="gcard-h">★ FAVORITES</div>
+        <div class="gcard-b">{games.map(g => <span class="tag">{g}</span>)}</div>
+      </div>
+    )}
+    {templateData.player_count_note && (
+      <div class="gcard"><div class="gcard-h">🎯 PLAYER COUNT</div><div class="gcard-b">{templateData.player_count_note}</div></div>
+    )}
+  </div>
+  {profile.bio && <p class="bio">{profile.bio}</p>}
+</div>
+<style>
+  .t2 { padding: 40px 32px; background: #0F0F23; color: #fff; border-radius: 18px; }
+  .t2 .eb { font-size: 11px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: #FFD93D; }
+  .t2 h1 { font-size: 38px; font-weight: 900; line-height: 1; letter-spacing: -1px; margin-bottom: 6px; }
+  .t2 .caveat { font-family: 'Caveat', cursive; font-size: 20px; color: #FFD93D; display: inline-block; transform: rotate(-1deg); margin-bottom: 22px; }
+  .t2 .night { background: linear-gradient(135deg, #FF3D7F, #C026D3); padding: 18px 22px; border-radius: 14px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(255,61,127,0.3); }
+  .t2 .night-l { font-size: 10px; letter-spacing: 2px; opacity: 0.85; font-weight: 800; }
+  .t2 .night-t { font-size: 22px; font-weight: 800; margin: 4px 0; }
+  .t2 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .t2 .gcard { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 16px; }
+  .t2 .gcard-h { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #FFD93D; font-weight: 800; margin-bottom: 6px; }
+  .t2 .gcard-b { font-size: 13px; color: #ccc; line-height: 1.5; }
+  .t2 .tag { display: inline-block; background: rgba(255,217,61,0.15); color: #FFD93D; font-size: 11px; padding: 3px 10px; border-radius: 999px; margin: 2px 2px 0 0; font-weight: 700; }
+  .t2 .bio { font-size: 14px; line-height: 1.6; color: #ccc; }
+  @media (max-width: 600px) { .t2 .grid { grid-template-columns: 1fr; } }
+</style>

@@ -2,6 +2,7 @@
 import Base from '../../../layouts/Base.astro';
 import { getDB } from '../../../lib/db';
 import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
+import { PROFILE_TEMPLATES, parseTemplateData, defaultTemplateData } from '../../../lib/profile-templates';
 
 const rawSlug = Astro.params.slug || '';
 const v = validateSlug(rawSlug);
@@ -11,11 +12,21 @@ const slug = v.slug;
 const db = getDB();
 if (!db) return new Response('DB unavailable', { status: 500 });
 
-const profile = await db.prepare(
-  `SELECT slug, display_name, email, headline, bio, photo_emoji, accent_color,
-          offers_json, links_json, contact_email, contact_phone, status
-   FROM profiles WHERE slug = ?`
-).bind(slug).first() as any;
+let profile: any = null;
+try {
+  profile = await db.prepare(
+    `SELECT slug, display_name, email, headline, bio, photo_emoji, accent_color,
+            offers_json, links_json, contact_email, contact_phone, neighborhood,
+            template, template_data, status
+     FROM profiles WHERE slug = ?`
+  ).bind(slug).first();
+} catch {
+  profile = await db.prepare(
+    `SELECT slug, display_name, email, headline, bio, photo_emoji, accent_color,
+            offers_json, links_json, contact_email, contact_phone, status
+     FROM profiles WHERE slug = ?`
+  ).bind(slug).first();
+}
 
 if (!profile) return new Response('Not found', { status: 404 });
 
@@ -32,6 +43,9 @@ const atIdx = e.indexOf('@');
 const maskedEmail = atIdx > 1 ? e[0] + '***' + e.slice(atIdx - 1) : e;
 
 const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.accent_color : '#7C3AED';
+const currentTemplate = (profile.template || 'host').toString();
+const templateData = parseTemplateData(profile.template_data);
+const templateDataJson = JSON.stringify(templateData);
 const SWATCHES = [
   { name: 'purple', hex: '#7C3AED' },
   { name: 'blue',   hex: '#3B82F6' },
@@ -69,6 +83,22 @@ const SWATCHES = [
           <a href="#" class="editor-out" id="editor-out">Sign out of editor</a>
         </div>
 
+        <div class="editor-field"><label>Page template</label>
+          <div class="tpl-grid" id="tpl-grid">
+            {PROFILE_TEMPLATES.map(t => (
+              <button type="button" class:list={["tpl-card", { 'tpl-active': t.key === currentTemplate }]} data-tpl={t.key}>
+                <span class="tpl-emoji">{t.emoji}</span>
+                <span class="tpl-label">{t.label}</span>
+              </button>
+            ))}
+          </div>
+          <div class="tpl-hint">Switch any time. Each template surfaces its own extra fields below.</div>
+        </div>
+
+        <div class="editor-field"><label>Neighborhood</label>
+          <input data-field="neighborhood" type="text" value={profile.neighborhood || ''} maxlength="80" placeholder="Wash Park, Cap Hill, etc."/>
+        </div>
+
         <div class="editor-field"><label>Display name</label>
           <input data-field="display_name" type="text" value={profile.display_name || ''} maxlength="80"/>
         </div>
@@ -77,6 +107,16 @@ const SWATCHES = [
         </div>
         <div class="editor-field"><label>Bio</label>
           <textarea data-field="bio" rows="4" maxlength="2000" placeholder="Who you are, where you are, what you're up to.">{profile.bio || ''}</textarea>
+        </div>
+
+        <div class="editor-field" id="tpl-data-section">
+          <label>Template-specific fields</label>
+          <div class="tpl-data-help" id="tpl-data-help"></div>
+          <textarea id="tpl-data-textarea" rows="10" maxlength="4000" spellcheck="false">{templateDataJson}</textarea>
+          <div class="tpl-data-row">
+            <button type="button" class="add" id="tpl-data-reset">↺ Load example for this template</button>
+            <span class="tpl-data-status" id="tpl-data-status"></span>
+          </div>
         </div>
 
         <div class="editor-field"><label>Accent color</label>
@@ -134,7 +174,7 @@ const SWATCHES = [
   </div>
 
   {authed && (
-    <script is:inline define:vars={{ slug }}>
+    <script is:inline define:vars={{ slug, templateExamples: Object.fromEntries(PROFILE_TEMPLATES.map(t => [t.key, defaultTemplateData(t.key)])), templateLabels: Object.fromEntries(PROFILE_TEMPLATES.map(t => [t.key, t.label])) }}>
       (function() {
         var status = document.getElementById('editor-status');
         function setStatus(s, color) {
@@ -230,6 +270,57 @@ const SWATCHES = [
           attachLinkRow(d);
           d.querySelector('.link-icon').focus();
         });
+
+        // Template picker
+        var tplGrid = document.getElementById('tpl-grid');
+        if (tplGrid) {
+          tplGrid.querySelectorAll('.tpl-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+              var key = card.getAttribute('data-tpl');
+              tplGrid.querySelectorAll('.tpl-card').forEach(function(c){ c.classList.remove('tpl-active'); });
+              card.classList.add('tpl-active');
+              save('template', key);
+              updateTplHelp(key);
+            });
+          });
+        }
+        function updateTplHelp(key) {
+          var h = document.getElementById('tpl-data-help');
+          if (!h) return;
+          var ex = templateExamples[key] || {};
+          var keys = Object.keys(ex);
+          h.textContent = keys.length
+            ? 'Edit the JSON below to fill in: ' + keys.join(', ') + '. Click "Load example" to start from a template.'
+            : 'This template uses only the universal fields above (name, bio, photo, events).';
+        }
+        var currentTpl = document.querySelector('.tpl-card.tpl-active');
+        if (currentTpl) updateTplHelp(currentTpl.getAttribute('data-tpl'));
+
+        // Template-data textarea (free-form JSON for the per-template extras)
+        var tplTa = document.getElementById('tpl-data-textarea');
+        var tplStatus = document.getElementById('tpl-data-status');
+        if (tplTa) {
+          tplTa.addEventListener('blur', function() {
+            var raw = tplTa.value.trim() || '{}';
+            try { JSON.parse(raw); } catch (e) {
+              if (tplStatus) { tplStatus.textContent = '✗ Invalid JSON'; tplStatus.style.color = '#DC2626'; }
+              return;
+            }
+            if (tplStatus) { tplStatus.textContent = ''; }
+            save('template_data', raw);
+          });
+        }
+        var tplReset = document.getElementById('tpl-data-reset');
+        if (tplReset) {
+          tplReset.addEventListener('click', function() {
+            var active = document.querySelector('.tpl-card.tpl-active');
+            var key = active ? active.getAttribute('data-tpl') : 'host';
+            var ex = templateExamples[key] || {};
+            var json = JSON.stringify(ex, null, 2);
+            tplTa.value = json;
+            save('template_data', json);
+          });
+        }
 
         // Sign out
         document.getElementById('editor-out').addEventListener('click', async function(e) {
@@ -335,10 +426,27 @@ const SWATCHES = [
     .add { background: none; border: 1px dashed var(--border); padding: 8px; width: 100%; border-radius: 8px; color: var(--text-sec); font-size: 13px; cursor: pointer; margin-top: 4px; }
     .add:hover { color: var(--text); border-color: var(--border-hover); }
 
+    /* Template picker */
+    .tpl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .tpl-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: 12px; border: 1.5px solid var(--border); background: #fff; cursor: pointer; transition: border-color 0.15s, background 0.15s; font-family: inherit; }
+    .tpl-card:hover { border-color: var(--accent, #7C3AED); background: var(--surface, #F8F9FB); }
+    .tpl-card:active { transform: scale(0.98); }
+    .tpl-emoji { font-size: 22px; line-height: 1; }
+    .tpl-label { font-size: 11px; font-weight: 600; color: var(--text-sec); text-align: center; line-height: 1.2; }
+    .tpl-active { border-color: var(--accent, #7C3AED); border-width: 2px; background: color-mix(in srgb, var(--accent, #7C3AED) 6%, #fff); }
+    .tpl-active .tpl-label { color: var(--text); }
+    .tpl-hint { font-size: 12px; color: var(--text-faint); margin-top: 6px; }
+    .tpl-data-help { font-size: 12px; color: var(--text-sec); margin-bottom: 6px; }
+    #tpl-data-textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 12px; font-family: ui-monospace, Menlo, monospace; background: var(--surface, #F8F9FB); }
+    .tpl-data-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+    .tpl-data-row .add { width: auto; flex: 0 0 auto; padding: 6px 12px; margin-top: 0; }
+    .tpl-data-status { font-size: 12px; color: #047857; }
+
     @media (max-width: 600px) {
       .editor-field.two { grid-template-columns: 1fr; }
       .editor-offer { flex-wrap: wrap; }
       .editor-offer .link-url { flex-basis: 100%; }
+      .tpl-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </Base>

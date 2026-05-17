@@ -1,0 +1,40 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const stats: any[] = Array.isArray(templateData.impact_stats) ? templateData.impact_stats : [];
+const days: any[] = Array.isArray(templateData.upcoming_days) ? templateData.upcoming_days : [];
+---
+<div class="t9">
+  <span class="pill">MONTHLY · FAMILY-FRIENDLY</span>
+  <h1>{profile.display_name}</h1>
+  {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  {templateData.mission && <div class="mission">{templateData.mission}</div>}
+  {stats.length > 0 && (
+    <div class="stats">{stats.map(s => <div class="stat"><div class="sn">{s.n}</div><div class="sl">{s.label}</div></div>)}</div>
+  )}
+  {days.length > 0 && (
+    <div class="days">
+      <div class="h">— Upcoming volunteer days</div>
+      {days.map(d => <div class="day"><span class="when">{d.when}</span><span>{d.what}</span></div>)}
+    </div>
+  )}
+  {profile.bio && <p class="bio">{profile.bio}</p>}
+</div>
+<style>
+  .t9 { padding: 44px 32px; background: linear-gradient(165deg, #F5F2E8, #E6DDC2); color: #2D3D24; border-radius: 18px; }
+  .t9 .pill { display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 1px; transform: rotate(-2deg); margin-bottom: 14px; background: #3D5E2E; color: #F5F2E8; }
+  .t9 h1 { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+  .t9 .caveat { font-family: 'Caveat', cursive; color: #5C6E48; font-size: 22px; display: inline-block; transform: rotate(-1deg); margin-bottom: 18px; }
+  .t9 .mission { background: #fff; border-left: 4px solid #6B8E4E; padding: 16px 22px; margin-bottom: 18px; font-size: 15px; line-height: 1.6; border-radius: 0 8px 8px 0; }
+  .t9 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  .t9 .stat { background: #3D5E2E; color: #F5F2E8; padding: 16px; border-radius: 12px; text-align: center; }
+  .t9 .sn { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 900; line-height: 1; }
+  .t9 .sl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; opacity: 0.85; }
+  .t9 .days { background: #fff; padding: 16px 20px; border-radius: 12px; }
+  .t9 .h { font-size: 11px; letter-spacing: 2px; font-weight: 700; color: #5C6E48; text-transform: uppercase; margin-bottom: 10px; }
+  .t9 .day { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E6DDC2; font-size: 13px; }
+  .t9 .day:last-child { border-bottom: none; }
+  .t9 .when { font-weight: 700; }
+  .t9 .bio { margin-top: 16px; font-size: 15px; line-height: 1.6; }
+  @media (max-width: 600px) { .t9 .stats { grid-template-columns: 1fr; } }
+</style>

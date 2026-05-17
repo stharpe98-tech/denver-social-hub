@@ -1,10 +1,12 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
 import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
+import { PROFILE_TEMPLATE_KEYS } from '../../../lib/profile-templates';
 
 const ALLOWED_FIELDS = new Set([
   'display_name', 'headline', 'bio', 'photo_emoji', 'accent_color',
   'offers_json', 'links_json', 'contact_email', 'contact_phone',
+  'neighborhood', 'template', 'template_data',
 ]);
 
 const ACCENT_RE = /^#[0-9A-Fa-f]{6}$/;
@@ -33,6 +35,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     display_name: 80, headline: 140, bio: 2000, photo_emoji: 16,
     accent_color: 16, offers_json: 4000, links_json: 4000,
     contact_email: 120, contact_phone: 40,
+    neighborhood: 80, template: 32, template_data: 4000,
   };
   if (value.length > (caps[field] || 1000)) {
     return new Response(JSON.stringify({ ok: false, error: 'Too long' }), { status: 400 });
@@ -40,10 +43,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (field === 'accent_color' && !ACCENT_RE.test(value)) {
     return new Response(JSON.stringify({ ok: false, error: 'Invalid color' }), { status: 400 });
   }
-  if (field === 'offers_json' || field === 'links_json') {
-    try { JSON.parse(value); } catch {
+  if (field === 'offers_json' || field === 'links_json' || field === 'template_data') {
+    try {
+      const parsed = JSON.parse(value || '{}');
+      if (field === 'template_data' && (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed))) {
+        return new Response(JSON.stringify({ ok: false, error: 'template_data must be an object' }), { status: 400 });
+      }
+    } catch {
       return new Response(JSON.stringify({ ok: false, error: 'Invalid JSON' }), { status: 400 });
     }
+  }
+  if (field === 'template' && !PROFILE_TEMPLATE_KEYS.has(value)) {
+    return new Response(JSON.stringify({ ok: false, error: 'Unknown template' }), { status: 400 });
   }
   if (field === 'display_name' && !value.trim()) {
     return new Response(JSON.stringify({ ok: false, error: 'Name required' }), { status: 400 });

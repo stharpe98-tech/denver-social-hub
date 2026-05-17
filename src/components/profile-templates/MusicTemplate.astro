@@ -1,0 +1,44 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const gigs: any[] = Array.isArray(templateData.upcoming_gigs) ? templateData.upcoming_gigs : [];
+---
+<div class="t8">
+  {templateData.tagline && <div class="eb">{templateData.tagline.toUpperCase()}</div>}
+  <h1>{profile.display_name}</h1>
+  {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  {profile.bio && <p class="bio">{profile.bio}</p>}
+  {gigs.length > 0 && (
+    <div class="gigs">
+      <div class="h">▶ UPCOMING GIGS</div>
+      {gigs.map(g => (
+        <div class="gig">
+          <div class="gd">{g.date || ''}</div>
+          <div><div class="gt">{g.title || ''}</div><div class="gm">{g.meta || ''}</div></div>
+        </div>
+      ))}
+    </div>
+  )}
+  <div class="meta">
+    {templateData.sound_link && <div class="mi"><div class="l">SOUND</div><div class="v">🎧 {templateData.sound_link}</div></div>}
+    {templateData.looking_for && <div class="mi"><div class="l">LOOKING FOR</div><div class="v">{templateData.looking_for}</div></div>}
+  </div>
+</div>
+<style>
+  .t8 { padding: 44px 32px; background: #0A0A0F; color: #fff; border-radius: 18px; }
+  .t8 .eb { font-size: 11px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: #E0335E; }
+  .t8 h1 { font-family: 'DM Serif Display', serif; font-size: 48px; line-height: 1; letter-spacing: -1px; margin-bottom: 6px; }
+  .t8 .caveat { font-family: 'Caveat', cursive; color: #E0335E; font-size: 22px; display: inline-block; transform: rotate(-1deg); margin-bottom: 18px; }
+  .t8 .bio { font-size: 14px; line-height: 1.6; color: #ddd; margin-bottom: 22px; }
+  .t8 .gigs { background: #15151F; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; border: 1px solid #2A2A3A; }
+  .t8 .h { font-size: 10px; letter-spacing: 2px; font-weight: 700; color: #E0335E; text-transform: uppercase; margin-bottom: 12px; }
+  .t8 .gig { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid #2A2A3A; }
+  .t8 .gig:last-child { border-bottom: none; }
+  .t8 .gd { font-family: 'DM Serif Display', serif; font-size: 18px; color: #E0335E; line-height: 1.1; min-width: 70px; }
+  .t8 .gt { font-weight: 700; font-size: 14px; }
+  .t8 .gm { font-size: 12px; color: #888; }
+  .t8 .meta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .t8 .mi { background: #15151F; padding: 12px 16px; border-radius: 10px; flex: 1; min-width: 160px; border: 1px solid #2A2A3A; }
+  .t8 .mi .l { font-size: 9px; letter-spacing: 1.5px; color: #888; text-transform: uppercase; }
+  .t8 .mi .v { font-size: 13px; color: #fff; margin-top: 4px; font-weight: 600; }
+</style>

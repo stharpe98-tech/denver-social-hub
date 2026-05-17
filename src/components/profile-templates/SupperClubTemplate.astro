@@ -1,0 +1,49 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const photos: any[] = Array.isArray(templateData.meal_photos) ? templateData.meal_photos.slice(0, 3) : [];
+const nd = templateData.next_dinner || {};
+---
+<div class="t13">
+  {photos.length > 0 && (
+    <div class="photos">{photos.map((p, i) => <div class={`photo photo-${i+1}`}>{p.emoji || '🍝'}</div>)}</div>
+  )}
+  <div class="body">
+    {profile.neighborhood && <div class="eb">{profile.neighborhood.toUpperCase()} · MONTHLY</div>}
+    <h1>{profile.display_name}</h1>
+    {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+    {(nd.title || nd.date) && (
+      <div class="next">
+        <div class="next-l">▶ NEXT DINNER</div>
+        <div class="next-t">{nd.title || ''}{nd.host ? ` · Hosted by ${nd.host}` : ''}</div>
+        <div class="next-m">{[nd.date, nd.seats].filter(Boolean).join(' · ')}</div>
+      </div>
+    )}
+    {profile.bio && <p class="bio">{profile.bio}</p>}
+    <div class="meta">
+      {templateData.dietary_note && <div class="mi"><div class="l">DIETARY</div><div class="v">{templateData.dietary_note}</div></div>}
+      {templateData.format_note && <div class="mi"><div class="l">FORMAT</div><div class="v">{templateData.format_note}</div></div>}
+    </div>
+  </div>
+</div>
+<style>
+  .t13 { background: #2A1810; color: #FAF3E7; border-radius: 18px; overflow: hidden; }
+  .t13 .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .t13 .photo { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 54px; }
+  .t13 .photo-1 { background: linear-gradient(135deg, #8B3A2E, #C4736A); }
+  .t13 .photo-2 { background: linear-gradient(135deg, #C9A55D, #8B6B2F); }
+  .t13 .photo-3 { background: linear-gradient(135deg, #5A3825, #8B5A3C); }
+  .t13 .body { padding: 36px 32px; }
+  .t13 .eb { font-size: 11px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: #C9A55D; }
+  .t13 h1 { font-family: 'DM Serif Display', serif; font-size: 40px; line-height: 1; margin-bottom: 6px; }
+  .t13 .caveat { font-family: 'Caveat', cursive; color: #C9A55D; font-size: 22px; display: inline-block; transform: rotate(-1deg); margin-bottom: 18px; }
+  .t13 .next { background: rgba(201,165,93,0.15); border: 1px solid rgba(201,165,93,0.4); padding: 18px 22px; border-radius: 10px; margin-bottom: 16px; }
+  .t13 .next-l { font-size: 10px; letter-spacing: 2px; color: #C9A55D; text-transform: uppercase; font-weight: 800; margin-bottom: 4px; }
+  .t13 .next-t { font-family: 'DM Serif Display', serif; font-size: 24px; margin-bottom: 4px; }
+  .t13 .next-m { font-size: 13px; color: #C4B89A; }
+  .t13 .bio { font-size: 14px; line-height: 1.6; color: #E8DDC4; margin-bottom: 14px; }
+  .t13 .meta { display: flex; gap: 16px; flex-wrap: wrap; }
+  .t13 .mi .l { font-size: 10px; letter-spacing: 1.5px; color: #C9A55D; text-transform: uppercase; font-weight: 700; }
+  .t13 .mi .v { font-size: 13px; color: #FAF3E7; margin-top: 3px; }
+  @media (max-width: 600px) { .t13 .photos { grid-template-columns: 1fr 1fr; } .t13 .photo:nth-child(3) { display: none; } }
+</style>

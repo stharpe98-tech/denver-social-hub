@@ -1,0 +1,44 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const cr = templateData.currently_reading || {};
+const pct = (cr.pages_total && cr.pages_read) ? Math.min(100, Math.round((cr.pages_read / cr.pages_total) * 100)) : 0;
+---
+<div class="t1">
+  <div class="eb">{[profile.neighborhood, templateData.founded_year ? `SINCE ${templateData.founded_year}` : null].filter(Boolean).join(' · ').toUpperCase()}</div>
+  <h1>{profile.display_name}</h1>
+  {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  {(cr.title || cr.author) && (
+    <div class="card">
+      <div class="eb card-l">★ Currently reading</div>
+      <div class="card-t">{cr.title || ''}</div>
+      <div class="card-a">{cr.author || ''}</div>
+      {cr.pages_total && (
+        <>
+          <div class="bar"><div style={`width:${pct}%`}></div></div>
+          <div class="meta-row"><span><strong>{cr.pages_read || 0}/{cr.pages_total}</strong> pages</span></div>
+        </>
+      )}
+    </div>
+  )}
+  {profile.bio && <p class="bio">{profile.bio}</p>}
+  {templateData.next_meeting && (
+    <div class="foot">📅 <strong>Next meeting</strong> · {templateData.next_meeting}</div>
+  )}
+</div>
+<style>
+  .t1 { padding: 44px 36px; background: linear-gradient(160deg, #FAF3E7 0%, #F0E5D0 100%); font-family: 'Cormorant Garamond', Georgia, serif; border-radius: 18px; color: #2a1810; }
+  .t1 .eb { font-size: 11px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: #C97A45; font-family: 'Inter', sans-serif; }
+  .t1 h1 { font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 800; line-height: 1; color: #2a1810; margin-bottom: 4px; }
+  .t1 .caveat { font-family: 'Caveat', cursive; font-size: 22px; color: #6B4423; display: inline-block; transform: rotate(-1deg); margin-bottom: 22px; }
+  .t1 .card { background: #fff; border-radius: 14px; padding: 20px 24px; margin-bottom: 22px; box-shadow: 0 6px 20px rgba(0,0,0,0.06); border-top: 4px solid #C97A45; }
+  .t1 .card-l { color: #C97A45; margin-bottom: 8px; }
+  .t1 .card-t { font-size: 26px; font-weight: 700; color: #2a1810; line-height: 1.1; }
+  .t1 .card-a { font-style: italic; color: #6B4423; font-size: 15px; margin-bottom: 14px; }
+  .t1 .bar { background: #F0E5D0; height: 8px; border-radius: 999px; overflow: hidden; margin: 8px 0 6px; }
+  .t1 .bar div { height: 100%; background: linear-gradient(90deg, #C97A45, #FFC55A); }
+  .t1 .meta-row { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; font-family: 'Inter', sans-serif; }
+  .t1 .bio { font-size: 17px; line-height: 1.6; color: #2a1810; margin-bottom: 18px; max-width: 580px; }
+  .t1 .foot { background: #2a1810; color: #FAF3E7; padding: 14px 18px; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; }
+  .t1 .foot strong { color: #FFD93D; }
+</style>

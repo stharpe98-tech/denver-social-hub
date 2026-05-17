@@ -1,0 +1,50 @@
+---
+export interface Props {
+  profile: any;
+  hostedEvents: any[];
+  templateData: Record<string, any>;
+}
+const { profile, hostedEvents = [] } = Astro.props;
+const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.accent_color : '#7C3AED';
+---
+<div class="t5" style={`--accent: ${accent}`}>
+  <div class="hero">
+    <div class="av">{profile.photo_emoji || '👤'}</div>
+    <div>
+      <h1>{profile.display_name}</h1>
+      {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+      {profile.neighborhood && <div class="loc">📍 {profile.neighborhood}</div>}
+    </div>
+  </div>
+  {profile.bio && <p class="bio">{profile.bio}</p>}
+  {hostedEvents.length > 0 && (
+    <div class="events">
+      <div class="h">— Events I'm hosting</div>
+      {hostedEvents.map((e: any) => (
+        <div class="ev">
+          <div class="d"><span class="m">{e.event_month}</span><span class="dn">{e.event_day}</span></div>
+          <div><a href={`/events/${e.id}`} style="font-weight:700;color:inherit;text-decoration:none">{e.title}</a>
+            <div style="font-size:12px;color:#888">{e.location || ''}{e._past ? ' · past' : ''}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+<style>
+  .t5 { padding: 40px 32px; background: #FAF8F4; border-radius: 18px; color: #1A1A1A; }
+  .t5 .hero { display: flex; gap: 18px; align-items: center; margin-bottom: 22px; }
+  .t5 .av { width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #3B82F6); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 42px; flex-shrink: 0; box-shadow: 0 8px 24px rgba(124,58,237,0.25); }
+  .t5 h1 { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+  .t5 .caveat { font-family: 'Caveat', cursive; color: var(--accent); font-size: 20px; margin-bottom: 6px; transform: rotate(-1deg); display: inline-block; }
+  .t5 .loc { font-size: 11px; letter-spacing: 1.5px; color: #C9A55D; text-transform: uppercase; font-weight: 700; }
+  .t5 .bio { font-size: 15px; line-height: 1.6; color: #2a2a2a; margin-bottom: 22px; }
+  .t5 .events { background: #fff; border: 1.5px solid #E8E2D5; border-radius: 14px; padding: 20px 22px; }
+  .t5 .h { font-size: 11px; letter-spacing: 2px; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 14px; }
+  .t5 .ev { display: flex; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid #F0E8D8; }
+  .t5 .ev:last-child { border-bottom: none; }
+  .t5 .d { font-family: 'Playfair Display', serif; text-align: center; line-height: 1; min-width: 44px; }
+  .t5 .d .m { font-size: 10px; color: #C9A55D; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+  .t5 .d .dn { font-size: 26px; font-weight: 900; display: block; }
+</style>

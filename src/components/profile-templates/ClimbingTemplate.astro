@@ -1,0 +1,38 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+---
+<div class="t12">
+  <span class="pill">LOOKING FOR PARTNERS</span>
+  <h1>{(profile.display_name || '').toUpperCase()}</h1>
+  {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  <div class="grades">
+    {templateData.lead_grade && <div class="grade"><div class="l">Lead</div><div class="v">{templateData.lead_grade}</div><div class="s">comfortable on most</div></div>}
+    {templateData.boulder_grade && <div class="grade"><div class="l">Bouldering</div><div class="v">{templateData.boulder_grade}</div><div class="s">{templateData.project_note || ''}</div></div>}
+  </div>
+  {profile.bio && <p class="bio">{profile.bio}</p>}
+  {templateData.partner_call && (
+    <div class="call">
+      <div class="call-h">▶ LOOKING FOR</div>
+      <div class="call-t">Partners</div>
+      <div class="call-m">{templateData.partner_call}</div>
+    </div>
+  )}
+</div>
+<style>
+  .t12 { padding: 44px 32px; background: linear-gradient(160deg, #2A3441, #4A5568); color: #fff; border-radius: 18px; }
+  .t12 .pill { display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 1px; transform: rotate(-2deg); margin-bottom: 14px; background: #FF7A1A; color: #1A1A1A; }
+  .t12 h1 { font-family: 'Bebas Neue', sans-serif; font-size: 42px; line-height: 1; letter-spacing: 1px; color: #FFD93D; margin-bottom: 6px; }
+  .t12 .caveat { font-family: 'Caveat', cursive; color: #FF7A1A; font-size: 22px; display: inline-block; transform: rotate(-1deg); margin-bottom: 18px; }
+  .t12 .grades { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .t12 .grade { background: rgba(255,255,255,0.08); padding: 14px 18px; border-radius: 12px; border-left: 4px solid #FF7A1A; }
+  .t12 .grade .l { font-size: 10px; letter-spacing: 1.5px; color: #FF7A1A; text-transform: uppercase; font-weight: 800; }
+  .t12 .grade .v { font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: #fff; line-height: 1; margin-top: 4px; }
+  .t12 .grade .s { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .t12 .bio { font-size: 14px; line-height: 1.6; color: #ddd; margin-bottom: 16px; }
+  .t12 .call { background: #FF7A1A; color: #1A1A1A; padding: 18px 22px; border-radius: 12px; }
+  .t12 .call-h { font-size: 10px; letter-spacing: 2px; font-weight: 800; text-transform: uppercase; }
+  .t12 .call-t { font-family: 'Bebas Neue', sans-serif; font-size: 24px; line-height: 1; margin: 4px 0; }
+  .t12 .call-m { font-size: 13px; }
+  @media (max-width: 600px) { .t12 .grades { grid-template-columns: 1fr; } }
+</style>

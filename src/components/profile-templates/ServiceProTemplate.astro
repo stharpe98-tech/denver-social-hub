@@ -1,0 +1,38 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const hoods: string[] = Array.isArray(templateData.neighborhoods_served) ? templateData.neighborhoods_served : [];
+const test = templateData.testimonial || {};
+---
+<div class="t10">
+  <div class="hero">
+    <div class="av">{profile.photo_emoji || '👤'}</div>
+    <div>
+      <h1>{profile.display_name}</h1>
+      {(profile.headline || templateData.license_info) && (
+        <div class="caveat">~ {[profile.headline, templateData.license_info].filter(Boolean).join(' · ')} ~</div>
+      )}
+      {profile.neighborhood && <div class="loc">📍 {profile.neighborhood}</div>}
+    </div>
+  </div>
+  {profile.bio && <p class="bio">"{profile.bio}"</p>}
+  {hoods.length > 0 && (
+    <div class="hoods">{hoods.map(h => <span class="hood">{h.toUpperCase()}</span>)}</div>
+  )}
+  {(test.text || test.source) && (
+    <div class="test">"{test.text || ''}"<div class="test-sig">— {test.source || ''}</div></div>
+  )}
+</div>
+<style>
+  .t10 { background: #FAF8F4; padding: 44px 32px; border-radius: 18px; color: #1A1A1A; }
+  .t10 .hero { padding-bottom: 22px; border-bottom: 1px solid #E8E2D5; margin-bottom: 22px; display: flex; gap: 22px; align-items: center; }
+  .t10 .av { width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #1A1A1A, #444); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 48px; box-shadow: 0 12px 32px rgba(0,0,0,0.12); flex-shrink: 0; }
+  .t10 h1 { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 900; line-height: 1; letter-spacing: -0.5px; }
+  .t10 .caveat { font-family: 'Caveat', cursive; color: #C9A55D; font-size: 18px; margin-top: 4px; margin-bottom: 6px; display: inline-block; transform: rotate(-1deg); }
+  .t10 .loc { font-size: 11px; letter-spacing: 1.5px; color: #888; text-transform: uppercase; font-weight: 700; }
+  .t10 .bio { font-family: 'Playfair Display', serif; font-size: 18px; line-height: 1.6; font-style: italic; color: #444; margin-bottom: 22px; }
+  .t10 .hoods { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 22px; }
+  .t10 .hood { font-size: 11px; padding: 5px 12px; border: 1px solid #C9A55D; color: #C9A55D; border-radius: 999px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .t10 .test { background: #fff; border: 1px solid #E8E2D5; padding: 16px 20px; border-radius: 8px; font-style: italic; font-size: 14px; line-height: 1.5; }
+  .t10 .test-sig { font-style: normal; font-size: 11px; color: #888; margin-top: 8px; letter-spacing: 0.5px; }
+</style>

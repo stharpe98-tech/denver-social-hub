@@ -57,6 +57,8 @@ export async function ensureCommunitySchema(db: D1Database): Promise<void> {
       ['neighborhood', "TEXT DEFAULT ''"],
       ['contact_email', "TEXT DEFAULT ''"],
       ['contact_phone', "TEXT DEFAULT ''"],
+      ['template', "TEXT DEFAULT 'host'"],
+      ['template_data', "TEXT DEFAULT '{}'"],
     ] as const) {
       if (!pNames.has(col)) {
         try { await db.prepare(`ALTER TABLE profiles ADD COLUMN ${col} ${type}`).run(); } catch {}

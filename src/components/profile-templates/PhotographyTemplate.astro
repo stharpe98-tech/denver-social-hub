@@ -1,0 +1,70 @@
+---
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
+const { profile, templateData = {} } = Astro.props;
+const frames: any[] = Array.isArray(templateData.frames) ? templateData.frames.slice(0, 5) : [];
+const cs = templateData.currently_shooting || {};
+const walk = templateData.photo_walk || {};
+const tags: string[] = Array.isArray(templateData.style_tags) ? templateData.style_tags : [];
+---
+<div class="t16">
+  {frames.length > 0 && (
+    <div class="hero-grid">
+      {frames.map((f, i) => (
+        <div class={`frame f${i+1}`}>{f.emoji || '📷'}<span class="lab">{f.label || ''}</span></div>
+      ))}
+    </div>
+  )}
+  <div class="body">
+    <div class="eb">FILM + DIGITAL · DENVER METRO</div>
+    <h1>{profile.display_name}</h1>
+    {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+    {profile.bio && <p class="bio">{profile.bio}</p>}
+    {tags.length > 0 && <div class="tags">{tags.map(t => <span class="tag">{t}</span>)}</div>}
+    <div class="meta">
+      {templateData.gear && <div class="mi"><div class="l">GEAR</div><div class="v">{templateData.gear}</div></div>}
+      {(cs.name || cs.description) && (
+        <div class="mi"><div class="l">CURRENTLY SHOOTING</div><div class="v">"{cs.name || ''}"<small>{cs.description || ''}</small></div></div>
+      )}
+    </div>
+    {(walk.date || walk.location) && (
+      <div class="walk">
+        <div class="walk-l">▶ NEXT PHOTO WALK</div>
+        <div class="walk-t">{walk.date || ''}{walk.location ? ` · ${walk.location}` : ''}</div>
+        <div class="walk-m">{walk.meta || ''}</div>
+      </div>
+    )}
+  </div>
+</div>
+<style>
+  .t16 { background: #0C0C0C; color: #fff; border-radius: 18px; overflow: hidden; }
+  .t16 .hero-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px; aspect-ratio: 2 / 1; }
+  .t16 .frame { display: flex; align-items: center; justify-content: center; font-size: 56px; position: relative; }
+  .t16 .frame .lab { position: absolute; bottom: 8px; left: 10px; font-family: 'Space Mono', monospace; font-size: 10px; color: #fff; background: rgba(0,0,0,0.5); padding: 2px 6px; letter-spacing: 1px; }
+  .t16 .f1 { grid-row: 1 / 3; background: linear-gradient(135deg, #1a1a2e, #4a4a6e); color: #FFD93D; }
+  .t16 .f2 { background: linear-gradient(135deg, #2d3a4a, #5e7387); color: #FF6B9D; }
+  .t16 .f3 { background: linear-gradient(135deg, #3a2820, #6b4d3d); color: #FFD93D; }
+  .t16 .f4 { background: linear-gradient(135deg, #1f2937, #374151); color: #fff; }
+  .t16 .f5 { background: linear-gradient(135deg, #4a3a2a, #7a6750); color: #fff; }
+  .t16 .body { padding: 36px 32px; }
+  .t16 .eb { font-size: 11px; letter-spacing: 3px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: #FFD93D; font-family: 'Space Mono', monospace; }
+  .t16 h1 { font-family: 'DM Serif Display', serif; font-size: 46px; line-height: 1; margin-bottom: 4px; letter-spacing: -0.5px; }
+  .t16 .caveat { font-family: 'Caveat', cursive; color: #FFD93D; font-size: 22px; display: inline-block; transform: rotate(-1deg); margin-bottom: 18px; }
+  .t16 .bio { font-size: 15px; line-height: 1.7; color: #ccc; margin-bottom: 20px; max-width: 600px; }
+  .t16 .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .t16 .mi { background: #1A1A1A; padding: 14px 16px; border: 1px solid #2A2A2A; border-radius: 10px; }
+  .t16 .mi .l { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: #888; text-transform: uppercase; }
+  .t16 .mi .v { font-size: 14px; color: #fff; margin-top: 6px; font-weight: 600; }
+  .t16 .mi .v small { display: block; font-weight: 400; color: #aaa; font-size: 12px; margin-top: 2px; }
+  .t16 .walk { background: #FFD93D; color: #0C0C0C; padding: 18px 22px; border-radius: 12px; }
+  .t16 .walk-l { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 2px; font-weight: 800; text-transform: uppercase; }
+  .t16 .walk-t { font-family: 'DM Serif Display', serif; font-size: 24px; line-height: 1; margin: 4px 0; }
+  .t16 .walk-m { font-size: 13px; font-weight: 600; }
+  .t16 .tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0; }
+  .t16 .tag { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 1.5px; padding: 4px 10px; background: rgba(255,217,61,0.12); color: #FFD93D; border: 1px solid rgba(255,217,61,0.3); text-transform: uppercase; font-weight: 700; }
+  @media (max-width: 600px) {
+    .t16 .meta { grid-template-columns: 1fr; }
+    .t16 .hero-grid { grid-template-columns: 1fr 1fr; grid-template-rows: auto; aspect-ratio: auto; }
+    .t16 .f1 { grid-row: auto; grid-column: 1 / 3; aspect-ratio: 2 / 1; }
+    .t16 .f2, .t16 .f3, .t16 .f4, .t16 .f5 { aspect-ratio: 1; }
+  }
+</style>
