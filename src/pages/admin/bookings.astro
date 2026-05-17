@@ -1,0 +1,205 @@
+---
+import { requireApprovedOrg } from '../../lib/admin-auth';
+import { getDB } from '../../lib/db';
+import { ensureBookingsSchema, formatDenverHuman } from '../../lib/bookings-schema';
+
+const gate = await requireApprovedOrg(Astro);
+if (gate instanceof Response) return gate;
+const org = gate;
+
+const url = new URL(Astro.request.url);
+const filter = (url.searchParams.get('status') || 'pending').toLowerCase();
+const validFilters = ['pending', 'confirmed', 'declined', 'all'];
+const safeFilter = validFilters.includes(filter) ? filter : 'pending';
+
+const db = getDB();
+let rows: any[] = [];
+let counts = { pending: 0, confirmed: 0, declined: 0, all: 0 };
+
+if (db) {
+  try {
+    await ensureBookingsSchema(db);
+
+    const countRows = await db.prepare(
+      `SELECT status, COUNT(*) AS c FROM bookings GROUP BY status`
+    ).all<{ status: string; c: number }>();
+    for (const r of (countRows.results || []) as any[]) {
+      counts.all += Number(r.c) || 0;
+      if (r.status === 'pending') counts.pending = Number(r.c);
+      else if (r.status === 'confirmed') counts.confirmed = Number(r.c);
+      else if (r.status === 'declined') counts.declined = Number(r.c);
+    }
+
+    const sql = safeFilter === 'all'
+      ? `SELECT b.id, b.profile_slug, b.slot_start, b.slot_end, b.status,
+                b.requester_name, b.requester_email, b.created_at,
+                o.title AS offering_title
+         FROM bookings b
+         LEFT JOIN bookable_offerings o ON o.id = b.offering_id
+         ORDER BY b.created_at DESC LIMIT 300`
+      : `SELECT b.id, b.profile_slug, b.slot_start, b.slot_end, b.status,
+                b.requester_name, b.requester_email, b.created_at,
+                o.title AS offering_title
+         FROM bookings b
+         LEFT JOIN bookable_offerings o ON o.id = b.offering_id
+         WHERE b.status = ?
+         ORDER BY b.created_at DESC LIMIT 300`;
+
+    const stmt = safeFilter === 'all' ? db.prepare(sql) : db.prepare(sql).bind(safeFilter);
+    const r = await stmt.all();
+    rows = (r.results || []) as any[];
+  } catch (e) {
+    // bookings schema may not be migrated on every deploy
+    rows = [];
+  }
+}
+
+function statusColor(s: string) {
+  if (s === 'pending') return { bg: '#FFFBEB', border: '#F59E0B', fg: '#92400E' };
+  if (s === 'confirmed') return { bg: '#E8F5EC', border: '#2D5F3F', fg: '#2D5F3F' };
+  if (s === 'declined') return { bg: '#FEF2F2', border: '#FCA5A5', fg: '#DC2626' };
+  return { bg: '#F3F4F6', border: '#D1D5DB', fg: '#6B6B73' };
+}
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Bookings · Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root {
+      --bg: #F5EFE3; --surface: #FFFFFF; --border: #DDD2BB;
+      --text: #2A2730; --text-faint: #6B6B73;
+      --accent: #2D5F3F; --accent-light: #E8F5EC;
+      --radius: 14px; --radius-sm: 10px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+      --font: 'Inter', sans-serif; --font-display: 'Outfit', sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+    html,body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 14px 24px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .topbar h1 { font-family: var(--font-display); font-weight: 700; font-size: 17px; }
+    .topbar a { font-size: 13px; color: var(--text-faint); text-decoration: none; }
+    .topbar a:hover { color: var(--text); }
+    .page { max-width: 1000px; margin: 0 auto; padding: 24px 20px 80px; }
+    .head { margin-bottom: 18px; }
+    .head h2 { font-family: var(--font-display); font-weight: 800; font-size: 24px; margin-bottom: 4px; }
+    .head p { color: var(--text-faint); font-size: 13px; }
+    .filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .pill {
+      padding: 7px 14px; border-radius: 100px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-faint); font-size: 13px; font-weight: 600;
+      text-decoration: none; transition: all 0.15s;
+    }
+    .pill:hover { border-color: var(--text-faint); color: var(--text); }
+    .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .pill .n { font-family: var(--mono); font-size: 12px; margin-left: 4px; opacity: 0.8; }
+
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .table-head {
+      display: grid; grid-template-columns: 1.4fr 1.2fr 1.4fr 1.4fr 0.8fr 60px;
+      padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--border);
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint);
+    }
+    .table-row {
+      display: grid; grid-template-columns: 1.4fr 1.2fr 1.4fr 1.4fr 0.8fr 60px;
+      padding: 14px 16px; border-bottom: 1px solid var(--border); align-items: center; gap: 8px;
+    }
+    .table-row:last-child { border-bottom: none; }
+    .table-row > div { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .cell-name { font-weight: 600; }
+    .cell-meta { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+    .slug-link { color: var(--accent); text-decoration: none; font-family: var(--mono); font-size: 12px; }
+    .slug-link:hover { text-decoration: underline; }
+    .status-badge {
+      display: inline-block; font-size: 11px; font-weight: 700; padding: 4px 10px;
+      border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .view-link { color: var(--accent); text-decoration: none; font-size: 13px; font-weight: 600; }
+    .view-link:hover { text-decoration: underline; }
+    .empty { padding: 40px 20px; text-align: center; color: var(--text-faint); font-style: italic; }
+
+    @media (max-width: 700px) {
+      .table-head { display: none; }
+      .table-row {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+      .table-row > div { white-space: normal; }
+      .mobile-label { font-size: 10px; text-transform: uppercase; color: var(--text-faint); font-weight: 700; letter-spacing: 0.5px; margin-bottom: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Bookings — Admin</h1>
+    <a href="/admin/dashboard">← Back to dashboard</a>
+  </div>
+
+  <div class="page">
+    <div class="head">
+      <h2>All bookings</h2>
+      <p>Read-only view of every booking across all /u/ pages. Organizers manage their own requests from their profile pages.</p>
+    </div>
+
+    <div class="filters">
+      <a href="?status=pending" class:list={['pill', { active: safeFilter === 'pending' }]}>Pending <span class="n">{counts.pending}</span></a>
+      <a href="?status=confirmed" class:list={['pill', { active: safeFilter === 'confirmed' }]}>Confirmed <span class="n">{counts.confirmed}</span></a>
+      <a href="?status=declined" class:list={['pill', { active: safeFilter === 'declined' }]}>Declined <span class="n">{counts.declined}</span></a>
+      <a href="?status=all" class:list={['pill', { active: safeFilter === 'all' }]}>All <span class="n">{counts.all}</span></a>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head">
+        <div>Requester</div>
+        <div>Profile</div>
+        <div>Offering</div>
+        <div>Slot</div>
+        <div>Status</div>
+        <div></div>
+      </div>
+
+      {rows.length === 0 ? (
+        <div class="empty">No bookings match this filter.</div>
+      ) : rows.map((b: any) => {
+        const sc = statusColor(b.status);
+        let slotLabel = b.slot_start;
+        try { slotLabel = formatDenverHuman(b.slot_start); } catch {}
+        return (
+          <div class="table-row">
+            <div>
+              <div class="mobile-label">Requester</div>
+              <div class="cell-name">{b.requester_name || '(no name)'}</div>
+              <div class="cell-meta">{b.requester_email}</div>
+            </div>
+            <div>
+              <div class="mobile-label">Profile</div>
+              <a href={`/u/${b.profile_slug}`} class="slug-link" target="_blank">/u/{b.profile_slug}</a>
+            </div>
+            <div>
+              <div class="mobile-label">Offering</div>
+              {b.offering_title || <em style="color:var(--text-faint)">(deleted)</em>}
+            </div>
+            <div>
+              <div class="mobile-label">Slot</div>
+              {slotLabel}
+            </div>
+            <div>
+              <div class="mobile-label">Status</div>
+              <span class="status-badge" style={`background:${sc.bg};color:${sc.fg};border:1px solid ${sc.border}`}>{b.status}</span>
+            </div>
+            <div>
+              <a href={`/u/${b.profile_slug}/bookings`} class="view-link" target="_blank">View →</a>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+</body>
+</html>

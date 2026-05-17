@@ -1,37 +1,79 @@
 ---
 import { requireApprovedOrg, isSuperAdmin } from '../../lib/admin-auth';
 import { getDB } from '../../lib/db';
+
 const gate = await requireApprovedOrg(Astro);
 if (gate instanceof Response) return gate;
 const org = gate;
 const showApprovalUI = isSuperAdmin(org);
 const db = getDB();
+
+// ── Safe count helper — tables may not all exist on every deploy ─────
+async function safeCount(sql: string): Promise<number> {
+  if (!db) return 0;
+  try {
+    const row = await db.prepare(sql).first<{ c: number }>();
+    return Number(row?.c ?? 0);
+  } catch { return 0; }
+}
+async function safeAll<T = any>(sql: string): Promise<T[]> {
+  if (!db) return [];
+  try {
+    const r = await db.prepare(sql).all<T>();
+    return (r.results ?? []) as T[];
+  } catch { return []; }
+}
+
+// ── A. Quick stats strip ─────────────────────────────────────────────
+const statEvents     = await safeCount("SELECT COUNT(*) AS c FROM events WHERE is_past IS NULL OR is_past=0");
+const statPotlucks   = await safeCount("SELECT COUNT(*) AS c FROM potlucks WHERE status='upcoming'");
+const statProfiles   = await safeCount("SELECT COUNT(*) AS c FROM profiles WHERE status='live'");
+const statBookings   = await safeCount("SELECT COUNT(*) AS c FROM bookings WHERE status='pending'");
+
+// ── B. Today / Now buckets ───────────────────────────────────────────
+const flaggedPages       = await safeCount(
+  "SELECT COUNT(*) AS c FROM profiles WHERE status='live' AND (SELECT COUNT(*) FROM profile_reports WHERE slug=profiles.slug) > 0"
+);
+const pendingEventSubs   = await safeCount(
+  "SELECT COUNT(*) AS c FROM event_suggestions WHERE status IS NULL OR status='pending'"
+);
+const openReports        = await safeCount("SELECT COUNT(*) AS c FROM reports WHERE status='open'");
+
+// ── D. Manage section data ───────────────────────────────────────────
+const upcomingPotlucks = await safeAll<any>(
+  "SELECT id, title, date_label, location FROM potlucks WHERE status='upcoming' ORDER BY id DESC LIMIT 8"
+);
+const newPagesThisWeek = await safeCount(
+  "SELECT COUNT(*) AS c FROM profiles WHERE created_at >= datetime('now','-7 days')"
+);
+const pendingPartners = await safeCount(
+  "SELECT COUNT(*) AS c FROM partners WHERE status IS NULL OR status='pending'"
+);
+const communityPostCount = await safeCount(
+  "SELECT COUNT(*) AS c FROM community_posts WHERE created_at >= datetime('now','-7 days')"
+);
+
+// ── Sources of truth ─────────────────────────────────────────────────
+const eventSources = await safeAll<any>("SELECT id, kind, label, url, enabled FROM event_sources ORDER BY id DESC LIMIT 20");
+
+// ── Pending organizer approvals (super admin only) ───────────────────
 let pendingOrgs: any[] = [];
 let approvedOrgs: any[] = [];
 if (showApprovalUI && db) {
-  const all = await db.prepare("SELECT id, name, email, approved_for_potlucks FROM organizers ORDER BY id DESC").all();
-  const rows = (all.results ?? []) as any[];
-  pendingOrgs = rows.filter(r => !r.approved_for_potlucks);
-  approvedOrgs = rows.filter(r => !!r.approved_for_potlucks);
+  try {
+    const all = await db.prepare("SELECT id, name, email, approved_for_potlucks FROM organizers ORDER BY id DESC").all();
+    const rows = (all.results ?? []) as any[];
+    pendingOrgs = rows.filter(r => !r.approved_for_potlucks);
+    approvedOrgs = rows.filter(r => !!r.approved_for_potlucks);
+  } catch {}
 }
-let events: any[] = [];
-let templates: any[] = [];
-try {
-  if (db) {
-    const e = await db.prepare(`SELECT p.*, COUNT(DISTINCT r.id) as signups FROM potlucks p LEFT JOIN potluck_rsvp r ON r.potluck_id=p.id AND r.rsvp='yes' WHERE p.status != 'pending' GROUP BY p.id ORDER BY p.id DESC`).all();
-    events = e?.results ?? [];
-    const t = await db.prepare(`SELECT * FROM event_templates ORDER BY created_at DESC`).all();
-    templates = t?.results ?? [];
-  }
-} catch(e) {}
-const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 0), 0);
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Dashboard · {org.name}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root {
@@ -40,14 +82,16 @@ const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 
       --accent: #2D5F3F; --accent-light: #E8F5EC; --accent-hover: #245233;
       --orange: #D97B3A; --orange-light: #FEF3E8;
       --red: #DC2626; --red-light: #FEF2F2;
+      --purple: #7C3AED; --purple-light: #EDE9FE;
       --radius: 14px; --radius-sm: 10px;
       --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
       --shadow-lg: 0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08);
-      --font: 'Inter', sans-serif; --font-display: 'Fraunces', sans-serif;
+      --font: 'Inter', sans-serif; --font-display: 'Outfit', sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
     }
     html,body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; font-size: 14px; }
 
-    /* ── Top bar ── */
+    /* Top bar */
     .topbar {
       background: var(--surface); border-bottom: 1px solid var(--border);
       padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
@@ -71,183 +115,145 @@ const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 
     .logout-btn {
       font-size: 13px; color: var(--text-faint); background: none; border: none;
       cursor: pointer; font-family: var(--font); padding: 6px 10px; border-radius: 8px;
-      transition: background 0.15s;
     }
     .logout-btn:hover { background: var(--border); color: var(--text); }
+    .logout-btn:active { transform: translateY(1px); }
 
-    /* ── Tab nav ── */
-    .tab-bar {
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 0 24px; display: flex; gap: 0; overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    .tab-btn {
-      padding: 14px 20px; font-size: 13px; font-weight: 600; font-family: var(--font);
-      color: var(--text-faint); background: none; border: none; cursor: pointer;
-      border-bottom: 2.5px solid transparent; white-space: nowrap;
-      transition: color 0.15s, border-color 0.15s;
-    }
-    .tab-btn:hover { color: var(--text-sec); }
-    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
+    .page { max-width: 920px; margin: 0 auto; padding: 24px 20px 80px; }
 
-    /* ── Page shell ── */
-    .page { max-width: 800px; margin: 0 auto; padding: 28px 20px 60px; }
-
-    /* ── Stat cards ── */
-    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
-    @media (max-width: 500px) { .stats-row { grid-template-columns: 1fr; } }
-    .stat-card {
+    /* A. Stats strip */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+    @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+    .stat {
       background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 18px 20px; box-shadow: var(--shadow);
+      padding: 14px 16px; box-shadow: var(--shadow);
     }
-    .stat-value { font-family: var(--font-display); font-weight: 800; font-size: 28px; color: var(--text); }
-    .stat-label { font-size: 12px; color: var(--text-faint); margin-top: 2px; font-weight: 500; }
+    .stat-val { font-family: var(--mono); font-weight: 600; font-size: 26px; color: var(--text); line-height: 1.1; }
+    .stat-lab { font-size: 11px; color: var(--text-faint); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 
-    /* ── Quick action grid ── */
-    .action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 28px; }
-    @media (min-width: 600px) { .action-grid { grid-template-columns: repeat(4, 1fr); } }
-    .action-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 20px 16px; text-align: center; text-decoration: none;
-      box-shadow: var(--shadow); transition: border-color 0.15s, box-shadow 0.15s;
+    /* B. Today / Now */
+    .now-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 10px; margin-bottom: 24px; }
+    .now-card {
+      display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+      background: #FFFBEB; border: 1px solid #F59E0B; border-radius: var(--radius);
+      text-decoration: none; color: inherit; box-shadow: var(--shadow);
+      transition: transform 0.1s, box-shadow 0.15s;
     }
-    .action-card:hover { border-color: var(--accent); box-shadow: var(--shadow-lg); }
-    .action-icon { font-size: 26px; display: block; margin-bottom: 8px; }
-    .action-label { font-size: 13px; font-weight: 600; color: var(--text); }
-    .action-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+    .now-card:hover { box-shadow: var(--shadow-lg); }
+    .now-card:active { transform: translateY(1px); }
+    .now-count { font-family: var(--mono); font-weight: 600; font-size: 22px; color: #92400E; }
+    .now-label { font-size: 13px; font-weight: 600; color: #5B21B6; }
 
-    /* ── Section headers ── */
+    /* C. Quick actions */
     .sec-head {
       font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-      color: var(--text-faint); margin-bottom: 12px;
+      color: var(--text-faint); margin: 0 0 12px 0;
     }
-
-    /* ── Cards ── */
-    .card {
+    .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 28px; }
+    @media (max-width: 700px) { .actions { grid-template-columns: 1fr; } }
+    .act {
       background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px;
+      padding: 18px 16px; text-align: center; text-decoration: none; color: var(--text);
+      box-shadow: var(--shadow); transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+      display: block;
     }
-    .card-title {
-      font-family: var(--font-display); font-weight: 700; font-size: 16px;
-      color: var(--text); margin-bottom: 4px;
-    }
-    .card-desc { font-size: 13px; color: var(--text-sec); line-height: 1.6; margin-bottom: 16px; }
+    .act:hover { border-color: var(--accent); box-shadow: var(--shadow-lg); }
+    .act:active { transform: translateY(1px); }
+    .act-icon { font-size: 22px; display: block; margin-bottom: 6px; }
+    .act-label { font-size: 13px; font-weight: 600; }
 
-    /* ── Event rows ── */
-    .event-row {
+    /* D. Manage details */
+    details.section {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); margin-bottom: 10px; overflow: hidden;
+    }
+    details.section > summary {
+      list-style: none; cursor: pointer; padding: 16px 20px;
       display: flex; justify-content: space-between; align-items: center;
-      padding: 14px 16px; background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); margin-bottom: 8px;
-      text-decoration: none; transition: border-color 0.15s;
+      font-family: var(--font-display); font-weight: 700; font-size: 15px;
     }
-    .event-row:hover { border-color: var(--accent); }
-    .event-title { font-weight: 600; font-size: 14px; color: var(--text); }
-    .event-meta { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
-    .event-badge {
-      font-size: 12px; font-weight: 600; color: var(--accent);
-      background: var(--accent-light); padding: 4px 10px; border-radius: 8px; flex-shrink: 0;
+    details.section > summary::-webkit-details-marker { display: none; }
+    details.section > summary::after {
+      content: '+'; font-family: var(--mono); font-size: 18px; color: var(--text-faint);
+      transition: transform 0.15s;
+    }
+    details.section[open] > summary::after { content: '−'; }
+    details.section > summary:hover { background: var(--bg); }
+    .section-body { padding: 4px 20px 20px; border-top: 1px solid var(--border); }
+    .section-count {
+      font-family: var(--mono); font-size: 12px; color: var(--text-faint);
+      font-weight: 500; margin-left: auto; margin-right: 14px;
     }
 
-    /* ── Template rows ── */
-    .tmpl-row {
+    /* Manage rows */
+    .row {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 16px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); margin-bottom: 8px;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
     }
-    .tmpl-name { font-weight: 600; font-size: 13px; color: var(--text); }
-    .tmpl-meta { font-size: 12px; color: var(--text-faint); }
-    .tmpl-actions { display: flex; gap: 6px; }
+    .row:last-child { border-bottom: none; }
+    .row-title { font-weight: 600; font-size: 14px; color: var(--text); }
+    .row-meta { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+    .row a.manage-link { font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; }
+    .row a.manage-link:hover { text-decoration: underline; }
 
-    /* ── Org rows ── */
-    .org-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 16px; border-bottom: 1px solid var(--border);
+    .link-btn {
+      display: inline-block; padding: 8px 14px; border-radius: 8px;
+      background: var(--accent-light); color: var(--accent);
+      font-size: 13px; font-weight: 600; text-decoration: none;
+      margin-right: 8px; margin-top: 8px;
     }
-    .org-row:last-child { border-bottom: none; }
-    .org-name { font-weight: 600; font-size: 13px; }
-    .org-email { font-size: 12px; color: var(--text-faint); }
-    .org-badge { font-size: 11px; color: var(--text-faint); padding: 4px 10px; }
+    .link-btn:hover { background: var(--accent); color: #fff; }
 
-    /* ── Form elements ── */
-    .field { margin-bottom: 14px; }
-    .field label {
-      display: block; font-size: 11px; font-weight: 700; color: var(--text-sec);
-      margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px;
-    }
-    .field input, .field select {
-      width: 100%; padding: 10px 12px; background: var(--bg); border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text); font-family: var(--font); font-size: 13px;
-      outline: none; transition: border-color 0.15s;
-    }
-    .field input:focus { border-color: var(--accent); }
-    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 500px) { .field-row { grid-template-columns: 1fr; } }
+    .empty { color: var(--text-faint); font-style: italic; font-size: 13px; padding: 12px 0; }
+    .hint { font-size: 12px; color: var(--text-faint); line-height: 1.5; margin-bottom: 10px; }
 
-    /* ── Buttons ── */
     .btn-primary {
-      padding: 10px 20px; border-radius: var(--radius-sm); border: none;
+      padding: 10px 18px; border-radius: var(--radius-sm); border: none;
       background: var(--accent); color: #fff; font-family: var(--font);
-      font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s;
+      font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none;
+      display: inline-block;
     }
     .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:active { transform: translateY(1px); }
     .btn-secondary {
-      padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+      padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);
       background: var(--surface); color: var(--text-sec); font-family: var(--font);
-      font-size: 13px; cursor: pointer; transition: all 0.15s;
+      font-size: 13px; cursor: pointer; text-decoration: none; display: inline-block;
     }
     .btn-secondary:hover { border-color: var(--text-faint); color: var(--text); }
     .btn-danger {
-      padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid #FCA5A5;
+      padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid #FCA5A5;
       background: var(--red-light); color: var(--red); font-family: var(--font);
       font-size: 13px; font-weight: 600; cursor: pointer;
     }
     .btn-approve {
-      padding: 6px 14px; border-radius: 8px; border: none;
+      padding: 6px 12px; border-radius: 8px; border: none;
       background: var(--accent); color: #fff; font-size: 12px; font-weight: 600;
       cursor: pointer; font-family: var(--font);
     }
     .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
-    /* ── Embed code ── */
-    .embed-block {
-      background: #2A2730; border-radius: var(--radius-sm); padding: 16px 18px; margin-top: 10px;
-    }
-    .embed-code {
-      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #86EFAC;
-      word-break: break-all; line-height: 1.6;
-    }
-    .copy-btn {
-      margin-top: 10px; padding: 7px 14px; border-radius: 8px; border: 1px solid #3D3D3D;
-      background: transparent; color: #6B6B73; font-size: 12px; cursor: pointer;
-      font-family: var(--font);
-    }
+    /* Security cards */
+    .sub-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 12px; }
+    .sub-card h3 { font-family: var(--font-display); font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+    .sub-card p.desc { font-size: 12px; color: var(--text-faint); margin-bottom: 12px; line-height: 1.5; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-sec); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .field input { width: 100%; padding: 9px 12px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font); font-size: 13px; outline: none; }
+    .field input:focus { border-color: var(--accent); }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 500px) { .field-row { grid-template-columns: 1fr; } }
 
-    /* ── Empty state ── */
-    .empty { text-align: center; padding: 28px; color: var(--text-faint); font-style: italic; font-size: 13px; }
-
-    /* ── Toast ── */
     .toast {
       position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
       background: #0D2E1A; border: 1px solid #166534; color: #4ADE80;
       padding: 10px 20px; border-radius: var(--radius-sm); font-size: 13px;
       display: none; z-index: 999; box-shadow: var(--shadow-lg);
     }
-
-    /* ── Hint text ── */
-    .hint { font-size: 12px; color: var(--text-faint); line-height: 1.5; }
-
-    /* ── Pending alert ── */
-    .pending-alert {
-      background: #EDE9FE; border: 1px solid #F59E0B; border-radius: var(--radius-sm);
-      padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #5B21B6;
-    }
   </style>
 </head>
 <body>
 
-  <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-left">
       <div class="topbar-avatar">{org.name.charAt(0).toUpperCase()}</div>
@@ -262,292 +268,202 @@ const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 
     </div>
   </div>
 
-  <!-- Tab nav -->
-  <div class="tab-bar">
-    <button class="tab-btn active" data-tab="overview">Overview</button>
-    <button class="tab-btn" data-tab="settings">Settings</button>
-    <button class="tab-btn" data-tab="security">Security</button>
-    {showApprovalUI && <button class="tab-btn" data-tab="admin">Admin</button>}
-  </div>
+  <div class="page">
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- TAB: Overview                                -->
-  <!-- ════════════════════════════════════════════ -->
-  <div class="tab-panel active" id="panel-overview">
-    <div class="page">
+    {/* ─ A. Quick stats ─ */}
+    <div class="stats">
+      <div class="stat"><div class="stat-val">{statEvents}</div><div class="stat-lab">Events upcoming</div></div>
+      <div class="stat"><div class="stat-val">{statPotlucks}</div><div class="stat-lab">Potlucks live</div></div>
+      <div class="stat"><div class="stat-val">{statProfiles}</div><div class="stat-lab">Active /u/ pages</div></div>
+      <div class="stat"><div class="stat-val">{statBookings}</div><div class="stat-lab">Pending bookings</div></div>
+    </div>
 
-      <!-- Stats -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-value">{events.length}</div>
-          <div class="stat-label">Events</div>
+    {/* ─ B. Today / Now ─ */}
+    {(statBookings > 0 || flaggedPages > 0 || pendingEventSubs > 0 || openReports > 0) && (
+      <>
+        <div class="sec-head">Needs your attention</div>
+        <div class="now-grid">
+          {statBookings > 0 && (
+            <a href="/admin/bookings" class="now-card">
+              <div class="now-count">{statBookings}</div>
+              <div class="now-label">pending booking request{statBookings === 1 ? '' : 's'}</div>
+            </a>
+          )}
+          {flaggedPages > 0 && (
+            <a href="/admin/pages" class="now-card">
+              <div class="now-count">{flaggedPages}</div>
+              <div class="now-label">flagged /u/ page{flaggedPages === 1 ? '' : 's'}</div>
+            </a>
+          )}
+          {pendingEventSubs > 0 && (
+            <a href="/admin/pending" class="now-card">
+              <div class="now-count">{pendingEventSubs}</div>
+              <div class="now-label">pending event submission{pendingEventSubs === 1 ? '' : 's'}</div>
+            </a>
+          )}
+          {openReports > 0 && (
+            <a href="/admin/reports" class="now-card">
+              <div class="now-count">{openReports}</div>
+              <div class="now-label">new report{openReports === 1 ? '' : 's'}</div>
+            </a>
+          )}
         </div>
-        <div class="stat-card">
-          <div class="stat-value">{totalSignups}</div>
-          <div class="stat-label">Total sign-ups</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">{templates.length}</div>
-          <div class="stat-label">Templates</div>
-        </div>
-      </div>
+      </>
+    )}
 
-      <!-- Quick actions -->
-      <div class="sec-head">Quick Actions</div>
-      <div class="action-grid">
-        <a href="/potlucks/manage" class="action-card">
-          <span class="action-icon">🍽</span>
-          <span class="action-label">Manage Events</span>
-          <span class="action-sub">Edit potlucks & RSVPs</span>
-        </a>
-        <a href="/admin/settings" class="action-card">
-          <span class="action-icon">⚙️</span>
-          <span class="action-label">Site Settings</span>
-          <span class="action-sub">Email, SMS, contact info</span>
-        </a>
-        <a href="/admin/analytics" class="action-card">
-          <span class="action-icon">📊</span>
-          <span class="action-label">Analytics</span>
-          <span class="action-sub">Views & conversions</span>
-        </a>
-        <a href="/admin/activity" class="action-card">
-          <span class="action-icon">📡</span>
-          <span class="action-label">Activity feed</span>
-          <span class="action-sub">RSVPs, signups, ideas</span>
-        </a>
-        <a href="/admin/sync" class="action-card">
-          <span class="action-icon">🤖</span>
-          <span class="action-label">Event Sync</span>
-          <span class="action-sub">Discord, ICS, RSS, more</span>
-        </a>
-        <a href="/admin/reports" class="action-card">
-          <span class="action-icon">🚩</span>
-          <span class="action-label">Reports</span>
-          <span class="action-sub">Flagged content queue</span>
-        </a>
-        <a href="/admin/partners" class="action-card">
-          <span class="action-icon">🏪</span>
-          <span class="action-label">Partner perks</span>
-          <span class="action-sub">Review business offers</span>
-        </a>
-        <a href="/admin/pages" class="action-card">
-          <span class="action-icon">👤</span>
-          <span class="action-label">Personal pages</span>
-          <span class="action-sub">Moderate /u/ profiles</span>
-        </a>
-        <a href="/admin/community" class="action-card">
-          <span class="action-icon">🌳</span>
-          <span class="action-label">Community</span>
-          <span class="action-sub">Calendar + named roles</span>
-        </a>
-        <a href="/admin/links" class="action-card">
-          <span class="action-icon">🔗</span>
-          <span class="action-label">Short Links</span>
-          <span class="action-sub">Track shares</span>
-        </a>
-        <a href="/potlucks/1/poster" class="action-card">
-          <span class="action-icon">🖼</span>
-          <span class="action-label">Poster</span>
-          <span class="action-sub">Shareable flyer</span>
-        </a>
-        <a href="/admin/sync" class="action-card">
-          <span class="action-icon">🤖</span>
-          <span class="action-label">Event Sync</span>
-          <span class="action-sub">Discord, ICS feeds</span>
-        </a>
-      </div>
+    {/* ─ C. Quick actions ─ */}
+    <div class="sec-head">Quick actions</div>
+    <div class="actions">
+      <a href="/events/new" class="act"><span class="act-icon">📅</span><span class="act-label">Post an event</span></a>
+      <a href="/potlucks/new" class="act"><span class="act-icon">🥘</span><span class="act-label">Create a potluck</span></a>
+      <a href="/community/post/new" class="act"><span class="act-icon">📌</span><span class="act-label">Pin a flyer</span></a>
+      <a href="/admin/settings" class="act"><span class="act-icon">⚙️</span><span class="act-label">Site settings</span></a>
+      <a href="/admin/analytics" class="act"><span class="act-icon">📊</span><span class="act-label">Analytics</span></a>
+      <a href="/api/admin/backup" class="act"><span class="act-icon">💾</span><span class="act-label">Backup data</span></a>
+    </div>
 
-      <!-- Your events -->
-      <div class="sec-head">Your Events</div>
-      {events.length === 0
-        ? <div class="empty">No events yet</div>
-        : events.slice(0, 8).map((p: any) => (
-          <a href={`/potlucks/manage/${p.id}`} class="event-row">
-            <div>
-              <div class="event-title">{p.title}</div>
-              <div class="event-meta">{p.date_label} · {p.location}</div>
-            </div>
-            <span class="event-badge">{p.signups || 0} signed up</span>
-          </a>
-        ))
-      }
+    {/* ─ D. Manage (collapsed) ─ */}
+    <div class="sec-head">Manage</div>
 
-      <!-- Templates -->
-      <div style="margin-top: 28px;">
-        <div class="sec-head">Saved Templates ({templates.length})</div>
-        {templates.length === 0
-          ? <div class="empty">No templates yet — save a potluck as a template from the manage page</div>
-          : templates.map((t: any) => (
-            <div class="tmpl-row">
+    <details class="section">
+      <summary>Potlucks <span class="section-count">{upcomingPotlucks.length} upcoming</span></summary>
+      <div class="section-body">
+        {upcomingPotlucks.length === 0 ? (
+          <div class="empty">No upcoming potlucks. <a href="/potlucks/new" class="manage-link">Create one →</a></div>
+        ) : (
+          upcomingPotlucks.map((p: any) => (
+            <div class="row">
               <div>
-                <div class="tmpl-name">{t.name}</div>
-                <div class="tmpl-meta">{t.location} · {t.template} theme</div>
+                <div class="row-title">{p.title}</div>
+                <div class="row-meta">{p.date_label} · {p.location}</div>
               </div>
-              <div class="tmpl-actions">
-                <button class="btn-approve" data-id={t.id}>Use</button>
-                <button class="btn-secondary" data-tmpl-id={t.id} style="font-size:12px;padding:6px 12px">Delete</button>
-              </div>
+              <a href={`/potlucks/manage/${p.id}`} class="manage-link">Manage →</a>
             </div>
           ))
-        }
+        )}
       </div>
+    </details>
 
-      <!-- Embed -->
-      <div style="margin-top: 28px;">
-        <div class="sec-head">Embed Widget</div>
-        <div class="card">
-          <div class="card-desc" style="margin-bottom:10px">Drop this on any website to embed your sign-up form.</div>
-          <div class="embed-block">
-            <div class="embed-code" id="embed-code">&lt;iframe src="https://denversocialhub.com/potlucks/1" width="100%" height="700" frameborder="0" style="border-radius:16px"&gt;&lt;/iframe&gt;</div>
-            <button class="copy-btn" id="copy-embed">Copy embed code</button>
-          </div>
+    <details class="section">
+      <summary>Personal pages (/u/) <span class="section-count">{newPagesThisWeek} new this week</span></summary>
+      <div class="section-body">
+        <p class="hint">Moderate claimed personal pages, review flags, take pages offline.</p>
+        <a href="/admin/pages" class="link-btn">Open moderation queue →</a>
+        <a href="/admin/bookings" class="link-btn">View all bookings →</a>
+      </div>
+    </details>
+
+    <details class="section">
+      <summary>Community board <span class="section-count">{communityPostCount} new this week</span></summary>
+      <div class="section-body">
+        <p class="hint">Calendar posts, named roles, and community-board moderation.</p>
+        <a href="/admin/community" class="link-btn">Open community admin →</a>
+        <a href="/admin/links" class="link-btn">Short links →</a>
+      </div>
+    </details>
+
+    <details class="section">
+      <summary>Partners / Perks <span class="section-count">{pendingPartners} pending</span></summary>
+      <div class="section-body">
+        <p class="hint">Review partner business offers and perks.</p>
+        <a href="/admin/partners" class="link-btn">Open partners →</a>
+      </div>
+    </details>
+
+    {/* ─ F. Sources of truth (collapsed) ─ */}
+    <div class="sec-head" style="margin-top: 28px;">Sources of truth</div>
+
+    <details class="section">
+      <summary>Sync sources <span class="section-count">{eventSources.length} configured</span></summary>
+      <div class="section-body">
+        <p class="hint">Discord, Reddit, Eventbrite, ICS, RSS feeds — anything that auto-imports events.</p>
+        <a href="/admin/sync" class="link-btn">Manage sync sources →</a>
+        <a href="/admin/activity" class="link-btn">Activity log →</a>
+      </div>
+    </details>
+
+    <details class="section">
+      <summary>Backup &amp; restore</summary>
+      <div class="section-body">
+        <p class="hint">Download a single JSON file containing every table in the database. Save it somewhere safe.</p>
+        <div class="btn-row" style="margin-bottom:16px">
+          <a href="/api/admin/backup" class="btn-primary">⬇ Download backup</a>
+          <a href="https://github.com/stharpe98-tech/denver-social-hub/archive/refs/heads/main.zip" class="btn-secondary">⬇ Source code</a>
+        </div>
+        <div style="padding-top:14px; border-top:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px">Restore (destructive)</div>
+          <p class="hint">Choose a backup JSON file. Drops + recreates every table in the file. Uncheck "wipe first" if you want to merge.</p>
+          <input type="file" id="restore-file" accept="application/json" style="margin-bottom:10px;font-size:13px"/>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-sec);margin-bottom:10px">
+            <input type="checkbox" id="restore-wipe"/> Wipe all tables first (full reset)
+          </label>
+          <button class="btn-danger" id="restore-btn">Restore from file</button>
+          <div id="restore-status" style="font-size:13px;margin-top:10px;display:none"></div>
         </div>
       </div>
+    </details>
 
-    </div>
-  </div>
-
-  <!-- ════════════════════════════════════════════ -->
-  <!-- TAB: Settings                                -->
-  <!-- ════════════════════════════════════════════ -->
-  <div class="tab-panel" id="panel-settings">
-    <div class="page">
-      <div class="sec-head">Profile & Branding</div>
-      <div class="card">
-        <div class="field-row">
-          <div class="field"><label>Display Name</label><input type="text" id="pf-name" placeholder="Denver Social Community" value={org.name}/></div>
-          <div class="field"><label>Logo URL</label><input type="text" id="pf-logo" placeholder="https://…/logo.png"/></div>
+    <details class="section">
+      <summary>Security &mdash; passkeys &amp; PIN</summary>
+      <div class="section-body">
+        <div class="sub-card">
+          <h3>Passkeys</h3>
+          <p class="desc">Sign in instantly with Face ID, Touch ID, or your device's biometric. No password needed.</p>
+          <div id="passkey-list" style="margin-bottom:12px">Loading…</div>
+          <button class="btn-primary" id="add-passkey-btn">+ Add a passkey</button>
+          <div id="passkey-err" style="font-size:13px;color:var(--red);margin-top:10px;display:none"></div>
         </div>
-        <div class="field-row">
-          <div class="field"><label>Stripe Payment Link</label><input type="text" id="pf-stripe" placeholder="https://buy.stripe.com/…"/></div>
-          <div class="field"><label>Twilio Phone (SMS)</label><input type="text" id="pf-twilio" placeholder="+1720…"/></div>
-        </div>
-        <button class="btn-primary" id="save-profile">Save changes</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- TAB: Security                                -->
-  <!-- ════════════════════════════════════════════ -->
-  <div class="tab-panel" id="panel-security">
-    <div class="page">
-
-      <!-- Passkeys -->
-      <div class="sec-head">Passkeys</div>
-      <div class="card">
-        <div class="card-desc">Sign in instantly with Face ID, Touch ID, or your device's biometric. No password needed.</div>
-        <div id="passkey-list" style="margin-bottom:14px">Loading…</div>
-        <button class="btn-primary" id="add-passkey-btn">+ Add a passkey</button>
-        <div id="passkey-err" style="font-size:13px;color:var(--red);margin-top:10px;display:none"></div>
-      </div>
-
-      <!-- Quick PIN -->
-      <div style="margin-top:24px">
-        <div class="sec-head">Quick PIN</div>
-        <div class="card">
-          <div class="card-desc">Set a 4–8 digit PIN to sign in fast on this device. 5 wrong tries locks the device.</div>
+        <div class="sub-card">
+          <h3>Quick PIN</h3>
+          <p class="desc">Set a 4–8 digit PIN to sign in fast on this device. 5 wrong tries locks the device.</p>
           <div class="field-row">
             <div class="field"><label>New PIN</label><input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="pin-new" placeholder="1234" autocomplete="off"/></div>
-            <div class="field"><label>Device Name (optional)</label><input type="text" id="pin-label" placeholder="Seth's MacBook" autocomplete="off"/></div>
+            <div class="field"><label>Device name (optional)</label><input type="text" id="pin-label" placeholder="My MacBook" autocomplete="off"/></div>
           </div>
           <div class="btn-row">
             <button class="btn-primary" id="pin-save-btn">Save PIN for this device</button>
             <button class="btn-secondary" id="pin-disable-all-btn">Remove all PINs</button>
           </div>
           <div id="pin-err" style="font-size:13px;color:var(--red);margin-top:10px;display:none"></div>
-          <div id="pin-list" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">Loading trusted devices…</div>
+          <div id="pin-list" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">Loading trusted devices…</div>
         </div>
       </div>
+    </details>
 
-    </div>
-  </div>
-
-  <!-- ════════════════════════════════════════════ -->
-  <!-- TAB: Admin (super only)                      -->
-  <!-- ════════════════════════════════════════════ -->
-  {showApprovalUI && (
-    <div class="tab-panel" id="panel-admin">
-      <div class="page">
-
-        <!-- Organizer access -->
-        <div class="sec-head">Organizer Access ({pendingOrgs.length} pending · {approvedOrgs.length} approved)</div>
-
-        {pendingOrgs.length > 0 && (
-          <div class="card" style="border-color: #F59E0B; background: #FFFBEB;">
-            <div style="font-size:12px;font-weight:700;color:#5B21B6;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Pending Approval</div>
-            {pendingOrgs.map((o: any) => (
-              <div class="org-row">
-                <div>
-                  <div class="org-name">{o.name}</div>
-                  <div class="org-email">{o.email}</div>
+    {showApprovalUI && (
+      <details class="section">
+        <summary>Organizer access <span class="section-count">{pendingOrgs.length} pending · {approvedOrgs.length} approved</span></summary>
+        <div class="section-body">
+          {pendingOrgs.length > 0 && (
+            <div style="margin-bottom:14px">
+              <div style="font-size:11px;font-weight:700;color:#5B21B6;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Pending approval</div>
+              {pendingOrgs.map((o: any) => (
+                <div class="row">
+                  <div><div class="row-title">{o.name}</div><div class="row-meta">{o.email}</div></div>
+                  <button class="btn-approve" data-approve-id={o.id}>Approve</button>
                 </div>
-                <button class="btn-approve" data-approve-id={o.id}>Approve</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div class="card">
-          <div style="font-size:12px;font-weight:700;color:var(--text-faint);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Approved</div>
+              ))}
+            </div>
+          )}
+          <div style="font-size:11px;font-weight:700;color:var(--text-faint);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Approved</div>
           {approvedOrgs.map((o: any) => (
-            <div class="org-row">
-              <div>
-                <div class="org-name">{o.name}</div>
-                <div class="org-email">{o.email}</div>
-              </div>
+            <div class="row">
+              <div><div class="row-title">{o.name}</div><div class="row-meta">{o.email}</div></div>
               {o.email.toLowerCase() === 'stharpe98@gmail.com'
-                ? <span class="org-badge">super</span>
+                ? <span style="font-size:11px;color:var(--text-faint);padding:4px 10px">super</span>
                 : <button class="btn-secondary" data-revoke-id={o.id} style="font-size:12px;padding:5px 12px">Revoke</button>}
             </div>
           ))}
         </div>
+      </details>
+    )}
 
-        <!-- Backup & Restore -->
-        <div style="margin-top:28px">
-          <div class="sec-head">Backup & Restore</div>
-          <div class="card">
-            <div class="card-desc">Download a single JSON file containing every table in the database. Save it somewhere safe.</div>
-            <div class="btn-row" style="margin-bottom:20px">
-              <a href="/api/admin/backup" class="btn-primary" style="text-decoration:none;display:inline-block">⬇ Download backup</a>
-              <a href="https://github.com/stharpe98-tech/denver-social-hub/archive/refs/heads/main.zip" class="btn-secondary" style="text-decoration:none;display:inline-block">⬇ Source code</a>
-            </div>
-
-            <div style="padding-top:18px;border-top:1px solid var(--border)">
-              <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px">Restore (destructive)</div>
-              <div class="hint" style="margin-bottom:10px">
-                Choose a backup JSON file. Drops + recreates every table in the file.
-                Uncheck "wipe first" if you want to merge.
-              </div>
-              <input type="file" id="restore-file" accept="application/json" style="margin-bottom:10px;font-size:13px"/>
-              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-sec);margin-bottom:10px">
-                <input type="checkbox" id="restore-wipe"/> Wipe all tables first (full reset)
-              </label>
-              <button class="btn-danger" id="restore-btn">Restore from file</button>
-              <div id="restore-status" style="font-size:13px;margin-top:10px;display:none"></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  )}
+  </div>
 
   <div class="toast" id="toast"></div>
 
-  <!-- ── Inline JS (no imports needed) ── -->
   <script is:inline>
-    /* Tabs */
-    document.querySelectorAll('.tab-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-        document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
-        btn.classList.add('active');
-        var panel = document.getElementById('panel-' + btn.getAttribute('data-tab'));
-        if (panel) panel.classList.add('active');
-      });
-    });
-
     function showToast(msg) {
       var t = document.getElementById('toast');
       t.textContent = msg; t.style.display = 'block';
@@ -557,22 +473,6 @@ const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 
     document.getElementById('logout-btn').addEventListener('click', async function() {
       await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) });
       location.href = '/admin/login';
-    });
-
-    document.getElementById('save-profile').addEventListener('click', async function() {
-      var res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        action: 'update_profile',
-        white_label_name: document.getElementById('pf-name').value,
-        white_label_logo: document.getElementById('pf-logo').value,
-        stripe_link: document.getElementById('pf-stripe').value,
-      })});
-      var data = await res.json();
-      if (data.ok) showToast('Saved ✓');
-    });
-
-    document.getElementById('copy-embed').addEventListener('click', function() {
-      navigator.clipboard.writeText(document.getElementById('embed-code').textContent);
-      showToast('Copied ✓');
     });
 
     document.querySelectorAll('[data-approve-id]').forEach(function(btn) {
@@ -592,18 +492,8 @@ const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 
         if (data.ok) location.reload();
       });
     });
-
-    document.querySelectorAll('.btn-secondary[data-tmpl-id]').forEach(function(btn) {
-      btn.addEventListener('click', async function() {
-        if (!confirm('Delete this template?')) return;
-        await fetch('/api/event-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id: parseInt(btn.dataset.tmplId) }) });
-        btn.closest('.tmpl-row').remove();
-        showToast('Deleted');
-      });
-    });
   </script>
 
-  <!-- ── Bundled JS (imports from npm) ── -->
   <script>
     import { startRegistration } from '@simplewebauthn/browser';
 
@@ -628,7 +518,7 @@ const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 
         listEl.innerHTML = passkeys.map((pk: any) => {
           const label = pk.device_label || 'Unnamed device';
           const date = new Date(pk.created_at).toLocaleDateString();
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
             <div><strong>🔑 ${label}</strong><div style="font-size:11px;color:var(--text-faint)">added ${date}</div></div>
             <button class="btn-secondary" data-pk-id="${pk.id}" style="font-size:12px;padding:5px 12px">Remove</button>
           </div>`;
@@ -663,14 +553,13 @@ const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 
         showToast('Passkey added ✓');
         refreshPasskeyList();
       } catch (e: any) {
-        errEl.textContent = 'Couldn\'t add passkey: ' + (e.message || 'unknown error');
+        errEl.textContent = "Couldn't add passkey: " + (e.message || 'unknown error');
         errEl.style.display = 'block';
       }
     });
 
     refreshPasskeyList();
 
-    // ── Quick PIN ──
     async function refreshPinList() {
       const listEl = document.getElementById('pin-list');
       if (!listEl) return;
@@ -682,12 +571,12 @@ const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 
           listEl.innerHTML = '<em style="color:var(--text-faint)">No PIN set on any device yet.</em>';
           return;
         }
-        listEl.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Trusted Devices</div>' + devices.map((d: any) => {
+        listEl.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Trusted devices</div>' + devices.map((d: any) => {
           const label = d.device_label || 'Unnamed device';
           const date = new Date(d.created_at).toLocaleDateString();
           const last = d.last_used_at ? new Date(d.last_used_at).toLocaleDateString() : 'never';
           const here = d.is_current ? ' <span style="background:#EDE9FE;color:#5B21B6;font-size:10px;padding:2px 6px;border-radius:6px;margin-left:6px">this device</span>' : '';
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
             <div><strong>📱 ${label}</strong>${here}<div style="font-size:11px;color:var(--text-faint)">added ${date} · last used ${last}</div></div>
             <button class="btn-secondary" data-trusted-id="${d.id}" style="font-size:12px;padding:5px 12px">Remove</button>
           </div>`;
@@ -735,7 +624,6 @@ const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 
 
     refreshPinList();
 
-    // ── Backup / Restore ──
     document.getElementById('restore-btn')?.addEventListener('click', async () => {
       const fileEl = document.getElementById('restore-file') as HTMLInputElement;
       const statusEl = document.getElementById('restore-status')!;
@@ -756,7 +644,7 @@ const totalSignups = events.reduce((sum: number, e: any) => sum + (e.signups || 
       let payload;
       try { payload = JSON.parse(text); } catch {
         statusEl.style.color = 'var(--red)';
-        statusEl.textContent = 'File isn\'t valid JSON.';
+        statusEl.textContent = "File isn't valid JSON.";
         return;
       }
 
