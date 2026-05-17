@@ -444,8 +444,18 @@ const initialTier = (Astro.url.searchParams.get('tier') || 'regular').toLowerCas
     .foot { font-size: 13px; color: var(--text-sec, #555); text-align: center; margin-top: var(--space-3); }
     .foot a { color: var(--accent, #7C3AED); font-weight: 700; }
 
-    @media (max-width: 480px) {
-      .tier-toggle { grid-template-columns: 1fr; }
+    @media (max-width: 639px) {
+      .wrap { padding: var(--space-5) var(--space-3) var(--space-6); }
+      .tier-toggle { grid-template-columns: 1fr; gap: 8px; }
+      .tier-btn { padding: 16px 14px; }
+      .card { padding: var(--space-3) var(--space-4); }
+      .mode-toggle { max-width: 100%; }
+      .mode-btn { padding: 10px 12px; font-size: 13px; }
+      .slug-prefix { padding: 11px 8px; font-size: 11px; letter-spacing: -0.2px; }
+      .slug-row input { padding: 11px 10px; }
+    }
+    @media (min-width: 640px) and (max-width: 1023px) {
+      .wrap { max-width: 600px; }
     }
   </style>
 </Base>
