@@ -6,6 +6,12 @@ const { title = "Denver Social", description = "Real small-group events across D
 // to decide whether to surface the Admin link in nav.
 const adminCookie = Astro.cookies.get('dsn_admin')?.value || '';
 const isAdmin = adminCookie.split('.').length >= 3; // lightweight signal; real check is server-side via isAdmin()
+// Lightweight signal for whether the visitor has *any* dsn_profile_* cookie.
+// Used by the member-card popup to decide whether to show Message/Phone
+// buttons or a "get a /u/ page" CTA. Real verification happens server-side
+// inside /api/dm and /api/phone-requests.
+const cookieHeader = Astro.request.headers.get('cookie') || '';
+const hasProfileSession = /(^|;\s*)dsn_profile_[a-z0-9-]+=/i.test(cookieHeader);
 const currentPath = Astro.url.pathname;
 // Tour is rendered for visitors who haven't dismissed it. Cookie is
 // the source of truth — localStorage is a client-side fallback.
@@ -221,16 +227,14 @@ const showWelcomeTour = !tourSeen;
     })();
   </script>
 
-  {false && (
-    <div id="mc-overlay" class="mc-overlay" hidden>
-      <div class="mc-card" role="dialog" aria-modal="true">
-        <button class="mc-close" id="mc-close" aria-label="Close">×</button>
-        <div id="mc-body" class="mc-body">
-          <div class="mc-loading">Loading…</div>
-        </div>
+  <div id="mc-overlay" class="mc-overlay" hidden data-has-profile={hasProfileSession ? '1' : '0'}>
+    <div class="mc-card" role="dialog" aria-modal="true">
+      <button class="mc-close" id="mc-close" aria-label="Close">×</button>
+      <div id="mc-body" class="mc-body">
+        <div class="mc-loading">Loading…</div>
       </div>
     </div>
-  )}
+  </div>
 
   <script is:inline>
     (function() {
@@ -262,43 +266,41 @@ const showWelcomeTour = !tourSeen;
 
       function renderCard(data) {
         var m = data.member;
-        var initial = (m.name || '?').charAt(0).toUpperCase();
+        var hasViewer = !!data.viewer;
+        var avatar = m.photo_emoji || (m.name || '?').charAt(0).toUpperCase();
         var html = '';
-        html += '<div class="mc-avatar">' + escapeHtml(initial) + '</div>';
+        html += '<div class="mc-avatar">' + escapeHtml(avatar) + '</div>';
         html += '<h2 class="mc-name">' + escapeHtml(m.name) + '</h2>';
+        if (m.slug) {
+          html += '<p class="mc-handle"><a href="/u/' + escapeHtml(m.slug) + '">/u/' + escapeHtml(m.slug) + '</a></p>';
+        }
         var meta = [];
-        if (m.extra_role) meta.push('<span class="mc-role">' + escapeHtml(m.extra_role) + '</span>');
+        if (m.headline) meta.push(escapeHtml(m.headline));
         if (m.neighborhood) meta.push('📍 ' + escapeHtml(m.neighborhood));
-        if (m.joined_at) meta.push('Member since ' + escapeHtml(fmtDate(m.joined_at)));
+        if (m.joined_at) meta.push('Joined ' + escapeHtml(fmtDate(m.joined_at)));
         if (meta.length) html += '<p class="mc-meta">' + meta.join(' · ') + '</p>';
 
         if (m.bio) {
           html += '<p class="mc-bio">"' + escapeHtml(m.bio) + '"</p>';
         }
 
-        if (data.mutualGroups && data.mutualGroups.length) {
-          html += '<div class="mc-mutuals"><span class="mc-label">Mutual groups</span><div class="mc-mutual-list">';
-          data.mutualGroups.forEach(function(g) {
-            html += '<a href="/groups/' + escapeHtml(g.slug) + '" class="mc-mutual">' + escapeHtml(g.name) + '</a>';
-          });
-          html += '</div></div>';
-        }
-
-        html += '<div class="mc-contact"><span class="mc-label">Email</span><span class="mc-email">' + escapeHtml(m.email) + '</span></div>';
-
         if (!data.isSelf) {
           html += '<div class="mc-actions">';
-          html += '<button class="mc-btn mc-btn-primary" id="mc-msg" data-email="' + escapeHtml(m.email) + '">💬 Message</button>';
-
-          var sent = data.phoneRequest && data.phoneRequest.sent;
-          if (sent && sent.status === 'approved' && sent.shared_phone) {
-            html += '<div class="mc-phone-ok">📱 ' + escapeHtml(sent.shared_phone) + '</div>';
-          } else if (sent && sent.status === 'pending') {
-            html += '<button class="mc-btn mc-btn-sec" disabled>📱 Phone requested</button>';
-          } else if (sent && sent.status === 'declined') {
-            html += '<button class="mc-btn mc-btn-sec" disabled>📱 Phone request declined</button>';
+          if (!hasViewer) {
+            // No profile session — show a CTA to claim a /u/ page.
+            html += '<a class="mc-btn mc-btn-primary" href="/u/new?next=' + encodeURIComponent(window.location.pathname) + '">Get a /u/ page to message</a>';
           } else {
-            html += '<button class="mc-btn mc-btn-sec" id="mc-phone" data-email="' + escapeHtml(m.email) + '">📱 Request phone</button>';
+            html += '<button class="mc-btn mc-btn-primary" id="mc-msg" data-email="' + escapeHtml(m.email) + '">💬 Message</button>';
+            var sent = data.phoneRequest && data.phoneRequest.sent;
+            if (sent && sent.status === 'approved' && sent.shared_phone) {
+              html += '<div class="mc-phone-ok">📱 ' + escapeHtml(sent.shared_phone) + '</div>';
+            } else if (sent && sent.status === 'pending') {
+              html += '<button class="mc-btn mc-btn-sec" disabled>📱 Phone requested</button>';
+            } else if (sent && sent.status === 'declined') {
+              html += '<button class="mc-btn mc-btn-sec" disabled>📱 Phone request declined</button>';
+            } else {
+              html += '<button class="mc-btn mc-btn-sec" id="mc-phone" data-email="' + escapeHtml(m.email) + '">📱 Request phone</button>';
+            }
           }
           html += '</div>';
         }

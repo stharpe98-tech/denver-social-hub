@@ -1,7 +1,7 @@
 // Per-profile editor auth — mirrors the dsn_admin pattern but is
 // scoped to a single slug. Cookie name: dsn_profile_<slug>.
 // Token format: <slug>.<expires_at_ms>.<hmac_hex>
-import type { AstroGlobal, APIContext } from 'astro';
+import type { AstroGlobal, APIContext, AstroCookies } from 'astro';
 import { env } from 'cloudflare:workers';
 
 type CookieCtx = Pick<AstroGlobal, 'cookies'> | Pick<APIContext, 'cookies'>;
@@ -60,6 +60,81 @@ export async function canEditProfile(cookies: CookieCtx['cookies'], slug: string
   let diff = 0;
   for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
   return diff === 0;
+}
+
+async function verifyProfileTokenForSlug(raw: string, slug: string): Promise<boolean> {
+  const parts = raw.split('.');
+  if (parts.length < 3) return false;
+  const sig = parts.pop()!;
+  const expStr = parts.pop()!;
+  const tokSlug = parts.join('.');
+  if (tokSlug !== slug) return false;
+  const expires = parseInt(expStr, 10);
+  if (!Number.isFinite(expires)) return false;
+  if (Date.now() > expires) return false;
+  const expected = await hmacHex(getSecret(), `${tokSlug}.${expires}`);
+  if (expected.length !== sig.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
+  return diff === 0;
+}
+
+function parseCookieHeader(header: string | null | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!header) return out;
+  for (const piece of header.split(/;\s*/)) {
+    const eq = piece.indexOf('=');
+    if (eq <= 0) continue;
+    const k = piece.slice(0, eq).trim();
+    const v = piece.slice(eq + 1).trim();
+    if (!k) continue;
+    try { out[k] = decodeURIComponent(v); } catch { out[k] = v; }
+  }
+  return out;
+}
+
+/**
+ * Resolve the visitor's "current profile" — the first valid, non-expired
+ * `dsn_profile_<slug>` cookie that matches a live profile row. Returns
+ * null if no valid profile session exists.
+ *
+ * Note: AstroCookies has no public iteration API for incoming cookies,
+ * so we parse the raw Cookie header from the request.
+ */
+export async function getCurrentProfile(
+  cookies: CookieCtx['cookies'],
+  db: D1Database,
+  request?: Request,
+): Promise<{ slug: string; email: string; display_name: string } | null> {
+  if (!db) return null;
+  // Build a map of cookie name -> value.
+  let jar: Record<string, string> = {};
+  if (request) {
+    jar = parseCookieHeader(request.headers.get('cookie'));
+  }
+  // Also let cookies.get() override (covers cookies set earlier in the same request).
+  const profileNames = new Set<string>();
+  for (const name of Object.keys(jar)) {
+    if (name.startsWith('dsn_profile_')) profileNames.add(name);
+  }
+  for (const name of profileNames) {
+    const slug = name.slice('dsn_profile_'.length);
+    if (!slug) continue;
+    // Prefer value from cookies API (catches mid-request mutations); fall back to header.
+    const raw = cookies.get(name)?.value || jar[name];
+    if (!raw) continue;
+    if (!(await verifyProfileTokenForSlug(raw, slug))) continue;
+    const row = await db.prepare(
+      `SELECT slug, email, display_name FROM profiles WHERE slug = ? AND status = 'live' LIMIT 1`
+    ).bind(slug).first() as any;
+    if (!row) continue;
+    return {
+      slug: row.slug as string,
+      email: ((row.email as string) || '').toLowerCase(),
+      display_name: (row.display_name as string) || row.slug,
+    };
+  }
+  return null;
 }
 
 const RESERVED_SLUGS = new Set(['new', 'admin', 'api', 'edit', 'login']);

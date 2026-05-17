@@ -1,10 +1,204 @@
 ---
 import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+import { ensureDmSchema } from '../../lib/dm-schema';
+import { getCurrentProfile } from '../../lib/profile-auth';
+
+const db = getDB();
+const { id } = Astro.params;
+const viewer = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
+if (!viewer) return Astro.redirect(`/u/new?next=/messages/${id}`);
+
+let conv: any = null;
+let messages: any[] = [];
+let otherEmail = '';
+let otherName = '';
+let otherSlug = '';
+
+if (db && id) {
+  await ensureDmSchema(db);
+  conv = await db.prepare('SELECT * FROM dm_conversations WHERE id=?').bind(id).first();
+  if (conv) {
+    const me = viewer.email;
+    if (conv.member_a_email !== me && conv.member_b_email !== me) {
+      return Astro.redirect('/messages');
+    }
+    otherEmail = conv.member_a_email === me ? conv.member_b_email : conv.member_a_email;
+    const other: any = await db.prepare(
+      `SELECT display_name, slug FROM profiles WHERE LOWER(email)=? AND status='live'`
+    ).bind(otherEmail).first();
+    otherName = other?.display_name || (otherEmail || '').split('@')[0];
+    otherSlug = other?.slug || '';
+    const r = await db.prepare(
+      'SELECT id, from_email, body, created_at FROM dm_messages WHERE conversation_id=? ORDER BY id ASC LIMIT 200'
+    ).bind(id).all();
+    messages = (r.results || []) as any[];
+    await db.prepare(
+      "UPDATE dm_messages SET read_at=datetime('now') WHERE conversation_id=? AND from_email != ? AND read_at IS NULL"
+    ).bind(id, me).run();
+  }
+}
+
+if (!conv) return Astro.redirect('/messages');
+
+const myEmail = viewer.email;
+const initial = (otherName || '?')[0]?.toUpperCase();
+const latestId = messages.length > 0 ? messages[messages.length - 1].id : 0;
 ---
-<Base title="Messages" description="Messaging is offline.">
-  <div style="max-width:520px;margin:96px auto;padding:0 24px;text-align:center">
-    <h1 style="font-family:var(--font-display);font-size:28px;margin-bottom:12px">Messaging is offline</h1>
-    <p style="color:var(--text-sec);margin-bottom:24px">We're reworking how accounts and messaging work. Coming back soon.</p>
-    <a href="/" class="btn-sec">Back to home</a>
+<Base title={`Chat with ${otherName}`} description="Direct message thread.">
+<div class="dt-wrap">
+  <a href="/messages" class="dt-back">← All messages</a>
+  <header class="dt-head">
+    <div class="dt-avatar">{initial}</div>
+    <div>
+      <h1>{otherName}</h1>
+      {otherSlug
+        ? <a class="dt-sub" href={`/u/${otherSlug}`}>/u/{otherSlug}</a>
+        : <span class="dt-sub">{otherEmail}</span>}
+    </div>
+  </header>
+
+  <div class="dt-thread" id="dt-thread" data-conv-id={id} data-latest-id={latestId} data-me={myEmail}>
+    {messages.length === 0 && (
+      <div class="dt-empty">No messages yet. Say hi 👋</div>
+    )}
+    {messages.map((m: any) => (
+      <div class={`dt-msg ${m.from_email?.toLowerCase() === myEmail ? 'mine' : 'theirs'}`} data-id={m.id}>
+        <div class="dt-bubble">{m.body}</div>
+      </div>
+    ))}
   </div>
+
+  <form id="dt-form" class="dt-composer">
+    <input type="text" id="dt-input" class="dt-input" placeholder={`Message ${otherName}…`} maxlength="2000" autocomplete="off" />
+    <button type="submit" class="dt-send">Send</button>
+  </form>
+</div>
+
+<style>
+  .dt-wrap { max-width: 720px; margin: 0 auto; padding: 24px clamp(12px, 3vw, 24px) 24px; display: flex; flex-direction: column; height: calc(100vh - 96px); min-height: 540px; }
+  .dt-back { font-size: 13px; color: var(--text-sec); text-decoration: none; margin-bottom: 12px; }
+  .dt-back:hover { color: var(--text); }
+  .dt-head { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .dt-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; font-size: 16px; }
+  .dt-head h1 { font-family: var(--font-display); font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+  .dt-sub { font-size: 12px; color: var(--text-faint); text-decoration: none; }
+  a.dt-sub:hover { color: var(--accent); }
+
+  .dt-thread {
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 6px;
+    background: var(--surface); border-radius: 14px;
+    padding: 14px;
+  }
+  .dt-empty { text-align: center; color: var(--text-faint); padding: 60px 20px; font-size: 14px; }
+  .dt-msg { display: flex; max-width: 75%; }
+  .dt-msg.mine { align-self: flex-end; justify-content: flex-end; }
+  .dt-msg.theirs { align-self: flex-start; }
+  .dt-bubble {
+    padding: 10px 14px; border-radius: 18px;
+    font-size: 14px; line-height: 1.45; word-wrap: break-word; white-space: pre-wrap;
+  }
+  .dt-msg.theirs .dt-bubble { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
+  .dt-msg.mine .dt-bubble { background: var(--cta-bg); color: #fff; border-bottom-right-radius: 4px; }
+
+  .dt-composer { display: flex; gap: 8px; padding-top: 14px; }
+  .dt-input {
+    flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 999px;
+    font-size: 15px; color: var(--text); background: var(--bg);
+  }
+  .dt-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .dt-send {
+    padding: 12px 22px; border-radius: 999px; border: none;
+    background: var(--cta-bg); color: #fff;
+    font-family: var(--font-display); font-weight: 800; font-size: 14px; cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .dt-send:hover { transform: translateY(-1px); box-shadow: 0 6px 16px var(--accent-glow); }
+  .dt-send:active { transform: translateY(0); }
+  .dt-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+</style>
+
+<script is:inline>
+  (function() {
+    var thread = document.getElementById('dt-thread');
+    var form = document.getElementById('dt-form');
+    var input = document.getElementById('dt-input');
+    if (!thread || !form || !input) return;
+
+    var convId = parseInt(thread.getAttribute('data-conv-id'));
+    var latestId = parseInt(thread.getAttribute('data-latest-id')) || 0;
+    var me = thread.getAttribute('data-me') || '';
+
+    function scrollToBottom() { thread.scrollTop = thread.scrollHeight; }
+    scrollToBottom();
+
+    function appendMessage(m) {
+      var row = document.createElement('div');
+      row.className = 'dt-msg ' + (m.from_email.toLowerCase() === me ? 'mine' : 'theirs');
+      row.setAttribute('data-id', String(m.id));
+      var bubble = document.createElement('div');
+      bubble.className = 'dt-bubble';
+      bubble.textContent = m.body;
+      row.appendChild(bubble);
+      thread.appendChild(row);
+      var empty = thread.querySelector('.dt-empty');
+      if (empty) empty.remove();
+    }
+
+    async function poll() {
+      try {
+        var res = await fetch('/api/dm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'poll', conversation_id: convId, since_id: latestId }),
+        });
+        var d = await res.json();
+        if (d.ok && d.messages && d.messages.length > 0) {
+          var wasAtBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
+          d.messages.forEach(function(m) {
+            if (m.id > latestId) {
+              appendMessage(m);
+              latestId = m.id;
+            }
+          });
+          if (wasAtBottom) scrollToBottom();
+        }
+      } catch (e) {}
+    }
+
+    setInterval(function() {
+      if (document.visibilityState === 'visible') poll();
+    }, 4000);
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') poll();
+    });
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var text = input.value.trim();
+      if (!text) return;
+      var send = form.querySelector('.dt-send');
+      send.disabled = true;
+      try {
+        var res = await fetch('/api/dm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'send', conversation_id: convId, body: text }),
+        });
+        var d = await res.json();
+        if (d.ok) {
+          appendMessage({ id: d.id || latestId + 1, from_email: me, body: text, created_at: d.at });
+          latestId = d.id || latestId + 1;
+          input.value = '';
+          scrollToBottom();
+        } else {
+          alert('Failed: ' + d.error);
+        }
+      } catch (e) { alert('Network error.'); }
+      send.disabled = false;
+      input.focus();
+    });
+  })();
+</script>
 </Base>
