@@ -10,7 +10,7 @@ const db = getDB();
 let rows: any[] = [];
 if (db) {
   const r = await db.prepare(
-    `SELECT p.slug, p.display_name, p.email, p.status, p.created_at,
+    `SELECT p.slug, p.display_name, p.email, p.status, p.tier, p.template, p.created_at,
        (SELECT COUNT(*) FROM profile_reports r WHERE r.slug = p.slug) AS report_count
      FROM profiles p
      ORDER BY report_count DESC, p.created_at DESC
@@ -28,16 +28,17 @@ if (db) {
 
     <div class="mod-table">
       <div class="mod-row mod-head">
-        <div>Slug</div><div>Name</div><div>Email</div><div>Reports</div><div>Action</div>
+        <div>Slug</div><div>Name</div><div>Email</div><div>Tier · Template</div><div>Reports</div><div>Action</div>
       </div>
       {rows.length === 0 && (
-        <div class="mod-row"><div colspan="5" style="grid-column: 1 / -1; text-align: center; color: var(--text-faint); padding: 24px;">No pages claimed yet.</div></div>
+        <div class="mod-row"><div colspan="6" style="grid-column: 1 / -1; text-align: center; color: var(--text-faint); padding: 24px;">No pages claimed yet.</div></div>
       )}
       {rows.map((r: any) => (
         <div class:list={["mod-row", { "mod-flagged": (r.report_count || 0) > 0, "mod-offline": r.status === 'offline' }]} data-slug={r.slug}>
           <div><a href={`/u/${r.slug}`} target="_blank">/u/{r.slug}</a></div>
           <div>{r.display_name || '(no name)'}</div>
           <div class="cell-email">{r.email}</div>
+          <div class="cell-tier"><span class:list={['tier-badge', `tier-${r.tier || 'regular'}`]}>{r.tier || 'regular'}</span><span class="cell-tpl">{r.template || 'host'}</span></div>
           <div>{(r.report_count || 0) > 0 ? `${r.report_count} 🚩` : '0'}</div>
           <div class="cell-actions">
             <a class="mini" href={`/u/${r.slug}`} target="_blank">View</a>
@@ -80,7 +81,12 @@ if (db) {
     .hd h1 { font-family: var(--font-display, sans-serif); font-size: 26px; font-weight: 800; margin-bottom: 4px; }
     .sub { font-size: 14px; color: var(--text-sec); }
     .mod-table { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: 13px; background: var(--bg); }
-    .mod-row { display: grid; grid-template-columns: 130px 1fr 1.3fr 90px 220px; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); align-items: center; }
+    .mod-row { display: grid; grid-template-columns: 130px 1fr 1.3fr 150px 70px 200px; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); align-items: center; }
+    .cell-tier { display: flex; flex-direction: column; gap: 2px; font-size: 11px; }
+    .tier-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    .tier-organizer { background: #FFFAEB; color: #92400E; border: 1px solid #FCD34D; align-self: flex-start; }
+    .tier-regular { background: #EEF2FF; color: #4338CA; border: 1px solid #C7D2FE; align-self: flex-start; }
+    .cell-tpl { color: var(--text-faint); font-family: 'SF Mono', monospace; font-size: 10px; letter-spacing: 0.3px; }
     .mod-row:last-child { border-bottom: none; }
     .mod-row a { color: var(--accent, #7C3AED); text-decoration: none; }
     .mod-row a:hover { text-decoration: underline; }
