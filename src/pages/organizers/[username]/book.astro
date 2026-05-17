@@ -1,0 +1,9 @@
+---
+import { validateSlug } from '../../../lib/profile-auth';
+
+const raw = Astro.params.username || '';
+const v = validateSlug(raw);
+if (!v.ok) return Astro.redirect('/404');
+
+return Astro.redirect(`/u/${v.slug}/book`, 301);
+---

@@ -1,0 +1,12 @@
+---
+import { getDB } from '../../lib/db';
+import { getCurrentProfile } from '../../lib/profile-auth';
+
+const db = getDB();
+if (!db) return new Response('DB unavailable', { status: 500 });
+
+const me = await getCurrentProfile(Astro.cookies, db, Astro.request);
+if (!me) return Astro.redirect('/sign-in?next=/dashboard/reservations');
+
+return Astro.redirect(`/u/${me.slug}/bookings`);
+---

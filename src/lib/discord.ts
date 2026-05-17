@@ -53,7 +53,7 @@ export function siteUrlFrom(request: Request, envObj: unknown): string {
     const u = new URL(request.url);
     return `${u.protocol}//${u.host}`;
   } catch {
-    return "https://denversocial.com";
+    return "https://denversocialhub.com";
   }
 }
 
