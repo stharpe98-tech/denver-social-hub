@@ -40,6 +40,43 @@ export async function ensureGroupsSchema(db: D1Database): Promise<void> {
       expires_at TEXT
     )
   `).run();
+
+  // Idempotent column additions — mirror the ensureEventsSchema pattern.
+  try {
+    const cols = await db.prepare("PRAGMA table_info(groups)").all();
+    const names = new Set((cols.results ?? []).map((r: any) => r.name));
+    if (!names.has('category')) {
+      try { await db.prepare("ALTER TABLE groups ADD COLUMN category TEXT DEFAULT 'general'").run(); } catch {}
+    }
+    if (!names.has('neighborhood')) {
+      try { await db.prepare("ALTER TABLE groups ADD COLUMN neighborhood TEXT DEFAULT ''").run(); } catch {}
+    }
+    if (!names.has('cover_emoji')) {
+      try { await db.prepare("ALTER TABLE groups ADD COLUMN cover_emoji TEXT DEFAULT '👥'").run(); } catch {}
+    }
+  } catch { /* PRAGMA failure — non-fatal */ }
+}
+
+export const GROUP_CATEGORIES = [
+  { key: 'hobby',        label: 'Hobby',          emoji: '🎨' },
+  { key: 'sport',        label: 'Sport',          emoji: '🏃' },
+  { key: 'food',         label: 'Food & drink',   emoji: '🍽️' },
+  { key: 'social',       label: 'Social',         emoji: '🍻' },
+  { key: 'professional', label: 'Professional',   emoji: '💼' },
+  { key: 'cause',        label: 'Cause',          emoji: '🌱' },
+  { key: 'family',       label: 'Family & kids',  emoji: '👶' },
+  { key: 'wellness',     label: 'Wellness',       emoji: '🧘' },
+  { key: 'creative',     label: 'Creative',       emoji: '✏️' },
+  { key: 'tech',         label: 'Tech',           emoji: '💻' },
+  { key: 'general',      label: 'General',        emoji: '👥' },
+];
+
+export function categoryLabel(key: string): string {
+  return GROUP_CATEGORIES.find(c => c.key === key)?.label || 'General';
+}
+
+export function categoryEmoji(key: string): string {
+  return GROUP_CATEGORIES.find(c => c.key === key)?.emoji || '👥';
 }
 
 export function slugify(name: string): string {

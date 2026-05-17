@@ -1,271 +1,204 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
-import { ensureGroupsSchema } from '../../lib/groups-schema';
-import { ensureDmSchema } from '../../lib/dm-schema';
+import { ensureGroupsSchema, GROUP_CATEGORIES, categoryEmoji, categoryLabel } from '../../lib/groups-schema';
+import { getCurrentProfile } from '../../lib/profile-auth';
+import { getNeighborhood, NEIGHBORHOODS } from '../../lib/neighborhoods';
 
 const db = getDB();
-// Accounts are offline; only public group browsing works.
-const user: any = null;
-void user;
+if (db) await ensureGroupsSchema(db);
+const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
 
-const tab = (Astro.url.searchParams.get('tab') || 'groups').toLowerCase();
+const params = Astro.url.searchParams;
+const catFilter = (params.get('cat') || '').toLowerCase();
+const nbhFilter = (params.get('nbh') || '').toLowerCase();
 
-const myGroups: any[] = [];
-let discoverGroups: any[] = [];
-const conversations: any[] = [];
+// Curated short list of major Denver-metro hood pills (matches discoverability spec).
+const TOP_HOODS = ['downtown','rino','lohi','highlands','five-points','cherry-creek','wash-park','capitol-hill']
+  .map(slug => getNeighborhood(slug))
+  .filter(Boolean) as Array<{ slug: string; label: string }>;
 
+let myGroups: any[] = [];
+let allGroups: any[] = [];
 if (db) {
-  await ensureGroupsSchema(db);
-  const discover = await db.prepare(`
-    SELECT g.*
-    FROM groups g
-    WHERE g.privacy = 'public'
-    ORDER BY g.member_count DESC, g.id DESC
-    LIMIT 24
+  if (me) {
+    const m = await db.prepare(`
+      SELECT g.*, gm.role as my_role
+      FROM groups g JOIN group_members gm ON gm.group_id = g.id
+      WHERE LOWER(gm.member_email) = LOWER(?)
+      ORDER BY gm.joined_at DESC LIMIT 24
+    `).bind(me.email).all();
+    myGroups = (m.results || []) as any[];
+  }
+  const all = await db.prepare(`
+    SELECT * FROM groups ORDER BY member_count DESC, id DESC LIMIT 200
   `).all();
-  discoverGroups = (discover.results || []) as any[];
-  // Messaging is offline — skip ensuring schema beyond what's needed.
-  void ensureDmSchema;
+  allGroups = (all.results || []) as any[];
 }
 
-const totalUnread = 0;
+const filteredGroups = allGroups.filter((g: any) => {
+  if (catFilter && (g.category || 'general') !== catFilter) return false;
+  if (nbhFilter && (g.neighborhood || '') !== nbhFilter) return false;
+  return true;
+});
 
-function otherName(c: any): string {
-  return c.other_name || c.other_reddit || c.other_discord
-    || (c.member_a_email || '').split('@')[0]
-    || 'Member';
+function hoodLabel(slug: string): string {
+  if (!slug) return '';
+  const h = NEIGHBORHOODS.find(n => n.slug === slug);
+  return h?.label || slug;
 }
 
-function timeAgo(iso: string): string {
-  if (!iso) return '';
-  const ms = Date.now() - new Date((iso || '').includes('Z') ? iso : iso + 'Z').getTime();
-  if (Number.isNaN(ms) || ms < 0) return '';
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return 'just now';
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  return d < 30 ? `${d}d` : new Date(iso).toLocaleDateString();
+function buildUrl(opts: { cat?: string | null; nbh?: string | null }): string {
+  const sp = new URLSearchParams();
+  const nextCat = opts.cat ?? catFilter;
+  const nextNbh = opts.nbh ?? nbhFilter;
+  if (nextCat) sp.set('cat', nextCat);
+  if (nextNbh) sp.set('nbh', nextNbh);
+  const s = sp.toString();
+  return s ? '/groups?' + s : '/groups';
 }
+
+const canCreate = me?.tier === 'organizer';
 ---
-<Base title="Groups" description="Subcommunities and direct messages in one place.">
+<Base title="Groups" description="Find your people in Denver — hobbies, sports, food, causes.">
 <div class="g-wrap">
-  <header class="g-head">
-    <div>
-      <h1>Groups & messages</h1>
-      <p class="g-sub">Smaller circles inside Denver Social, and private chats with the people in them.</p>
+  <header class="g-hero">
+    <h1>Groups · Find your people</h1>
+    <p class="g-sub">Browse by what you're into — hobbies, sports, food, causes. Anyone can join, organizers create.</p>
+    <div class="g-hero-actions">
+      {canCreate
+        ? <a href="/groups/new" class="btn-cta">+ Create a group</a>
+        : me
+          ? <a href={`/u/${me.slug}`} class="btn-sec">Upgrade to organizer to create</a>
+          : <a href="/profile/new?next=/groups/new" class="btn-sec">Sign up to host</a>}
     </div>
-    {/* Group creation is offline while we rework accounts. */}
   </header>
 
-  {user && (
-    <nav class="g-tabs" aria-label="Section">
-      <a href="/groups?tab=groups" class:list={["g-tab", { active: tab !== 'messages' }]}>
-        👥 Groups
-      </a>
-      <a href="/groups?tab=messages" class:list={["g-tab", { active: tab === 'messages' }]}>
-        💬 Messages
-        {totalUnread > 0 && <span class="g-tab-badge">{totalUnread}</span>}
-      </a>
-    </nav>
-  )}
-
-  {(tab !== 'messages' || !user) && (
-    <>
-      {user && (
-        <section class="g-section">
-          <h2 class="g-section-title">Your groups</h2>
-          {myGroups.length === 0 ? (
-            <div class="g-empty">
-              You haven't joined any groups yet. Browse below or <a href="/groups/new">make your own</a>.
-            </div>
-          ) : (
-            <div class="g-grid">
-              {myGroups.map((g: any) => (
-                <a href={`/groups/${g.slug}`} class="g-card">
-                  <div class="g-card-head">
-                    <span class="g-card-name">{g.name}</span>
-                    {g.privacy === 'invite_only' && <span class="g-card-lock">🔒 Private</span>}
-                  </div>
-                  {g.description && <p class="g-card-desc">{g.description}</p>}
-                  <div class="g-card-meta">
-                    <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
-                    {g.role === 'owner' && <span class="g-card-role">Owner</span>}
-                    {g.role === 'organizer' && <span class="g-card-role">Organizer</span>}
-                  </div>
-                </a>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      <section class="g-section">
-        <h2 class="g-section-title">Discover</h2>
-        {discoverGroups.length === 0 ? (
-          <div class="g-empty">No public groups yet. Group creation is offline while we rework accounts.</div>
-        ) : (
-          <div class="g-grid">
-            {discoverGroups.map((g: any) => (
-              <a href={`/groups/${g.slug}`} class="g-card">
-                <div class="g-card-head">
-                  <span class="g-card-name">{g.name}</span>
-                </div>
-                {g.description && <p class="g-card-desc">{g.description}</p>}
-                <div class="g-card-meta">
-                  <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
-                </div>
-              </a>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section class="g-section">
-        <h2 class="g-section-title">More ways to connect</h2>
-        <div class="g-side-grid">
-          <a href="/welcome" class="g-side-card">
-            <span class="g-side-emoji">👋</span>
-            <div>
-              <strong>New here?</strong>
-              <p>Drop an intro, see who else just joined.</p>
-            </div>
-          </a>
-          <a href="/community" class="g-side-card">
-            <span class="g-side-emoji">🤝</span>
-            <div>
-              <strong>Community Board</strong>
-              <p>Favors, groups, messages — all in one place.</p>
-            </div>
-          </a>
-        </div>
-      </section>
-    </>
-  )}
-
-  {tab === 'messages' && user && (
+  {me && myGroups.length > 0 && (
     <section class="g-section">
-      <h2 class="g-section-title">Conversations</h2>
-      {conversations.length === 0 ? (
-        <div class="g-empty">
-          No chats yet. The silence is deafening. Pop over to a group, click 💬 next to anyone, and ruin someone's peaceful Tuesday in the best way.
-        </div>
-      ) : (
-        <div class="dm-list">
-          {conversations.map((c: any) => {
-            const name = otherName(c);
-            const initial = name[0]?.toUpperCase() || '?';
-            const isUnread = (c.unread || 0) > 0;
-            const preview = c.last_msg_preview || 'Start the conversation…';
-            return (
-              <a href={`/messages/${c.id}`} class={`dm-row ${isUnread ? 'unread' : ''}`}>
-                <div class="dm-avatar">{initial}</div>
-                <div class="dm-body">
-                  <div class="dm-row-top">
-                    <strong>{name}</strong>
-                    <span class="dm-time">{timeAgo(c.last_msg_at)}</span>
-                  </div>
-                  <div class="dm-preview">
-                    {c.last_msg_from?.toLowerCase() === (user.email || '').toLowerCase() && <span class="dm-you">You: </span>}
-                    {preview}
-                  </div>
-                </div>
-                {isUnread && <span class="dm-badge">{c.unread}</span>}
-              </a>
-            );
-          })}
-        </div>
-      )}
+      <h2 class="g-section-title">Your groups</h2>
+      <div class="g-grid">
+        {myGroups.map((g: any) => (
+          <a href={`/groups/${g.slug}`} class="g-card">
+            <div class="g-card-emoji">{g.cover_emoji || '👥'}</div>
+            <div class="g-card-body">
+              <div class="g-card-name">{g.name}</div>
+              <div class="g-card-meta">
+                <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
+                {g.my_role && g.my_role !== 'member' && <span class="g-card-role">{g.my_role}</span>}
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
     </section>
   )}
+
+  <section class="g-section">
+    <h2 class="g-section-title">Browse by category</h2>
+    <div class="g-pills">
+      <a href={buildUrl({ cat: '' })} class:list={["g-pill", { active: !catFilter }]}>All</a>
+      {GROUP_CATEGORIES.map((c: any) => (
+        <a href={buildUrl({ cat: c.key })} class:list={["g-pill", { active: catFilter === c.key }]}>
+          <span>{c.emoji}</span> <span>{c.label}</span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="g-section">
+    <h2 class="g-section-subtitle">Filter by neighborhood</h2>
+    <div class="g-pills g-pills-sm">
+      <a href={buildUrl({ nbh: '' })} class:list={["g-pill", { active: !nbhFilter }]}>All metro</a>
+      {TOP_HOODS.map((h: any) => (
+        <a href={buildUrl({ nbh: h.slug })} class:list={["g-pill", { active: nbhFilter === h.slug }]}>
+          {h.label}
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="g-section">
+    <h2 class="g-section-title">
+      {catFilter || nbhFilter ? 'Matching groups' : 'All groups'}
+      <span class="g-count-pill">{filteredGroups.length}</span>
+    </h2>
+    {filteredGroups.length === 0 ? (
+      <div class="g-empty">
+        No groups match those filters yet.
+        {canCreate && <> Be first — <a href="/groups/new">create one →</a></>}
+      </div>
+    ) : (
+      <div class="g-grid">
+        {filteredGroups.map((g: any) => (
+          <a href={`/groups/${g.slug}`} class="g-card">
+            <div class="g-card-emoji">{g.cover_emoji || '👥'}</div>
+            <div class="g-card-body">
+              <div class="g-card-name">{g.name}</div>
+              {g.description && <p class="g-card-desc">{g.description}</p>}
+              <div class="g-card-tags">
+                <span class="g-tag g-tag-cat">{categoryEmoji(g.category || 'general')} {categoryLabel(g.category || 'general')}</span>
+                {g.neighborhood && <span class="g-tag g-tag-hood">📍 {hoodLabel(g.neighborhood)}</span>}
+                {g.privacy === 'invite_only' && <span class="g-tag g-tag-lock">🔒 Private</span>}
+              </div>
+              <div class="g-card-meta">
+                <span>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+  </section>
 </div>
 
 <style>
   .g-wrap { max-width: 1180px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
-  .g-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; }
-  .g-head h1 { font-family: var(--font-display); font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -0.02em; }
-  .g-sub { font-size: 15px; color: var(--text-sec); margin-top: 6px; max-width: 540px; }
+  .g-hero { margin-bottom: 32px; }
+  .g-hero h1 { font-family: var(--font-display); font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -0.02em; }
+  .g-sub { font-size: 15px; color: var(--text-sec); margin-top: 8px; max-width: 600px; }
+  .g-hero-actions { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
 
-  .g-tabs { display: flex; gap: 6px; margin-bottom: 28px; background: var(--surface); padding: 6px; border-radius: 999px; width: fit-content; border: 1px solid var(--border); }
-  .g-tab {
+  .g-section { margin-bottom: 32px; }
+  .g-section-title { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.01em; }
+  .g-section-subtitle { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+  .g-count-pill { font-size: 12px; font-weight: 700; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, #fff); padding: 4px 12px; border-radius: 999px; }
+
+  .g-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .g-pill {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 18px; border-radius: 999px;
-    font-family: var(--font-display); font-size: 14px; font-weight: 700;
-    color: var(--text-sec); text-decoration: none; transition: background 0.15s, color 0.15s;
+    padding: 8px 16px; border-radius: 50px;
+    background: var(--bg); border: 1px solid var(--border);
+    font-size: 13px; font-weight: 600; color: var(--text);
+    text-decoration: none; transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
-  .g-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--card-shadow); }
-  .g-tab:hover:not(.active) { color: var(--text); }
-  .g-tab-badge {
-    min-width: 20px; padding: 2px 8px; border-radius: 999px;
-    background: var(--cta-bg); color: #fff; font-size: 11px; font-weight: 800;
-    text-align: center;
-  }
+  .g-pill:hover { background: var(--surface); border-color: var(--border-hover); }
+  .g-pill:active { transform: translateY(1px); }
+  .g-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .g-pills-sm .g-pill { padding: 6px 12px; font-size: 12px; }
 
-  .g-section { margin-bottom: 36px; }
-  .g-section-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.01em; }
   .g-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
   .g-card {
-    display: flex; flex-direction: column; gap: 8px;
-    padding: 18px; background: var(--bg); border: 1px solid var(--border); border-radius: 16px;
-    text-decoration: none; color: var(--text);
+    display: flex; gap: 12px; padding: 16px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+    text-decoration: none; color: var(--text); box-shadow: var(--card-shadow);
     transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
   }
-  .g-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
+  .g-card:hover { transform: translateY(-2px); border-color: var(--border-hover); box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+  .g-card:active { transform: translateY(0); }
+  .g-card-emoji { font-size: 32px; flex-shrink: 0; line-height: 1; padding-top: 2px; }
+  .g-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .g-card-name { font-family: var(--font-display); font-size: 17px; font-weight: 700; line-height: 1.2; }
+  .g-card-desc { font-size: 13px; color: var(--text-sec); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
+  .g-card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .g-tag { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: var(--surface); color: var(--text-sec); }
+  .g-tag-cat { background: #EEF2FF; color: #4338CA; }
+  .g-tag-hood { background: #F0FDF4; color: #047857; }
+  .g-tag-lock { background: #FEF3C7; color: #92400E; }
+  .g-card-meta { font-size: 12px; color: var(--text-faint); }
+  .g-card-role { color: var(--accent); font-weight: 700; text-transform: capitalize; margin-left: 6px; }
 
-  .g-side-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
-  .g-side-card {
-    display: flex; align-items: flex-start; gap: 14px;
-    padding: 18px; background: var(--bg); border: 1px solid var(--border); border-radius: 16px;
-    text-decoration: none; color: var(--text);
-    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
-  }
-  .g-side-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
-  .g-side-emoji { font-size: 26px; flex-shrink: 0; }
-  .g-side-card strong { display: block; font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 2px; }
-  .g-side-card p { font-size: 13px; color: var(--text-sec); line-height: 1.45; }
-  .g-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .g-card-name { font-family: var(--font-display); font-size: 17px; font-weight: 700; }
-  .g-card-lock { font-size: 11px; color: var(--text-sec); background: var(--surface); padding: 3px 9px; border-radius: 999px; }
-  .g-card-desc { font-size: 13px; color: var(--text-sec); line-height: 1.45; flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .g-card-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-faint); }
-  .g-card-role { color: var(--accent); font-weight: 700; }
-  .g-empty {
-    padding: 24px; border: 1px dashed var(--border); border-radius: 14px;
-    text-align: center; color: var(--text-sec); font-size: 14px;
-  }
+  .g-empty { padding: 24px; border: 1px dashed var(--border); border-radius: 14px; text-align: center; color: var(--text-sec); font-size: 14px; }
   .g-empty a { color: var(--accent); font-weight: 600; }
-
-  /* DM list (inline, reuses the styling from /messages) */
-  .dm-list { display: flex; flex-direction: column; gap: 6px; }
-  .dm-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 16px; background: var(--bg);
-    border: 1px solid var(--border); border-radius: 14px;
-    text-decoration: none; transition: background 0.15s, border-color 0.15s;
-  }
-  .dm-row:hover { background: var(--surface); border-color: var(--border-hover); }
-  .dm-row.unread { background: var(--accent-dim); border-color: var(--accent); }
-  .dm-avatar {
-    width: 44px; height: 44px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--sunset), var(--pink));
-    color: #fff; display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-weight: 800; font-size: 18px; flex-shrink: 0;
-  }
-  .dm-body { flex: 1; min-width: 0; }
-  .dm-row-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-  .dm-row-top strong { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); }
-  .dm-time { font-size: 12px; color: var(--text-faint); flex-shrink: 0; }
-  .dm-preview { font-size: 13px; color: var(--text-sec); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .dm-row.unread .dm-preview { color: var(--text); font-weight: 500; }
-  .dm-you { color: var(--text-faint); }
-  .dm-badge {
-    min-width: 22px; padding: 3px 8px; border-radius: 999px;
-    background: var(--cta-bg); color: #fff;
-    font-family: var(--font-display); font-size: 11px; font-weight: 800;
-    text-align: center; flex-shrink: 0;
-  }
 </style>
 </Base>

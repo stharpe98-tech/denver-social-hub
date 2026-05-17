@@ -1,10 +1,63 @@
 ---
 import Base from '../../../layouts/Base.astro';
+import { getDB } from '../../../lib/db';
+import { ensureGroupsSchema, refreshMemberCount } from '../../../lib/groups-schema';
+import { getCurrentProfile } from '../../../lib/profile-auth';
+
+const db = getDB();
+const { code } = Astro.params;
+
+if (!code) return Astro.redirect('/groups');
+if (db) await ensureGroupsSchema(db);
+
+const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
+if (!me) {
+  return Astro.redirect('/profile/new?next=/groups/join/' + encodeURIComponent(code));
+}
+
+let error: string | null = null;
+let groupSlug: string | null = null;
+
+if (db) {
+  const inv: any = await db.prepare(
+    `SELECT id, group_id, invitee_email, used_at, expires_at FROM group_invites WHERE code=?`
+  ).bind(code).first();
+  if (!inv) error = 'This invite link is invalid.';
+  else if (inv.used_at) error = 'This invite has already been used.';
+  else {
+    if (inv.expires_at) {
+      const exp = new Date(inv.expires_at.includes('T') ? inv.expires_at : inv.expires_at + 'Z').getTime();
+      if (Number.isFinite(exp) && Date.now() > exp) error = 'This invite has expired.';
+    }
+    if (!error && inv.invitee_email && inv.invitee_email.toLowerCase() !== me.email.toLowerCase()) {
+      error = 'This invite was sent to a different email.';
+    }
+    if (!error) {
+      const grp: any = await db.prepare('SELECT id, slug FROM groups WHERE id=?').bind(inv.group_id).first();
+      if (!grp) error = 'That group no longer exists.';
+      else {
+        const already: any = await db.prepare(
+          'SELECT 1 FROM group_members WHERE group_id=? AND LOWER(member_email)=LOWER(?)'
+        ).bind(grp.id, me.email).first();
+        if (!already) {
+          await db.prepare(`INSERT INTO group_members (group_id, member_email, role) VALUES (?, ?, 'member')`)
+            .bind(grp.id, me.email).run();
+          await refreshMemberCount(db, grp.id);
+        }
+        await db.prepare(`UPDATE group_invites SET used_at=datetime('now'), used_by_email=? WHERE id=?`)
+          .bind(me.email, inv.id).run();
+        groupSlug = grp.slug;
+      }
+    }
+  }
+}
+
+if (groupSlug) return Astro.redirect('/groups/' + groupSlug);
 ---
-<Base title="Group joining is offline" description="Joining groups is offline while accounts are reworked.">
+<Base title="Group invite" description="Redeem a group invite.">
   <div style="max-width:520px;margin:96px auto;padding:0 24px;text-align:center">
-    <h1 style="font-family:var(--font-display);font-size:28px;margin-bottom:12px">Joining groups is offline</h1>
-    <p style="color:var(--text-sec);margin-bottom:24px">We're reworking accounts. Invite links will work again soon.</p>
+    <h1 style="font-family:var(--font-display);font-size:28px;margin-bottom:12px">Couldn't accept invite</h1>
+    <p style="color:var(--text-sec);margin-bottom:24px">{error || 'Something went wrong.'}</p>
     <a href="/groups" class="btn-sec">Browse groups</a>
   </div>
 </Base>

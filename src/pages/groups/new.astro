@@ -1,10 +1,153 @@
 ---
 import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+import { getCurrentProfile } from '../../lib/profile-auth';
+import { GROUP_CATEGORIES, ensureGroupsSchema } from '../../lib/groups-schema';
+import { neighborhoodsByCity } from '../../lib/neighborhoods';
+
+const db = getDB();
+if (db) await ensureGroupsSchema(db);
+const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
+
+if (!me) {
+  return Astro.redirect('/profile/new?next=/groups/new');
+}
+if (me.tier !== 'organizer') {
+  return Astro.redirect('/u/' + me.slug + '?notice=organizers_only');
+}
+
+const hoodGroups = neighborhoodsByCity();
+const EMOJI_OPTIONS = ['👥','🎨','🏃','🍽️','🍻','💼','🌱','👶','🧘','✏️','💻','🎲','🎬','📚','🎵','⚽','🏔️','🐕','☕','🍕'];
 ---
-<Base title="Group creation offline" description="Group creation is offline while accounts are reworked.">
-  <div style="max-width:520px;margin:96px auto;padding:0 24px;text-align:center">
-    <h1 style="font-family:var(--font-display);font-size:28px;margin-bottom:12px">Group creation is offline</h1>
-    <p style="color:var(--text-sec);margin-bottom:24px">Creating and joining groups requires accounts, which we're reworking. Coming back soon.</p>
-    <a href="/groups" class="btn-sec">Browse groups</a>
-  </div>
+<Base title="New group" description="Create a new community group on Denver Social.">
+<div class="ng-wrap">
+  <a href="/groups" class="ng-back">← Groups</a>
+  <h1 class="ng-h1">Start a new group</h1>
+  <p class="ng-sub">Bring your people together. Pick a vibe, give it a home, invite folks.</p>
+
+  <form id="new-group-form" class="ng-form">
+    <label class="ng-field">
+      <span class="ng-label">Group name</span>
+      <input type="text" name="name" required minlength="3" maxlength="80" placeholder="e.g. Denver Trail Runners" class="ng-input" />
+    </label>
+
+    <label class="ng-field">
+      <span class="ng-label">Description</span>
+      <textarea name="description" rows="3" maxlength="1000" placeholder="What's this group about? Who's it for?" class="ng-input"></textarea>
+    </label>
+
+    <div class="ng-row">
+      <label class="ng-field">
+        <span class="ng-label">Category</span>
+        <select name="category" class="ng-input">
+          {GROUP_CATEGORIES.map((c: any) => (
+            <option value={c.key}>{c.emoji} {c.label}</option>
+          ))}
+        </select>
+      </label>
+
+      <label class="ng-field">
+        <span class="ng-label">Neighborhood (optional)</span>
+        <select name="neighborhood" class="ng-input">
+          <option value="">Anywhere in metro</option>
+          {hoodGroups.map((g: any) => (
+            <optgroup label={g.label}>
+              {g.items.map((n: any) => (<option value={n.slug}>{n.label}</option>))}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+    </div>
+
+    <fieldset class="ng-field">
+      <legend class="ng-label">Cover emoji</legend>
+      <div class="ng-emoji-grid">
+        {EMOJI_OPTIONS.map((e: string, i: number) => (
+          <label class="ng-emoji">
+            <input type="radio" name="cover_emoji" value={e} checked={i === 0} />
+            <span>{e}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+
+    <fieldset class="ng-field">
+      <legend class="ng-label">Privacy</legend>
+      <label class="ng-radio">
+        <input type="radio" name="privacy" value="public" checked />
+        <span><strong>Public</strong> — anyone can browse and join.</span>
+      </label>
+      <label class="ng-radio">
+        <input type="radio" name="privacy" value="invite_only" />
+        <span><strong>Invite only</strong> — joining requires a link from you.</span>
+      </label>
+    </fieldset>
+
+    <div id="ng-error" class="ng-error" hidden></div>
+    <button type="submit" class="btn-cta ng-submit">Create group</button>
+  </form>
+</div>
+
+<style>
+  .ng-wrap { max-width: 620px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+  .ng-back { font-size: 13px; color: var(--text-sec); text-decoration: none; }
+  .ng-back:hover { color: var(--text); }
+  .ng-h1 { font-family: var(--font-display); font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -0.02em; margin-top: 16px; }
+  .ng-sub { color: var(--text-sec); margin-bottom: 24px; }
+  .ng-form { display: flex; flex-direction: column; gap: 16px; }
+  .ng-field { display: flex; flex-direction: column; gap: 8px; border: none; padding: 0; min-width: 0; }
+  .ng-label { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--text); }
+  .ng-input {
+    padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px;
+    font-size: 14px; font-family: var(--font); background: var(--bg); color: var(--text);
+  }
+  .ng-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+  .ng-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 540px) { .ng-row { grid-template-columns: 1fr; } }
+  .ng-emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 6px; }
+  .ng-emoji { position: relative; }
+  .ng-emoji input { position: absolute; opacity: 0; pointer-events: none; }
+  .ng-emoji span { display: flex; align-items: center; justify-content: center; padding: 10px; font-size: 22px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; background: var(--bg); transition: border-color 0.15s, background 0.15s; }
+  .ng-emoji input:checked + span { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, #fff); }
+  .ng-radio { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
+  .ng-radio:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, #fff); }
+  .ng-radio + .ng-radio { margin-top: 8px; }
+  .ng-radio span strong { font-weight: 700; }
+  .ng-submit { margin-top: 8px; align-self: flex-start; }
+  .ng-error { padding: 10px 14px; background: #FEF2F2; color: #B91C1C; border-radius: 10px; font-size: 13px; }
+</style>
+
+<script>
+  const form = document.getElementById('new-group-form') as HTMLFormElement | null;
+  const errBox = document.getElementById('ng-error') as HTMLElement | null;
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (errBox) { errBox.hidden = true; errBox.textContent = ''; }
+    const fd = new FormData(form);
+    const payload = {
+      action: 'create',
+      name: fd.get('name'),
+      description: fd.get('description'),
+      category: fd.get('category'),
+      neighborhood: fd.get('neighborhood'),
+      cover_emoji: fd.get('cover_emoji'),
+      privacy: fd.get('privacy'),
+    };
+    const btn = form.querySelector('.ng-submit') as HTMLButtonElement;
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/groups', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const d = await res.json();
+      if (d.ok && d.slug) { location.href = '/groups/' + d.slug; return; }
+      if (errBox) { errBox.textContent = 'Could not create group: ' + (d.error || 'unknown'); errBox.hidden = false; }
+    } catch {
+      if (errBox) { errBox.textContent = 'Network error.'; errBox.hidden = false; }
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
 </Base>
