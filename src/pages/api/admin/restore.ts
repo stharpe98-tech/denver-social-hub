@@ -7,6 +7,14 @@ export const prerender = false;
 interface BackupTable { create_sql: string; rows: any[]; }
 interface BackupPayload { version: number; tables: Record<string, BackupTable>; }
 
+// Belt-and-suspenders: SQL identifier names from the backup payload get
+// inlined into DROP/CREATE/INSERT template strings. The endpoint is
+// super-admin only, but a malicious or corrupted backup could still inject
+// SQL via weirdly-named tables/columns. Allow only conservative SQLite
+// identifiers (letter or underscore, then alphanumerics/underscore).
+const SAFE_IDENT = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
+function isSafeIdent(s: string): boolean { return typeof s === 'string' && SAFE_IDENT.test(s); }
+
 // Wipes existing user tables and replays the supplied backup. Super-admin
 // only because this is destructive: it drops + recreates every table.
 //
@@ -51,13 +59,20 @@ export const POST: APIRoute = async (ctx) => {
       "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'd1_%'"
     ).all();
     for (const r of (live.results ?? []) as any[]) {
-      try { await db.prepare(`DROP TABLE IF EXISTS "${r.name}"`).run(); } catch (e: any) { errors.push(`drop ${r.name}: ${e.message}`); }
+      const name = (r as any).name;
+      if (!isSafeIdent(name)) { errors.push(`drop skipped (unsafe ident): ${name}`); continue; }
+      try { await db.prepare(`DROP TABLE IF EXISTS "${name}"`).run(); } catch (e: any) { errors.push(`drop ${name}: ${e.message}`); }
     }
   }
 
   for (const tableName of tableNames) {
     const t = payload.tables[tableName];
     if (!t || !t.create_sql) continue;
+
+    if (!isSafeIdent(tableName)) {
+      errors.push(`recreate skipped (unsafe table name): ${tableName}`);
+      continue;
+    }
 
     try {
       await db.prepare(`DROP TABLE IF EXISTS "${tableName}"`).run();
@@ -71,9 +86,15 @@ export const POST: APIRoute = async (ctx) => {
     if (!t.rows || t.rows.length === 0) continue;
 
     // Build a single batched insert per table so we don't hammer D1
-    // with one statement per row.
+    // with one statement per row. Reject any column name that doesn't
+    // pass the identifier regex so a corrupted backup can't inject SQL.
     const cols = Object.keys(t.rows[0]);
     if (cols.length === 0) continue;
+    const unsafeCols = cols.filter(c => !isSafeIdent(c));
+    if (unsafeCols.length > 0) {
+      errors.push(`insert skipped (unsafe column names on ${tableName}): ${unsafeCols.join(', ')}`);
+      continue;
+    }
     const colList = cols.map(c => `"${c}"`).join(',');
     const placeholders = cols.map(() => '?').join(',');
     const stmt = db.prepare(`INSERT INTO "${tableName}" (${colList}) VALUES (${placeholders})`);
