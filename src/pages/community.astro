@@ -224,6 +224,7 @@ function timeAgo(iso: string): string {
 
         <div class="bd-extra">
           <a href="/calendar" class="bd-calendar-btn">📅 See the community calendar →</a>
+          <a href="/organizers" class="bd-calendar-btn bd-organizers-btn">👥 Meet the organizers →</a>
         </div>
       </section>
 
@@ -471,7 +472,9 @@ function timeAgo(iso: string): string {
   .bd-stat-l { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #888; margin-top: 4px; font-weight: 600; }
   @media (max-width: 540px) { .bd-stats { gap: 24px; } .bd-stat-n { font-size: 22px; } }
 
-  .bd-extra { text-align: center; padding: 0 16px 48px; }
+  .bd-extra { text-align: center; padding: 0 16px 48px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .bd-organizers-btn { background: #fff !important; color: #1A1A1A !important; border: 1.5px solid #1A1A1A; }
+  .bd-organizers-btn:hover { background: #1A1A1A !important; color: #FFD93D !important; }
   .bd-calendar-btn {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 10px 18px; background: #1A1A1A; color: #FFD93D;
