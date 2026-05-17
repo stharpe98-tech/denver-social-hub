@@ -1,0 +1,182 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Sign in — Denver Social" description="Sign back in to edit your /u/ page.">
+  <div class="wrap">
+    <header class="intro">
+      <div class="tag">SIGN IN</div>
+      <h1>Welcome back.</h1>
+      <p class="sub">Enter your <span class="mono">/u/yourname</span> URL. We'll email a code to the address on file.</p>
+    </header>
+
+    <div class="card" id="step-slug">
+      <div class="field">
+        <label>Your URL</label>
+        <div class="slug-row">
+          <span class="slug-prefix">denversocialhub.com/u/</span>
+          <input id="slug" type="text" placeholder="jimmy" autocomplete="off" autocapitalize="off" maxlength="30"/>
+        </div>
+        <div class="slug-check" id="slug-check"></div>
+      </div>
+      <button class="cta" id="send-btn">Email me a code →</button>
+      <div class="err" id="send-err"></div>
+      <p class="foot">
+        Don't have a page yet? <a href="/profile/new">Sign up here →</a>
+      </p>
+    </div>
+
+    <div class="card" id="step-code" hidden>
+      <h3 class="code-h">Check your inbox</h3>
+      <p class="code-sub" id="code-sub">We sent a 6-digit code to the email on file for /u/<span id="code-slug"></span>.</p>
+      <div class="field">
+        <label>6-digit code</label>
+        <input id="code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="••••••"/>
+      </div>
+      <div class="field">
+        <label>Confirm your email <span class="opt">(the one you signed up with)</span></label>
+        <input id="email" type="email" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <button class="cta" id="verify-btn">Sign in →</button>
+      <button class="link" id="resend-btn" type="button">Send me a new code</button>
+      <button class="link" id="back-btn" type="button">Use a different URL</button>
+      <div class="err" id="code-err"></div>
+      <div class="ok" id="resend-ok" hidden>✓ New code sent.</div>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function() {
+      var slugInput = document.getElementById('slug');
+      var emailInput = document.getElementById('email');
+      var codeInput = document.getElementById('code');
+      var slugCheck = document.getElementById('slug-check');
+      var stepSlug = document.getElementById('step-slug');
+      var stepCode = document.getElementById('step-code');
+      var SLUG_RE = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/;
+
+      function showErr(id, msg) { var el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
+      function clearErr(id) { var el = document.getElementById(id); el.textContent = ''; el.classList.remove('show'); }
+
+      slugInput.addEventListener('input', function() {
+        var s = slugInput.value.toLowerCase().trim();
+        slugInput.value = s;
+        slugCheck.textContent = '';
+      });
+
+      document.getElementById('send-btn').addEventListener('click', async function() {
+        clearErr('send-err');
+        var slug = slugInput.value.trim().toLowerCase();
+        if (!slug || !SLUG_RE.test(slug)) { showErr('send-err', 'Enter your URL — lowercase letters, numbers, hyphens.'); return; }
+        var btn = this; var orig = btn.textContent;
+        btn.textContent = 'Sending…'; btn.disabled = true;
+        try {
+          var r = await fetch('/api/profile/edit-code-send', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug })
+          });
+          var d = await r.json();
+          if (d && d.ok) {
+            stepSlug.hidden = true; stepCode.hidden = false;
+            document.getElementById('code-slug').textContent = slug;
+            codeInput.focus();
+          } else {
+            showErr('send-err', (d && d.error) || 'Could not send code. Check the URL.');
+          }
+        } catch (e) {
+          showErr('send-err', 'Network hiccup — try again.');
+        }
+        btn.textContent = orig; btn.disabled = false;
+      });
+
+      document.getElementById('verify-btn').addEventListener('click', async function() {
+        clearErr('code-err');
+        var slug = slugInput.value.trim().toLowerCase();
+        var email = (emailInput.value || '').trim().toLowerCase();
+        var code = (codeInput.value || '').trim();
+        if (!email || email.indexOf('@') < 0) { showErr('code-err', 'Enter the email on file.'); return; }
+        if (!/^\d{6}$/.test(code)) { showErr('code-err', 'Enter the 6-digit code.'); return; }
+        var btn = this; var orig = btn.textContent;
+        btn.textContent = 'Verifying…'; btn.disabled = true;
+        try {
+          var r = await fetch('/api/profile/code-verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug, email: email, code: code })
+          });
+          var d = await r.json();
+          if (d.ok) {
+            location.href = d.redirect || ('/u/' + slug + '/edit');
+            return;
+          }
+          showErr('code-err', d.error || 'Invalid or expired code.');
+        } catch (e) {
+          showErr('code-err', 'Network hiccup — try again.');
+        }
+        btn.textContent = orig; btn.disabled = false;
+      });
+
+      document.getElementById('back-btn').addEventListener('click', function() {
+        stepCode.hidden = true; stepSlug.hidden = false; slugInput.focus();
+      });
+
+      var resendBtn = document.getElementById('resend-btn');
+      var resendOk = document.getElementById('resend-ok');
+      resendBtn.addEventListener('click', async function() {
+        clearErr('code-err');
+        resendOk.hidden = true;
+        var slug = slugInput.value.trim().toLowerCase();
+        if (!slug) { showErr('code-err', 'Missing URL — go back.'); return; }
+        var orig = resendBtn.textContent;
+        resendBtn.textContent = 'Sending…'; resendBtn.disabled = true;
+        try {
+          var r = await fetch('/api/profile/edit-code-send', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug })
+          });
+          var d = await r.json();
+          if (d && d.ok) {
+            resendOk.hidden = false;
+            setTimeout(function() { resendOk.hidden = true; }, 4000);
+          } else {
+            showErr('code-err', (d && d.error) || 'Could not send a new code.');
+          }
+        } catch (e) {
+          showErr('code-err', 'Network hiccup — try again.');
+        }
+        resendBtn.textContent = orig; resendBtn.disabled = false;
+      });
+
+      codeInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('verify-btn').click(); });
+      emailInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('verify-btn').click(); });
+      slugInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('send-btn').click(); });
+    })();
+  </script>
+
+  <style>
+    .wrap { max-width: 480px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-8); }
+    .intro { text-align: center; margin-bottom: var(--space-5); }
+    .tag { font-family: 'SF Mono', Menlo, monospace; font-size: 11px; letter-spacing: 2px; color: var(--accent, #7C3AED); font-weight: 700; margin-bottom: var(--space-2); }
+    .intro h1 { font-family: var(--font-display, 'Playfair Display', serif); font-size: clamp(28px, 5vw, 36px); font-weight: 800; line-height: 1.1; margin-bottom: var(--space-2); }
+    .sub { font-size: 15px; color: var(--text-sec, #555); line-height: 1.5; }
+    .mono { font-family: 'SF Mono', Menlo, monospace; background: rgba(124,58,237,0.10); padding: 1px 6px; border-radius: 4px; font-size: 0.92em; color: var(--accent, #7C3AED); }
+
+    .card { background: var(--surface, #F8F9FB); border: 1.5px solid var(--border, #E5E7EB); border-radius: var(--radius-lg, 20px); padding: var(--space-5); margin-bottom: var(--space-4); }
+    .code-h { font-family: var(--font-display, serif); font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+    .code-sub { text-align: center; font-size: 14px; color: var(--text-sec, #555); margin-bottom: var(--space-4); }
+    .field { margin-bottom: var(--space-3); }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sec, #555); margin-bottom: 6px; }
+    .field label .opt { font-weight: 400; color: var(--text-faint, #888); }
+    .field input { width: 100%; padding: 11px 13px; border-radius: 10px; border: 1.5px solid var(--border, #E5E7EB); font-size: 14px; background: #fff; font-family: inherit; }
+    .field input:focus { outline: none; border-color: var(--accent, #7C3AED); }
+    .slug-row { display: flex; align-items: stretch; border: 1.5px solid var(--border, #E5E7EB); border-radius: 10px; overflow: hidden; background: #fff; }
+    .slug-prefix { padding: 11px 12px; background: var(--surface, #F8F9FB); color: var(--text-faint, #888); font-size: 13px; font-family: monospace; border-right: 1px solid var(--border, #E5E7EB); }
+    .slug-row input { flex: 1; border: none; padding: 11px 13px; font-size: 14px; outline: none; font-family: monospace; }
+    .cta { width: 100%; padding: 14px; border-radius: 999px; border: none; background: var(--accent, #7C3AED); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: var(--space-2); }
+    .cta:hover { filter: brightness(1.08); }
+    .link { display: block; margin: var(--space-2) auto 0; background: none; border: none; cursor: pointer; font-size: 13px; color: var(--text-sec, #555); text-decoration: underline; text-underline-offset: 3px; font-family: inherit; }
+    .err { color: #DC2626; font-size: 13px; margin-top: var(--space-2); display: none; }
+    .err.show { display: block; }
+    .ok { color: #047857; font-size: 13px; margin-top: var(--space-2); text-align: center; font-weight: 600; }
+    .foot { font-size: 13px; color: var(--text-sec, #555); text-align: center; margin-top: var(--space-3); }
+    .foot a { color: var(--accent, #7C3AED); font-weight: 600; }
+  </style>
+</Base>

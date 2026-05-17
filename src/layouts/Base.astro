@@ -53,6 +53,7 @@ const currentPath = Astro.url.pathname;
       </nav>
 
       <div class="site-auth">
+        {!hasProfileSession && <a href="/sign-in" class="site-signin">Sign in</a>}
         {!hasProfileSession && <a href="/profile/new" class="site-cta">Sign up</a>}
         {isAdmin && <a href="/api/admin/logout" class="site-logout">Admin sign out</a>}
       </div>
@@ -81,6 +82,7 @@ const currentPath = Astro.url.pathname;
 
     <div class="mob-drawer-foot">
       {!hasProfileSession && (
+        <a href="/sign-in" class="mob-drawer-cta mob-drawer-cta-ghost">Sign in</a>
         <a href="/profile/new" class="mob-drawer-cta">Sign up</a>
       )}
       {isAdmin && (
@@ -112,6 +114,7 @@ const currentPath = Astro.url.pathname;
         <div class="footer-col-title">People</div>
         <a href="/organizers">Organizers</a>
         <a href="/groups">Groups</a>
+        <a href="/sign-in">Sign in</a>
         <a href="/profile/new">Sign up</a>
       </div>
       <div class="footer-col">
@@ -466,6 +469,16 @@ const currentPath = Astro.url.pathname;
     transition: color 0.15s;
   }
   .site-logout:hover { color: #fff; }
+  .site-signin {
+    font-size: 14px; font-weight: 600;
+    color: var(--text-sec, #555);
+    padding: 10px 14px; border-radius: var(--radius-pill);
+    text-decoration: none;
+    transition: color 0.15s, background 0.15s;
+    white-space: nowrap;
+    margin-right: 4px;
+  }
+  .site-signin:hover { color: var(--text); background: rgba(0,0,0,0.05); }
   .site-cta {
     font-size: 14px; font-weight: 600;
     background: var(--cta-bg); color: var(--cta-text);
