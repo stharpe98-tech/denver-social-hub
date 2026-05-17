@@ -1,0 +1,28 @@
+---
+// Top-level slug router. Maps /<slug> like /April30potluck to the
+// corresponding potluck page by Astro.rewrite, so the URL the user
+// sees matches the slug they typed. Falls through to 404 for anything
+// that doesn't match the potluck slug pattern or isn't in DB.
+import { getDB } from '../lib/db';
+import { POTLUCK_SLUG_RE } from '../lib/slug';
+
+const { slug } = Astro.params;
+const s = (slug || '').trim();
+
+// Reject anything that isn't a potluck-shaped slug — keeps this catch-all
+// route from intercepting other top-level pages.
+if (!s || !POTLUCK_SLUG_RE.test(s)) {
+  return new Response(null, { status: 404 });
+}
+
+const db = getDB();
+let row: any = null;
+try {
+  if (db) row = await db.prepare('SELECT id FROM potlucks WHERE slug=? LIMIT 1').bind(s).first();
+} catch { /* slug column might be missing on stale envs */ }
+
+if (!row?.id) return new Response(null, { status: 404 });
+
+// Serve the existing potluck detail page under this URL.
+return Astro.rewrite(`/potlucks/${row.id}`);
+---

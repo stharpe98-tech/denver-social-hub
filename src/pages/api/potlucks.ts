@@ -1,6 +1,19 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../lib/db';
 import { ensurePotluckSchema } from '../../lib/potluck-schema';
+import { potluckSlug } from '../../lib/slug';
+
+// Pick an unused slug, suffixing -2, -3, … if the base is taken.
+async function assignSlug(db: D1Database, eventDate: string | null, id: number): Promise<string> {
+  const base = potluckSlug(eventDate, id);
+  let candidate = base;
+  for (let n = 2; n <= 6; n++) {
+    const row = await db.prepare('SELECT 1 FROM potlucks WHERE slug=? AND id<>?').bind(candidate, id).first();
+    if (!row) return candidate;
+    candidate = `${base}-${n}`;
+  }
+  return `potluck-${id}`;
+}
 
 export const GET: APIRoute = async ({ url }) => {
   const db = getDB();
@@ -30,8 +43,13 @@ export const POST: APIRoute = async ({ request }) => {
     const action = b.action;
     await ensurePotluckSchema(db);
     if (action === 'suggest') {
-      await db.prepare(`INSERT INTO potlucks (title,description,date_label,time_label,location,location_detail,status,event_date) VALUES (?,?,?,?,?,?,?,?)`)
+      const ins = await db.prepare(`INSERT INTO potlucks (title,description,date_label,time_label,location,location_detail,status,event_date) VALUES (?,?,?,?,?,?,?,?)`)
         .bind(b.title??'New Potluck',b.description??'',b.date_label??'',b.time_label??'',b.location??'',b.location_detail??'','pending',b.event_date??null).run();
+      const newId = Number((ins as any).meta?.last_row_id) || 0;
+      if (newId) {
+        const slug = await assignSlug(db, b.event_date ?? null, newId);
+        await db.prepare('UPDATE potlucks SET slug=? WHERE id=?').bind(slug, newId).run();
+      }
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
     }
     if (action === 'approve') {
@@ -45,11 +63,22 @@ export const POST: APIRoute = async ({ request }) => {
     if (action === 'create') {
       const result = await db.prepare(`INSERT INTO potlucks (title,description,date_label,time_label,location,location_detail,status,event_date,cover_photo) VALUES (?,?,?,?,?,?,?,?,?)`)
         .bind(b.title??'',b.description??'',b.date_label??'',b.time_label??'',b.location??'',b.location_detail??'',b.status??'upcoming',b.event_date??null,b.cover_photo??null).run();
+      const newId = Number((result as any).meta?.last_row_id) || 0;
+      if (newId) {
+        const slug = await assignSlug(db, b.event_date ?? null, newId);
+        await db.prepare('UPDATE potlucks SET slug=? WHERE id=?').bind(slug, newId).run();
+      }
       return new Response(JSON.stringify({ ok: true, id: result.meta.last_row_id }), { headers: { 'Content-Type': 'application/json' } });
     }
     if (action === 'update') {
       await db.prepare(`UPDATE potlucks SET title=?,description=?,date_label=?,time_label=?,location=?,location_detail=?,status=?,template=?,locked=?,organizer_email=?,event_date=?,cover_photo=? WHERE id=?`)
         .bind(b.title,b.description,b.date_label,b.time_label,b.location,b.location_detail,b.status,b.template??'warm',b.locked?1:0,b.organizer_email??'',b.event_date??null,b.cover_photo??null,b.id).run();
+      // Backfill slug if missing or if event_date changed
+      const cur: any = await db.prepare('SELECT slug, event_date FROM potlucks WHERE id=?').bind(b.id).first();
+      if (cur && (!cur.slug || (b.event_date && b.event_date !== cur.event_date))) {
+        const slug = await assignSlug(db, b.event_date ?? cur.event_date ?? null, parseInt(b.id));
+        await db.prepare('UPDATE potlucks SET slug=? WHERE id=?').bind(slug, b.id).run();
+      }
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
     }
     if (action === 'duplicate') {
