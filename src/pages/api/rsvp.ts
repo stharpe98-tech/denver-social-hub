@@ -1,12 +1,11 @@
 import { env } from "cloudflare:workers";
 import { ensureEventRsvpsSchema, generateCheckinToken } from "../../lib/event-rsvps-schema";
+import { getCurrentProfile } from "../../lib/profile-auth";
 
-// Open RSVP: anyone can RSVP to any event. Identity comes from the
-// submitted display_name + (optional) contact_email — dedupe on that
-// pair when present. With accounts offline we can't enforce a real
-// "one RSVP per person" rule, but we still gate by (event_id,email)
-// when an email is given.
-export const POST = async ({ request }: { request: Request }) => {
+// Open RSVP: by default anyone can RSVP to any event. Events with
+// `rsvp_requires_profile = 1` require an authenticated profile
+// (regular or organizer) — those calls return 401 if no session.
+export const POST = async ({ request, cookies }: { request: Request; cookies: any }) => {
   const db = (env as any).DB;
 
   let event_id: string | null = null;
@@ -46,6 +45,20 @@ export const POST = async ({ request }: { request: Request }) => {
   try {
     const event: any = await db.prepare("SELECT * FROM events WHERE id=?").bind(event_id).first();
     if (!event) return new Response(JSON.stringify({ error: "event_not_found" }), { status: 404 });
+
+    // Profile-gated events block anonymous RSVP.
+    if (Number(event.rsvp_requires_profile) === 1) {
+      const me = await getCurrentProfile(cookies, db, request);
+      if (!me) {
+        return new Response(JSON.stringify({
+          error: 'profile_required',
+          message: 'Sign in or create a profile to RSVP.',
+        }), { status: 401 });
+      }
+      // Prefer the profile identity over what the form sent.
+      display_name = me.display_name || display_name;
+      contact_email = me.email || contact_email;
+    }
 
     // Dedupe key: prefer email when given; otherwise the display name is
     // all we have to go on. A blank email + repeated names still result

@@ -2,18 +2,30 @@
 import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
 import { ensureGroupsSchema } from '../../lib/groups-schema';
+import { getCurrentProfile } from '../../lib/profile-auth';
 
-// Posting is open to everyone — no account required. We do show the
-// group banner if a slug is in the URL, but group-scoped posting is
-// disabled while we rework accounts.
+const db = getDB();
+const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
+if (!me) return Astro.redirect('/profile/new?next=/events/new');
+
+// Hosting cap for regulars.
+const HOST_LIMIT = 3;
+let hostedCount = 0;
+if (me.tier !== 'organizer' && db) {
+  try {
+    const r: any = await db.prepare(
+      `SELECT COUNT(*) AS c FROM events WHERE LOWER(submitted_by_email) = ?`
+    ).bind(me.email).first();
+    hostedCount = Number(r?.c || 0);
+  } catch {}
+}
+const atLimit = me.tier !== 'organizer' && hostedCount >= HOST_LIMIT;
+
 const groupSlug = Astro.url.searchParams.get('group') || '';
 let postingInGroup: any = null;
-if (groupSlug) {
-  const db = getDB();
-  if (db) {
-    await ensureGroupsSchema(db);
-    postingInGroup = await db.prepare('SELECT id, slug, name FROM groups WHERE slug=?').bind(groupSlug).first();
-  }
+if (groupSlug && db) {
+  await ensureGroupsSchema(db);
+  postingInGroup = await db.prepare('SELECT id, slug, name FROM groups WHERE slug=?').bind(groupSlug).first();
 }
 
 const TYPES = [
@@ -32,6 +44,15 @@ const TYPES = [
 ];
 ---
 <Base title="Create an event" description="Plan a small-group event in Denver.">
+{atLimit && (
+  <div class="ne-wrap">
+    <a href="/events" class="ne-back">← Events</a>
+    <h1 class="ne-title">You've hosted 3 events.</h1>
+    <p class="ne-sub">Regular accounts can host up to 3 events. Want to host more? <strong>Upgrade to Organizer</strong> — you'll get a public page, unlimited hosting, and group tools.</p>
+    <a href="/u/new" class="ne-submit" style="display:inline-block;text-align:center;text-decoration:none;max-width:320px;">Upgrade to Organizer →</a>
+  </div>
+)}
+{!atLimit && (
 <div class="ne-wrap">
   <a href={postingInGroup ? `/groups/${postingInGroup.slug}` : '/events'} class="ne-back">← {postingInGroup ? postingInGroup.name : 'Events'}</a>
   <h1 class="ne-title">Plan an event.</h1>
@@ -151,6 +172,15 @@ const TYPES = [
         <input type="text" id="ne-link" class="ne-input" placeholder="https://…" />
       </div>
 
+      {me.tier === 'organizer' && (
+        <div class="ne-field">
+          <label class="ne-vibe ne-toggle">
+            <input type="checkbox" id="ne-gate" />
+            <span>🔒 Require profile to RSVP <em>— cuts down on no-shows</em></span>
+          </label>
+        </div>
+      )}
+
       <div class="ne-field">
         <label class="ne-label">Vibe <span class="opt">(pick any that fit)</span></label>
         <div class="ne-vibes">
@@ -168,6 +198,7 @@ const TYPES = [
     <div id="ne-err" class="ne-err"></div>
   </form>
 </div>
+)}
 
 <style>
   .ne-wrap { max-width: 680px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
@@ -294,6 +325,7 @@ const TYPES = [
 </style>
 
 <script is:inline>
+  if (document.getElementById('ne-form')) {
   // ── Type chip grid: store value on hidden state, default = "dinner" ──
   var selectedType = 'dinner';
   document.querySelectorAll('#ne-types .ne-type').forEach(function (btn) {
@@ -407,6 +439,10 @@ const TYPES = [
       spots: document.getElementById('ne-spots').value.trim() || null,
       link: document.getElementById('ne-link').value.trim(),
       contact_phone: document.getElementById('ne-phone').value.trim(),
+      rsvp_requires_profile: (function () {
+        var g = document.getElementById('ne-gate');
+        return g && g.checked ? 1 : 0;
+      })(),
       vibe_tags: Array.from(document.querySelectorAll('input[name="vibe"]:checked')).map(function (c) { return c.value; }),
       group_id: groupId,
       submitted_by: (document.getElementById('ne-host') && document.getElementById('ne-host').value.trim()) || '',
@@ -425,5 +461,6 @@ const TYPES = [
     btn.disabled = false;
     btn.textContent = orig;
   });
+  } // end if (document.getElementById('ne-form'))
 </script>
 </Base>

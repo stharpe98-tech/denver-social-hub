@@ -11,6 +11,12 @@ export async function ensureEventsSchema(db: D1Database): Promise<void> {
     // Optional link to a Group — null means "site-wide", not scoped.
     await db.prepare("ALTER TABLE events ADD COLUMN group_id INTEGER").run();
   }
+  if (!names.has('rsvp_requires_profile')) {
+    // 0 = open RSVP (anonymous name/email allowed), 1 = profile required.
+    try {
+      await db.prepare("ALTER TABLE events ADD COLUMN rsvp_requires_profile INTEGER DEFAULT 0").run();
+    } catch { /* stale schema or race — safe to ignore */ }
+  }
 }
 
 // Canonical vibe-tag dictionary. Keep keys URL/storage-friendly; labels

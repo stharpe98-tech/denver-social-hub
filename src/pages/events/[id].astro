@@ -3,12 +3,14 @@ import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
 import { parseVibeTags, vibeLabel } from '../../lib/events-schema';
 import { ensureCohostsSchema } from '../../lib/cohosts-schema';
+import { getCurrentProfile } from '../../lib/profile-auth';
 
 import { isAdmin as isAdminCookie } from '../../lib/admin-auth';
 const db = getDB();
 const { id } = Astro.params;
 const user: any = null;
 const isAdmin = await isAdminCookie(Astro.cookies);
+const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
 void user;
 
 let event: any = null;
@@ -220,12 +222,24 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   <!-- ═══════════════════════════════════════ -->
   <div class="ev-rsvp-section" id="rsvp-section">
 
-    {/* Open RSVP form (no account required) */}
-    {!isFull && (
+    {/* Profile-gated RSVP: anonymous viewers see a sign-in CTA instead of the form. */}
+    {!isFull && Number(event.rsvp_requires_profile) === 1 && !me && (
+      <div class="ev-rsvp-card" style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+        <strong style="font-size:15px">🔒 Profile required to RSVP</strong>
+        <span class="ev-rsvp-sub">The host wants to cut down on no-shows. Sign in or create a free profile to RSVP.</span>
+        <a href={`/profile/new?next=/events/${id}`} class="ev-rsvp-btn ev-rsvp-going" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px">
+          <span class="ev-rsvp-emoji">✨</span><span>Sign in or create a profile</span>
+        </a>
+      </div>
+    )}
+
+    {/* Open RSVP form — default for events with rsvp_requires_profile = 0,
+        and also shown to profile-holders when the gate is on (pre-filled). */}
+    {!isFull && (Number(event.rsvp_requires_profile) !== 1 || !!me) && (
       <form id="open-rsvp-form" class="ev-rsvp-card" data-event-id={id} style="display:flex;flex-direction:column;gap:12px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <input class="input" type="text" name="display_name" placeholder="Your name" required maxlength="60" />
-          <input class="input" type="email" name="contact_email" placeholder="Email (optional)" maxlength="120" />
+          <input class="input" type="text" name="display_name" placeholder="Your name" required maxlength="60" value={me?.display_name || ''} />
+          <input class="input" type="email" name="contact_email" placeholder="Email (optional)" maxlength="120" value={me?.email || ''} />
         </div>
         <div class="ev-rsvp-options">
           <button class="ev-rsvp-btn ev-rsvp-going" type="submit" data-status="going">
@@ -235,7 +249,10 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
             <span class="ev-rsvp-emoji">🤔</span><span>Maybe</span>
           </button>
         </div>
-        <span class="ev-rsvp-sub">{spotsLeft !== Infinity ? `${spotsLeft} spots left` : `${rsvps.length} going`}</span>
+        <span class="ev-rsvp-sub">
+          {spotsLeft !== Infinity ? `${spotsLeft} spots left` : `${rsvps.length} going`}
+          {Number(event.rsvp_requires_profile) === 1 && ' · 🔒 Profile-only'}
+        </span>
         <div id="open-rsvp-msg" style="font-size:13px;color:var(--text-sec)"></div>
       </form>
     )}

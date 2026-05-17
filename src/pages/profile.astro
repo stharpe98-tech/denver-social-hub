@@ -1,5 +1,231 @@
 ---
-// User profiles are offline while we rework accounts. Redirect any
-// visitor to the home page.
-return Astro.redirect('/');
+import Base from '../layouts/Base.astro';
+import { getDB } from '../lib/db';
+import { getCurrentProfile } from '../lib/profile-auth';
+
+const db = getDB();
+const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
+if (!me) return Astro.redirect('/profile/new');
+
+// Hosted events and posted flyers — best-effort counts.
+let hostedCount = 0;
+let flyerCount = 0;
+try {
+  const r1: any = await db!.prepare(
+    `SELECT COUNT(*) AS c FROM events WHERE LOWER(submitted_by_email) = ?`
+  ).bind(me.email).first();
+  hostedCount = Number(r1?.c || 0);
+} catch {
+  // Older schemas don't have submitted_by_email — fall back to display_name match.
+  try {
+    const r1b: any = await db!.prepare(
+      `SELECT COUNT(*) AS c FROM events WHERE submitted_by = ?`
+    ).bind(me.display_name).first();
+    hostedCount = Number(r1b?.c || 0);
+  } catch {}
+}
+try {
+  const r2: any = await db!.prepare(
+    `SELECT COUNT(*) AS c FROM favors WHERE LOWER(member_email) = ?`
+  ).bind(me.email).first();
+  flyerCount = Number(r2?.c || 0);
+} catch {}
+
+const HOST_LIMIT = 3;
+const remaining = me.tier === 'organizer' ? null : Math.max(0, HOST_LIMIT - hostedCount);
+
+// Saved contact details (used to auto-prefill flyer + RSVP forms).
+let savedContactEmail = '';
+let savedContactPhone = '';
+try {
+  const row: any = await db!.prepare(
+    `SELECT contact_email, contact_phone FROM profiles WHERE slug = ? LIMIT 1`
+  ).bind(me.slug).first();
+  savedContactEmail = (row?.contact_email || '').toString();
+  savedContactPhone = (row?.contact_phone || '').toString();
+} catch { /* columns may not exist on stale envs */ }
 ---
+<Base title="Your account — Denver Social" description="Your Denver Social account.">
+  <div class="wrap">
+    <header class="hd">
+      <div class="hd-avatar">{me.display_name.charAt(0).toUpperCase()}</div>
+      <div class="hd-id">
+        <h1 class="hd-name">{me.display_name}</h1>
+        <p class="hd-email">{me.email}</p>
+        <span class={`tier-badge ${me.tier}`}>{me.tier === 'organizer' ? '✨ Organizer' : '👋 Regular'}</span>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="stat">
+        <div class="stat-num">{hostedCount}</div>
+        <div class="stat-lbl">Events hosted</div>
+        {me.tier !== 'organizer' && remaining !== null && (
+          <div class="stat-sub">{remaining > 0 ? `${remaining} left` : 'limit reached'}</div>
+        )}
+        {me.tier === 'organizer' && <div class="stat-sub">unlimited</div>}
+      </div>
+      <div class="stat">
+        <div class="stat-num">{flyerCount}</div>
+        <div class="stat-lbl">Flyers posted</div>
+      </div>
+    </section>
+
+    {me.tier === 'regular' && (
+      <section class="upgrade">
+        <h2 class="up-h">Want a public page?</h2>
+        <p class="up-sub">Become an Organizer to get a page at <span class="mono">/u/yourname</span>, unlimited event hosting, group creation, and DMs from members.</p>
+        <a class="up-cta" href="/u/new">Upgrade to Organizer →</a>
+      </section>
+    )}
+
+    {me.tier === 'organizer' && (
+      <section class="organizer-tools">
+        <h2 class="up-h">Your organizer page</h2>
+        <div class="org-row">
+          <a class="org-btn primary" href={`/u/${me.slug}/edit`}>Edit your page</a>
+          <a class="org-btn" href={`/u/${me.slug}`}>View public page →</a>
+        </div>
+      </section>
+    )}
+
+    {me.tier === 'regular' && (
+      <section class="contact-edit">
+        <h2 class="up-h">Saved contact info</h2>
+        <p class="up-sub">Used to auto-fill flyers and RSVP forms. Never shown publicly unless you attach it to a flyer.</p>
+        <div class="ce-grid">
+          <label class="ce-field">
+            <span>Display name</span>
+            <input type="text" id="ce-name" maxlength="60" value={me.display_name} />
+          </label>
+          <label class="ce-field">
+            <span>Contact email</span>
+            <input type="email" id="ce-email" maxlength="120" value={savedContactEmail} placeholder="you@example.com" />
+          </label>
+          <label class="ce-field">
+            <span>Contact phone</span>
+            <input type="tel" id="ce-phone" maxlength="40" value={savedContactPhone} placeholder="(720) 555-0101" />
+          </label>
+        </div>
+        <button class="up-cta" id="ce-save" type="button" data-slug={me.slug}>Save changes</button>
+        <span class="ce-msg" id="ce-msg"></span>
+      </section>
+    )}
+
+    <section class="quick">
+      <h3 class="quick-h">Quick actions</h3>
+      <div class="quick-grid">
+        <a class="quick-card" href="/events/new">
+          <div class="quick-emoji">🎉</div>
+          <div class="quick-lbl">Host an event</div>
+        </a>
+        <a class="quick-card" href="/community">
+          <div class="quick-emoji">📌</div>
+          <div class="quick-lbl">Post on the board</div>
+        </a>
+        <a class="quick-card" href="/events">
+          <div class="quick-emoji">🔍</div>
+          <div class="quick-lbl">Find an event</div>
+        </a>
+        <a class="quick-card" href="/messages">
+          <div class="quick-emoji">💬</div>
+          <div class="quick-lbl">Messages</div>
+        </a>
+      </div>
+    </section>
+
+    <script is:inline>
+      (function () {
+        var btn = document.getElementById('ce-save');
+        if (!btn) return;
+        var msg = document.getElementById('ce-msg');
+        var slug = btn.getAttribute('data-slug');
+        async function save(field, value) {
+          var r = await fetch('/api/profile/save', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug, field: field, value: value }),
+          });
+          var d = await r.json().catch(function () { return {}; });
+          if (!d.ok) throw new Error(d.error || 'Save failed');
+        }
+        btn.addEventListener('click', async function () {
+          msg.textContent = 'Saving…';
+          msg.className = 'ce-msg';
+          var name = (document.getElementById('ce-name').value || '').trim();
+          var email = (document.getElementById('ce-email').value || '').trim();
+          var phone = (document.getElementById('ce-phone').value || '').trim();
+          try {
+            if (name) await save('display_name', name);
+            await save('contact_email', email);
+            await save('contact_phone', phone);
+            msg.textContent = 'Saved ✓';
+            msg.className = 'ce-msg ok';
+          } catch (e) {
+            msg.textContent = (e && e.message) ? e.message : 'Save failed';
+            msg.className = 'ce-msg err';
+          }
+        });
+      })();
+    </script>
+
+    <footer class="ft">
+      <a class="ft-link" href={`/api/profile/logout?slug=${encodeURIComponent(me.slug)}`}>Sign out</a>
+    </footer>
+  </div>
+
+  <style>
+    .wrap { max-width: 720px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
+    .hd { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-5); }
+    .hd-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #7C3AED, #3B82F6); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; }
+    .hd-id { flex: 1; min-width: 0; }
+    .hd-name { font-family: var(--font-display, serif); font-size: clamp(24px, 5vw, 32px); font-weight: 800; line-height: 1.1; margin-bottom: 2px; }
+    .hd-email { color: var(--text-sec, #6B7280); font-size: 14px; margin-bottom: 6px; }
+    .tier-badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1px; padding: 4px 10px; border-radius: 999px; }
+    .tier-badge.regular { background: #F0FDF4; color: #047857; border: 1px solid #BBF7D0; }
+    .tier-badge.organizer { background: #EEF2FF; color: #4338CA; border: 1px solid #C7D2FE; }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-bottom: var(--space-5); }
+    .stat { padding: var(--space-4); background: var(--surface, #F8F9FB); border: 1px solid var(--border); border-radius: var(--radius, 14px); text-align: center; }
+    .stat-num { font-family: var(--font-display, serif); font-size: 32px; font-weight: 800; color: var(--text); line-height: 1; }
+    .stat-lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-sec); margin-top: 6px; }
+    .stat-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+    .upgrade { background: linear-gradient(135deg, #FAF5FF, #EEF2FF); border: 1px solid #E9D5FF; border-radius: var(--radius-lg, 20px); padding: var(--space-5); margin-bottom: var(--space-5); text-align: center; }
+    .up-h { font-family: var(--font-display, serif); font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .up-sub { font-size: 14px; color: var(--text-sec); line-height: 1.55; margin-bottom: var(--space-3); }
+    .up-cta { display: inline-block; padding: 12px 24px; border-radius: 999px; background: var(--accent, #7C3AED); color: #fff; text-decoration: none; font-weight: 700; font-size: 15px; transition: filter .15s; }
+    .up-cta:hover { filter: brightness(1.08); }
+    .up-cta:active { filter: brightness(0.95); }
+    .mono { font-family: 'SF Mono', Menlo, monospace; background: rgba(124,58,237,0.10); padding: 1px 6px; border-radius: 4px; font-size: 0.95em; color: var(--accent, #7C3AED); }
+
+    .organizer-tools { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-5); margin-bottom: var(--space-5); }
+    .org-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+    .org-btn { padding: 10px 20px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 14px; border: 1.5px solid var(--border); color: var(--text); background: #fff; }
+    .org-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .org-btn:hover { filter: brightness(0.97); }
+    .org-btn.primary:hover { filter: brightness(1.08); }
+
+    .contact-edit { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-5); margin-bottom: var(--space-5); }
+    .ce-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-2); margin-bottom: var(--space-3); }
+    @media (min-width: 600px) { .ce-grid { grid-template-columns: 1fr 1fr; } .ce-grid .ce-field:first-child { grid-column: 1 / -1; } }
+    .ce-field { display: flex; flex-direction: column; gap: 4px; }
+    .ce-field span { font-size: 12px; font-weight: 600; color: var(--text-sec); }
+    .ce-field input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 14px; background: #fff; font-family: inherit; }
+    .ce-field input:focus { outline: none; border-color: var(--accent); }
+    .ce-msg { display: inline-block; margin-left: var(--space-2); font-size: 13px; color: var(--text-sec); }
+    .ce-msg.ok { color: #047857; }
+    .ce-msg.err { color: #DC2626; }
+
+    .quick { margin-bottom: var(--space-5); }
+    .quick-h { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-faint); margin-bottom: var(--space-3); }
+    .quick-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2); }
+    @media (min-width: 600px) { .quick-grid { grid-template-columns: repeat(4, 1fr); } }
+    .quick-card { padding: var(--space-3); background: #fff; border: 1px solid var(--border); border-radius: var(--radius, 14px); text-align: center; text-decoration: none; color: var(--text); transition: transform .15s, border-color .15s; }
+    .quick-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .quick-emoji { font-size: 28px; margin-bottom: 4px; }
+    .quick-lbl { font-size: 13px; font-weight: 600; }
+
+    .ft { text-align: center; padding-top: var(--space-4); border-top: 1px solid var(--border); }
+    .ft-link { font-size: 13px; color: var(--text-sec); text-decoration: underline; text-underline-offset: 3px; }
+  </style>
+</Base>

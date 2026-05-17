@@ -68,7 +68,7 @@ if (db) {
       try {
         const r = await db.prepare(
           `SELECT slug, display_name, headline, photo_emoji, neighborhood
-           FROM profiles WHERE LOWER(neighborhood)=? AND status='live'
+           FROM profiles WHERE LOWER(neighborhood)=? AND status='live' AND tier='organizer'
            ORDER BY updated_at DESC LIMIT 4`
         ).bind(nbhSlug).all();
         people = (r.results || []) as any[];

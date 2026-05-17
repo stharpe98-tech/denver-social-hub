@@ -20,11 +20,12 @@ export const GET: APIRoute = async ({ url, request, cookies }) => {
 
   // Look up the target by their live profile row.
   const target: any = await db.prepare(
-    `SELECT slug, display_name, email, headline, bio, neighborhood, photo_emoji, created_at
+    `SELECT slug, display_name, email, headline, bio, neighborhood, photo_emoji, tier, created_at
        FROM profiles
       WHERE LOWER(email) = ? AND status = 'live' LIMIT 1`
   ).bind(email).first();
   if (!target) return bad('not_found', 404);
+  const targetTier: 'regular' | 'organizer' = target.tier === 'organizer' ? 'organizer' : 'regular';
 
   // Viewer (may be null — non-profile viewers still get the public card,
   // they just see a "get a /u/ page" CTA instead of message/phone buttons).
@@ -52,6 +53,7 @@ export const GET: APIRoute = async ({ url, request, cookies }) => {
       bio: target.bio || '',
       neighborhood: target.neighborhood || '',
       photo_emoji: target.photo_emoji || '',
+      tier: targetTier,
       joined_at: target.created_at || null,
     },
     viewer: viewer ? { slug: viewer.slug, email: viewer.email, display_name: viewer.display_name } : null,

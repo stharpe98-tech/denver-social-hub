@@ -2,9 +2,31 @@
 import Base from '../../../layouts/Base.astro';
 import { NEIGHBORHOODS, resolveNeighborhoodSlug, getNeighborhood, neighborhoodsByCity } from '../../../lib/neighborhoods';
 import { BOARD_KINDS } from '../../../lib/community-schema';
+import { getDB } from '../../../lib/db';
+import { getCurrentProfile } from '../../../lib/profile-auth';
 
 const preNbh = resolveNeighborhoodSlug(Astro.url.searchParams.get('nbh'));
 const preNbhInfo = getNeighborhood(preNbh);
+
+// Prefill from the signed-in profile (regular or organizer). Anonymous
+// visitors can still post — the fields stay blank.
+const db = getDB();
+const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
+let preName = '';
+let preEmail = '';
+let prePhone = '';
+if (me && db) {
+  preName = me.display_name || '';
+  try {
+    const row: any = await db.prepare(
+      `SELECT contact_email, contact_phone FROM profiles WHERE slug = ? LIMIT 1`
+    ).bind(me.slug).first();
+    preEmail = (row?.contact_email || me.email || '').toString();
+    prePhone = (row?.contact_phone || '').toString();
+  } catch {
+    preEmail = me.email || '';
+  }
+}
 ---
 <Base title="Pin a flyer" description="Post a flyer to your Denver neighborhood board.">
   <section class="board-bg">
@@ -56,17 +78,17 @@ const preNbhInfo = getNeighborhood(preNbh);
 
         <label class="c-field">
           <span class="c-label">Your name <em>*</em></span>
-          <input type="text" name="name" class="c-input" required maxlength="60" placeholder="Jenna" />
+          <input type="text" name="name" class="c-input" required maxlength="60" placeholder="Jenna" value={preName} />
         </label>
 
         <div class="c-row">
           <label class="c-field">
             <span class="c-label">Email</span>
-            <input type="email" name="contact_email" class="c-input" placeholder="you@example.com" />
+            <input type="email" name="contact_email" class="c-input" placeholder="you@example.com" value={preEmail} />
           </label>
           <label class="c-field">
             <span class="c-label">Phone</span>
-            <input type="tel" name="contact_phone" class="c-input" placeholder="(720) 555-0101" />
+            <input type="tel" name="contact_phone" class="c-input" placeholder="(720) 555-0101" value={prePhone} />
           </label>
         </div>
         <p class="c-hint">At least one of email or phone is required. Neighbors see it only after clicking "Get in touch".</p>

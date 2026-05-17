@@ -1,0 +1,183 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Sign up — Denver Social" description="Pick the kind of presence that fits you on Denver Social.">
+  <div class="wrap">
+    <header class="intro">
+      <div class="intro-tag">SIGN UP · TWO PATHS</div>
+      <h1 class="intro-h1">Two ways to be on Denver Social.</h1>
+      <p class="intro-deck">Save your identity in 30 seconds — or build a full public page that lives at <span class="mono">/u/yourname</span>. Pick what fits.</p>
+    </header>
+
+    <section class="tiers">
+      <a href="#step-regular" class="tier-card tier-regular">
+        <div class="tier-head">
+          <div class="tier-emoji">👋</div>
+          <div class="tier-tag">REGULAR</div>
+        </div>
+        <h2 class="tier-h">Sign up — Regular</h2>
+        <p class="tier-sub">Save your identity. Post on the board. RSVP. Host up to 3 events.</p>
+        <ul class="tier-list">
+          <li>Saved name & email — RSVPs remember who you are</li>
+          <li>Post flyers on the Community Board</li>
+          <li>Host up to <strong>3 events ever</strong></li>
+          <li>No public page</li>
+        </ul>
+        <div class="tier-cta">Pick Regular →</div>
+      </a>
+
+      <a href="/u/new" class="tier-card tier-organizer">
+        <div class="tier-head">
+          <div class="tier-emoji">✨</div>
+          <div class="tier-tag">ORGANIZER</div>
+        </div>
+        <h2 class="tier-h">Sign up — Organizer</h2>
+        <p class="tier-sub">All of the above plus a public page at <span class="mono">/u/yourname</span>, unlimited hosting, groups.</p>
+        <ul class="tier-list">
+          <li>Public landing page at <span class="mono">/u/yourname</span></li>
+          <li><strong>Unlimited</strong> event hosting</li>
+          <li>Create groups + recurring events (coming)</li>
+          <li>Featured in People on the Community Board</li>
+          <li>Receive DMs + phone requests from members</li>
+        </ul>
+        <div class="tier-cta">Pick Organizer →</div>
+      </a>
+    </section>
+
+    <div class="claim-box" id="step-regular">
+      <h3 class="claim-h">Sign up as a Regular</h3>
+      <p class="claim-sub">Enter your email — we'll send a 6-digit code. No password.</p>
+      <div class="claim-field">
+        <label>Your name <span class="opt">(how you'll show up on RSVPs and posts)</span></label>
+        <input id="r-name" type="text" placeholder="Jamie" maxlength="60" autocomplete="name"/>
+      </div>
+      <div class="claim-field">
+        <label>Your email <span class="opt">(never shown publicly)</span></label>
+        <input id="r-email" type="email" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <button class="claim-cta" id="r-send">Send me a code →</button>
+      <div class="claim-err" id="r-send-err"></div>
+      <p class="claim-foot">Want a public page instead? <a href="/u/new">Sign up as an Organizer</a>.</p>
+    </div>
+
+    <div class="claim-box" id="step-r-verify" hidden>
+      <h3 class="claim-h">Enter your code</h3>
+      <p class="claim-sub" id="r-verify-sub">Check your email for a 6-digit code.</p>
+      <div class="claim-field">
+        <label>6-digit code</label>
+        <input id="r-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="••••••"/>
+      </div>
+      <button class="claim-cta" id="r-verify">Verify & finish →</button>
+      <button class="claim-link" id="r-back" type="button">Use a different email</button>
+      <div class="claim-err" id="r-verify-err"></div>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function() {
+      var nameEl = document.getElementById('r-name');
+      var emailEl = document.getElementById('r-email');
+      var codeEl = document.getElementById('r-code');
+      var stepReg = document.getElementById('step-regular');
+      var stepVer = document.getElementById('step-r-verify');
+      var subVer = document.getElementById('r-verify-sub');
+      function showErr(id, msg) { var el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
+      function clearErr(id) { var el = document.getElementById(id); el.textContent=''; el.classList.remove('show'); }
+
+      document.getElementById('r-send').addEventListener('click', async function() {
+        clearErr('r-send-err');
+        var name = (nameEl.value || '').trim();
+        var email = (emailEl.value || '').trim().toLowerCase();
+        if (!name) { showErr('r-send-err', 'Enter your name.'); return; }
+        if (!email || email.indexOf('@') < 0) { showErr('r-send-err', 'Enter a valid email.'); return; }
+        var btn = this; var orig = btn.textContent;
+        btn.textContent = 'Sending…'; btn.disabled = true;
+        try {
+          var r = await fetch('/api/profile/regular-code-send', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, name: name })
+          });
+          var d = await r.json();
+          if (d.ok) {
+            stepReg.hidden = true;
+            stepVer.hidden = false;
+            subVer.textContent = 'We sent a code to ' + email + '.';
+            codeEl.focus();
+          } else {
+            showErr('r-send-err', d.error || 'Could not send code.');
+          }
+        } catch (e) { showErr('r-send-err', 'Network error.'); }
+        btn.textContent = orig; btn.disabled = false;
+      });
+
+      document.getElementById('r-verify').addEventListener('click', async function() {
+        clearErr('r-verify-err');
+        var name = (nameEl.value || '').trim();
+        var email = (emailEl.value || '').trim().toLowerCase();
+        var code = (codeEl.value || '').trim();
+        if (!/^\d{6}$/.test(code)) { showErr('r-verify-err', 'Enter the 6-digit code.'); return; }
+        var btn = this; var orig = btn.textContent;
+        btn.textContent = 'Verifying…'; btn.disabled = true;
+        try {
+          var r = await fetch('/api/profile/regular-code-verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, code: code, name: name })
+          });
+          var d = await r.json();
+          if (d.ok && d.redirect) { location.href = d.redirect; return; }
+          showErr('r-verify-err', d.error || 'Invalid or expired code.');
+        } catch (e) { showErr('r-verify-err', 'Network error.'); }
+        btn.textContent = orig; btn.disabled = false;
+      });
+
+      document.getElementById('r-back').addEventListener('click', function() {
+        stepVer.hidden = true; stepReg.hidden = false; emailEl.focus();
+      });
+      codeEl.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('r-verify').click(); });
+      emailEl.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('r-send').click(); });
+    })();
+  </script>
+
+  <style>
+    .wrap { max-width: 880px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
+    .intro { text-align: center; margin-bottom: var(--space-6); }
+    .intro-tag { font-family: 'SF Mono', Menlo, monospace; font-size: 11px; letter-spacing: 2px; color: var(--accent, #7C3AED); font-weight: 700; margin-bottom: var(--space-2); }
+    .intro-h1 { font-family: var(--font-display, 'Playfair Display', serif); font-size: clamp(28px, 5vw, 40px); font-weight: 800; line-height: 1.1; margin-bottom: var(--space-2); color: var(--text); }
+    .intro-deck { font-size: 15px; line-height: 1.55; color: var(--text-sec, #4B5563); max-width: 560px; margin: 0 auto; }
+    .mono { font-family: 'SF Mono', Menlo, monospace; background: rgba(124,58,237,0.10); padding: 1px 6px; border-radius: 4px; font-size: 0.95em; color: var(--accent, #7C3AED); }
+
+    .tiers { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-6); }
+    @media (max-width: 720px) { .tiers { grid-template-columns: 1fr; } }
+    .tier-card { display: block; text-decoration: none; color: inherit; padding: var(--space-5); border-radius: var(--radius-lg, 20px); border: 1.5px solid var(--border); background: var(--surface, #F8F9FB); transition: transform .15s, box-shadow .15s, border-color .15s; }
+    .tier-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(124,58,237,0.10); border-color: var(--accent, #7C3AED); }
+    .tier-card:active { transform: translateY(0); }
+    .tier-regular { background: #fff; }
+    .tier-organizer { background: linear-gradient(135deg, #FAF5FF, #EEF2FF); }
+    .tier-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+    .tier-emoji { font-size: 28px; }
+    .tier-tag { font-family: 'SF Mono', Menlo, monospace; font-size: 10px; letter-spacing: 2px; color: var(--accent, #7C3AED); font-weight: 700; }
+    .tier-h { font-family: var(--font-display, serif); font-size: 22px; font-weight: 800; margin-bottom: 6px; color: var(--text); }
+    .tier-sub { font-size: 14px; color: var(--text-sec, #4B5563); line-height: 1.5; margin-bottom: var(--space-3); }
+    .tier-list { list-style: none; padding: 0; margin: 0 0 var(--space-3) 0; }
+    .tier-list li { font-size: 13px; color: var(--text-sec); padding: 6px 0; border-bottom: 1px dashed var(--border); line-height: 1.4; }
+    .tier-list li:last-child { border-bottom: none; }
+    .tier-cta { font-weight: 700; color: var(--accent, #7C3AED); font-size: 14px; }
+
+    .claim-box { background: var(--surface, #F8F9FB); border: 1.5px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-5); max-width: 480px; margin: 0 auto var(--space-4); }
+    .claim-h { font-family: var(--font-display, sans-serif); font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+    .claim-sub { text-align: center; font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-4); }
+    .claim-field { margin-bottom: var(--space-3); }
+    .claim-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 6px; }
+    .claim-field label .opt { font-weight: 400; color: var(--text-faint); }
+    .claim-field input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 14px; background: #fff; font-family: inherit; }
+    #r-code { font-size: 22px; letter-spacing: 8px; text-align: center; font-family: monospace; }
+    .claim-cta { width: 100%; padding: 14px; border-radius: 999px; border: none; background: var(--accent, #7C3AED); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: var(--space-2); transition: filter 0.15s; }
+    .claim-cta:hover { filter: brightness(1.08); }
+    .claim-cta:active { filter: brightness(0.95); }
+    .claim-link { display: block; margin: var(--space-3) auto 0; background: none; border: none; cursor: pointer; font-size: 13px; color: var(--text-sec); text-decoration: underline; text-underline-offset: 3px; }
+    .claim-err { font-size: 13px; color: #DC2626; margin-top: var(--space-2); display: none; }
+    .claim-err.show { display: block; }
+    .claim-foot { font-size: 12px; color: var(--text-faint); text-align: center; margin-top: var(--space-3); line-height: 1.5; }
+    .claim-foot a { color: var(--accent); }
+  </style>
+</Base>

@@ -105,7 +105,7 @@ export async function getCurrentProfile(
   cookies: CookieCtx['cookies'],
   db: D1Database,
   request?: Request,
-): Promise<{ slug: string; email: string; display_name: string } | null> {
+): Promise<{ slug: string; email: string; display_name: string; tier: 'regular' | 'organizer' } | null> {
   if (!db) return null;
   // Build a map of cookie name -> value.
   let jar: Record<string, string> = {};
@@ -125,16 +125,30 @@ export async function getCurrentProfile(
     if (!raw) continue;
     if (!(await verifyProfileTokenForSlug(raw, slug))) continue;
     const row = await db.prepare(
-      `SELECT slug, email, display_name FROM profiles WHERE slug = ? AND status = 'live' LIMIT 1`
+      `SELECT slug, email, display_name, tier FROM profiles WHERE slug = ? AND status = 'live' LIMIT 1`
     ).bind(slug).first() as any;
     if (!row) continue;
+    const tier = (row.tier === 'organizer' ? 'organizer' : 'regular') as 'regular' | 'organizer';
     return {
       slug: row.slug as string,
       email: ((row.email as string) || '').toLowerCase(),
       display_name: (row.display_name as string) || row.slug,
+      tier,
     };
   }
   return null;
+}
+
+/** Generate a random invisible slug for a regular profile.
+ *  Format: `r-<8 base36 chars>`. The `r-` prefix is reserved so it never
+ *  collides with the organizer namespace.
+ */
+export function generateRegularSlug(): string {
+  const arr = new Uint8Array(6);
+  crypto.getRandomValues(arr);
+  let s = '';
+  for (const b of arr) s += (b % 36).toString(36);
+  return `r-${s}${Date.now().toString(36).slice(-2)}`.toLowerCase();
 }
 
 const RESERVED_SLUGS = new Set(['new', 'admin', 'api', 'edit', 'login']);
@@ -146,5 +160,6 @@ export function validateSlug(s: string): { ok: true; slug: string } | { ok: fals
   if (slug.length < 3 || slug.length > 30) return { ok: false, error: 'URL must be 3-30 characters.' };
   if (!SLUG_RE.test(slug)) return { ok: false, error: 'Use lowercase letters, numbers, and hyphens.' };
   if (RESERVED_SLUGS.has(slug)) return { ok: false, error: 'That URL is reserved.' };
+  if (slug.startsWith('r-')) return { ok: false, error: 'That URL prefix is reserved.' };
   return { ok: true, slug };
 }

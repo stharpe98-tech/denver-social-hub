@@ -48,12 +48,19 @@ export async function ensureCommunitySchema(db: D1Database): Promise<void> {
       try { await db.prepare(`ALTER TABLE favors ADD COLUMN ${col} ${type}`).run(); } catch {}
     }
   }
-  // profiles.neighborhood (board mixes person cards in)
+  // profiles: neighborhood + contact fields (regulars can store these
+  // for flyer auto-prefill; organizers already use them on their public page).
   try {
     const pCols = await db.prepare("PRAGMA table_info(profiles)").all();
     const pNames = new Set((pCols.results ?? []).map((r: any) => r.name));
-    if (!pNames.has('neighborhood')) {
-      try { await db.prepare("ALTER TABLE profiles ADD COLUMN neighborhood TEXT DEFAULT ''").run(); } catch {}
+    for (const [col, type] of [
+      ['neighborhood', "TEXT DEFAULT ''"],
+      ['contact_email', "TEXT DEFAULT ''"],
+      ['contact_phone', "TEXT DEFAULT ''"],
+    ] as const) {
+      if (!pNames.has(col)) {
+        try { await db.prepare(`ALTER TABLE profiles ADD COLUMN ${col} ${type}`).run(); } catch {}
+      }
     }
   } catch {}
 

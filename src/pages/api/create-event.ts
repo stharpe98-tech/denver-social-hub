@@ -3,6 +3,9 @@ import { env } from 'cloudflare:workers';
 import { getDB } from '../../lib/db';
 import { mirrorEventCreate } from '../../lib/event-sync/outbound';
 import { ensureEventsSchema } from '../../lib/events-schema';
+import { getCurrentProfile } from '../../lib/profile-auth';
+
+const REGULAR_HOST_LIMIT = 3;
 
 async function notifyAdmin(db: D1Database, eventTitle: string, submittedBy: string) {
   try {
@@ -42,13 +45,45 @@ async function notifyAdmin(db: D1Database, eventTitle: string, submittedBy: stri
 
 export const prerender = false;
 
-export async function POST({ request }: APIContext) {
+export async function POST({ request, cookies }: APIContext) {
   const db = getDB();
   if (!db) return new Response(JSON.stringify({ error: 'DB unavailable' }), { status: 500 });
 
   try {
     await ensureEventsSchema(db);
-    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day, vibe_tags, group_id: rawGroupId, submitted_by } = await request.json() as any;
+
+    // Require an authenticated profile (regular or organizer) to post.
+    const me = await getCurrentProfile(cookies, db, request);
+    if (!me) {
+      return new Response(JSON.stringify({
+        error: 'profile_required',
+        message: 'Sign up to post an event.',
+      }), { status: 401 });
+    }
+
+    // Tier-based hosting cap.
+    if (me.tier !== 'organizer') {
+      let hosted = 0;
+      try {
+        const r: any = await db.prepare(
+          `SELECT COUNT(*) AS c FROM events WHERE LOWER(submitted_by_email) = ?`
+        ).bind(me.email).first();
+        hosted = Number(r?.c || 0);
+      } catch {}
+      if (hosted >= REGULAR_HOST_LIMIT) {
+        return new Response(JSON.stringify({
+          error: 'limit_reached',
+          message: 'Upgrade to Organizer to host more.',
+        }), { status: 403 });
+      }
+    }
+
+    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day, vibe_tags, group_id: rawGroupId, rsvp_requires_profile } = await request.json() as any;
+    void subcat;
+
+    // Only organizers can gate RSVP behind a profile. Regulars always
+    // get the default (open RSVP).
+    const gateRsvp = (me.tier === 'organizer' && Number(rsvp_requires_profile) === 1) ? 1 : 0;
 
     if (!title || !title.trim()) {
       return new Response(JSON.stringify({ error: 'Title is required' }), { status: 400 });
@@ -62,7 +97,8 @@ export async function POST({ request }: APIContext) {
     // Use venue as location if provided, otherwise use area
     const finalLocation = venueName || loc || '';
     const zone = loc || 'TBD';
-    const submittedBy = (submitted_by || '').toString().trim() || 'Community Member';
+    const submittedBy = me.display_name || 'Community Member';
+    const submittedByEmail = me.email;
 
     // Map budget string to price_cap
     const budgetMap: Record<string, string> = {
@@ -106,30 +142,62 @@ export async function POST({ request }: APIContext) {
     const groupId: number | null = null;
     void rawGroupId;
 
-    const insert = await db.prepare(
-      `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, discord_link, contact_phone, vibe_tags, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      title.trim(),
-      fullDesc,
-      eventType,
-      finalLocation,
-      zone,
-      eventMonth,
-      eventDay || suggested_date || 'TBD',
-      spots,
-      priceCap,
-      submittedBy,
-      eventLink,
-      phone,
-      vibeTagsStr,
-      groupId,
-    ).run();
+    let insert: any;
+    try {
+      insert = await db.prepare(
+        `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, submitted_by_email, discord_link, contact_phone, vibe_tags, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        title.trim(),
+        fullDesc,
+        eventType,
+        finalLocation,
+        zone,
+        eventMonth,
+        eventDay || suggested_date || 'TBD',
+        spots,
+        priceCap,
+        submittedBy,
+        submittedByEmail,
+        eventLink,
+        phone,
+        vibeTagsStr,
+        groupId,
+      ).run();
+    } catch (e: any) {
+      // Older deploys without submitted_by_email column.
+      insert = await db.prepare(
+        `INSERT INTO events (title, description, event_type, location, zone, event_month, event_day, spots, price_cap, submitted_by, discord_link, contact_phone, vibe_tags, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        title.trim(),
+        fullDesc,
+        eventType,
+        finalLocation,
+        zone,
+        eventMonth,
+        eventDay || suggested_date || 'TBD',
+        spots,
+        priceCap,
+        submittedBy,
+        eventLink,
+        phone,
+        vibeTagsStr,
+        groupId,
+      ).run();
+    }
+
+    // Persist the rsvp_requires_profile flag separately so the INSERT
+    // path stays compatible with older schemas that lack the column.
+    const newId = Number((insert as any).meta?.last_row_id) || 0;
+    if (newId && gateRsvp) {
+      try {
+        await db.prepare(`UPDATE events SET rsvp_requires_profile = 1 WHERE id = ?`).bind(newId).run();
+      } catch { /* column may not exist on stale envs */ }
+    }
 
     // Notify Seth about new event (non-blocking)
     notifyAdmin(db, title.trim(), submittedBy);
 
     // Mirror to Discord scheduled events if any source has it enabled (non-blocking).
-    const newId = Number((insert as any).meta?.last_row_id) || 0;
     if (newId) {
       const botToken = (env as any).DISCORD_BOT_TOKEN as string | undefined;
       try { await mirrorEventCreate(db, newId, botToken); } catch {}

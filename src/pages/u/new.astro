@@ -1,13 +1,23 @@
 ---
 import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+import { getCurrentProfile } from '../../lib/profile-auth';
+
+const db = getDB();
+const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
+// Pre-fill email for existing regulars so they don't re-auth.
+const prefillEmail = me && me.tier === 'regular' ? me.email : '';
+const isUpgrade = !!(me && me.tier === 'regular');
+const oldSlug = me ? me.slug : '';
 ---
 <Base title="Claim your page — Denver Social" description="Get your own page on Denver Social. Free, takes 2 minutes.">
   <div class="wrap">
 
     <header class="intro">
-      <div class="intro-tag">FREE · NO ACCOUNT NEEDED</div>
-      <h1 class="intro-h1">Your own page on Denver Social.</h1>
+      <div class="intro-tag">{isUpgrade ? 'UPGRADE TO ORGANIZER' : 'SIGN UP · ORGANIZER'}</div>
+      <h1 class="intro-h1">{isUpgrade ? 'Add a public page to your account.' : 'Your own page on Denver Social.'}</h1>
       <p class="intro-deck">A free, simple page for anyone in Denver with skills, services, or something to share. Pick a URL, pick a color, write a few sentences about what you do, and people can find you.</p>
+      <p class="intro-deck" style="margin-top:12px;font-size:14px;"><a href="/profile/new" style="color:var(--accent,#7C3AED)">← What's an organizer page? See both options</a></p>
     </header>
 
     <section class="who">
@@ -69,8 +79,10 @@ import Base from '../../layouts/Base.astro';
       </div>
       <div class="claim-field">
         <label>Your email <span class="opt">(we'll send a code, won't show publicly)</span></label>
-        <input id="email" type="email" placeholder="you@example.com"/>
+        <input id="email" type="email" placeholder="you@example.com" value={prefillEmail} readonly={isUpgrade}/>
+        {isUpgrade && <div class="slug-check" style="color:#047857">✓ using your saved account email</div>}
       </div>
+      {isUpgrade && <input type="hidden" id="upgrade-old-slug" value={oldSlug}/>}
       <button class="claim-cta" id="send-btn">Send me a code →</button>
       <div class="claim-err" id="send-err"></div>
       <div class="claim-foot">By claiming a page you agree to keep it real — no spam, no impersonation. Page reviewed if reported.</div>

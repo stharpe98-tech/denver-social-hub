@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
-import { setProfileCookie, validateSlug } from '../../../lib/profile-auth';
+import { clearProfileCookie, getCurrentProfile, setProfileCookie, validateSlug } from '../../../lib/profile-auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const db = getDB();
@@ -13,6 +13,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const slug = v.slug;
   const email = (body?.email || '').toString().trim().toLowerCase();
   const code = (body?.code || '').toString().trim();
+
+  // Detect "upgrade" — existing regular session for this email.
+  const existingMe = await getCurrentProfile(cookies, db, request);
+  const isUpgrade = !!(existingMe && existingMe.tier === 'regular' && existingMe.email === email);
   if (!email || !/^\d{6}$/.test(code)) {
     return new Response(JSON.stringify({ ok: false, error: 'Invalid email or code' }), { status: 400 });
   }
@@ -28,12 +32,44 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   // Check whether profile already exists (edit re-auth flow)
   const existing = await db.prepare(`SELECT slug FROM profiles WHERE slug = ?`).bind(slug).first();
   await db.prepare(`UPDATE profile_codes SET used = 1 WHERE rowid = ?`).bind(row.id).run();
+
+  if (isUpgrade && existingMe && !existing) {
+    // Upgrade path: flip the regular profile row to the new slug + organizer tier.
+    try {
+      await db.prepare(
+        `UPDATE profiles SET slug = ?, tier = 'organizer', updated_at = datetime('now') WHERE slug = ?`
+      ).bind(slug, existingMe.slug).run();
+    } catch (e: any) {
+      return new Response(JSON.stringify({ ok: false, error: 'Upgrade failed: ' + (e?.message || 'db') }), { status: 500 });
+    }
+    clearProfileCookie({ cookies } as any, existingMe.slug);
+    await setProfileCookie({ cookies } as any, slug);
+    return new Response(JSON.stringify({ ok: true, redirect: `/u/${slug}/edit` }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   if (!existing) {
     const displayName = (email.split('@')[0] || slug).slice(0, 60);
-    await db.prepare(
-      `INSERT INTO profiles (slug, display_name, email, status, created_at, updated_at)
-       VALUES (?,?,?, 'live', ?, ?)`
-    ).bind(slug, displayName, email, now, now).run();
+    // Try the full insert (with tier + id). If the schema is older, retry without optional columns.
+    try {
+      await db.prepare(
+        `INSERT INTO profiles (id, slug, display_name, email, status, tier, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'live', 'organizer', datetime('now'), datetime('now'))`
+      ).bind(slug, slug, displayName, email).run();
+    } catch {
+      try {
+        await db.prepare(
+          `INSERT INTO profiles (slug, display_name, email, status, tier, created_at, updated_at)
+           VALUES (?, ?, ?, 'live', 'organizer', ?, ?)`
+        ).bind(slug, displayName, email, now, now).run();
+      } catch {
+        await db.prepare(
+          `INSERT INTO profiles (slug, display_name, email, status, created_at, updated_at)
+           VALUES (?,?,?, 'live', ?, ?)`
+        ).bind(slug, displayName, email, now, now).run();
+      }
+    }
   }
   await setProfileCookie({ cookies } as any, slug);
   return new Response(JSON.stringify({ ok: true, redirect: `/u/${slug}/edit` }), {

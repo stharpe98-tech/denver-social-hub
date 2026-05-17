@@ -33,11 +33,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const other = String(body.with || '').trim().toLowerCase();
     if (!other || !other.includes('@')) return bad('bad_email');
     if (other === me) return bad('self');
-    // Target must have a live profile too — that's the new identity layer.
+    // Target must be an organizer — regulars don't accept DMs.
     const target: any = await db.prepare(
-      `SELECT 1 FROM profiles WHERE LOWER(email)=? AND status='live' LIMIT 1`
+      `SELECT tier FROM profiles WHERE LOWER(email)=? AND status='live' LIMIT 1`
     ).bind(other).first();
     if (!target) return bad('not_a_member', 404);
+    if (target.tier !== 'organizer') {
+      return bad('organizer_only', 403, { message: 'You can only message organizers.' });
+    }
     const id = await getOrCreateConversation(db, me, other);
     return ok({ id });
   }

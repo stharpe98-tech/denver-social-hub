@@ -35,11 +35,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const note = String(body.note || '').trim().slice(0, 200);
     if (!to.includes('@')) return bad('to_email');
     if (to === me) return bad('self');
-    // Target must have a live profile too.
+    // Target must be an organizer — regulars don't receive phone requests.
     const target: any = await db.prepare(
-      `SELECT 1 FROM profiles WHERE LOWER(email)=? AND status='live' LIMIT 1`
+      `SELECT tier FROM profiles WHERE LOWER(email)=? AND status='live' LIMIT 1`
     ).bind(to).first();
     if (!target) return bad('not_a_member', 404);
+    if (target.tier !== 'organizer') {
+      return bad('organizer_only', 403, { message: 'You can only message organizers.' });
+    }
     // Rate limit: don't let one viewer fire more than N requests per hour.
     const recent: any = await db.prepare(
       "SELECT COUNT(*) AS c FROM phone_requests WHERE LOWER(from_email)=? AND created_at > datetime('now', '-1 hour')"
