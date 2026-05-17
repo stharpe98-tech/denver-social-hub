@@ -6,6 +6,10 @@ import { getDB } from '../../lib/db';
 const gate = await requireApprovedOrg(Astro);
 if (gate instanceof Response) return gate;
 
+// TODO(moderation): when an admin sets status='offline', uploaded R2 photos
+// (cover_photo_url / avatar_photo_url) are intentionally kept. Add an explicit
+// "Delete photos" button + R2 cleanup here if/when we want moderator photo nuke.
+
 const db = getDB();
 let rows: any[] = [];
 if (db) {

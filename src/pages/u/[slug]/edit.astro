@@ -17,7 +17,7 @@ try {
   profile = await db.prepare(
     `SELECT slug, display_name, email, headline, bio, photo_emoji, accent_color,
             offers_json, links_json, contact_email, contact_phone, neighborhood,
-            template, template_data, status
+            template, template_data, cover_photo_url, avatar_photo_url, status
      FROM profiles WHERE slug = ?`
   ).bind(slug).first();
 } catch {
@@ -86,6 +86,41 @@ const SWATCHES = [
         </div>
 
         <!-- Essentials (always visible) -->
+        <div class="editor-field">
+          <label>Photos</label>
+          <div class="photos-row">
+            <div class="photo-card" data-kind="cover">
+              <div class="photo-card-label">Cover photo</div>
+              <div class="photo-preview cover-preview" id="cover-preview" data-empty={profile.cover_photo_url ? 'false' : 'true'}>
+                {profile.cover_photo_url
+                  ? <img src={profile.cover_photo_url} alt="Cover preview" id="cover-img"/>
+                  : <span class="photo-empty">No cover yet</span>}
+              </div>
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" id="cover-file" hidden/>
+              <div class="photo-actions">
+                <button type="button" class="photo-btn" id="cover-choose">Choose photo</button>
+                <button type="button" class="photo-rm" id="cover-remove" hidden={!profile.cover_photo_url}>× Remove</button>
+              </div>
+              <div class="photo-err" id="cover-err"></div>
+            </div>
+            <div class="photo-card" data-kind="avatar">
+              <div class="photo-card-label">Avatar photo</div>
+              <div class="photo-preview avatar-preview" id="avatar-preview" data-empty={profile.avatar_photo_url ? 'false' : 'true'}>
+                {profile.avatar_photo_url
+                  ? <img src={profile.avatar_photo_url} alt="Avatar preview" id="avatar-img"/>
+                  : <span class="photo-empty">No avatar yet</span>}
+              </div>
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" id="avatar-file" hidden/>
+              <div class="photo-actions">
+                <button type="button" class="photo-btn" id="avatar-choose">Choose photo</button>
+                <button type="button" class="photo-rm" id="avatar-remove" hidden={!profile.avatar_photo_url}>× Remove</button>
+              </div>
+              <div class="photo-err" id="avatar-err"></div>
+            </div>
+          </div>
+          <div class="photo-help">Cover: wide banner image (recommended 1400×400). Avatar: square (300×300). Max 5 MB · JPEG, PNG, WebP, or GIF.</div>
+        </div>
+
         <div class="editor-field"><label>Display name</label>
           <input data-field="display_name" type="text" value={profile.display_name || ''} maxlength="80"/>
         </div>
@@ -475,6 +510,66 @@ const SWATCHES = [
           });
         }
 
+        // Photos
+        function wirePhoto(kind) {
+          var fileIn = document.getElementById(kind + '-file');
+          var chooseBtn = document.getElementById(kind + '-choose');
+          var removeBtn = document.getElementById(kind + '-remove');
+          var preview = document.getElementById(kind + '-preview');
+          var errEl = document.getElementById(kind + '-err');
+          if (!fileIn || !chooseBtn || !preview) return;
+
+          function setErr(msg) { if (errEl) { errEl.textContent = msg || ''; errEl.style.display = msg ? 'block' : 'none'; } }
+
+          chooseBtn.addEventListener('click', function() { setErr(''); fileIn.click(); });
+
+          fileIn.addEventListener('change', async function() {
+            var f = fileIn.files && fileIn.files[0];
+            if (!f) return;
+            if (f.size > 5 * 1024 * 1024) { setErr('Too large (max 5 MB).'); fileIn.value = ''; return; }
+            if (!/^image\//.test(f.type)) { setErr('Not an image.'); fileIn.value = ''; return; }
+            var allowed = ['image/jpeg','image/png','image/webp','image/gif'];
+            if (allowed.indexOf(f.type) === -1) { setErr('Use JPEG, PNG, WebP, or GIF.'); fileIn.value = ''; return; }
+            setSaving();
+            var fd = new FormData();
+            fd.append('slug', slug);
+            fd.append('kind', kind);
+            fd.append('file', f);
+            try {
+              var r = await fetch('/api/profile/upload', { method: 'POST', body: fd });
+              var d = await r.json();
+              if (!d.ok) { setError(d.error || 'Upload failed'); setErr(d.error || 'Upload failed'); return; }
+              preview.setAttribute('data-empty', 'false');
+              preview.innerHTML = '<img src="' + d.url + '" alt="' + kind + ' preview" id="' + kind + '-img"/>';
+              if (removeBtn) removeBtn.hidden = false;
+              setSaved();
+            } catch (e) { setError('network'); setErr('Network error.'); }
+            fileIn.value = '';
+          });
+
+          if (removeBtn) {
+            removeBtn.addEventListener('click', async function() {
+              setSaving();
+              var fd = new FormData();
+              fd.append('slug', slug);
+              fd.append('kind', kind);
+              fd.append('action', 'delete');
+              try {
+                var r = await fetch('/api/profile/upload', { method: 'POST', body: fd });
+                var d = await r.json();
+                if (!d.ok) { setError(d.error || 'Delete failed'); setErr(d.error || 'Delete failed'); return; }
+                preview.setAttribute('data-empty', 'true');
+                preview.innerHTML = '<span class="photo-empty">No ' + kind + ' yet</span>';
+                removeBtn.hidden = true;
+                setErr('');
+                setSaved();
+              } catch (e) { setError('network'); setErr('Network error.'); }
+            });
+          }
+        }
+        wirePhoto('cover');
+        wirePhoto('avatar');
+
         // Sign out
         document.getElementById('editor-out').addEventListener('click', async function(e) {
           e.preventDefault();
@@ -658,7 +753,29 @@ const SWATCHES = [
     details.more > .editor-field:first-of-type { padding-top: var(--space-3); }
     details.more > :last-child { padding-bottom: var(--space-3); }
 
+    /* Photos block */
+    .photos-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+    .photo-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; }
+    .photo-card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint); margin-bottom: 8px; }
+    .photo-preview { background: var(--surface, #F8F9FB); border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+    .photo-preview[data-empty="true"] { border: 1.5px dashed var(--border); }
+    .photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-empty { font-size: 12px; color: var(--text-faint); padding: 24px 8px; }
+    .cover-preview { aspect-ratio: 14 / 4; }
+    .avatar-preview { aspect-ratio: 1 / 1; max-width: 160px; margin-left: auto; margin-right: auto; border-radius: 50%; }
+    .avatar-preview[data-empty="true"] { border-radius: 50%; }
+    .avatar-preview img { border-radius: 50%; }
+    .photo-actions { display: flex; gap: 8px; align-items: center; }
+    .photo-btn { flex: 1; padding: 8px 12px; border-radius: 999px; border: 1.5px solid var(--border); background: #fff; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; transition: border-color 0.15s, background 0.15s; font-family: inherit; }
+    .photo-btn:hover { border-color: var(--accent, #7C3AED); background: var(--surface, #F8F9FB); }
+    .photo-btn:active { transform: scale(0.98); }
+    .photo-rm { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: var(--text-faint); font-size: 12px; cursor: pointer; font-family: inherit; }
+    .photo-rm:hover { color: #DC2626; border-color: #FECACA; }
+    .photo-err { font-size: 12px; color: #DC2626; margin-top: 6px; display: none; }
+    .photo-help { font-size: 12px; color: var(--text-faint); margin-top: 8px; }
+
     @media (max-width: 600px) {
+      .photos-row { grid-template-columns: 1fr; }
       .editor-field.two { grid-template-columns: 1fr; }
       .editor-offer { flex-wrap: wrap; }
       .editor-offer .link-url { flex-basis: 100%; }

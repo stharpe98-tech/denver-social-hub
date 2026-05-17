@@ -7,7 +7,7 @@ const sched: any[] = Array.isArray(templateData.weekly_schedule) ? templateData.
 ---
 <div class="t7">
   <div class="hero">
-    <div class="av">{profile.photo_emoji || '🧘'}</div>
+    <div class="av">{profile.avatar_photo_url ? <img src={profile.avatar_photo_url} alt={profile.display_name || 'avatar'}/> : (profile.photo_emoji || '🧘')}</div>
     <h1>{profile.display_name}</h1>
     {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
   </div>
@@ -32,7 +32,8 @@ const sched: any[] = Array.isArray(templateData.weekly_schedule) ? templateData.
 <style>
   .t7 { padding: 44px 32px; background: linear-gradient(170deg, #F4F7F2 0%, #E0E9D9 100%); font-family: 'Lora', Georgia, serif; color: #2C3A2C; border-radius: 18px; }
   .t7 .hero { text-align: center; margin-bottom: 22px; }
-  .t7 .av { width: 92px; height: 92px; border-radius: 50%; background: #fff; border: 3px solid #7BA17B; display: flex; align-items: center; justify-content: center; font-size: 44px; margin: 0 auto 14px; }
+  .t7 .av { width: 92px; height: 92px; border-radius: 50%; background: #fff; border: 3px solid #7BA17B; display: flex; align-items: center; justify-content: center; font-size: 44px; margin: 0 auto 14px; overflow: hidden; }
+  .t7 .av img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
   .t7 h1 { font-size: 32px; font-weight: 700; margin-bottom: 4px; }
   .t7 .caveat { font-family: 'Caveat', cursive; color: #6B7E6B; font-size: 18px; }
   .t7 .quote { background: #fff; border-left: 4px solid #7BA17B; padding: 16px 22px; margin: 18px 0; font-style: italic; font-size: 16px; line-height: 1.5; border-radius: 0 8px 8px 0; }

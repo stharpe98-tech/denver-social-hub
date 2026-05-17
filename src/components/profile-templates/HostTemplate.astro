@@ -11,7 +11,7 @@ const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.ac
 ---
 <div class="t5" style={`--accent: ${accent}`}>
   <div class="hero">
-    <div class="av">{profile.photo_emoji || '👤'}</div>
+    <div class="av">{profile.avatar_photo_url ? <img src={profile.avatar_photo_url} alt={profile.display_name || 'avatar'}/> : (profile.photo_emoji || '👤')}</div>
     <div>
       <h1>{profile.display_name}</h1>
       {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
@@ -38,7 +38,8 @@ const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.ac
 <style>
   .t5 { padding: 40px 32px; background: #FAF8F4; border-radius: 18px; color: #1A1A1A; }
   .t5 .hero { display: flex; gap: 18px; align-items: center; margin-bottom: 22px; }
-  .t5 .av { width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #3B82F6); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 42px; flex-shrink: 0; box-shadow: 0 8px 24px rgba(124,58,237,0.25); }
+  .t5 .av { width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #3B82F6); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 42px; flex-shrink: 0; box-shadow: 0 8px 24px rgba(124,58,237,0.25); overflow: hidden; }
+  .t5 .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .t5 h1 { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
   .t5 .caveat { font-family: 'Caveat', cursive; color: var(--accent); font-size: 20px; margin-bottom: 6px; transform: rotate(-1deg); display: inline-block; }
   .t5 .loc { font-size: 11px; letter-spacing: 1.5px; color: #C9A55D; text-transform: uppercase; font-weight: 700; }

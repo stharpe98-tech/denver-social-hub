@@ -32,7 +32,7 @@ try {
   profile = await db.prepare(
     `SELECT slug, email, display_name, headline, bio, photo_emoji, accent_color,
             offers_json, links_json, contact_email, contact_phone, neighborhood,
-            template, template_data, status
+            template, template_data, cover_photo_url, avatar_photo_url, status
      FROM profiles WHERE slug = ?`
   ).bind(v.slug).first();
 } catch {
@@ -110,6 +110,9 @@ const TemplateComponent = TEMPLATE_MAP[templateKey] || HostTemplate;
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Serif+Display&family=Bebas+Neue&family=Lora:wght@500;700&family=Space+Mono&display=swap"/>
   <div class="wrap">
     <div class="profile" style={`--profile-accent: ${accent}`} data-slug={profile.slug}>
+      {profile.cover_photo_url && (
+        <div class="prof-cover"><img src={profile.cover_photo_url} alt="Cover" loading="eager"/></div>
+      )}
       <TemplateComponent profile={profile} hostedEvents={hostedEvents} templateData={templateData} links={links} />
 
       {(offers.length > 0 || links.length > 0 || profile.contact_email || profile.contact_phone) && (
@@ -205,6 +208,8 @@ const TemplateComponent = TEMPLATE_MAP[templateKey] || HostTemplate;
   <style>
     .wrap { max-width: 880px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
     .profile { background: var(--bg); border-radius: 20px; overflow: hidden; }
+    .prof-cover { width: 100%; aspect-ratio: 14 / 4; overflow: hidden; border-radius: 18px; margin-bottom: 16px; background: var(--surface, #F8F9FB); border: 1.5px solid var(--border); }
+    .prof-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .prof-extra { padding: var(--space-4) var(--space-5); background: #fff; border: 1.5px solid var(--border); border-radius: 18px; margin-top: 16px; }
     .prof-h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-faint); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
     .prof-h3-bar { width: 24px; height: 2px; background: var(--profile-accent, #7C3AED); border-radius: 999px; display: inline-block; }
