@@ -194,9 +194,9 @@ export function getNeighborhood(slug: string): Neighborhood | null {
 
 export function resolveNeighborhoodSlug(input: string | null | undefined): string {
   const s = (input || '').toLowerCase().trim();
-  if (s === 'all') return 'all';
-  if (s && BY_SLUG.has(s)) return s;
-  return 'wash-park';
+  if (s === 'all' || !s) return 'all';
+  if (BY_SLUG.has(s)) return s;
+  return 'all';
 }
 
 // Rough miles between two lat/lng pairs (great-circle haversine).
