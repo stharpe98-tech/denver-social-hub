@@ -1,0 +1,395 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { getDB } from '../../../lib/db';
+import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
+import { PROFILE_TEMPLATES } from '../../../lib/profile-templates';
+import { neighborhoodsByCity } from '../../../lib/neighborhoods';
+
+const rawSlug = Astro.params.slug || '';
+const v = validateSlug(rawSlug);
+if (!v.ok) return Astro.redirect('/404');
+const slug = v.slug;
+
+const authed = await canEditProfile(Astro.cookies, slug);
+if (!authed) return Astro.redirect('/profile/new?mode=signin');
+
+const db = getDB();
+if (!db) return new Response('DB unavailable', { status: 500 });
+
+const profile: any = await db.prepare(
+  `SELECT slug, display_name, bio, photo_emoji, neighborhood, contact_email, contact_phone, template
+   FROM profiles WHERE slug = ?`
+).bind(slug).first();
+if (!profile) return new Response('Not found', { status: 404 });
+
+// If they've already filled out display_name + bio, skip the wizard.
+if ((profile.display_name || '').trim() && (profile.bio || '').trim()) {
+  return Astro.redirect(`/u/${slug}`);
+}
+
+const neighborhoods = neighborhoodsByCity();
+
+const TEMPLATE_BLURBS: Record<string, string> = {
+  host: 'A flexible default page — events, links, bio.',
+  book_club: 'Currently reading, next meeting, member roster.',
+  game_group: 'Game nights, favorite games, player count.',
+  bible_study: 'Verse of the week, current study, cadence.',
+  pottery: 'Gallery, classes, studio hours, pricing.',
+  run_club: 'Pace, mileage, training plan, meetup info.',
+  wellness: 'Schedule, certifications, pricing, philosophy.',
+  music: 'Upcoming gigs, sounds link, what you\'re looking for.',
+  cause: 'Mission, impact stats, upcoming volunteer days.',
+  service_pro: 'License, neighborhoods served, testimonials.',
+  dogs: 'Your pups, favorite parks, walking partners.',
+  climbing: 'Grades, projects, partner call-outs.',
+  supper_club: 'Next dinner, seats, dietary notes, photos.',
+  art: 'Mediums, next session, sample works.',
+  language: 'Languages offered + wanted, meet info.',
+  photography: 'Gear, current project, photo walks, frames.',
+};
+
+const initialTemplate = (profile.template || 'host').toString();
+---
+<Base title={`Welcome — /u/${slug}`} description="Set up your Denver Social page.">
+  <div class="wrap" data-slug={slug}>
+    <a href={`/u/${slug}`} class="skip-top">✕ Skip the setup</a>
+
+    <header class="welcome-head">
+      <div class="dots" id="dots">
+        <span class="dot on"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+      <div class="step-label" id="step-label">Step 1 of 3 · Basics</div>
+    </header>
+
+    <!-- STEP 1 -->
+    <section class="card step" data-step="1">
+      <h1 class="card-h">Hi 👋 Let's set up your page.</h1>
+      <p class="card-sub">Just the basics. You can change all of this later.</p>
+
+      <div class="field">
+        <label>Display name</label>
+        <input id="f-name" type="text" maxlength="80" value={profile.display_name || slug} placeholder="Your name or your group's name"/>
+      </div>
+
+      <div class="field">
+        <label>Photo emoji</label>
+        <div class="emoji-row">
+          <input id="f-emoji" type="text" maxlength="8" value={profile.photo_emoji || '👤'} class="emoji-input"/>
+          <button type="button" class="pick-btn" id="emoji-pick">Pick</button>
+        </div>
+        <div class="emoji-grid" id="emoji-grid" hidden>
+          {['👋','🧑‍🎨','🧑‍🍳','👨🏽‍💼','🧘🏻‍♀️','🧗','🏃','🐕','🎨','🎵','📚','⛪','🍳','🌍','📷','🏺'].map(e => (
+            <button type="button" class="emoji-opt" data-e={e}>{e}</button>
+          ))}
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Bio</label>
+        <textarea id="f-bio" rows="4" maxlength="2000" placeholder="A few sentences about you. Real talk works best.">{profile.bio || ''}</textarea>
+      </div>
+
+      <div class="err" id="err-1"></div>
+      <div class="actions">
+        <button type="button" class="btn-ghost" data-skip="1">Skip for now</button>
+        <button type="button" class="btn-primary" data-continue="1">Continue →</button>
+      </div>
+      <div class="foot"><a href={`/u/${slug}/edit`}>Edit later in /edit</a></div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="card step" data-step="2" hidden>
+      <h1 class="card-h">Pick what your page is for</h1>
+      <p class="card-sub">You can change this anytime. We'll style your page accordingly.</p>
+
+      <div class="tpl-grid" id="tpl-grid">
+        {PROFILE_TEMPLATES.map(t => (
+          <button type="button" class:list={["tpl-card", { 'tpl-on': t.key === initialTemplate }]} data-tpl={t.key}>
+            <span class="tpl-e">{t.emoji}</span>
+            <span class="tpl-l">{t.label}</span>
+          </button>
+        ))}
+      </div>
+      <div class="tpl-blurb" id="tpl-blurb">{TEMPLATE_BLURBS[initialTemplate] || ''}</div>
+
+      <div class="err" id="err-2"></div>
+      <div class="actions">
+        <button type="button" class="btn-ghost" data-skip="2">Skip</button>
+        <button type="button" class="btn-primary" data-continue="2">Continue →</button>
+      </div>
+      <div class="foot"><a href={`/u/${slug}/edit`}>Edit later in /edit</a></div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="card step" data-step="3" hidden>
+      <h1 class="card-h">Make it findable</h1>
+      <p class="card-sub">Help neighbors find you. All optional.</p>
+
+      <div class="field">
+        <label>Neighborhood</label>
+        <select id="f-hood">
+          <option value="">— Pick a neighborhood —</option>
+          {neighborhoods.map(g => (
+            <optgroup label={g.label}>
+              {g.items.map(n => (
+                <option value={n.label} selected={profile.neighborhood === n.label}>{n.label}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Contact email</label>
+        <input id="f-cemail" type="email" maxlength="120" value={profile.contact_email || ''} placeholder="shown after visitors click 'Get in touch'"/>
+      </div>
+
+      <div class="field">
+        <label>Contact phone</label>
+        <input id="f-cphone" type="text" maxlength="40" value={profile.contact_phone || ''} placeholder="shown after visitors click 'Get in touch'"/>
+      </div>
+
+      <div class="err" id="err-3"></div>
+      <div class="actions">
+        <button type="button" class="btn-ghost" data-skip="3">Skip</button>
+        <button type="button" class="btn-primary" data-continue="3">Done — see my page →</button>
+      </div>
+      <div class="foot"><a href={`/u/${slug}/edit`}>Edit later in /edit</a></div>
+    </section>
+  </div>
+
+  <script is:inline define:vars={{ slug, TEMPLATE_BLURBS }}>
+    (function() {
+      // Emoji picker
+      var emojiInput = document.getElementById('f-emoji');
+      var pickBtn = document.getElementById('emoji-pick');
+      var emojiGrid = document.getElementById('emoji-grid');
+      pickBtn.addEventListener('click', function() { emojiGrid.hidden = !emojiGrid.hidden; });
+      emojiGrid.querySelectorAll('.emoji-opt').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          emojiInput.value = btn.getAttribute('data-e');
+          emojiGrid.hidden = true;
+        });
+      });
+
+      // Template picker — toggle .tpl-on and update blurb
+      var tplGrid = document.getElementById('tpl-grid');
+      var tplBlurb = document.getElementById('tpl-blurb');
+      function updateBlurb(key) {
+        tplBlurb.textContent = (TEMPLATE_BLURBS && TEMPLATE_BLURBS[key]) || '';
+      }
+      tplGrid.querySelectorAll('.tpl-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+          tplGrid.querySelectorAll('.tpl-card').forEach(function(c){ c.classList.remove('tpl-on'); });
+          card.classList.add('tpl-on');
+          updateBlurb(card.getAttribute('data-tpl'));
+        });
+      });
+
+      async function saveField(field, value) {
+        var r = await fetch('/api/profile/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: slug, field: field, value: value })
+        });
+        var d = await r.json();
+        if (!d.ok) throw new Error(d.error || 'save failed');
+      }
+      function setErr(n, msg) {
+        var el = document.getElementById('err-' + n);
+        el.textContent = msg || '';
+        el.style.display = msg ? 'block' : 'none';
+      }
+      function getTpl() {
+        var on = tplGrid.querySelector('.tpl-card.tpl-on');
+        return on ? on.getAttribute('data-tpl') : 'host';
+      }
+
+      var dots = document.querySelectorAll('#dots .dot');
+      var stepLabel = document.getElementById('step-label');
+      var labels = ['Basics', 'Template', 'Findable'];
+      var steps = document.querySelectorAll('.step');
+      function showStep(n) {
+        steps.forEach(function(s) {
+          s.hidden = (parseInt(s.getAttribute('data-step'), 10) !== n);
+        });
+        dots.forEach(function(d, i) { d.classList.toggle('on', i === (n - 1)); });
+        stepLabel.textContent = 'Step ' + n + ' of 3 · ' + labels[n - 1];
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      function lockBtn(btn) { btn.disabled = true; btn.dataset._t = btn.textContent; btn.textContent = 'Saving…'; }
+      function unlockBtn(btn) { btn.disabled = false; if (btn.dataset._t) btn.textContent = btn.dataset._t; }
+
+      // Step 1 actions
+      document.querySelector('[data-skip="1"]').addEventListener('click', function() {
+        setErr(1, ''); showStep(2);
+      });
+      document.querySelector('[data-continue="1"]').addEventListener('click', async function() {
+        setErr(1, '');
+        var btn = this;
+        var name = (document.getElementById('f-name').value || '').trim();
+        var emoji = (document.getElementById('f-emoji').value || '').trim();
+        var bio = (document.getElementById('f-bio').value || '').trim();
+        if (!name) { setErr(1, 'Please enter a display name.'); return; }
+        lockBtn(btn);
+        try {
+          await saveField('display_name', name);
+          if (emoji) await saveField('photo_emoji', emoji);
+          if (bio) await saveField('bio', bio);
+          showStep(2);
+        } catch (e) {
+          setErr(1, e.message || 'Save failed — try again.');
+        }
+        unlockBtn(btn);
+      });
+
+      // Step 2 actions
+      document.querySelector('[data-skip="2"]').addEventListener('click', async function() {
+        setErr(2, '');
+        var btn = this; lockBtn(btn);
+        try { await saveField('template', 'host'); showStep(3); }
+        catch (e) { setErr(2, e.message || 'Save failed.'); }
+        unlockBtn(btn);
+      });
+      document.querySelector('[data-continue="2"]').addEventListener('click', async function() {
+        setErr(2, '');
+        var btn = this; lockBtn(btn);
+        try { await saveField('template', getTpl()); showStep(3); }
+        catch (e) { setErr(2, e.message || 'Save failed.'); }
+        unlockBtn(btn);
+      });
+
+      // Step 3 actions
+      document.querySelector('[data-skip="3"]').addEventListener('click', function() {
+        window.location.href = '/u/' + slug;
+      });
+      document.querySelector('[data-continue="3"]').addEventListener('click', async function() {
+        setErr(3, '');
+        var btn = this; lockBtn(btn);
+        var hood = (document.getElementById('f-hood').value || '').trim();
+        var cemail = (document.getElementById('f-cemail').value || '').trim();
+        var cphone = (document.getElementById('f-cphone').value || '').trim();
+        try {
+          if (hood) await saveField('neighborhood', hood);
+          if (cemail) await saveField('contact_email', cemail);
+          if (cphone) await saveField('contact_phone', cphone);
+          window.location.href = '/u/' + slug;
+        } catch (e) {
+          setErr(3, e.message || 'Save failed — try again.');
+          unlockBtn(btn);
+        }
+      });
+    })();
+  </script>
+
+  <style>
+    .wrap {
+      max-width: 560px; margin: 0 auto; min-height: 100vh; box-sizing: border-box;
+      padding: var(--space-5) var(--space-4) var(--space-8);
+      background:
+        radial-gradient(circle at 20% 18%, rgba(255,255,255,0.45) 0%, transparent 55%),
+        radial-gradient(circle at 80% 75%, rgba(0,0,0,0.04) 0%, transparent 55%),
+        repeating-linear-gradient(125deg, transparent 0 3px, rgba(0,0,0,0.022) 3px 4px),
+        linear-gradient(160deg, #E8DFCF 0%, #D8CBB4 100%);
+      position: relative;
+    }
+    .skip-top {
+      position: absolute; top: 14px; right: 14px;
+      font-size: 12px; color: #5a4f3d; text-decoration: none;
+      background: rgba(255,255,255,0.7); border-radius: 999px; padding: 6px 10px;
+    }
+    .skip-top:hover { background: #fff; }
+
+    .welcome-head { text-align: center; margin: var(--space-4) 0 var(--space-4); }
+    .dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(0,0,0,0.18); }
+    .dot.on { background: var(--accent, #7C3AED); }
+    .step-label { font-size: 12px; font-weight: 700; color: #5a4f3d; letter-spacing: 0.5px; text-transform: uppercase; }
+
+    .card {
+      background: #FFFEFA; border: 1.5px solid rgba(0,0,0,0.08);
+      border-radius: 18px; padding: var(--space-5);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    .card-h { font-family: var(--font-display, serif); font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 6px; }
+    .card-sub { text-align: center; font-size: 14px; color: var(--text-sec, #555); margin-bottom: var(--space-4); }
+
+    .field { margin-bottom: var(--space-3); }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sec, #555); margin-bottom: 6px; }
+    .field input, .field textarea, .field select {
+      width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 10px;
+      border: 1.5px solid var(--border, #E5E7EB); font-size: 15px; background: #fff;
+      font-family: inherit; box-sizing: border-box;
+    }
+    .field textarea { min-height: 96px; }
+
+    .emoji-row { display: flex; gap: 8px; align-items: stretch; }
+    .emoji-input { flex: 1; font-size: 20px; text-align: center; }
+    .pick-btn {
+      flex: 0 0 auto; padding: 0 16px; border-radius: 10px; border: 1.5px solid var(--border, #E5E7EB);
+      background: #fff; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600;
+    }
+    .pick-btn:hover { background: var(--surface, #F8F9FB); }
+    .pick-btn:active { transform: scale(0.98); }
+    .emoji-grid {
+      display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 8px;
+      padding: 8px; background: var(--surface, #F8F9FB); border-radius: 10px;
+    }
+    .emoji-opt {
+      min-height: 44px; font-size: 22px; border: 1px solid var(--border, #E5E7EB);
+      background: #fff; border-radius: 8px; cursor: pointer;
+    }
+    .emoji-opt:hover { background: var(--accent, #7C3AED); }
+
+    .tpl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .tpl-card {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 12px 6px; border-radius: 12px; border: 1.5px solid rgba(0,0,0,0.08);
+      background: #fff; cursor: pointer; font-family: inherit; min-height: 72px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .tpl-card:hover { border-color: var(--accent, #7C3AED); }
+    .tpl-card:active { transform: scale(0.98); }
+    .tpl-e { font-size: 22px; }
+    .tpl-l { font-size: 11px; font-weight: 600; color: var(--text-sec, #555); text-align: center; line-height: 1.2; }
+    .tpl-on {
+      border-color: var(--accent, #7C3AED); border-width: 2px;
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+      background: color-mix(in srgb, var(--accent, #7C3AED) 6%, #fff);
+    }
+    .tpl-on .tpl-l { color: var(--text, #111); }
+    .tpl-blurb {
+      text-align: center; font-size: 13px; color: var(--text-sec, #555);
+      background: var(--surface, #F8F9FB); padding: 10px; border-radius: 8px;
+      margin-bottom: var(--space-3);
+    }
+
+    .err { color: #DC2626; font-size: 13px; margin-bottom: 8px; display: none; }
+
+    .actions { display: flex; gap: 8px; margin-top: var(--space-3); }
+    .btn-primary, .btn-ghost {
+      min-height: 44px; padding: 12px 18px; border-radius: 999px;
+      font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+      border: none; transition: filter 0.15s, background 0.15s;
+    }
+    .btn-primary { flex: 1; background: var(--accent, #7C3AED); color: #fff; }
+    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-primary:active { filter: brightness(0.95); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-ghost {
+      flex: 0 0 auto; background: transparent; color: var(--text-sec, #555);
+      border: 1.5px solid rgba(0,0,0,0.12);
+    }
+    .btn-ghost:hover { background: rgba(0,0,0,0.04); }
+    .btn-ghost:active { background: rgba(0,0,0,0.08); }
+
+    .foot { text-align: center; margin-top: var(--space-3); font-size: 12px; }
+    .foot a { color: #5a4f3d; }
+
+    @media (max-width: 600px) {
+      .tpl-grid { grid-template-columns: repeat(3, 1fr); }
+      .emoji-grid { grid-template-columns: repeat(6, 1fr); }
+    }
+  </style>
+</Base>

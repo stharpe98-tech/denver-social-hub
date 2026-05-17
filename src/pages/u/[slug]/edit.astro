@@ -85,53 +85,17 @@ const SWATCHES = [
           <a href="#" class="editor-out" id="editor-out">Sign out of editor</a>
         </div>
 
-        <div class="editor-field"><label>Page template</label>
-          <div class="tpl-grid" id="tpl-grid">
-            {PROFILE_TEMPLATES.map(t => (
-              <button type="button" class:list={["tpl-card", { 'tpl-active': t.key === currentTemplate }]} data-tpl={t.key}>
-                <span class="tpl-emoji">{t.emoji}</span>
-                <span class="tpl-label">{t.label}</span>
-              </button>
-            ))}
-          </div>
-          <div class="tpl-hint">Switch any time. Each template surfaces its own extra fields below.</div>
-        </div>
-
-        <div class="editor-field"><label>Neighborhood</label>
-          <input data-field="neighborhood" type="text" value={profile.neighborhood || ''} maxlength="80" placeholder="Wash Park, Cap Hill, etc."/>
-        </div>
-
+        <!-- Essentials (always visible) -->
         <div class="editor-field"><label>Display name</label>
           <input data-field="display_name" type="text" value={profile.display_name || ''} maxlength="80"/>
-        </div>
-        <div class="editor-field"><label>Headline</label>
-          <input data-field="headline" type="text" value={profile.headline || ''} maxlength="140" placeholder="What you do, in one line"/>
-        </div>
-        <div class="editor-field"><label>Bio</label>
-          <textarea data-field="bio" rows="4" maxlength="2000" placeholder="Who you are, where you are, what you're up to.">{profile.bio || ''}</textarea>
-        </div>
-
-        <div class="editor-field" id="tpl-data-section">
-          <label>Template-specific fields</label>
-          <div class="tpl-data-help" id="tpl-data-help"></div>
-          <textarea id="tpl-data-textarea" rows="10" maxlength="4000" spellcheck="false">{templateDataJson}</textarea>
-          <div class="tpl-data-row">
-            <button type="button" class="add" id="tpl-data-reset">↺ Load example for this template</button>
-            <span class="tpl-data-status" id="tpl-data-status"></span>
-          </div>
-        </div>
-
-        <div class="editor-field"><label>Accent color</label>
-          <div class="color-row" id="color-row" data-accent={accent}>
-            {SWATCHES.map(s => (
-              <span class:list={["swatch", `swatch-${s.name}`, { 'swatch-active': s.hex.toLowerCase() === accent.toLowerCase() }]}
-                    data-hex={s.hex} role="button" tabindex="0" aria-label={`Accent ${s.name}`}></span>
-            ))}
-          </div>
         </div>
 
         <div class="editor-field"><label>Photo / avatar emoji</label>
           <input data-field="photo_emoji" type="text" value={profile.photo_emoji || '👤'} maxlength="16"/>
+        </div>
+
+        <div class="editor-field"><label>Bio</label>
+          <textarea data-field="bio" rows="4" maxlength="2000" placeholder="Who you are, where you are, what you're up to.">{profile.bio || ''}</textarea>
         </div>
 
         <div class="editor-field two">
@@ -143,34 +107,83 @@ const SWATCHES = [
           </div>
         </div>
 
-        <div class="editor-section" id="offers-section">
-          <label>What you offer</label>
-          <div id="offers-list">
-            {offers.map((o, i) => (
-              <div class="editor-offer" data-offer-idx={i}>
-                <input class="offer-icon" value={o.icon || ''} placeholder="🏠" maxlength="4"/>
-                <input class="offer-label" value={o.label || ''} placeholder="What you offer" maxlength="120"/>
-                <button class="x" type="button" data-action="remove-offer">×</button>
-              </div>
-            ))}
-          </div>
-          <button class="add" type="button" id="add-offer">+ Add an offer</button>
+        <div class="editor-field"><label>Neighborhood</label>
+          <input data-field="neighborhood" type="text" value={profile.neighborhood || ''} maxlength="80" placeholder="Wash Park, Cap Hill, etc."/>
         </div>
 
-        <div class="editor-section" id="links-section">
-          <label>Links</label>
-          <div id="links-list">
-            {links.map((l, i) => (
-              <div class="editor-offer" data-link-idx={i}>
-                <input class="link-icon" value={l.icon || ''} placeholder="🌐" maxlength="4"/>
-                <input class="link-label" value={l.label || ''} placeholder="Label" maxlength="40"/>
-                <input class="link-url" value={l.url || ''} placeholder="https://…" maxlength="300"/>
-                <button class="x" type="button" data-action="remove-link">×</button>
-              </div>
-            ))}
+        <!-- Advanced: template settings -->
+        <details class="more">
+          <summary>Show template settings</summary>
+
+          <div class="editor-field"><label>Page template</label>
+            <div class="tpl-grid" id="tpl-grid">
+              {PROFILE_TEMPLATES.map(t => (
+                <button type="button" class:list={["tpl-card", { 'tpl-active': t.key === currentTemplate }]} data-tpl={t.key}>
+                  <span class="tpl-emoji">{t.emoji}</span>
+                  <span class="tpl-label">{t.label}</span>
+                </button>
+              ))}
+            </div>
+            <div class="tpl-hint">Switch any time. Each template surfaces its own extra fields below.</div>
           </div>
-          <button class="add" type="button" id="add-link">+ Add a link</button>
-        </div>
+
+          <div class="editor-field"><label>Accent color</label>
+            <div class="color-row" id="color-row" data-accent={accent}>
+              {SWATCHES.map(s => (
+                <span class:list={["swatch", `swatch-${s.name}`, { 'swatch-active': s.hex.toLowerCase() === accent.toLowerCase() }]}
+                      data-hex={s.hex} role="button" tabindex="0" aria-label={`Accent ${s.name}`}></span>
+              ))}
+            </div>
+          </div>
+
+          <div class="editor-field"><label>Headline</label>
+            <input data-field="headline" type="text" value={profile.headline || ''} maxlength="140" placeholder="What you do, in one line"/>
+          </div>
+
+          <div class="editor-field" id="tpl-data-section">
+            <label>Template-specific fields</label>
+            <div class="tpl-data-help" id="tpl-data-help"></div>
+            <textarea id="tpl-data-textarea" rows="10" maxlength="4000" spellcheck="false">{templateDataJson}</textarea>
+            <div class="tpl-data-row">
+              <button type="button" class="add" id="tpl-data-reset">↺ Load example for this template</button>
+              <span class="tpl-data-status" id="tpl-data-status"></span>
+            </div>
+          </div>
+        </details>
+
+        <!-- Advanced: offers + links -->
+        <details class="more">
+          <summary>Show offers + links</summary>
+
+          <div class="editor-section" id="offers-section">
+            <label>What you offer</label>
+            <div id="offers-list">
+              {offers.map((o, i) => (
+                <div class="editor-offer" data-offer-idx={i}>
+                  <input class="offer-icon" value={o.icon || ''} placeholder="🏠" maxlength="4"/>
+                  <input class="offer-label" value={o.label || ''} placeholder="What you offer" maxlength="120"/>
+                  <button class="x" type="button" data-action="remove-offer">×</button>
+                </div>
+              ))}
+            </div>
+            <button class="add" type="button" id="add-offer">+ Add an offer</button>
+          </div>
+
+          <div class="editor-section" id="links-section">
+            <label>Links</label>
+            <div id="links-list">
+              {links.map((l, i) => (
+                <div class="editor-offer" data-link-idx={i}>
+                  <input class="link-icon" value={l.icon || ''} placeholder="🌐" maxlength="4"/>
+                  <input class="link-label" value={l.label || ''} placeholder="Label" maxlength="40"/>
+                  <input class="link-url" value={l.url || ''} placeholder="https://…" maxlength="300"/>
+                  <button class="x" type="button" data-action="remove-link">×</button>
+                </div>
+              ))}
+            </div>
+            <button class="add" type="button" id="add-link">+ Add a link</button>
+          </div>
+        </details>
       </div>
     )}
   </div>
@@ -468,6 +481,29 @@ const SWATCHES = [
     .tpl-data-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
     .tpl-data-row .add { width: auto; flex: 0 0 auto; padding: 6px 12px; margin-top: 0; }
     .tpl-data-status { font-size: 12px; color: #047857; }
+
+    details.more {
+      margin-top: var(--space-3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface, #F8F9FB);
+    }
+    details.more > summary {
+      cursor: pointer; padding: 12px 14px;
+      font-size: 13px; font-weight: 700; color: var(--text);
+      list-style: none; user-select: none;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    details.more > summary::-webkit-details-marker { display: none; }
+    details.more > summary::after {
+      content: '▾'; color: var(--text-faint); font-size: 12px;
+      transition: transform 0.15s;
+    }
+    details.more[open] > summary::after { transform: rotate(180deg); }
+    details.more[open] > summary { border-bottom: 1px solid var(--border); }
+    details.more > :not(summary) { padding: 0 14px; }
+    details.more > .editor-field:first-of-type { padding-top: var(--space-3); }
+    details.more > :last-child { padding-bottom: var(--space-3); }
 
     @media (max-width: 600px) {
       .editor-field.two { grid-template-columns: 1fr; }

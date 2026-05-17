@@ -49,6 +49,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
   }
 
+  const isNewProfile = !existing;
   if (!existing) {
     const displayName = (email.split('@')[0] || slug).slice(0, 60);
     // Try the full insert (with tier + id). If the schema is older, retry without optional columns.
@@ -72,7 +73,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
   }
   await setProfileCookie({ cookies } as any, slug);
-  return new Response(JSON.stringify({ ok: true, redirect: `/u/${slug}/edit` }), {
+  const redirect = isNewProfile ? `/u/${slug}/welcome` : `/u/${slug}/edit`;
+  return new Response(JSON.stringify({ ok: true, redirect }), {
     headers: { 'Content-Type': 'application/json' },
   });
 };
