@@ -328,9 +328,13 @@ const eventTypeChips = [
     .potluck-spotlight h3 { font-size: 22px; margin: 8px 0 4px; }
     .potluck-spotlight p { color: var(--text-sec); font-size: 14px; }
     .potluck-spotlight-arrow { font-size: 28px; color: var(--accent); flex-shrink: 0; }
+    @media (max-width: 639px) {
+      .potluck-spotlight { padding: var(--space-4); gap: var(--space-3); }
+      .potluck-spotlight h3 { font-size: 18px; }
+    }
 
     /* EVENT GRID */
-    .event-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); }
+    .event-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: var(--space-3); }
 
     /* Featured event */
     /* Personal pages card */
