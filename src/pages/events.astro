@@ -151,7 +151,10 @@ try {
       <h1 class="ev-h1">{cards.length} {cards.length === 1 ? 'event' : 'events'} live</h1>
       <p class="ev-sub">{content.events_subtitle || 'Small groups, real plans, no flakes.'} <a href="/calendar" class="ev-sub-link">See the shared calendar →</a></p>
     </div>
-    <a href="/events/new" class="btn btn-primary" id="createBtn">Post an event</a>
+    <div class="ev-header-cta">
+      <a href="/events/new" class="btn btn-primary" id="createBtn">Post an event</a>
+      <a href="/potlucks/new" class="btn btn-sec">🥘 Host a potluck</a>
+    </div>
   </div>
 
   <style is:inline>
@@ -382,7 +385,8 @@ try {
   .ev-page { max-width: 960px; margin: 0 auto; padding: 24px 24px 80px; }
 
   /* Header */
-  .ev-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+  .ev-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
+  .ev-header-cta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .ev-h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; margin-top: 6px; }
   .ev-sub { font-size: 14px; color: var(--text-sec); margin-top: 4px; }
 
