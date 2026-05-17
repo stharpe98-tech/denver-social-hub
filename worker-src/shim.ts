@@ -7,6 +7,7 @@
 import astroWorker from '../worker/index.js';
 import { buildReminderEmail } from '../src/lib/email';
 import { ensurePotluckSchema } from '../src/lib/potluck-schema';
+import { ensureBookingsSchema, formatDenverHuman } from '../src/lib/bookings-schema';
 import { runAllSyncs } from '../src/lib/event-sync';
 
 interface Env {
@@ -277,6 +278,84 @@ async function sendWeeklyDigest(env: Env): Promise<{ sent: number; errors: numbe
   return { sent, errors, skipped: null };
 }
 
+// 24h-before reminders for confirmed bookings. Daily cron looks at the
+// next ~12-36 hour window and emails the requester once. Marked via
+// reminder_sent_at so we never double-send.
+async function sendBookingReminders(env: Env): Promise<{ sent: number; errors: number; skipped: string | null }> {
+  const db = env.DB;
+  if (!db) return { sent: 0, errors: 0, skipped: 'no_db' };
+  await ensureBookingsSchema(db);
+
+  const cfgRows = await db.prepare("SELECT key, value FROM config").all();
+  const cfg: Record<string, string> = {};
+  (cfgRows.results ?? []).forEach((r: any) => { cfg[r.key] = r.value; });
+  if (!cfg.resend_api_key) return { sent: 0, errors: 0, skipped: 'no_resend_key' };
+
+  const siteUrl = cfg.site_url || 'https://denversocialhub.com';
+  const fromEmail = cfg.from_email || 'Denver Social <noreply@denversocialhub.com>';
+
+  // Cron runs daily at 14:00 UTC (8am MT). Target confirmed bookings
+  // happening 12-36h from now — safely covers "tomorrow" without
+  // double-sending if a cron tick is delayed or repeated.
+  const now = Date.now();
+  const lo = new Date(now + 12 * 3600 * 1000).toISOString();
+  const hi = new Date(now + 36 * 3600 * 1000).toISOString();
+
+  const { results } = await db.prepare(`
+    SELECT b.id, b.profile_slug, b.slot_start, b.requester_name, b.requester_email,
+           o.title AS offering_title, o.duration_min,
+           p.display_name AS organizer_name
+      FROM bookings b
+      LEFT JOIN bookable_offerings o ON o.id = b.offering_id
+      LEFT JOIN profiles p ON p.slug = b.profile_slug
+     WHERE b.status = 'confirmed'
+       AND b.slot_start >= ? AND b.slot_start < ?
+       AND (b.reminder_sent_at IS NULL OR b.reminder_sent_at = '')
+       AND b.requester_email IS NOT NULL AND b.requester_email != ''
+  `).bind(lo, hi).all();
+
+  let sent = 0;
+  let errors = 0;
+  for (const row of (results ?? []) as any[]) {
+    try {
+      const human = formatDenverHuman(String(row.slot_start));
+      const firstName = String(row.requester_name || 'there').split(' ')[0];
+      const title = String(row.offering_title || 'your booking');
+      const organizer = String(row.organizer_name || row.profile_slug || 'the organizer');
+      const profileUrl = `${siteUrl}/u/${encodeURIComponent(row.profile_slug)}`;
+
+      const subject = `Reminder: ${title} tomorrow — ${human}`;
+      const html = `<!DOCTYPE html><html><body style="margin:0;background:#F8F9FB;font-family:system-ui,sans-serif;color:#111827">
+        <div style="max-width:520px;margin:32px auto;padding:24px;background:#fff;border:1px solid #E5E7EB;border-radius:18px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#7C3AED;margin-bottom:8px">Tomorrow</div>
+          <h2 style="margin:0 0 12px;font-size:22px">See you soon, ${escapeHtml(firstName)}.</h2>
+          <p style="color:#374151;line-height:1.55;margin:0 0 16px">
+            Just a heads-up that your booking with <strong>${escapeHtml(organizer)}</strong> is coming up.
+          </p>
+          <div style="background:#F8F9FB;border:1px solid #E5E7EB;border-radius:12px;padding:16px;margin:16px 0">
+            <div style="font-size:17px;font-weight:700">${escapeHtml(title)}</div>
+            <div style="color:#7C3AED;margin-top:4px">${escapeHtml(human)}</div>
+            ${row.duration_min ? `<div style="color:#6B7280;font-size:13px;margin-top:4px">${escapeHtml(String(row.duration_min))} minutes</div>` : ''}
+          </div>
+          <p style="font-size:13px;color:#6B7280;margin:16px 0 0">Need to reach out? Reply to this email or visit <a href="${profileUrl}" style="color:#7C3AED">the organizer's page</a>.</p>
+        </div>
+      </body></html>`;
+      const text = `See you soon, ${firstName}.\n\nYour booking with ${organizer} is tomorrow.\n\n${title}\n${human}\n\n${profileUrl}`;
+
+      const resp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${cfg.resend_api_key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: fromEmail, to: [row.requester_email], subject, html, text }),
+      });
+      if (!resp.ok) { errors++; continue; }
+      await db.prepare("UPDATE bookings SET reminder_sent_at = ? WHERE id = ?")
+        .bind(new Date().toISOString(), row.id).run();
+      sent++;
+    } catch { errors++; }
+  }
+  return { sent, errors, skipped: null };
+}
+
 function escapeHtml(s: string): string {
   return String(s || '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c] as string));
 }
@@ -320,6 +399,13 @@ export default {
         console.log(`[digest] sent=${r.sent} errors=${r.errors} skipped=${r.skipped ?? 'none'}`);
       }).catch((e) => {
         console.error('[digest] failed', e);
+      }),
+    );
+    ctx.waitUntil(
+      sendBookingReminders(env).then((r) => {
+        console.log(`[booking-reminders] sent=${r.sent} errors=${r.errors} skipped=${r.skipped ?? 'none'}`);
+      }).catch((e) => {
+        console.error('[booking-reminders] failed', e);
       }),
     );
   },

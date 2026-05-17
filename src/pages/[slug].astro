@@ -1,28 +1,39 @@
 ---
-// Top-level slug router. Maps /<slug> like /April30potluck to the
-// corresponding potluck page by Astro.rewrite, so the URL the user
-// sees matches the slug they typed. Falls through to 404 for anything
-// that doesn't match the potluck slug pattern or isn't in DB.
+// Top-level slug router. Resolves /<slug> to either a potluck or a
+// public profile page, so /jane goes straight to /u/jane and
+// /April30potluck goes to the potluck. Falls through to 404 for
+// anything that matches neither. Reserved system routes (e.g. /about,
+// /events) always win in Astro routing before reaching this catch-all.
 import { getDB } from '../lib/db';
 import { POTLUCK_SLUG_RE } from '../lib/slug';
+import { validateSlug } from '../lib/profile-auth';
 
 const { slug } = Astro.params;
 const s = (slug || '').trim();
-
-// Reject anything that isn't a potluck-shaped slug — keeps this catch-all
-// route from intercepting other top-level pages.
-if (!s || !POTLUCK_SLUG_RE.test(s)) {
-  return new Response(null, { status: 404 });
-}
+if (!s) return new Response(null, { status: 404 });
 
 const db = getDB();
-let row: any = null;
-try {
-  if (db) row = await db.prepare('SELECT id FROM potlucks WHERE slug=? LIMIT 1').bind(s).first();
-} catch { /* slug column might be missing on stale envs */ }
+if (!db) return new Response(null, { status: 404 });
 
-if (!row?.id) return new Response(null, { status: 404 });
+// 1. Potluck slug (e.g. "April30potluck") — preserves existing behavior.
+if (POTLUCK_SLUG_RE.test(s)) {
+  try {
+    const row = await db.prepare('SELECT id FROM potlucks WHERE slug=? LIMIT 1').bind(s).first() as any;
+    if (row?.id) return Astro.rewrite(`/potlucks/${row.id}`);
+  } catch { /* slug column may be missing on stale envs */ }
+}
 
-// Serve the existing potluck detail page under this URL.
-return Astro.rewrite(`/potlucks/${row.id}`);
+// 2. Profile slug — vanity URL. Don't shadow regular profiles (which
+// use random "r-..." slugs and are not meant for public discovery).
+const v = validateSlug(s);
+if (v.ok) {
+  try {
+    const row = await db.prepare(
+      `SELECT slug FROM profiles WHERE slug=? AND status='live' LIMIT 1`
+    ).bind(v.slug).first() as any;
+    if (row?.slug) return Astro.rewrite(`/u/${row.slug}`);
+  } catch { /* profiles table might be missing on stale envs */ }
+}
+
+return new Response(null, { status: 404 });
 ---

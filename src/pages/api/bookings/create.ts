@@ -90,8 +90,9 @@ export const POST: APIRoute = async ({ request }) => {
   ).bind(slug, offeringId, slotStart, slotEnd, name, email, phone, message, token).run();
   const id = (r as any).meta?.last_row_id;
 
-  // Send the email asynchronously (don't block on failure).
+  // Send notification emails (best-effort — don't block on failure).
   try { await notifyOrganizer(db, request, { slug, offering, slotStart, name, email, phone, message, token }); } catch {}
+  try { await notifyRequester(db, request, { slug, offering, slotStart, name, email, message }); } catch {}
 
   return j({ ok: true, id });
 };
@@ -153,6 +154,55 @@ async function notifyOrganizer(db: D1Database, request: Request, p: {
     body: JSON.stringify({
       from: cfg.from_email || 'Denver Social <noreply@denversocialhub.com>',
       to: profile.email, subject, text, html,
+    }),
+  });
+}
+
+async function notifyRequester(db: D1Database, request: Request, p: {
+  slug: string; offering: any; slotStart: string;
+  name: string; email: string; message: string;
+}) {
+  const cfgRows = await db.prepare(`SELECT key, value FROM config`).all();
+  const cfg: Record<string, string> = {};
+  (cfgRows.results ?? []).forEach((row: any) => { cfg[row.key] = row.value; });
+  if (!cfg.resend_api_key) return;
+
+  const profile = await db.prepare(
+    `SELECT display_name FROM profiles WHERE slug=?`
+  ).bind(p.slug).first() as any;
+  const organizer = String(profile?.display_name || p.slug);
+
+  const origin = cfg.site_url || new URL(request.url).origin || 'https://denversocialhub.com';
+  const profileUrl = `${origin}/u/${encodeURIComponent(p.slug)}`;
+  const human = formatDenverHuman(p.slotStart);
+  const title = String(p.offering.title);
+  const firstName = (p.name || 'there').split(' ')[0];
+
+  const subject = `Request received — ${title} on ${human}`;
+  const html = `
+    <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111827">
+      <h2 style="margin:0 0 12px">Got it, ${escapeHtml(firstName)} — your request is in.</h2>
+      <p style="color:#374151;line-height:1.55;margin:0 0 16px">
+        We sent your request to <strong>${escapeHtml(organizer)}</strong>. You'll get another email the moment it's confirmed (or if they need to suggest a different time).
+      </p>
+      <div style="background:#F8F9FB;border:1px solid #E5E7EB;border-radius:12px;padding:16px;margin:16px 0">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6B7280;margin-bottom:6px">Requested</div>
+        <div style="font-size:17px;font-weight:700">${escapeHtml(title)}</div>
+        <div style="color:#7C3AED;margin-top:4px">${escapeHtml(human)}</div>
+      </div>
+      ${p.message ? `<div style="font-size:13px;color:#6B7280;margin-top:12px">Your note: "${escapeHtml(p.message)}"</div>` : ''}
+      <div style="font-size:12px;color:#9CA3AF;margin-top:24px">
+        Organizer page: <a href="${profileUrl}" style="color:#7C3AED">${escapeHtml(profileUrl.replace(/^https?:\/\//, ''))}</a>
+      </div>
+    </div>`;
+  const text = `Got it, ${firstName} — your request is in.\n\nWe sent your request to ${organizer}. You'll get another email the moment it's confirmed.\n\n${title}\n${human}\n\n${profileUrl}`;
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${cfg.resend_api_key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: cfg.from_email || 'Denver Social <noreply@denversocialhub.com>',
+      to: p.email, subject, text, html,
     }),
   });
 }
