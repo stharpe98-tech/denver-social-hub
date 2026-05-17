@@ -6,7 +6,7 @@ import { ensureGroupsSchema } from '../lib/groups-schema';
 import { ensureDmSchema } from '../lib/dm-schema';
 import {
   NEIGHBORHOODS, resolveNeighborhoodSlug, getNeighborhood,
-  nearbyNeighborhoods, milesBetween,
+  nearbyNeighborhoods, milesBetween, neighborhoodsByArea,
 } from '../lib/neighborhoods';
 
 const db = getDB();
@@ -195,8 +195,12 @@ function timeAgo(iso: string): string {
             </div>
             <select name="nbh" class="bd-picker-select" onchange="this.form.submit()">
               <option value="all" selected={nbhSlug === 'all'}>All Denver</option>
-              {NEIGHBORHOODS.map(n => (
-                <option value={n.slug} selected={n.slug === nbhSlug}>{n.label}</option>
+              {neighborhoodsByArea().map(group => (
+                <optgroup label={group.area}>
+                  {group.items.map(n => (
+                    <option value={n.slug} selected={n.slug === nbhSlug}>{n.label}</option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
