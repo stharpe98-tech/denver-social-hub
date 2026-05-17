@@ -17,7 +17,7 @@ try {
   profile = await db.prepare(
     `SELECT slug, display_name, email, headline, bio, photo_emoji, accent_color,
             offers_json, links_json, contact_email, contact_phone, neighborhood,
-            template, template_data, cover_photo_url, avatar_photo_url, status
+            template, template_data, cover_photo_url, avatar_photo_url, status, tier
      FROM profiles WHERE slug = ?`
   ).bind(slug).first();
 } catch {
@@ -31,6 +31,34 @@ try {
 if (!profile) return new Response('Not found', { status: 404 });
 
 const authed = await canEditProfile(Astro.cookies, slug);
+const isOrganizer = (profile.tier || '') === 'organizer';
+
+// Load bookable offerings + per-offering availability for the booking settings panel.
+let bookableOfferings: any[] = [];
+let availabilityByOffering: Record<string, any[]> = {};
+if (authed && isOrganizer) {
+  try {
+    const { ensureBookingsSchema } = await import('../../../lib/bookings-schema');
+    await ensureBookingsSchema(db);
+    bookableOfferings = ((await db.prepare(
+      `SELECT id, title, description, duration_min, price_text, capacity_per_slot, archived
+       FROM bookable_offerings WHERE profile_slug=? ORDER BY archived ASC, id ASC`
+    ).bind(slug).all())?.results || []) as any[];
+    if (bookableOfferings.length) {
+      const ids = bookableOfferings.map(o => o.id);
+      const rules = ((await db.prepare(
+        `SELECT id, offering_id, day_of_week, start_time, end_time
+         FROM offering_availability WHERE offering_id IN (${ids.map(() => '?').join(',')})
+         ORDER BY day_of_week, start_time`
+      ).bind(...ids).all())?.results || []) as any[];
+      for (const r of rules) {
+        const k = String(r.offering_id);
+        if (!availabilityByOffering[k]) availabilityByOffering[k] = [];
+        availabilityByOffering[k].push(r);
+      }
+    }
+  } catch {}
+}
 
 let offers: Array<{ icon?: string; label: string }> = [];
 let links: Array<{ icon?: string; label: string; url: string }> = [];
@@ -222,6 +250,59 @@ const SWATCHES = [
             <button class="add" type="button" id="add-link">+ Add a link</button>
           </div>
         </details>
+
+        {isOrganizer && (
+          <details class="more">
+            <summary>Show booking settings</summary>
+            <div class="editor-field">
+              <label>Bookable offerings</label>
+              <div class="bk-help">Define sessions visitors can book. Each offering has its own weekly availability windows. <a href={`/u/${slug}/bookings`} target="_blank">Open bookings dashboard ↗</a></div>
+              <div id="bk-offerings-list">
+                {bookableOfferings.map(o => (
+                  <div class="bk-offering" data-offering-id={o.id} data-archived={o.archived ? '1' : '0'}>
+                    <div class="bk-offering-head">
+                      <input class="bk-off-title-in" data-bk-field="title" value={o.title || ''} maxlength="120" placeholder="e.g. 30-min consult"/>
+                      <button type="button" class="bk-off-x" data-action="archive-offering" title={o.archived ? 'Unarchive' : 'Archive'}>{o.archived ? '↺' : '×'}</button>
+                    </div>
+                    {o.archived ? <div class="bk-archived-tag">Archived</div> : null}
+                    <div class="bk-off-grid">
+                      <label>Duration (min)<input type="number" class="bk-off-num" data-bk-field="duration_min" value={o.duration_min} min="5" max="480"/></label>
+                      <label>Price (text)<input type="text" class="bk-off-num" data-bk-field="price_text" value={o.price_text || ''} maxlength="60" placeholder="$45 or Free"/></label>
+                      <label>Capacity / slot<input type="number" class="bk-off-num" data-bk-field="capacity_per_slot" value={o.capacity_per_slot} min="1" max="100"/></label>
+                    </div>
+                    <label class="bk-desc-label">Description<textarea class="bk-off-desc" data-bk-field="description" rows="2" maxlength="2000" placeholder="What's included?">{o.description || ''}</textarea></label>
+
+                    <div class="bk-avail">
+                      <div class="bk-avail-h">Weekly availability (Denver / MT)</div>
+                      <div class="bk-rules" data-rules-for={o.id}>
+                        {(availabilityByOffering[String(o.id)] || []).map(r => (
+                          <div class="bk-rule" data-rule-id={r.id}>
+                            <span class="bk-rule-dow">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][r.day_of_week]}</span>
+                            <span class="bk-rule-time">{r.start_time} – {r.end_time}</span>
+                            <button type="button" class="bk-rule-x" data-action="delete-rule">×</button>
+                          </div>
+                        ))}
+                      </div>
+                      <div class="bk-rule-add">
+                        <select class="bk-add-dow">
+                          <option value="0">Sun</option><option value="1">Mon</option><option value="2">Tue</option>
+                          <option value="3">Wed</option><option value="4">Thu</option><option value="5">Fri</option>
+                          <option value="6">Sat</option>
+                        </select>
+                        <input type="time" class="bk-add-start" value="09:00"/>
+                        <span>→</span>
+                        <input type="time" class="bk-add-end" value="17:00"/>
+                        <button type="button" class="bk-add-rule" data-action="add-rule">+ Add window</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button class="add" type="button" id="bk-add-offering">+ Add offering</button>
+              <div class="bk-status" id="bk-status"></div>
+            </div>
+          </details>
+        )}
       </div>
     )}
   </div>
@@ -579,6 +660,84 @@ const SWATCHES = [
           });
           location.href = '/u/' + slug;
         });
+
+        // ============= Booking settings =============
+        var bkRoot = document.getElementById('bk-offerings-list');
+        var bkStatus = document.getElementById('bk-status');
+        function setBkStatus(msg, color) {
+          if (!bkStatus) return;
+          bkStatus.textContent = msg;
+          bkStatus.style.color = color || '#047857';
+        }
+
+        async function bkFetch(action, payload) {
+          var url = '/api/bookings/' + action;
+          var r = await fetch(url, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          return r.json();
+        }
+
+        function wireOfferingRow(row) {
+          var id = parseInt(row.dataset.offeringId, 10);
+          row.querySelectorAll('[data-bk-field]').forEach(function(inp) {
+            inp.addEventListener('blur', async function() {
+              var field = inp.getAttribute('data-bk-field');
+              var val = inp.value;
+              if (field === 'duration_min' || field === 'capacity_per_slot') val = parseInt(val, 10);
+              setBkStatus('Saving…', '#6B7280');
+              var payload = { action: 'update', id: id, slug: slug };
+              payload[field] = val;
+              var d = await bkFetch('offerings', payload);
+              if (d && d.ok) setBkStatus('Saved', '#047857');
+              else setBkStatus(d && d.error || 'Save failed', '#DC2626');
+            });
+          });
+          var x = row.querySelector('[data-action=archive-offering]');
+          if (x) x.addEventListener('click', async function() {
+            var isArchived = row.dataset.archived === '1';
+            if (!isArchived && !confirm('Archive this offering? It will stop appearing on your booking page.')) return;
+            var d = await bkFetch('offerings', { action: isArchived ? 'unarchive' : 'archive', id: id, slug: slug });
+            if (d && d.ok) location.reload();
+            else setBkStatus(d && d.error || 'Failed', '#DC2626');
+          });
+          // Add rule
+          var addBtn = row.querySelector('[data-action=add-rule]');
+          if (addBtn) addBtn.addEventListener('click', async function() {
+            var dow = parseInt(row.querySelector('.bk-add-dow').value, 10);
+            var startT = row.querySelector('.bk-add-start').value;
+            var endT = row.querySelector('.bk-add-end').value;
+            if (!startT || !endT || startT >= endT) { setBkStatus('End must be after start', '#DC2626'); return; }
+            var d = await bkFetch('availability', { action: 'create', offering_id: id, day_of_week: dow, start_time: startT, end_time: endT });
+            if (d && d.ok) location.reload();
+            else setBkStatus(d && d.error || 'Failed', '#DC2626');
+          });
+          // Delete rule
+          row.querySelectorAll('[data-action=delete-rule]').forEach(function(btn) {
+            btn.addEventListener('click', async function() {
+              var ruleRow = btn.closest('.bk-rule');
+              var rid = parseInt(ruleRow.dataset.ruleId, 10);
+              if (!confirm('Remove this availability window?')) return;
+              var d = await bkFetch('availability', { action: 'delete', id: rid });
+              if (d && d.ok) ruleRow.remove();
+              else setBkStatus(d && d.error || 'Failed', '#DC2626');
+            });
+          });
+        }
+
+        if (bkRoot) {
+          bkRoot.querySelectorAll('.bk-offering').forEach(wireOfferingRow);
+          var addOff = document.getElementById('bk-add-offering');
+          if (addOff) addOff.addEventListener('click', async function() {
+            var title = prompt('Name this offering (e.g. "30-min consult"):');
+            if (!title || !title.trim()) return;
+            setBkStatus('Creating…', '#6B7280');
+            var d = await bkFetch('offerings', { action: 'create', slug: slug, title: title.trim(), duration_min: 30, capacity_per_slot: 1 });
+            if (d && d.ok) location.reload();
+            else setBkStatus(d && d.error || 'Failed', '#DC2626');
+          });
+        }
       })();
     </script>
   )}
@@ -781,5 +940,36 @@ const SWATCHES = [
       .editor-offer .link-url { flex-basis: 100%; }
       .tpl-grid { grid-template-columns: repeat(2, 1fr); }
     }
+
+    /* Booking settings */
+    .bk-help { font-size: 12px; color: var(--text-sec); margin-bottom: 10px; }
+    .bk-help a { color: var(--accent, #7C3AED); text-decoration: none; }
+    .bk-help a:hover { text-decoration: underline; }
+    .bk-offering { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+    .bk-offering[data-archived="1"] { opacity: 0.65; background: var(--surface); }
+    .bk-offering-head { display: flex; gap: 8px; align-items: center; }
+    .bk-off-title-in { flex: 1; padding: 8px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 14px; font-weight: 600; font-family: inherit; background: var(--surface); }
+    .bk-off-x { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; color: var(--text-faint); font-size: 16px; }
+    .bk-off-x:hover { color: #DC2626; border-color: #FECACA; }
+    .bk-archived-tag { font-size: 11px; color: var(--text-faint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
+    .bk-off-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .bk-off-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint); }
+    .bk-off-num { padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 14px; font-family: inherit; background: var(--surface); }
+    .bk-desc-label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint); margin-top: 10px; }
+    .bk-off-desc { padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 14px; font-family: inherit; background: var(--surface); resize: vertical; }
+    .bk-avail { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+    .bk-avail-h { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint); margin-bottom: 8px; }
+    .bk-rules { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+    .bk-rule { display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+    .bk-rule-dow { font-weight: 700; min-width: 36px; }
+    .bk-rule-time { color: var(--text-sec); flex: 1; }
+    .bk-rule-x { background: transparent; border: none; cursor: pointer; color: var(--text-faint); font-size: 18px; padding: 0 4px; }
+    .bk-rule-x:hover { color: #DC2626; }
+    .bk-rule-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .bk-rule-add select, .bk-rule-add input[type="time"] { padding: 6px 8px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 13px; background: #fff; font-family: inherit; }
+    .bk-add-rule { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-sec); }
+    .bk-add-rule:hover { color: var(--text); border-color: var(--accent, #7C3AED); }
+    .bk-status { font-size: 12px; margin-top: 6px; color: var(--text-faint); }
+    @media (max-width: 600px) { .bk-off-grid { grid-template-columns: 1fr 1fr; } }
   </style>
 </Base>

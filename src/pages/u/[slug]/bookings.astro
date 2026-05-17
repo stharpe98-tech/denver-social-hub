@@ -1,0 +1,290 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { getDB } from '../../../lib/db';
+import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
+import { ensureBookingsSchema, formatDenverHuman } from '../../../lib/bookings-schema';
+
+const rawSlug = Astro.params.slug || '';
+const v = validateSlug(rawSlug);
+if (!v.ok) return Astro.redirect('/404');
+const slug = v.slug;
+
+const db = getDB();
+if (!db) return new Response('DB unavailable', { status: 500 });
+await ensureBookingsSchema(db);
+
+const profile = await db.prepare(
+  `SELECT slug, display_name, email FROM profiles WHERE slug=?`
+).bind(slug).first() as any;
+if (!profile) return new Response('Not found', { status: 404 });
+
+const authed = await canEditProfile(Astro.cookies, slug);
+
+const e = profile.email || '';
+const atIdx = e.indexOf('@');
+const maskedEmail = atIdx > 1 ? e[0] + '***' + e.slice(atIdx - 1) : e;
+
+let bookings: any[] = [];
+let offeringTitles: Record<string, string> = {};
+if (authed) {
+  bookings = ((await db.prepare(
+    `SELECT b.id, b.offering_id, b.slot_start, b.slot_end, b.requester_name,
+            b.requester_email, b.requester_phone, b.message, b.status, b.created_at,
+            o.title AS offering_title
+       FROM bookings b
+       LEFT JOIN bookable_offerings o ON o.id = b.offering_id
+      WHERE b.profile_slug=? ORDER BY b.slot_start ASC`
+  ).bind(slug).all())?.results || []) as any[];
+}
+
+const now = Date.now();
+type Row = any;
+const pending: Row[] = [], confirmed: Row[] = [], other: Row[] = [];
+for (const b of bookings) {
+  const slotMs = Date.parse(String(b.slot_start));
+  const past = Number.isFinite(slotMs) && slotMs < now;
+  b._human = formatDenverHuman(String(b.slot_start));
+  b._past = past;
+  if (b.status === 'pending') pending.push(b);
+  else if (b.status === 'confirmed') confirmed.push(b);
+  else other.push(b);
+}
+---
+<Base title={`Bookings — /u/${slug}`} description="Manage your incoming booking requests.">
+  <div class="wrap">
+    {!authed ? (
+      <div class="claim-box">
+        <h3 class="claim-h">Bookings for /u/{slug}</h3>
+        <p class="claim-sub">We'll send a code to the email on file ({maskedEmail}).</p>
+        <div id="reauth-step1">
+          <button class="claim-cta" id="reauth-send">Send me a code</button>
+          <div class="claim-err" id="reauth-send-err"></div>
+        </div>
+        <div id="reauth-step2" hidden>
+          <div class="claim-field" style="margin-top:16px">
+            <label>6-digit code</label>
+            <input id="reauth-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="••••••"/>
+          </div>
+          <input id="reauth-email" type="email" placeholder="Email on file" autocomplete="email"/>
+          <button class="claim-cta" id="reauth-verify" style="margin-top:8px">Verify & view →</button>
+          <div class="claim-err" id="reauth-verify-err"></div>
+        </div>
+        <div class="claim-foot"><a href={`/u/${slug}`} style="color:var(--text-sec)">← View public page</a></div>
+      </div>
+    ) : (
+      <div class="bk-dash" data-slug={slug}>
+        <header class="bk-dash-head">
+          <h1>Bookings</h1>
+          <div class="bk-dash-sub">
+            <a href={`/u/${slug}/edit`}>← Edit page</a>
+            <span>·</span>
+            <a href={`/u/${slug}/book`} target="_blank">View public booking page ↗</a>
+          </div>
+        </header>
+
+        <div class="bk-tabs" role="tablist">
+          <button class="bk-tab bk-tab-active" data-tab="pending" type="button">Pending ({pending.length})</button>
+          <button class="bk-tab" data-tab="confirmed" type="button">Confirmed ({confirmed.length})</button>
+          <button class="bk-tab" data-tab="other" type="button">Declined / Past ({other.length})</button>
+        </div>
+
+        <div class="bk-panel" data-panel="pending">
+          {pending.length === 0 ? <div class="bk-zero">No pending requests right now.</div> :
+            pending.map(b => (
+              <div class="bk-row" data-booking-id={b.id}>
+                <div class="bk-row-head">
+                  <div>
+                    <div class="bk-row-title">{b.offering_title || 'Offering'}</div>
+                    <div class="bk-row-when">{b._human}</div>
+                  </div>
+                  <span class="bk-pill bk-pill-pending">Pending</span>
+                </div>
+                <div class="bk-row-who">
+                  <div><strong>{b.requester_name}</strong> · <a href={`mailto:${b.requester_email}`}>{b.requester_email}</a></div>
+                  {b.requester_phone && <div>📞 {b.requester_phone}</div>}
+                </div>
+                {b.message && <div class="bk-row-msg">{b.message}</div>}
+                <div class="bk-row-actions">
+                  <button class="bk-btn bk-btn-confirm" data-action="confirm" type="button">✓ Confirm</button>
+                  <button class="bk-btn bk-btn-decline" data-action="decline" type="button">✕ Decline</button>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+
+        <div class="bk-panel" data-panel="confirmed" hidden>
+          {confirmed.length === 0 ? <div class="bk-zero">No confirmed bookings yet.</div> :
+            confirmed.map(b => (
+              <div class="bk-row" data-booking-id={b.id}>
+                <div class="bk-row-head">
+                  <div>
+                    <div class="bk-row-title">{b.offering_title || 'Offering'}</div>
+                    <div class="bk-row-when">{b._human}</div>
+                  </div>
+                  <span class="bk-pill bk-pill-confirmed">{b._past ? 'Past' : 'Confirmed'}</span>
+                </div>
+                <div class="bk-row-who">
+                  <div><strong>{b.requester_name}</strong> · <a href={`mailto:${b.requester_email}`}>{b.requester_email}</a></div>
+                  {b.requester_phone && <div>📞 {b.requester_phone}</div>}
+                </div>
+                {b.message && <div class="bk-row-msg">{b.message}</div>}
+              </div>
+            ))
+          }
+        </div>
+
+        <div class="bk-panel" data-panel="other" hidden>
+          {other.length === 0 ? <div class="bk-zero">Nothing here yet.</div> :
+            other.map(b => (
+              <div class="bk-row" data-booking-id={b.id}>
+                <div class="bk-row-head">
+                  <div>
+                    <div class="bk-row-title">{b.offering_title || 'Offering'}</div>
+                    <div class="bk-row-when">{b._human}</div>
+                  </div>
+                  <span class={`bk-pill bk-pill-${b.status}`}>{b.status}</span>
+                </div>
+                <div class="bk-row-who">
+                  <div><strong>{b.requester_name}</strong> · <a href={`mailto:${b.requester_email}`}>{b.requester_email}</a></div>
+                </div>
+                {b.message && <div class="bk-row-msg">{b.message}</div>}
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    )}
+  </div>
+
+  {authed && (
+    <script is:inline define:vars={{ slug }}>
+      (function() {
+        document.querySelectorAll('.bk-tab').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var tab = btn.dataset.tab;
+            document.querySelectorAll('.bk-tab').forEach(function(b) { b.classList.toggle('bk-tab-active', b === btn); });
+            document.querySelectorAll('.bk-panel').forEach(function(p) { p.hidden = p.dataset.panel !== tab; });
+          });
+        });
+        document.querySelectorAll('.bk-row-actions .bk-btn').forEach(function(btn) {
+          btn.addEventListener('click', async function() {
+            var row = btn.closest('.bk-row');
+            var id = parseInt(row.dataset.bookingId, 10);
+            var action = btn.dataset.action;
+            if (action === 'decline' && !confirm('Decline this booking? The requester will be emailed.')) return;
+            btn.disabled = true; var orig = btn.textContent; btn.textContent = '…';
+            try {
+              var r = await fetch('/api/bookings/respond', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ booking_id: id, action: action }),
+              });
+              var d = await r.json();
+              if (d && d.ok) {
+                row.style.opacity = '.5';
+                setTimeout(function() { location.reload(); }, 400);
+              } else {
+                alert((d && d.error) || 'Could not update booking.');
+                btn.disabled = false; btn.textContent = orig;
+              }
+            } catch (e) {
+              alert('Network error — try again.');
+              btn.disabled = false; btn.textContent = orig;
+            }
+          });
+        });
+      })();
+    </script>
+  )}
+
+  {!authed && (
+    <script is:inline define:vars={{ slug }}>
+      (function() {
+        function showErr(id, msg) { var el = document.getElementById(id); if (el) { el.textContent = msg; el.classList.add('show'); } }
+        function clearErr(id) { var el = document.getElementById(id); if (el) { el.textContent = ''; el.classList.remove('show'); } }
+        document.getElementById('reauth-send').addEventListener('click', async function() {
+          clearErr('reauth-send-err');
+          var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Sending…';
+          try {
+            var r = await fetch('/api/profile/edit-code-send', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ slug: slug })
+            });
+            var d = await r.json();
+            if (d.ok) {
+              document.getElementById('reauth-step1').hidden = true;
+              document.getElementById('reauth-step2').hidden = false;
+              document.getElementById('reauth-email').focus();
+            } else showErr('reauth-send-err', d.error || 'Could not send code.');
+          } catch (e) { showErr('reauth-send-err', 'Network error.'); }
+          btn.disabled = false; btn.textContent = orig;
+        });
+        document.getElementById('reauth-verify').addEventListener('click', async function() {
+          clearErr('reauth-verify-err');
+          var email = (document.getElementById('reauth-email').value || '').trim().toLowerCase();
+          var code = (document.getElementById('reauth-code').value || '').trim();
+          if (!email) { showErr('reauth-verify-err', 'Enter the email on file.'); return; }
+          if (!/^\d{6}$/.test(code)) { showErr('reauth-verify-err', 'Enter the 6-digit code.'); return; }
+          var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Verifying…';
+          try {
+            var r = await fetch('/api/profile/code-verify', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ slug: slug, email: email, code: code })
+            });
+            var d = await r.json();
+            if (d.ok) { location.reload(); return; }
+            showErr('reauth-verify-err', d.error || 'Invalid or expired code.');
+          } catch (e) { showErr('reauth-verify-err', 'Network error.'); }
+          btn.disabled = false; btn.textContent = orig;
+        });
+      })();
+    </script>
+  )}
+
+  <style>
+    .wrap { max-width:760px;margin:0 auto;padding:var(--space-5) var(--space-4) var(--space-8); }
+
+    .claim-box { background:var(--surface);border:1.5px solid var(--border);border-radius:20px;padding:var(--space-5);max-width:480px;margin:0 auto; }
+    .claim-h { font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;text-align:center;margin-bottom:4px; }
+    .claim-sub { text-align:center;font-size:14px;color:var(--text-sec);margin-bottom:var(--space-4); }
+    .claim-field label { display:block;font-size:12px;font-weight:600;color:var(--text-sec);margin-bottom:6px; }
+    .claim-box input { width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-size:14px;background:#fff;font-family:inherit; }
+    #reauth-code { font-size:22px;letter-spacing:8px;text-align:center;font-family:monospace; }
+    .claim-cta { width:100%;padding:14px;border-radius:999px;border:none;background:var(--accent,#7C3AED);color:#fff;font-size:15px;font-weight:700;cursor:pointer; }
+    .claim-cta:hover { filter: brightness(1.08); }
+    .claim-cta:active { filter: brightness(0.95); }
+    .claim-err { font-size:13px;color:#DC2626;margin-top:8px;display:none; }
+    .claim-err.show { display:block; }
+    .claim-foot { font-size:12px;color:var(--text-faint);text-align:center;margin-top:var(--space-3); }
+
+    .bk-dash-head h1 { font-family:'Outfit',sans-serif;font-size:28px;font-weight:800;margin:0 0 4px; }
+    .bk-dash-sub { font-size:13px;color:var(--text-sec);display:flex;gap:8px;align-items:center;margin-bottom:16px; }
+    .bk-dash-sub a { color:var(--accent,#7C3AED);text-decoration:none; }
+    .bk-dash-sub a:hover { text-decoration:underline; }
+
+    .bk-tabs { display:flex;gap:4px;border-bottom:1.5px solid var(--border);margin-bottom:16px;overflow-x:auto; }
+    .bk-tab { padding:10px 14px;background:transparent;border:none;border-bottom:2px solid transparent;font-family:inherit;font-size:13px;font-weight:600;color:var(--text-sec);cursor:pointer;white-space:nowrap;margin-bottom:-1.5px; }
+    .bk-tab:hover { color:var(--text); }
+    .bk-tab-active { color:var(--accent,#7C3AED);border-bottom-color:var(--accent,#7C3AED); }
+
+    .bk-zero { text-align:center;padding:32px 16px;color:var(--text-faint);font-size:14px;background:var(--surface);border:1.5px dashed var(--border);border-radius:14px; }
+    .bk-row { background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px; }
+    .bk-row-head { display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px; }
+    .bk-row-title { font-weight:700;font-size:15px;color:var(--text); }
+    .bk-row-when { font-size:13px;color:var(--text-sec);margin-top:2px; }
+    .bk-pill { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:999px;white-space:nowrap; }
+    .bk-pill-pending { background:#FEF3C7;color:#92400E; }
+    .bk-pill-confirmed { background:#D1FAE5;color:#047857; }
+    .bk-pill-declined { background:#FEE2E2;color:#991B1B; }
+    .bk-pill-cancelled { background:#E5E7EB;color:#6B7280; }
+    .bk-row-who { font-size:13px;color:var(--text);line-height:1.5; }
+    .bk-row-who a { color:var(--accent,#7C3AED);text-decoration:none; }
+    .bk-row-msg { background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:13px;color:var(--text-sec);white-space:pre-wrap; }
+    .bk-row-actions { display:flex;gap:8px;margin-top:12px; }
+    .bk-btn { flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer; }
+    .bk-btn-confirm { background:#10B981;color:#fff;border-color:#10B981; }
+    .bk-btn-confirm:hover { filter:brightness(1.08); }
+    .bk-btn-decline:hover { color:#DC2626;border-color:#FECACA; }
+    .bk-btn:disabled { opacity:.6;cursor:wait; }
+  </style>
+</Base>

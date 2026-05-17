@@ -80,6 +80,15 @@ let links: Array<{ icon?: string; label: string; url: string }> = [];
 try { const arr = JSON.parse(profile.offers_json || '[]'); if (Array.isArray(arr)) offers = arr; } catch {}
 try { const arr = JSON.parse(profile.links_json || '[]'); if (Array.isArray(arr)) links = arr; } catch {}
 
+// Surface "Book a session" if this profile has any active offerings.
+let hasBookableOfferings = false;
+try {
+  const row = await db.prepare(
+    `SELECT COUNT(*) AS n FROM bookable_offerings WHERE profile_slug=? AND archived=0`
+  ).bind(v.slug).first() as any;
+  hasBookableOfferings = !!(row && row.n > 0);
+} catch {}
+
 const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.accent_color : '#7C3AED';
 const firstName = (profile.display_name || '').split(' ')[0] || 'them';
 
@@ -114,6 +123,12 @@ const TemplateComponent = TEMPLATE_MAP[templateKey] || HostTemplate;
         <div class="prof-cover"><img src={profile.cover_photo_url} alt="Cover" loading="eager"/></div>
       )}
       <TemplateComponent profile={profile} hostedEvents={hostedEvents} templateData={templateData} links={links} />
+
+      {hasBookableOfferings && (
+        <div class="prof-book-row">
+          <a href={`/u/${profile.slug}/book`} class="prof-book-cta">📅 Book a session →</a>
+        </div>
+      )}
 
       {(offers.length > 0 || links.length > 0 || profile.contact_email || profile.contact_phone) && (
         <div class="prof-extra">
@@ -211,6 +226,16 @@ const TemplateComponent = TEMPLATE_MAP[templateKey] || HostTemplate;
     .prof-cover { width: 100%; aspect-ratio: 14 / 4; overflow: hidden; border-radius: 18px; margin-bottom: 16px; background: var(--surface, #F8F9FB); border: 1.5px solid var(--border); }
     .prof-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .prof-extra { padding: var(--space-4) var(--space-5); background: #fff; border: 1.5px solid var(--border); border-radius: 18px; margin-top: 16px; }
+    .prof-book-row { margin-top: 16px; }
+    .prof-book-cta {
+      display:block;text-align:center;padding:14px 20px;border-radius:50px;
+      background: var(--profile-accent, #7C3AED); color:#fff; font-weight:700; font-size:15px;
+      text-decoration:none;
+      box-shadow: 0 4px 14px color-mix(in srgb, var(--profile-accent, #7C3AED) 28%, transparent);
+      transition: transform .15s, filter .15s, box-shadow .15s;
+    }
+    .prof-book-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .prof-book-cta:active { transform: translateY(0); filter: brightness(0.95); }
     .prof-h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-faint); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
     .prof-h3-bar { width: 24px; height: 2px; background: var(--profile-accent, #7C3AED); border-radius: 999px; display: inline-block; }
     .prof-offers { margin-bottom: var(--space-4); }

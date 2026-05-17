@@ -1,0 +1,352 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { getDB } from '../../../lib/db';
+import { validateSlug } from '../../../lib/profile-auth';
+import { ensureBookingsSchema } from '../../../lib/bookings-schema';
+
+const rawSlug = Astro.params.slug || '';
+const v = validateSlug(rawSlug);
+if (!v.ok) return Astro.redirect('/404');
+const slug = v.slug;
+
+const db = getDB();
+if (!db) return new Response('DB unavailable', { status: 500 });
+await ensureBookingsSchema(db);
+
+const profile = await db.prepare(
+  `SELECT slug, display_name, headline, photo_emoji, accent_color, avatar_photo_url, status
+   FROM profiles WHERE slug=?`
+).bind(slug).first() as any;
+if (!profile || profile.status !== 'live') return new Response('Not found', { status: 404 });
+
+const offerings = ((await db.prepare(
+  `SELECT id, title, description, duration_min, price_text, capacity_per_slot
+   FROM bookable_offerings WHERE profile_slug=? AND archived=0 ORDER BY id ASC`
+).bind(slug).all())?.results || []) as any[];
+
+const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.accent_color : '#7C3AED';
+const displayName = profile.display_name || slug;
+---
+<Base title={`Book with ${displayName} — Denver Social`} description={`Book a session with ${displayName}.`}>
+  <div class="wrap" style={`--profile-accent:${accent}`}>
+    <div class="bk-head">
+      <a href={`/u/${slug}`} class="bk-back">← Back to profile</a>
+      <div class="bk-hero">
+        {profile.avatar_photo_url
+          ? <img class="bk-avatar" src={profile.avatar_photo_url} alt={displayName}/>
+          : <div class="bk-avatar bk-avatar-emoji">{profile.photo_emoji || '👋'}</div>}
+        <div>
+          <h1 class="bk-name">Book with {displayName}</h1>
+          {profile.headline && <div class="bk-tag">{profile.headline}</div>}
+        </div>
+      </div>
+    </div>
+
+    {offerings.length === 0 ? (
+      <div class="bk-empty">
+        <div class="bk-empty-emoji">📅</div>
+        <h2>Not taking bookings yet</h2>
+        <p>{displayName} hasn't set up any bookable sessions.</p>
+        <a href={`/u/${slug}`} class="bk-link">← Back to profile</a>
+      </div>
+    ) : (
+      <div class="bk-body" data-slug={slug} id="bk-body">
+        <section class="bk-section">
+          <h2 class="bk-h">1. Choose a session</h2>
+          <div class="bk-offerings" id="bk-offerings">
+            {offerings.map((o, i) => (
+              <button class:list={['bk-off', { 'bk-off-active': i === 0 }]}
+                      type="button"
+                      data-offering-id={o.id}
+                      data-duration={o.duration_min}>
+                <div class="bk-off-title">{o.title}</div>
+                <div class="bk-off-meta">
+                  <span>⏱ {o.duration_min} min</span>
+                  {o.price_text && <span>· {o.price_text}</span>}
+                </div>
+                {o.description && <div class="bk-off-desc">{o.description}</div>}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section class="bk-section">
+          <h2 class="bk-h">2. Pick a day</h2>
+          <div class="bk-days" id="bk-days"></div>
+        </section>
+
+        <section class="bk-section" id="bk-slots-sec" hidden>
+          <h2 class="bk-h">3. Pick a time</h2>
+          <div class="bk-slots" id="bk-slots"></div>
+        </section>
+
+        <section class="bk-section" id="bk-form-sec" hidden>
+          <h2 class="bk-h">4. Your details</h2>
+          <div class="bk-form">
+            <div class="bk-summary" id="bk-summary"></div>
+            <label>Name *<input id="bk-name" type="text" maxlength="120" autocomplete="name" required/></label>
+            <label>Email *<input id="bk-email" type="email" maxlength="200" autocomplete="email" required/></label>
+            <label>Phone (optional)<input id="bk-phone" type="tel" maxlength="40" autocomplete="tel"/></label>
+            <label>Message (optional)<textarea id="bk-message" rows="3" maxlength="2000" placeholder="Anything they should know?"></textarea></label>
+            <button type="button" class="bk-submit" id="bk-submit">Send request →</button>
+            <div class="bk-err" id="bk-err"></div>
+          </div>
+        </section>
+
+        <section class="bk-section" id="bk-done-sec" hidden>
+          <div class="bk-done">
+            <div class="bk-done-emoji">✓</div>
+            <h2>Request sent</h2>
+            <p id="bk-done-msg"></p>
+            <a href={`/u/${slug}`} class="bk-link">← Back to profile</a>
+          </div>
+        </section>
+      </div>
+    )}
+  </div>
+
+  <script is:inline define:vars={{ slug, displayName, hasOfferings: offerings.length > 0 }}>
+    if (hasOfferings) (function() {
+      var state = {
+        offeringId: null,
+        offeringTitle: '',
+        durationMin: 30,
+        dayYmd: null,
+        slotStart: null,
+        slotEnd: null,
+        slotsByDay: {},  // ymd -> array
+        availableDays: new Set(),
+      };
+
+      var offBtns = document.querySelectorAll('#bk-offerings .bk-off');
+      var daysEl = document.getElementById('bk-days');
+      var slotsSec = document.getElementById('bk-slots-sec');
+      var slotsEl = document.getElementById('bk-slots');
+      var formSec = document.getElementById('bk-form-sec');
+      var doneSec = document.getElementById('bk-done-sec');
+      var summary = document.getElementById('bk-summary');
+
+      function fmtDayLabel(ymd) {
+        // ymd is Denver-local "YYYY-MM-DD". Build a Date at noon UTC of that date,
+        // then format in Denver TZ to get the right weekday.
+        var parts = ymd.split('-');
+        var d = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]), 18, 0, 0));
+        var wd = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', weekday: 'short' }).format(d);
+        var md = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', month: 'short', day: 'numeric' }).format(d);
+        return { wd: wd, md: md };
+      }
+
+      function fmtTime(iso) {
+        return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+      }
+      function fmtFull(iso) {
+        var d = new Date(iso);
+        var date = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', weekday: 'short', month: 'short', day: 'numeric' }).format(d);
+        return date + ' at ' + fmtTime(iso) + ' MT';
+      }
+
+      function denverYmdNow(offsetDays) {
+        var d = new Date(Date.now() + offsetDays * 86400000);
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+      }
+
+      function buildDays() {
+        daysEl.innerHTML = '';
+        for (var i = 0; i < 14; i++) {
+          var ymd = denverYmdNow(i);
+          var label = fmtDayLabel(ymd);
+          var has = state.availableDays.has(ymd);
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'bk-day' + (has ? '' : ' bk-day-empty');
+          btn.disabled = !has;
+          btn.dataset.ymd = ymd;
+          btn.innerHTML = '<span class="bk-day-wd">' + label.wd + '</span><span class="bk-day-md">' + label.md + '</span><span class="bk-day-dot' + (has ? ' on' : '') + '"></span>';
+          btn.addEventListener('click', function() { pickDay(this.dataset.ymd); });
+          daysEl.appendChild(btn);
+        }
+      }
+
+      function pickOffering(btn) {
+        offBtns.forEach(function(b) { b.classList.remove('bk-off-active'); });
+        btn.classList.add('bk-off-active');
+        state.offeringId = parseInt(btn.dataset.offeringId, 10);
+        state.offeringTitle = btn.querySelector('.bk-off-title').textContent;
+        state.durationMin = parseInt(btn.dataset.duration, 10) || 30;
+        state.dayYmd = null;
+        state.slotStart = null;
+        slotsSec.hidden = true;
+        formSec.hidden = true;
+        doneSec.hidden = true;
+        loadSlots();
+      }
+
+      function loadSlots() {
+        var start = denverYmdNow(0);
+        var end = denverYmdNow(13);
+        daysEl.innerHTML = '<div class="bk-loading">Loading…</div>';
+        fetch('/api/bookings/slots?offering_id=' + state.offeringId + '&start=' + start + '&end=' + end)
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            state.slotsByDay = {};
+            state.availableDays = new Set();
+            if (d && d.ok && Array.isArray(d.slots)) {
+              d.slots.forEach(function(s) {
+                if (!s.available) return;
+                var ymd = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s.slot_start));
+                if (!state.slotsByDay[ymd]) state.slotsByDay[ymd] = [];
+                state.slotsByDay[ymd].push(s);
+                state.availableDays.add(ymd);
+              });
+            }
+            buildDays();
+          }).catch(function() { daysEl.innerHTML = '<div class="bk-loading">Couldn\\'t load slots.</div>'; });
+      }
+
+      function pickDay(ymd) {
+        state.dayYmd = ymd;
+        daysEl.querySelectorAll('.bk-day').forEach(function(b) {
+          b.classList.toggle('bk-day-active', b.dataset.ymd === ymd);
+        });
+        slotsSec.hidden = false;
+        formSec.hidden = true;
+        doneSec.hidden = true;
+        var arr = state.slotsByDay[ymd] || [];
+        slotsEl.innerHTML = '';
+        if (!arr.length) {
+          slotsEl.innerHTML = '<div class="bk-loading">No times available this day.</div>';
+          return;
+        }
+        arr.forEach(function(s) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'bk-slot';
+          b.textContent = fmtTime(s.slot_start);
+          b.dataset.start = s.slot_start;
+          b.dataset.end = s.slot_end;
+          b.addEventListener('click', function() {
+            slotsEl.querySelectorAll('.bk-slot').forEach(function(x) { x.classList.remove('bk-slot-active'); });
+            b.classList.add('bk-slot-active');
+            state.slotStart = b.dataset.start;
+            state.slotEnd = b.dataset.end;
+            formSec.hidden = false;
+            summary.innerHTML = '<strong>' + escapeHtml(state.offeringTitle) + '</strong><br/>' + escapeHtml(fmtFull(state.slotStart));
+            document.getElementById('bk-name').focus();
+            formSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+          slotsEl.appendChild(b);
+        });
+      }
+
+      function escapeHtml(s) {
+        return (s || '').replace(/[&<>"']/g, function(c) {
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+        });
+      }
+
+      offBtns.forEach(function(b) { b.addEventListener('click', function() { pickOffering(this); }); });
+
+      document.getElementById('bk-submit').addEventListener('click', async function() {
+        var btn = this;
+        var errEl = document.getElementById('bk-err');
+        errEl.textContent = '';
+        var name = document.getElementById('bk-name').value.trim();
+        var email = document.getElementById('bk-email').value.trim().toLowerCase();
+        var phone = document.getElementById('bk-phone').value.trim();
+        var message = document.getElementById('bk-message').value.trim();
+        if (!name) { errEl.textContent = 'Please enter your name.'; return; }
+        if (!email || email.indexOf('@') < 0) { errEl.textContent = 'Please enter a valid email.'; return; }
+        if (!state.slotStart || !state.offeringId) { errEl.textContent = 'Pick a time first.'; return; }
+        btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Sending…';
+        try {
+          var r = await fetch('/api/bookings/create', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              profile_slug: slug, offering_id: state.offeringId,
+              slot_start: state.slotStart, slot_end: state.slotEnd,
+              requester_name: name, requester_email: email, requester_phone: phone, message: message,
+            }),
+          });
+          var d = await r.json();
+          if (d && d.ok) {
+            formSec.hidden = true;
+            doneSec.hidden = false;
+            document.getElementById('bk-done-msg').textContent =
+              'Your request was sent. ' + displayName + ' will email you to confirm or decline.';
+            doneSec.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            errEl.textContent = (d && d.error) || 'Could not send request.';
+          }
+        } catch (e) {
+          errEl.textContent = 'Network error — try again.';
+        }
+        btn.disabled = false; btn.textContent = orig;
+      });
+
+      // Auto-load slots for the first offering.
+      if (offBtns.length > 0) pickOffering(offBtns[0]);
+    })();
+  </script>
+
+  <style>
+    .wrap { max-width: 760px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
+    .bk-back { display:inline-block;color:var(--text-sec);text-decoration:none;font-size:13px;margin-bottom:12px; }
+    .bk-back:hover { color: var(--text); }
+    .bk-hero { display:flex;align-items:center;gap:14px;margin-bottom:24px; }
+    .bk-avatar { width:64px;height:64px;border-radius:50%;object-fit:cover;background:var(--surface);border:1.5px solid var(--border); }
+    .bk-avatar-emoji { display:flex;align-items:center;justify-content:center;font-size:32px; }
+    .bk-name { font-family:'Outfit',sans-serif;font-size:24px;font-weight:800;margin:0;line-height:1.2; }
+    .bk-tag { font-size:14px;color:var(--text-sec);margin-top:2px; }
+
+    .bk-empty { text-align:center;padding:48px 24px;background:var(--surface);border:1.5px solid var(--border);border-radius:20px; }
+    .bk-empty-emoji { font-size:48px;margin-bottom:8px; }
+    .bk-empty h2 { font-family:'Outfit',sans-serif;margin:0 0 4px; }
+    .bk-empty p { color:var(--text-sec);margin:0 0 16px; }
+    .bk-link { color:var(--profile-accent,#7C3AED);text-decoration:none;font-weight:600; }
+
+    .bk-section { margin-bottom: 24px; }
+    .bk-h { font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-faint);margin:0 0 12px; }
+
+    .bk-offerings { display:grid;grid-template-columns:1fr;gap:8px; }
+    @media(min-width:600px){ .bk-offerings { grid-template-columns:1fr 1fr; } }
+    .bk-off { text-align:left;background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px;cursor:pointer;font-family:inherit;transition:border-color .15s, background .15s, transform .1s; }
+    .bk-off:hover { border-color: var(--profile-accent,#7C3AED); }
+    .bk-off:active { transform: scale(.99); }
+    .bk-off-active { border-color: var(--profile-accent,#7C3AED); background: color-mix(in srgb, var(--profile-accent,#7C3AED) 6%, #fff); border-width:2px; padding:13px; }
+    .bk-off-title { font-weight:700;font-size:15px;color:var(--text);margin-bottom:4px; }
+    .bk-off-meta { font-size:13px;color:var(--text-sec); display:flex;gap:6px; }
+    .bk-off-desc { font-size:13px;color:var(--text-sec);margin-top:6px;line-height:1.4; }
+
+    .bk-days { display:grid;grid-template-columns:repeat(7,1fr);gap:6px; }
+    @media(max-width:480px){ .bk-days { grid-template-columns:repeat(4,1fr); } }
+    .bk-day { display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;background:#fff;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;font-family:inherit;transition:border-color .15s, background .15s; }
+    .bk-day:hover:not(:disabled) { border-color: var(--profile-accent,#7C3AED); }
+    .bk-day:disabled { opacity:.45;cursor:not-allowed; }
+    .bk-day-wd { font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px; }
+    .bk-day-md { font-size:13px;font-weight:700;color:var(--text); }
+    .bk-day-dot { width:5px;height:5px;border-radius:50%;background:transparent;margin-top:2px; }
+    .bk-day-dot.on { background: var(--profile-accent,#7C3AED); }
+    .bk-day-active { background: color-mix(in srgb, var(--profile-accent,#7C3AED) 8%, #fff); border-color: var(--profile-accent,#7C3AED); border-width:2px; padding:9px 3px; }
+
+    .bk-slots { display:grid;grid-template-columns:repeat(auto-fill, minmax(96px, 1fr));gap:8px; }
+    .bk-slot { padding:10px 8px;background:#fff;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;color:var(--text);transition:border-color .15s, background .15s; }
+    .bk-slot:hover { border-color: var(--profile-accent,#7C3AED); }
+    .bk-slot-active { background: var(--profile-accent,#7C3AED); color:#fff; border-color: var(--profile-accent,#7C3AED); }
+    .bk-loading { font-size:13px;color:var(--text-faint);padding:8px; }
+
+    .bk-form { display:flex;flex-direction:column;gap:10px;background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:16px; }
+    .bk-summary { background:color-mix(in srgb, var(--profile-accent,#7C3AED) 6%, #fff); border:1px solid color-mix(in srgb, var(--profile-accent,#7C3AED) 18%, transparent); border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.4;color:var(--text);margin-bottom:6px; }
+    .bk-form label { display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--text-sec); }
+    .bk-form input, .bk-form textarea { padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-size:14px;background:var(--surface);font-family:inherit; }
+    .bk-submit { margin-top:6px;padding:13px;border-radius:999px;border:none;background:var(--profile-accent,#7C3AED);color:#fff;font-weight:700;font-size:15px;cursor:pointer; }
+    .bk-submit:hover { filter: brightness(1.08); }
+    .bk-submit:active { filter: brightness(0.95); }
+    .bk-submit:disabled { opacity:.6;cursor:wait; }
+    .bk-err { font-size:13px;color:#DC2626;min-height:18px; }
+
+    .bk-done { text-align:center;padding:40px 24px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:14px; }
+    .bk-done-emoji { font-size:48px;color:#10B981; }
+    .bk-done h2 { font-family:'Outfit',sans-serif;margin:8px 0 6px;color:#047857; }
+    .bk-done p { color:#374151;margin:0 0 16px; }
+  </style>
+</Base>
