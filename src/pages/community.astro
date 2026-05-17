@@ -6,7 +6,7 @@ import { ensureGroupsSchema } from '../lib/groups-schema';
 import { ensureDmSchema } from '../lib/dm-schema';
 import {
   NEIGHBORHOODS, resolveNeighborhoodSlug, getNeighborhood,
-  nearbyNeighborhoods, milesBetween, neighborhoodsByArea,
+  nearbyNeighborhoods, milesBetween, neighborhoodsByCity,
 } from '../lib/neighborhoods';
 
 const db = getDB();
@@ -187,16 +187,16 @@ function timeAgo(iso: string): string {
           <div class="bd-picker-row">
             <div class="bd-picker-pin">📍</div>
             <div class="bd-picker-info">
-              <div class="bd-picker-name">{currentNbh?.label || 'All Denver'}</div>
+              <div class="bd-picker-name">{currentNbh?.label || 'All Metro'}</div>
               <div class="bd-picker-meta">
                 {currentNbh ? `${currentNbh.area} · ${totalFlyers} flyer${totalFlyers === 1 ? '' : 's'} active`
                             : `All neighborhoods · ${totalFlyers} flyers`}
               </div>
             </div>
             <select name="nbh" class="bd-picker-select" onchange="this.form.submit()">
-              <option value="all" selected={nbhSlug === 'all'}>All Denver</option>
-              {neighborhoodsByArea().map(group => (
-                <optgroup label={group.area}>
+              <option value="all" selected={nbhSlug === 'all'}>All Denver Metro</option>
+              {neighborhoodsByCity().map(group => (
+                <optgroup label={group.label}>
                   {group.items.map(n => (
                     <option value={n.slug} selected={n.slug === nbhSlug}>{n.label}</option>
                   ))}
@@ -229,7 +229,7 @@ function timeAgo(iso: string): string {
 
       <section class="bd-board-bg">
         <div class="bd-toolbar">
-          <span class="bd-toolbar-label">{currentNbh?.label || 'All Denver'} ·</span>
+          <span class="bd-toolbar-label">{currentNbh?.label || 'All Metro'} ·</span>
           {[
             { k: 'all',      l: 'All' },
             { k: 'offer',    l: '🤝 Offers' },

@@ -1,6 +1,6 @@
 ---
 import Base from '../../../layouts/Base.astro';
-import { NEIGHBORHOODS, resolveNeighborhoodSlug, getNeighborhood } from '../../../lib/neighborhoods';
+import { NEIGHBORHOODS, resolveNeighborhoodSlug, getNeighborhood, neighborhoodsByCity } from '../../../lib/neighborhoods';
 import { BOARD_KINDS } from '../../../lib/community-schema';
 
 const preNbh = resolveNeighborhoodSlug(Astro.url.searchParams.get('nbh'));
@@ -44,8 +44,12 @@ const preNbhInfo = getNeighborhood(preNbh);
         <label class="c-field">
           <span class="c-label">Neighborhood <em>*</em></span>
           <select name="neighborhood" class="c-input" required>
-            {NEIGHBORHOODS.map(n => (
-              <option value={n.slug} selected={n.slug === preNbh}>{n.label}</option>
+            {neighborhoodsByCity().map(group => (
+              <optgroup label={group.label}>
+                {group.items.map(n => (
+                  <option value={n.slug} selected={n.slug === preNbh}>{n.label}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
