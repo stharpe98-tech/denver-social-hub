@@ -2,7 +2,7 @@
 import Base from '../../../layouts/Base.astro';
 import { getDB } from '../../../lib/db';
 import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
-import { PROFILE_TEMPLATES, parseTemplateData, defaultTemplateData } from '../../../lib/profile-templates';
+import { PROFILE_TEMPLATES, parseTemplateData, defaultTemplateData, templateSchema } from '../../../lib/profile-templates';
 
 const rawSlug = Astro.params.slug || '';
 const v = validateSlug(rawSlug);
@@ -141,13 +141,16 @@ const SWATCHES = [
           </div>
 
           <div class="editor-field" id="tpl-data-section">
-            <label>Template-specific fields</label>
+            <label id="tpl-form-heading">Fields for this template</label>
             <div class="tpl-data-help" id="tpl-data-help"></div>
-            <textarea id="tpl-data-textarea" rows="10" maxlength="4000" spellcheck="false">{templateDataJson}</textarea>
-            <div class="tpl-data-row">
-              <button type="button" class="add" id="tpl-data-reset">↺ Load example for this template</button>
-              <span class="tpl-data-status" id="tpl-data-status"></span>
-            </div>
+            <div id="tpl-form"></div>
+            <details class="tpl-raw">
+              <summary>Show raw JSON</summary>
+              <textarea id="tpl-data-textarea" rows="10" maxlength="4000" spellcheck="false">{templateDataJson}</textarea>
+              <div class="tpl-data-row">
+                <span class="tpl-data-status" id="tpl-data-status"></span>
+              </div>
+            </details>
           </div>
         </details>
 
@@ -189,7 +192,7 @@ const SWATCHES = [
   </div>
 
   {authed && (
-    <script is:inline define:vars={{ slug, templateExamples: Object.fromEntries(PROFILE_TEMPLATES.map(t => [t.key, defaultTemplateData(t.key)])), templateLabels: Object.fromEntries(PROFILE_TEMPLATES.map(t => [t.key, t.label])) }}>
+    <script is:inline define:vars={{ slug, currentTemplate, initialTemplateData: templateData, templateExamples: Object.fromEntries(PROFILE_TEMPLATES.map(t => [t.key, defaultTemplateData(t.key)])), templateLabels: Object.fromEntries(PROFILE_TEMPLATES.map(t => [t.key, t.label])), templateSchemas: Object.fromEntries(PROFILE_TEMPLATES.map(t => [t.key, templateSchema(t.key)])) }}>
       (function() {
         var status = document.getElementById('editor-status');
         function setStatus(s, color) {
@@ -286,6 +289,155 @@ const SWATCHES = [
           d.querySelector('.link-icon').focus();
         });
 
+        // Template data state — single source of truth
+        var tplState = (initialTemplateData && typeof initialTemplateData === 'object') ? initialTemplateData : {};
+        var activeTplKey = currentTemplate || 'host';
+        var tplTa = document.getElementById('tpl-data-textarea');
+        var tplStatus = document.getElementById('tpl-data-status');
+        var saveTimer = null;
+
+        function scheduleSave() {
+          if (saveTimer) clearTimeout(saveTimer);
+          setSaving();
+          saveTimer = setTimeout(function() {
+            var json = JSON.stringify(tplState);
+            if (tplTa) tplTa.value = json;
+            save('template_data', json);
+          }, 500);
+        }
+
+        // Form renderer
+        function el(tag, attrs, children) {
+          var n = document.createElement(tag);
+          if (attrs) for (var k in attrs) {
+            if (k === 'class') n.className = attrs[k];
+            else if (k === 'text') n.textContent = attrs[k];
+            else n.setAttribute(k, attrs[k]);
+          }
+          if (children) children.forEach(function(c){ if (c) n.appendChild(c); });
+          return n;
+        }
+
+        function renderField(field, value, onChange) {
+          var wrap = el('div', { class: 'tf-field' });
+          var label = el('label', { class: 'tf-label', text: field.label });
+          wrap.appendChild(label);
+          if (field.help) wrap.appendChild(el('div', { class: 'tf-help', text: field.help }));
+
+          if (field.type === 'text' || field.type === 'url' || field.type === 'number') {
+            var input = document.createElement('input');
+            input.type = field.type === 'number' ? 'number' : (field.type === 'url' ? 'url' : 'text');
+            if (field.placeholder) input.placeholder = field.placeholder;
+            input.value = value == null ? '' : String(value);
+            input.className = 'tf-input';
+            input.addEventListener('input', function() {
+              var v = input.value;
+              if (field.type === 'number') {
+                if (v === '') { onChange(undefined); }
+                else { var n = Number(v); onChange(isNaN(n) ? v : n); }
+              } else {
+                onChange(v);
+              }
+            });
+            wrap.appendChild(input);
+          } else if (field.type === 'textarea') {
+            var ta = document.createElement('textarea');
+            ta.rows = 3;
+            if (field.placeholder) ta.placeholder = field.placeholder;
+            ta.value = value == null ? '' : String(value);
+            ta.className = 'tf-input';
+            ta.addEventListener('input', function() { onChange(ta.value); });
+            wrap.appendChild(ta);
+          } else if (field.type === 'string-array') {
+            var inp = document.createElement('input');
+            inp.type = 'text';
+            if (field.placeholder) inp.placeholder = field.placeholder;
+            inp.value = Array.isArray(value) ? value.join(', ') : (value == null ? '' : String(value));
+            inp.className = 'tf-input';
+            inp.addEventListener('input', function() {
+              var parts = inp.value.split(',').map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+              onChange(parts);
+            });
+            wrap.appendChild(inp);
+          } else if (field.type === 'object') {
+            var obj = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+            var card = el('div', { class: 'tf-obj' });
+            (field.fields || []).forEach(function(sub) {
+              card.appendChild(renderField(sub, obj[sub.key], function(v) {
+                if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) { delete obj[sub.key]; }
+                else { obj[sub.key] = v; }
+                onChange(Object.keys(obj).length ? obj : undefined);
+              }));
+            });
+            wrap.appendChild(card);
+          } else if (field.type === 'object-array') {
+            var arr = Array.isArray(value) ? value.slice() : [];
+            var listEl = el('div', { class: 'tf-list' });
+            var addBtn = el('button', { type: 'button', class: 'add' });
+            addBtn.textContent = '+ Add another';
+
+            function commit() {
+              onChange(arr.length ? arr : undefined);
+              redraw();
+            }
+            function redraw() {
+              listEl.innerHTML = '';
+              arr.forEach(function(row, idx) {
+                var rowEl = el('div', { class: 'tf-row' });
+                var rmBtn = el('button', { type: 'button', class: 'tf-rm' });
+                rmBtn.textContent = '× Remove';
+                rmBtn.addEventListener('click', function() {
+                  arr.splice(idx, 1);
+                  commit();
+                });
+                rowEl.appendChild(rmBtn);
+                (field.fields || []).forEach(function(sub) {
+                  rowEl.appendChild(renderField(sub, row[sub.key], function(v) {
+                    if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) { delete row[sub.key]; }
+                    else { row[sub.key] = v; }
+                    onChange(arr.length ? arr : undefined);
+                  }));
+                });
+                listEl.appendChild(rowEl);
+              });
+              addBtn.disabled = !!(field.max && arr.length >= field.max);
+            }
+            addBtn.addEventListener('click', function() {
+              if (field.max && arr.length >= field.max) return;
+              arr.push({});
+              commit();
+            });
+            redraw();
+            wrap.appendChild(listEl);
+            wrap.appendChild(addBtn);
+          }
+          return wrap;
+        }
+
+        function renderTemplateForm() {
+          var container = document.getElementById('tpl-form');
+          var heading = document.getElementById('tpl-form-heading');
+          var help = document.getElementById('tpl-data-help');
+          if (!container) return;
+          container.innerHTML = '';
+          var schema = templateSchemas[activeTplKey] || [];
+          var label = templateLabels[activeTplKey] || activeTplKey;
+          if (heading) heading.textContent = 'Fields for the ' + label + ' template';
+          if (help) {
+            help.textContent = schema.length
+              ? 'Fill in only what applies — empty fields stay hidden on your page.'
+              : 'This template uses only the universal fields above (name, bio, photo, events).';
+          }
+          schema.forEach(function(field) {
+            container.appendChild(renderField(field, tplState[field.key], function(v) {
+              if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) { delete tplState[field.key]; }
+              else { tplState[field.key] = v; }
+              scheduleSave();
+            }));
+          });
+          if (tplTa) tplTa.value = JSON.stringify(tplState);
+        }
+
         // Template picker
         var tplGrid = document.getElementById('tpl-grid');
         if (tplGrid) {
@@ -294,46 +446,32 @@ const SWATCHES = [
               var key = card.getAttribute('data-tpl');
               tplGrid.querySelectorAll('.tpl-card').forEach(function(c){ c.classList.remove('tpl-active'); });
               card.classList.add('tpl-active');
+              activeTplKey = key;
               save('template', key);
-              updateTplHelp(key);
+              renderTemplateForm();
             });
           });
         }
-        function updateTplHelp(key) {
-          var h = document.getElementById('tpl-data-help');
-          if (!h) return;
-          var ex = templateExamples[key] || {};
-          var keys = Object.keys(ex);
-          h.textContent = keys.length
-            ? 'Edit the JSON below to fill in: ' + keys.join(', ') + '. Click "Load example" to start from a template.'
-            : 'This template uses only the universal fields above (name, bio, photo, events).';
-        }
-        var currentTpl = document.querySelector('.tpl-card.tpl-active');
-        if (currentTpl) updateTplHelp(currentTpl.getAttribute('data-tpl'));
 
-        // Template-data textarea (free-form JSON for the per-template extras)
-        var tplTa = document.getElementById('tpl-data-textarea');
-        var tplStatus = document.getElementById('tpl-data-status');
+        renderTemplateForm();
+
+        // Raw JSON power-user edit
         if (tplTa) {
           tplTa.addEventListener('blur', function() {
             var raw = tplTa.value.trim() || '{}';
-            try { JSON.parse(raw); } catch (e) {
+            var parsed;
+            try { parsed = JSON.parse(raw); } catch (e) {
               if (tplStatus) { tplStatus.textContent = '✗ Invalid JSON'; tplStatus.style.color = '#DC2626'; }
               return;
             }
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+              if (tplStatus) { tplStatus.textContent = '✗ Must be a JSON object'; tplStatus.style.color = '#DC2626'; }
+              return;
+            }
             if (tplStatus) { tplStatus.textContent = ''; }
-            save('template_data', raw);
-          });
-        }
-        var tplReset = document.getElementById('tpl-data-reset');
-        if (tplReset) {
-          tplReset.addEventListener('click', function() {
-            var active = document.querySelector('.tpl-card.tpl-active');
-            var key = active ? active.getAttribute('data-tpl') : 'host';
-            var ex = templateExamples[key] || {};
-            var json = JSON.stringify(ex, null, 2);
-            tplTa.value = json;
-            save('template_data', json);
+            tplState = parsed;
+            renderTemplateForm();
+            scheduleSave();
           });
         }
 
@@ -481,6 +619,21 @@ const SWATCHES = [
     .tpl-data-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
     .tpl-data-row .add { width: auto; flex: 0 0 auto; padding: 6px 12px; margin-top: 0; }
     .tpl-data-status { font-size: 12px; color: #047857; }
+
+    /* Schema-driven template form */
+    #tpl-form { display: flex; flex-direction: column; gap: var(--space-3); }
+    .tf-field { display: flex; flex-direction: column; }
+    .tf-label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint); margin-bottom: 4px; }
+    .tf-help { font-size: 12px; color: var(--text-sec); margin-bottom: 4px; }
+    .tf-input { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 14px; background: #fff; font-family: inherit; }
+    .tf-obj { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+    .tf-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    .tf-row { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 12px; padding-right: 64px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+    .tf-rm { position: absolute; top: 8px; right: 8px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; font-size: 11px; color: var(--text-faint); cursor: pointer; }
+    .tf-rm:hover { color: #DC2626; border-color: #FECACA; }
+    .tpl-raw { margin-top: var(--space-3); }
+    .tpl-raw > summary { cursor: pointer; font-size: 12px; color: var(--text-faint); padding: 4px 0; user-select: none; }
+    .tpl-raw > summary:hover { color: var(--text-sec); }
 
     details.more {
       margin-top: var(--space-3);
