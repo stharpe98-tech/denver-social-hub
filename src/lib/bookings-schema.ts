@@ -62,6 +62,17 @@ export async function ensureBookingsSchema(db: D1Database): Promise<void> {
   `).run();
   await db.prepare(`CREATE INDEX IF NOT EXISTS idx_bookings_slug ON bookings(profile_slug, status, slot_start)`).run();
   await db.prepare(`CREATE INDEX IF NOT EXISTS idx_bookings_token ON bookings(confirm_token)`).run();
+
+  // Master on/off switch for the reservation engine on each profile.
+  // Off by default — nobody is opted in until they activate it from /dashboard/booking-setup.
+  try {
+    const pCols = await db.prepare("PRAGMA table_info(profiles)").all();
+    const pNames = new Set((pCols.results ?? []).map((r: any) => r.name));
+    if (!pNames.has('has_booking_tool')) {
+      try { await db.prepare(`ALTER TABLE profiles ADD COLUMN has_booking_tool INTEGER DEFAULT 0`).run(); } catch {}
+    }
+  } catch {}
+  try { await db.prepare(`CREATE INDEX IF NOT EXISTS idx_profiles_booking_enabled ON profiles(has_booking_tool)`).run(); } catch {}
 }
 
 export function randomToken(len = 24): string {

@@ -14,15 +14,16 @@ if (!db) return new Response('DB unavailable', { status: 500 });
 await ensureBookingsSchema(db);
 
 const profile = await db.prepare(
-  `SELECT slug, display_name, headline, photo_emoji, accent_color, avatar_photo_url, status
+  `SELECT slug, display_name, headline, photo_emoji, accent_color, avatar_photo_url, status, has_booking_tool
    FROM profiles WHERE slug=?`
 ).bind(slug).first() as any;
 if (!profile || profile.status !== 'live') return new Response('Not found', { status: 404 });
 
-const offerings = ((await db.prepare(
+const bookingEnabled = Number(profile.has_booking_tool) === 1;
+const offerings = bookingEnabled ? (((await db.prepare(
   `SELECT id, title, description, duration_min, price_text, capacity_per_slot
    FROM bookable_offerings WHERE profile_slug=? AND archived=0 ORDER BY id ASC`
-).bind(slug).all())?.results || []) as any[];
+).bind(slug).all())?.results) || []) as any[] : [];
 
 const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.accent_color : '#7C3AED';
 const displayName = profile.display_name || slug;

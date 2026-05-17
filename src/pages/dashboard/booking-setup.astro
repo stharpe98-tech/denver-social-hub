@@ -1,0 +1,711 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+import { getCurrentProfile } from '../../lib/profile-auth';
+import { ensureBookingsSchema } from '../../lib/bookings-schema';
+
+const db = getDB();
+if (!db) return new Response('DB unavailable', { status: 500 });
+await ensureBookingsSchema(db);
+
+const me = await getCurrentProfile(Astro.cookies, db, Astro.request);
+if (!me) return Astro.redirect('/sign-in?next=/dashboard/booking-setup');
+
+const slug = me.slug;
+
+const profile = await db.prepare(
+  `SELECT slug, display_name, has_booking_tool FROM profiles WHERE slug=?`
+).bind(slug).first() as any;
+const bookingEnabled = Number(profile?.has_booking_tool) === 1;
+
+const offerings = ((await db.prepare(
+  `SELECT id, title, description, duration_min, price_text, capacity_per_slot, archived
+   FROM bookable_offerings WHERE profile_slug=? ORDER BY archived ASC, id ASC`
+).bind(slug).all())?.results || []) as any[];
+
+let availabilityByOffering: Record<string, any[]> = {};
+const activeIds = offerings.filter(o => !o.archived).map(o => o.id);
+if (activeIds.length) {
+  const rows = ((await db.prepare(
+    `SELECT id, offering_id, day_of_week, start_time, end_time
+     FROM offering_availability WHERE offering_id IN (${activeIds.map(() => '?').join(',')})
+     ORDER BY day_of_week ASC, start_time ASC`
+  ).bind(...activeIds).all())?.results || []) as any[];
+  for (const r of rows) {
+    const k = String(r.offering_id);
+    (availabilityByOffering[k] = availabilityByOffering[k] || []).push(r);
+  }
+}
+
+const pendingCount = Number(((await db.prepare(
+  `SELECT COUNT(*) AS c FROM bookings WHERE profile_slug=? AND status='pending'`
+).bind(slug).first()) as any)?.c || 0);
+
+const displayName = profile?.display_name || slug;
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+---
+<Base title="Booking setup — Denver Social" description="Configure your reservation engine.">
+  <div class="wrap">
+    <header class="bs-head">
+      <div class="bs-head-text">
+        <p class="bs-eyebrow">Reservation engine</p>
+        <h1 class="bs-title">Booking setup</h1>
+        <p class="bs-sub">Activate your booking tool, define services, and set your weekly hours.</p>
+      </div>
+      <div class="bs-head-links">
+        <a class="btn-sec" href={`/u/${slug}/bookings`}>
+          Reservations
+          {pendingCount > 0 && <span class="bs-pill">{pendingCount}</span>}
+        </a>
+        <a class="btn-sec" href={`/u/${slug}/book`} target="_blank">View public page ↗</a>
+      </div>
+    </header>
+
+    <section class="bs-card" data-section="toggle">
+      <div class="bs-toggle-row">
+        <div>
+          <h2 class="bs-card-title">Booking tool</h2>
+          <p class="bs-card-sub">When activated, <code>/u/{slug}/book</code> becomes a live booking page.</p>
+        </div>
+        <label class="bs-switch">
+          <input type="checkbox" id="bs-toggle" checked={bookingEnabled} data-slug={slug}/>
+          <span class="bs-switch-track"><span class="bs-switch-knob"></span></span>
+          <span class="bs-switch-label" data-on={bookingEnabled ? '1' : '0'}>
+            {bookingEnabled ? 'Active' : 'Off'}
+          </span>
+        </label>
+      </div>
+      <div class="bs-status" id="bs-toggle-status" aria-live="polite"></div>
+    </section>
+
+    <section class="bs-card" data-section="services">
+      <div class="bs-card-head">
+        <div>
+          <h2 class="bs-card-title">Services</h2>
+          <p class="bs-card-sub">Add the appointment types people can book with you.</p>
+        </div>
+        <button type="button" class="btn-cta" id="bs-add-service">+ Add service</button>
+      </div>
+
+      <div id="bs-services" data-slug={slug}>
+        {offerings.length === 0 ? (
+          <div class="bs-empty">
+            <div class="bs-empty-emoji">📅</div>
+            <p class="bs-empty-h">No services yet</p>
+            <p class="bs-empty-sub">Add your first service to start taking reservations.</p>
+          </div>
+        ) : (
+          offerings.map(o => (
+            <article class="bs-svc" data-id={o.id} data-archived={o.archived ? '1' : '0'}>
+              <header class="bs-svc-head">
+                <input
+                  class="bs-svc-title"
+                  data-field="title"
+                  value={o.title || ''}
+                  maxlength="120"
+                  placeholder="e.g. 30-min consult"
+                />
+                <button
+                  type="button"
+                  class="bs-icon"
+                  data-action={o.archived ? 'unarchive' : 'archive'}
+                  title={o.archived ? 'Unarchive' : 'Archive'}
+                  aria-label={o.archived ? 'Unarchive service' : 'Archive service'}
+                >{o.archived ? '↺' : '×'}</button>
+              </header>
+
+              <div class="bs-svc-grid">
+                <label class="bs-field">
+                  <span>Duration (min)</span>
+                  <input type="number" min="5" max="480" step="5" data-field="duration_min" value={o.duration_min || 30}/>
+                </label>
+                <label class="bs-field">
+                  <span>Price (text)</span>
+                  <input type="text" data-field="price_text" value={o.price_text || ''} maxlength="60" placeholder="$50 or Free"/>
+                </label>
+                <label class="bs-field">
+                  <span>Capacity / slot</span>
+                  <input type="number" min="1" max="100" step="1" data-field="capacity_per_slot" value={o.capacity_per_slot || 1}/>
+                </label>
+              </div>
+
+              <label class="bs-field">
+                <span>Description</span>
+                <textarea data-field="description" rows="2" maxlength="2000" placeholder="What's included…">{o.description || ''}</textarea>
+              </label>
+
+              {!o.archived && (
+                <div class="bs-hours">
+                  <p class="bs-hours-label">Weekly hours</p>
+                  <div class="bs-hours-list" data-offering-id={o.id}>
+                    {(availabilityByOffering[String(o.id)] || []).map(rule => (
+                      <div class="bs-hour" data-rule-id={rule.id}>
+                        <select data-field="day_of_week">
+                          {[0,1,2,3,4,5,6].map(d => (
+                            <option value={d} selected={d === rule.day_of_week}>{DAY_NAMES[d]}</option>
+                          ))}
+                        </select>
+                        <input type="time" data-field="start_time" value={rule.start_time}/>
+                        <span class="bs-hour-sep">to</span>
+                        <input type="time" data-field="end_time" value={rule.end_time}/>
+                        <button type="button" class="bs-icon" data-action="delete-rule" aria-label="Remove window">×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" class="bs-add-hour" data-action="add-rule">+ Add window</button>
+                </div>
+              )}
+
+              <div class="bs-svc-foot">
+                <span class="bs-svc-status" aria-live="polite"></span>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+    </section>
+  </div>
+
+  <style>
+    .wrap {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: var(--space-5) var(--space-4) var(--space-9);
+    }
+
+    /* Header */
+    .bs-head {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
+    }
+    .bs-eyebrow {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin: 0 0 var(--space-1);
+    }
+    .bs-title {
+      font-family: var(--font-display, sans-serif);
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--text);
+      margin: 0 0 var(--space-2);
+    }
+    .bs-sub {
+      color: var(--text-sec);
+      font-size: 15px;
+      margin: 0;
+    }
+    .bs-head-links {
+      display: flex;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+    }
+    .bs-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 6px;
+      margin-left: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    @media (min-width: 720px) {
+      .bs-head {
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+      }
+      .bs-title { font-size: 36px; }
+    }
+
+    /* Cards */
+    .bs-card {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg, 20px);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+      box-shadow: var(--card-shadow, 0 1px 3px rgba(0,0,0,0.06));
+    }
+    .bs-card-head {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+    .bs-card-title {
+      font-family: var(--font-display, sans-serif);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 4px;
+    }
+    .bs-card-sub {
+      color: var(--text-sec);
+      font-size: 14px;
+      margin: 0;
+    }
+    .bs-card-sub code {
+      background: var(--surface);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    @media (min-width: 600px) {
+      .bs-card { padding: var(--space-5); }
+      .bs-card-head {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+    }
+
+    /* Toggle */
+    .bs-toggle-row {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+    @media (min-width: 600px) {
+      .bs-toggle-row {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-4);
+      }
+    }
+    .bs-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-3);
+      cursor: pointer;
+      user-select: none;
+    }
+    .bs-switch input { position: absolute; opacity: 0; pointer-events: none; }
+    .bs-switch-track {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 30px;
+      background: var(--border);
+      border-radius: 999px;
+      transition: background 0.2s;
+    }
+    .bs-switch-knob {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      background: #fff;
+      border-radius: 999px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+    .bs-switch input:checked + .bs-switch-track { background: var(--accent); }
+    .bs-switch input:checked + .bs-switch-track .bs-switch-knob { transform: translateX(22px); }
+    .bs-switch input:focus-visible + .bs-switch-track {
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .bs-switch-label {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-sec);
+    }
+    .bs-switch-label[data-on="1"] { color: var(--accent); }
+    .bs-status {
+      font-size: 13px;
+      color: var(--text-sec);
+      margin-top: var(--space-2);
+      min-height: 1em;
+    }
+    .bs-status[data-tone="ok"] { color: var(--green, #10B981); }
+    .bs-status[data-tone="err"] { color: var(--red, #DC2626); }
+
+    /* Empty */
+    .bs-empty {
+      text-align: center;
+      padding: var(--space-6) var(--space-4);
+      background: var(--surface);
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius, 14px);
+    }
+    .bs-empty-emoji { font-size: 32px; margin-bottom: var(--space-2); }
+    .bs-empty-h { font-weight: 700; color: var(--text); margin: 0 0 4px; }
+    .bs-empty-sub { color: var(--text-sec); font-size: 14px; margin: 0; }
+
+    /* Service card */
+    .bs-svc {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius, 14px);
+      padding: var(--space-3);
+      margin-bottom: var(--space-3);
+    }
+    .bs-svc[data-archived="1"] { opacity: 0.6; }
+    .bs-svc-head {
+      display: flex;
+      gap: var(--space-2);
+      align-items: center;
+      margin-bottom: var(--space-3);
+    }
+    .bs-svc-title {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .bs-svc-title:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+
+    .bs-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      color: var(--text-sec);
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.15s;
+    }
+    .bs-icon:hover { border-color: var(--accent); color: var(--accent); }
+    .bs-icon:active { background: var(--surface-hover); }
+
+    .bs-svc-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+    }
+    @media (min-width: 520px) {
+      .bs-svc-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .bs-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-faint);
+    }
+    .bs-field input,
+    .bs-field textarea,
+    .bs-field select {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+      text-transform: none;
+      letter-spacing: normal;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .bs-field input:focus,
+    .bs-field textarea:focus,
+    .bs-field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    /* Hours */
+    .bs-hours {
+      margin-top: var(--space-3);
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--border);
+    }
+    .bs-hours-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-faint);
+      margin: 0 0 var(--space-2);
+    }
+    .bs-hours-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-bottom: var(--space-2);
+    }
+    .bs-hour {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto;
+      gap: var(--space-2);
+      align-items: center;
+    }
+    .bs-hour select,
+    .bs-hour input[type="time"] {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      min-width: 0;
+    }
+    .bs-hour select:focus,
+    .bs-hour input[type="time"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .bs-hour-sep { font-size: 12px; color: var(--text-faint); }
+    .bs-hour .bs-icon { width: 32px; height: 32px; font-size: 14px; }
+
+    .bs-add-hour {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      background: transparent;
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      color: var(--text-sec);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .bs-add-hour:hover { border-color: var(--accent); color: var(--accent); }
+    .bs-add-hour:active { background: var(--accent-dim); }
+
+    .bs-svc-foot {
+      margin-top: var(--space-2);
+      min-height: 18px;
+    }
+    .bs-svc-status {
+      font-size: 12px;
+      color: var(--text-sec);
+    }
+    .bs-svc-status[data-tone="ok"] { color: var(--green, #10B981); }
+    .bs-svc-status[data-tone="err"] { color: var(--red, #DC2626); }
+
+    #bs-add-service { align-self: flex-start; }
+  </style>
+
+  <script is:inline define:vars={{ slug }}>
+    (function () {
+      const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+      function jpost(url, body) {
+        return fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }).then(async (r) => {
+          let j = null;
+          try { j = await r.json(); } catch {}
+          return j || { ok: r.ok };
+        });
+      }
+
+      function status(el, msg, tone) {
+        if (!el) return;
+        el.textContent = msg || '';
+        if (tone) el.setAttribute('data-tone', tone);
+        else el.removeAttribute('data-tone');
+        if (msg) {
+          clearTimeout(el._t);
+          el._t = setTimeout(() => { el.textContent = ''; el.removeAttribute('data-tone'); }, 2500);
+        }
+      }
+
+      // --- Master toggle ---
+      const toggle = document.getElementById('bs-toggle');
+      const toggleStatus = document.getElementById('bs-toggle-status');
+      const toggleLabel = document.querySelector('.bs-switch-label');
+      if (toggle) {
+        toggle.addEventListener('change', async () => {
+          const enabled = toggle.checked;
+          toggle.disabled = true;
+          const r = await jpost('/api/bookings/toggle', { slug, enabled });
+          toggle.disabled = false;
+          if (!r.ok) {
+            toggle.checked = !enabled;
+            status(toggleStatus, r.error || 'Could not save', 'err');
+            return;
+          }
+          if (toggleLabel) {
+            toggleLabel.textContent = enabled ? 'Active' : 'Off';
+            toggleLabel.setAttribute('data-on', enabled ? '1' : '0');
+          }
+          status(toggleStatus, enabled ? 'Booking tool activated.' : 'Booking tool turned off.', 'ok');
+        });
+      }
+
+      // --- Services ---
+      const list = document.getElementById('bs-services');
+      function debounce(fn, ms) {
+        let t; return function () {
+          clearTimeout(t);
+          const args = arguments, ctx = this;
+          t = setTimeout(() => fn.apply(ctx, args), ms);
+        };
+      }
+
+      function svcStatus(svc, msg, tone) {
+        const s = svc.querySelector('.bs-svc-status');
+        status(s, msg, tone);
+      }
+
+      async function saveField(svc, field) {
+        const id = parseInt(svc.dataset.id, 10);
+        const el = svc.querySelector('[data-field="' + field + '"]');
+        if (!el) return;
+        const raw = el.value;
+        const payload = { action: 'update', id, slug };
+        if (field === 'duration_min' || field === 'capacity_per_slot') {
+          payload[field] = parseInt(raw, 10);
+          if (!Number.isFinite(payload[field])) return;
+        } else {
+          payload[field] = raw;
+        }
+        const r = await jpost('/api/bookings/offerings', payload);
+        if (!r.ok) svcStatus(svc, r.error || 'Save failed', 'err');
+        else svcStatus(svc, 'Saved', 'ok');
+      }
+
+      async function archiveSvc(svc, archive) {
+        const id = parseInt(svc.dataset.id, 10);
+        const r = await jpost('/api/bookings/offerings', {
+          action: archive ? 'archive' : 'unarchive', id, slug,
+        });
+        if (!r.ok) { svcStatus(svc, r.error || 'Could not update', 'err'); return; }
+        location.reload();
+      }
+
+      async function addRule(offeringId, hoursList) {
+        const r = await jpost('/api/bookings/availability', {
+          action: 'create',
+          offering_id: offeringId,
+          day_of_week: 1,
+          start_time: '09:00',
+          end_time: '17:00',
+        });
+        if (!r.ok || !r.id) return;
+        const row = renderRule({ id: r.id, day_of_week: 1, start_time: '09:00', end_time: '17:00' });
+        hoursList.appendChild(row);
+        wireRule(row, offeringId);
+      }
+
+      function renderRule(rule) {
+        const div = document.createElement('div');
+        div.className = 'bs-hour';
+        div.dataset.ruleId = String(rule.id);
+        let opts = '';
+        for (let d = 0; d < 7; d++) {
+          opts += '<option value="' + d + '"' + (d === rule.day_of_week ? ' selected' : '') + '>' + DAY_NAMES[d] + '</option>';
+        }
+        div.innerHTML =
+          '<select data-field="day_of_week">' + opts + '</select>' +
+          '<input type="time" data-field="start_time" value="' + rule.start_time + '"/>' +
+          '<span class="bs-hour-sep">to</span>' +
+          '<input type="time" data-field="end_time" value="' + rule.end_time + '"/>' +
+          '<button type="button" class="bs-icon" data-action="delete-rule" aria-label="Remove window">×</button>';
+        return div;
+      }
+
+      async function updateRule(row) {
+        // Availability API has no update — delete + recreate.
+        const id = parseInt(row.dataset.ruleId, 10);
+        const dow = parseInt(row.querySelector('[data-field="day_of_week"]').value, 10);
+        const start = row.querySelector('[data-field="start_time"]').value;
+        const end = row.querySelector('[data-field="end_time"]').value;
+        if (!start || !end || !(start < end)) return;
+        const list = row.parentElement;
+        const offeringId = parseInt(list.dataset.offeringId, 10);
+        await jpost('/api/bookings/availability', { action: 'delete', id });
+        const r = await jpost('/api/bookings/availability', {
+          action: 'create',
+          offering_id: offeringId,
+          day_of_week: dow,
+          start_time: start,
+          end_time: end,
+        });
+        if (r.ok && r.id) row.dataset.ruleId = String(r.id);
+      }
+
+      function wireRule(row, offeringId) {
+        row.addEventListener('change', () => updateRule(row));
+        const del = row.querySelector('[data-action="delete-rule"]');
+        if (del) del.addEventListener('click', async () => {
+          const id = parseInt(row.dataset.ruleId, 10);
+          await jpost('/api/bookings/availability', { action: 'delete', id });
+          row.remove();
+        });
+      }
+
+      function wireSvc(svc) {
+        if (svc._wired) return;
+        svc._wired = true;
+        svc.querySelectorAll('[data-field]').forEach((el) => {
+          if (el.closest('.bs-hour')) return; // hours handled separately
+          const field = el.dataset.field;
+          const handler = debounce(() => saveField(svc, field), 600);
+          el.addEventListener('input', handler);
+          el.addEventListener('change', () => saveField(svc, field));
+        });
+        const head = svc.querySelector('.bs-svc-head .bs-icon');
+        if (head) head.addEventListener('click', () => {
+          const archive = head.dataset.action === 'archive';
+          if (archive && !confirm('Archive this service? It will stop appearing on your booking page.')) return;
+          archiveSvc(svc, archive);
+        });
+        const hoursList = svc.querySelector('.bs-hours-list');
+        if (hoursList) {
+          const offeringId = parseInt(hoursList.dataset.offeringId, 10);
+          hoursList.querySelectorAll('.bs-hour').forEach((r) => wireRule(r, offeringId));
+          const add = svc.querySelector('[data-action="add-rule"]');
+          if (add) add.addEventListener('click', () => addRule(offeringId, hoursList));
+        }
+      }
+
+      list.querySelectorAll('.bs-svc').forEach(wireSvc);
+
+      const addBtn = document.getElementById('bs-add-service');
+      if (addBtn) {
+        addBtn.addEventListener('click', async () => {
+          addBtn.disabled = true;
+          const r = await jpost('/api/bookings/offerings', {
+            action: 'create',
+            slug,
+            title: 'New service',
+            duration_min: 30,
+            capacity_per_slot: 1,
+          });
+          addBtn.disabled = false;
+          if (!r.ok) { alert(r.error || 'Could not add service'); return; }
+          location.reload();
+        });
+      }
+    })();
+  </script>
+</Base>
