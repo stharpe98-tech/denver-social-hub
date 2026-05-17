@@ -32,7 +32,6 @@ type Card = {
   goingCount: number;
   spotsLeft: number;
   hostName: string;
-  karmaMin: number;
   attendeeCount: number;
   dishCount: number;
   externalSource?: string;
@@ -78,7 +77,7 @@ try {
         sortMonth: sm, sortDay: sd,
         location: ev.zone || ev.location || 'Denver',
         fillPct: pct, goingCount: taken, spotsLeft: left,
-        hostName: ev.host_name || '', karmaMin: ev.karma_min || 0,
+        hostName: ev.host_name || '',
         attendeeCount: 0, dishCount: 0,
         externalSource: ev.external_source || '',
         externalUrl: ev.external_url || '',
@@ -114,7 +113,7 @@ try {
         sortMonth: sm, sortDay: sd,
         location: p.location || 'Denver',
         fillPct: 0, goingCount: p.attendee_count || 0, spotsLeft: -1,
-        hostName: '', karmaMin: 0,
+        hostName: '',
         attendeeCount: p.attendee_count || 0, dishCount: p.dish_count || 0,
       });
     }
@@ -239,7 +238,6 @@ try {
               {c.externalSource && (
                 <span class="tag tag-purple">via {c.externalSource}</span>
               )}
-              {c.karmaMin >= 1 && <span class="tag tag-yellow">{c.karmaMin}+ karma</span>}
               {(c.kind === 'event' && c.spotsLeft !== 0 && c.spotsLeft !== -1 && 4 > c.spotsLeft) && <span class="tag tag-orange">last {c.spotsLeft} spots</span>}
               {c.kind === 'event' && c.spotsLeft === 0 && <span class="tag" style="background:#FEE2E2;color:#991B1B">Full</span>}
             </div>

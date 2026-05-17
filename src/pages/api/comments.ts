@@ -22,9 +22,9 @@ export const POST = async ({ request }: { request: Request }) => {
 
   const id = crypto.randomUUID();
   await db.prepare(
-    `INSERT INTO comments (id, event_id, user_id, body, parent_id, author_name, author_karma)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, eventId, 'anon', body, parentId, authorName, 0).run();
+    `INSERT INTO comments (id, event_id, user_id, body, parent_id, author_name)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).bind(id, eventId, 'anon', body, parentId, authorName).run();
 
   return new Response(null, { status: 302, headers: { 'Location': `/events/${eventId}` } });
 };

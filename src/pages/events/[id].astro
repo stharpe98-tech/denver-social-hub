@@ -29,15 +29,15 @@ try {
   if (db && id) {
     event = await db.prepare("SELECT * FROM events WHERE id=?").bind(id).first();
     const r = await db.prepare(
-      "SELECT r.*, m.reddit_username, m.karma, m.reliability_score, m.check_in_count FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL AND (r.status IS NULL OR r.status = 'going') ORDER BY r.created_at"
+      "SELECT r.* FROM event_rsvps r WHERE r.event_id=? AND r.waitlist_position IS NULL AND (r.status IS NULL OR r.status = 'going') ORDER BY r.created_at"
     ).bind(id).all();
     rsvps = r?.results || [];
     const mb = await db.prepare(
-      "SELECT r.*, m.reddit_username FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NULL AND r.status='maybe' ORDER BY r.created_at"
+      "SELECT r.* FROM event_rsvps r WHERE r.event_id=? AND r.waitlist_position IS NULL AND r.status='maybe' ORDER BY r.created_at"
     ).bind(id).all();
     maybeList = (mb?.results || []) as any[];
     const w = await db.prepare(
-      "SELECT r.*, m.reddit_username, m.karma FROM event_rsvps r LEFT JOIN members m ON r.member_email=m.email WHERE r.event_id=? AND r.waitlist_position IS NOT NULL ORDER BY r.waitlist_position"
+      "SELECT r.* FROM event_rsvps r WHERE r.event_id=? AND r.waitlist_position IS NOT NULL ORDER BY r.waitlist_position"
     ).bind(id).all();
     waitlist = w?.results || [];
     const c = await db.prepare("SELECT * FROM comments WHERE event_id=? ORDER BY created_at ASC").bind(id).all();
@@ -58,7 +58,7 @@ try {
     }
     await ensureCohostsSchema(db);
     const ch = await db.prepare(`
-      SELECT ec.member_email, m.name as display_name, m.reddit_username, m.discord_username
+      SELECT ec.member_email, m.name as display_name
       FROM event_cohosts ec
       LEFT JOIN members m ON LOWER(m.email) = LOWER(ec.member_email)
       WHERE ec.event_id = ?
@@ -206,16 +206,6 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
     </div>
   )}
 
-  <!-- Karma gate warning -->
-  {user && !meetsKarmaGate && (
-    <div class="ev-gate">
-      <div class="ev-gate-icon">🔒</div>
-      <div>
-        <strong>This event has a karma gate</strong>
-        <p>Requires {event.karma_min ? `${event.karma_min}+ karma` : ''}{event.karma_min && event.account_age_min ? ' and ' : ''}{event.account_age_min ? `a ${event.account_age_min}+ day old account` : ''}. Your karma: {userKarma}.</p>
-      </div>
-    </div>
-  )}
 
   <!-- ═══════════════════════════════════════ -->
   <!-- RSVP SECTION — The main action area    -->
@@ -366,14 +356,6 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
       </div>
     )}
 
-    {/* Karma gate blocks RSVP */}
-    {user && !myRsvp && !myWaitlistEntry && !meetsKarmaGate && (
-      <div class="ev-rsvp-locked">
-        <span>🔒</span>
-        <span>Karma gate — you need more karma to RSVP</span>
-      </div>
-    )}
-
     {/* Event is full — join waitlist */}
     {user && !myRsvp && !myWaitlistEntry && meetsKarmaGate && isFull && (
       <div class="ev-rsvp-card ev-rsvp-waitlist-cta" id="waitlist-cta">
@@ -482,7 +464,7 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
           </div>
         )}
         {cohosts.map((c: any) => {
-          const name = c.display_name || c.reddit_username || c.discord_username || (c.member_email || '').split('@')[0];
+          const name = c.display_name || (c.member_email || '').split('@')[0] || 'Member';
           return (
             <div class="ev-cohost-row">
               <span class="ev-cohost-badge">Co-host</span>
@@ -512,9 +494,9 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
     {rsvps.length > 0 ? (
       <div class="ev-guests">
         {rsvps.map((r: any) => {
-          const name = r.member_name || (r.reddit_username ? `u/${r.reddit_username}` : 'Guest');
-          const initial = name.replace(/^u\//, '')[0]?.toUpperCase() || '?';
-          const claimed = bringItems.filter((bi: any) => bi.claimed_by_name === (r.member_name || r.reddit_username));
+          const name = r.member_name || 'Guest';
+          const initial = name[0]?.toUpperCase() || '?';
+          const claimed = bringItems.filter((bi: any) => bi.claimed_by_name === r.member_name);
           let bringingText = '';
           if (claimed.length > 0) {
             bringingText = claimed.map((bi: any) => bi.item_name).join(', ');
@@ -614,7 +596,6 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
           <div class="ev-comment">
             <div class="ev-comment-header">
               <span class="ev-comment-author">{c.author_name || `user_${c.user_id}`}</span>
-              {c.author_karma > 0 && <span class="ev-comment-karma">{c.author_karma} karma</span>}
               <span class="ev-comment-time">{new Date(c.created_at).toLocaleDateString()}</span>
             </div>
             <p class="ev-comment-body">{c.body}</p>
@@ -1207,7 +1188,6 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   .ev-comment:last-child { border-bottom: none; }
   .ev-comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .ev-comment-author { font-size: 13px; font-weight: 700; color: var(--text); }
-  .ev-comment-karma { font-size: 10px; color: var(--accent); background: var(--accent-dim); padding: 2px 6px; border-radius: 4px; font-weight: 600; }
   .ev-comment-time { font-size: 11px; color: var(--text-faint); margin-left: auto; }
   .ev-comment-body { font-size: 14px; color: var(--text-sec); line-height: 1.6; margin-bottom: 8px; }
   .ev-comment-actions { display: flex; align-items: center; gap: 12px; }
