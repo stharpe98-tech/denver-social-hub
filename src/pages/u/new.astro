@@ -94,8 +94,10 @@ const oldSlug = me ? me.slug : '';
         <input id="code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="••••••"/>
       </div>
       <button class="claim-cta" id="verify-btn">Verify & start editing →</button>
+      <button class="claim-link" id="resend-btn" type="button">Send me a new code</button>
       <button class="claim-link" id="back-btn" type="button">Use a different email/URL</button>
       <div class="claim-err" id="verify-err"></div>
+      <div class="claim-ok" id="resend-ok" hidden>✓ New code sent.</div>
     </div>
   </div>
 
@@ -181,6 +183,35 @@ const oldSlug = me ? me.slug : '';
         stepVerify.hidden = true;
         stepClaim.hidden = false;
         slugInput.focus();
+      });
+
+      var resendBtn = document.getElementById('resend-btn');
+      var resendOk = document.getElementById('resend-ok');
+      resendBtn.addEventListener('click', async function() {
+        clearErr('verify-err');
+        resendOk.hidden = true;
+        var slug = slugInput.value.trim().toLowerCase();
+        var email = (emailInput.value || '').trim().toLowerCase();
+        if (!slug || !email) { showErr('verify-err', 'Missing email or URL — go back.'); return; }
+        var orig = resendBtn.textContent;
+        resendBtn.textContent = 'Sending…'; resendBtn.disabled = true;
+        try {
+          var r = await fetch('/api/profile/code-send', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug, email: email })
+          });
+          var d = await r.json();
+          if (d && d.ok) {
+            resendOk.hidden = false;
+            setTimeout(function() { resendOk.hidden = true; }, 4000);
+          } else {
+            showErr('verify-err', (d && d.error) || 'Could not send a new code.');
+          }
+        } catch (e) {
+          showErr('verify-err', 'Network hiccup — try again.');
+        } finally {
+          resendBtn.textContent = orig; resendBtn.disabled = false;
+        }
       });
 
       codeInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('verify-btn').click(); });

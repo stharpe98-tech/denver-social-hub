@@ -71,7 +71,9 @@ const SWATCHES = [
           </div>
           <input id="reauth-email" type="email" placeholder="Email on file" autocomplete="email"/>
           <button class="claim-cta" id="reauth-verify" style="margin-top:8px">Verify & edit →</button>
+          <button class="claim-link" id="reauth-resend" type="button" style="margin-top:6px">Send me a new code</button>
           <div class="claim-err" id="reauth-verify-err"></div>
+          <div class="claim-ok" id="reauth-resend-ok" hidden style="color:#047857;font-size:12px;margin-top:6px">✓ New code sent.</div>
         </div>
         <div class="claim-foot"><a href={`/u/${slug}`} style="color:var(--text-sec)">← View public page</a></div>
       </div>
@@ -372,6 +374,31 @@ const SWATCHES = [
             showErr('reauth-verify-err', d.error || 'Invalid or expired code.');
           } catch (e) { showErr('reauth-verify-err', 'Network error.'); }
           btn.disabled = false; btn.textContent = orig;
+        });
+
+        var resendBtn = document.getElementById('reauth-resend');
+        var resendOk = document.getElementById('reauth-resend-ok');
+        resendBtn && resendBtn.addEventListener('click', async function() {
+          clearErr('reauth-verify-err');
+          resendOk.hidden = true;
+          var orig = resendBtn.textContent;
+          resendBtn.textContent = 'Sending…'; resendBtn.disabled = true;
+          try {
+            var r = await fetch('/api/profile/edit-code-send', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ slug: slug })
+            });
+            var d = await r.json();
+            if (d && d.ok) {
+              resendOk.hidden = false;
+              setTimeout(function() { resendOk.hidden = true; }, 4000);
+            } else {
+              showErr('reauth-verify-err', (d && d.error) || 'Could not send a new code.');
+            }
+          } catch (e) {
+            showErr('reauth-verify-err', 'Network error — try again.');
+          }
+          resendBtn.textContent = orig; resendBtn.disabled = false;
         });
       })();
     </script>
