@@ -107,7 +107,7 @@ try {
         ds = `${dayNames[dt.getDay()]}, ${monthAbbrs[sm]} ${sd}`;
       }
       cards.push({
-        kind: 'potluck', id: p.id, href: `/potlucks/${p.id}`,
+        kind: 'potluck', id: p.id, href: p.slug ? `/${p.slug}` : `/potlucks/${p.id}`,
         title: p.title, description: p.description || '',
         type: 'potluck',
         dateStr: ds, timeStr: p.time_label || '',

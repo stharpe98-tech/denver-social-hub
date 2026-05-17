@@ -60,7 +60,7 @@ try {
     const ec = await db.prepare("SELECT COUNT(*) as cnt FROM events WHERE is_past IS NULL OR is_past=0").first();
     eventCount = ec?.cnt || 0;
     suggestions = (await db.prepare("SELECT * FROM event_suggestions ORDER BY votes DESC LIMIT 4").all())?.results || [];
-    upcomingPotluck = await db.prepare("SELECT id, title, date_label, location FROM potlucks WHERE status='upcoming' ORDER BY id DESC LIMIT 1").first();
+    upcomingPotluck = await db.prepare("SELECT id, slug, title, date_label, location FROM potlucks WHERE status='upcoming' ORDER BY id DESC LIMIT 1").first();
   }
 } catch {}
 
@@ -165,7 +165,7 @@ const eventTypeChips = [
   <!-- UPCOMING POTLUCK SPOTLIGHT -->
   {upcomingPotluck && (
     <section class="page-wrap">
-      <a href={`/potlucks/${upcomingPotluck.id}`} class="potluck-spotlight">
+      <a href={upcomingPotluck.slug ? `/${upcomingPotluck.slug}` : `/potlucks/${upcomingPotluck.id}`} class="potluck-spotlight">
         <div>
           <span class="tag tag-green">🍽 Next Potluck</span>
           <h3>{upcomingPotluck.title}</h3>

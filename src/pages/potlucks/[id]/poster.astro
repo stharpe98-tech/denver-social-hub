@@ -109,7 +109,7 @@ const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${e
 </head>
 <body>
   <div class="ctrl-bar">
-    <a href={`/potlucks/${id}`} class="ctrl-back">← Back to sign-up</a>
+    <a href={potluck?.slug ? `/${potluck.slug}` : `/potlucks/${id}`} class="ctrl-back">← Back to sign-up</a>
     <div class="ctrl-title">🖼 Event Poster</div>
 
     <div class="ctrl-section">
