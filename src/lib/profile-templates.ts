@@ -206,135 +206,135 @@ export interface TemplateField {
 const SCHEMAS: Record<string, TemplateField[]> = {
   host: [],
   book_club: [
-    { key: 'currently_reading', label: 'Currently reading', type: 'object', fields: [
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'author', label: 'Author', type: 'text' },
-      { key: 'pages_read', label: 'Pages read', type: 'number' },
-      { key: 'pages_total', label: 'Pages total', type: 'number' },
+    { key: 'currently_reading', label: 'What you\'re reading right now', type: 'object', help: 'The book your club is on this month', fields: [
+      { key: 'title', label: 'Book title', type: 'text', placeholder: 'The Overstory' },
+      { key: 'author', label: 'Author', type: 'text', placeholder: 'Richard Powers' },
+      { key: 'pages_read', label: 'Pages read so far', type: 'number', placeholder: '247' },
+      { key: 'pages_total', label: 'Total pages', type: 'number', placeholder: '502' },
     ]},
-    { key: 'next_meeting', label: 'Next meeting', type: 'text', placeholder: "Fri Jun 7 at Lin's place" },
+    { key: 'next_meeting', label: 'When + where you meet next', type: 'text', placeholder: "Fri Jun 7, 7pm at Lin's place" },
   ],
   game_group: [
-    { key: 'next_night', label: 'Next game night', type: 'text', placeholder: "Thursday 7pm at Marcus's" },
-    { key: 'favorite_games', label: 'Favorite games', type: 'string-array', help: 'comma-separated, like Wingspan, Codenames' },
-    { key: 'player_count_note', label: 'Player-count note', type: 'textarea' },
+    { key: 'next_night', label: 'Next game night', type: 'text', placeholder: "Thursday 7pm at Marcus's place" },
+    { key: 'favorite_games', label: 'Games the group loves', type: 'string-array', help: 'Comma-separated. Example: Wingspan, Codenames, Cascadia' },
+    { key: 'player_count_note', label: 'How many people show up', type: 'textarea', placeholder: 'Sweet spot is 4–6. We split tables if more than 8.' },
   ],
   bible_study: [
-    { key: 'verse', label: 'Verse', type: 'object', fields: [
-      { key: 'text', label: 'Verse text', type: 'textarea' },
-      { key: 'reference', label: 'Reference', type: 'text', placeholder: 'PROVERBS 27:17 · ESV' },
+    { key: 'verse', label: 'A favorite verse', type: 'object', help: 'Optional — a scripture that captures the group\'s spirit', fields: [
+      { key: 'text', label: 'The verse itself', type: 'textarea', placeholder: '"Iron sharpens iron, and one man sharpens another."' },
+      { key: 'reference', label: 'Where it\'s from', type: 'text', placeholder: 'PROVERBS 27:17 · ESV' },
     ]},
-    { key: 'currently_in', label: 'Currently in', type: 'text', placeholder: 'The Book of Acts' },
-    { key: 'cadence', label: 'Cadence', type: 'text', placeholder: 'Tuesdays 7–8:30pm' },
-    { key: 'tradition', label: 'Tradition', type: 'text', placeholder: 'Non-denominational' },
+    { key: 'currently_in', label: 'Book of the Bible you\'re studying', type: 'text', placeholder: 'The Book of Acts' },
+    { key: 'cadence', label: 'When you meet', type: 'text', placeholder: 'Tuesdays 7–8:30pm' },
+    { key: 'tradition', label: 'Tradition / denomination', type: 'text', placeholder: 'Non-denominational' },
   ],
   pottery: [
-    { key: 'gallery', label: 'Gallery', type: 'object-array', max: 6, fields: [
-      { key: 'emoji', label: 'Emoji', type: 'text', placeholder: '🏺' },
-      { key: 'caption', label: 'Caption', type: 'text', placeholder: 'chubby mugs' },
+    { key: 'gallery', label: 'Recent work', type: 'object-array', max: 6, help: 'Add up to 6 pieces — emoji + a short caption each', fields: [
+      { key: 'emoji', label: 'Piece emoji', type: 'text', placeholder: '🏺' },
+      { key: 'caption', label: 'What it is', type: 'text', placeholder: 'chubby mugs' },
     ]},
-    { key: 'classes', label: 'Classes', type: 'object-array', max: 6, fields: [
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'when', label: 'When', type: 'text' },
+    { key: 'classes', label: 'Classes you teach', type: 'object-array', max: 6, help: 'Each row is one class type', fields: [
+      { key: 'title', label: 'Class name', type: 'text', placeholder: 'Intro to wheel — 4 weeks' },
+      { key: 'when', label: 'When it runs', type: 'text', placeholder: 'Saturdays 10am · next start Jun 8' },
       { key: 'price_usd', label: 'Price', type: 'text', placeholder: '$240' },
     ]},
   ],
   run_club: [
-    { key: 'pace', label: 'Pace', type: 'text', placeholder: '9:30 min/mi' },
-    { key: 'weekly_miles', label: 'Weekly miles', type: 'text', placeholder: '142' },
-    { key: 'training_plan', label: 'Training plan', type: 'object', fields: [
-      { key: 'name', label: 'Plan name', type: 'text' },
-      { key: 'week', label: 'Current week', type: 'number' },
-      { key: 'total_weeks', label: 'Total weeks', type: 'number' },
+    { key: 'pace', label: 'Typical pace', type: 'text', placeholder: '9:30 min/mi' },
+    { key: 'weekly_miles', label: 'Group miles per week', type: 'text', placeholder: '142' },
+    { key: 'training_plan', label: 'Current training plan', type: 'object', help: 'Optional — if the group is prepping for a race', fields: [
+      { key: 'name', label: 'Plan name', type: 'text', placeholder: 'Bolder Boulder prep' },
+      { key: 'week', label: 'Current week', type: 'number', placeholder: '3' },
+      { key: 'total_weeks', label: 'Total weeks', type: 'number', placeholder: '8' },
     ]},
-    { key: 'meet', label: 'Meet info', type: 'textarea', placeholder: "Saturday 7am at Sloan's Lake N lot" },
+    { key: 'meet', label: 'When + where you meet', type: 'textarea', placeholder: "Saturday 7am at Sloan's Lake north lot. 6 easy miles, coffee after." },
   ],
   wellness: [
-    { key: 'philosophy_quote', label: 'Philosophy quote', type: 'textarea' },
-    { key: 'certifications', label: 'Certifications', type: 'string-array', help: 'comma-separated, like RYT-500, Yin Certified' },
-    { key: 'weekly_schedule', label: 'Weekly schedule', type: 'object-array', max: 7, fields: [
-      { key: 'day', label: 'Day', type: 'text' },
-      { key: 'time', label: 'Time', type: 'text' },
+    { key: 'philosophy_quote', label: 'Your teaching philosophy (one or two lines)', type: 'textarea', placeholder: 'The body benefits from movement; the mind benefits from stillness.' },
+    { key: 'certifications', label: 'Certifications', type: 'string-array', help: 'Comma-separated. Example: RYT-500, Yin Certified, Trauma-informed' },
+    { key: 'weekly_schedule', label: 'Class schedule', type: 'object-array', max: 7, help: 'One row per day you teach', fields: [
+      { key: 'day', label: 'Day', type: 'text', placeholder: 'Tuesday' },
+      { key: 'time', label: 'Time + where', type: 'text', placeholder: 'In-home, 7pm' },
     ]},
-    { key: 'pricing', label: 'Pricing', type: 'text', placeholder: '$25 drop-in · $200 ten-pack' },
+    { key: 'pricing', label: 'Pricing', type: 'text', placeholder: '$25 drop-in · $200 ten-pack · first class free' },
   ],
   music: [
-    { key: 'tagline', label: 'Tagline', type: 'text' },
-    { key: 'upcoming_gigs', label: 'Upcoming gigs', type: 'object-array', max: 10, fields: [
+    { key: 'tagline', label: 'One-line description', type: 'text', placeholder: 'Folk duo · porch concerts + dive bars' },
+    { key: 'upcoming_gigs', label: 'Upcoming gigs', type: 'object-array', max: 10, help: 'One row per show', fields: [
       { key: 'date', label: 'Date', type: 'text', placeholder: 'May 24' },
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'meta', label: 'Meta', type: 'text' },
+      { key: 'title', label: 'Venue / event', type: 'text', placeholder: 'Porch concert · Berkeley' },
+      { key: 'meta', label: 'Time + details', type: 'text', placeholder: 'Sat 6pm · BYOB · address day-of' },
     ]},
-    { key: 'sound_link', label: 'Sound link', type: 'url' },
-    { key: 'looking_for', label: 'Looking for', type: 'text' },
+    { key: 'sound_link', label: 'Link to your music', type: 'url', placeholder: 'https://open.spotify.com/...' },
+    { key: 'looking_for', label: 'Looking for (optional)', type: 'text', placeholder: 'A bassist for summer shows' },
   ],
   cause: [
-    { key: 'mission', label: 'Mission', type: 'textarea' },
-    { key: 'impact_stats', label: 'Impact stats', type: 'object-array', max: 6, fields: [
-      { key: 'n', label: 'Number', type: 'text' },
-      { key: 'label', label: 'Label', type: 'text' },
+    { key: 'mission', label: 'Your mission', type: 'textarea', placeholder: 'We meet the first Saturday of every month at Sloan\'s Lake at 9am to pick up trash. Bags and gloves provided. Pizza after.' },
+    { key: 'impact_stats', label: 'Impact so far', type: 'object-array', max: 6, help: 'Numbers worth bragging about — one per row', fields: [
+      { key: 'n', label: 'Number', type: 'text', placeholder: '47' },
+      { key: 'label', label: 'What it\'s counting', type: 'text', placeholder: 'trash bags' },
     ]},
-    { key: 'upcoming_days', label: 'Upcoming days', type: 'object-array', max: 8, fields: [
-      { key: 'when', label: 'When', type: 'text' },
-      { key: 'what', label: 'What', type: 'text' },
+    { key: 'upcoming_days', label: 'Upcoming volunteer days', type: 'object-array', max: 8, fields: [
+      { key: 'when', label: 'Date', type: 'text', placeholder: 'Sat Jun 1' },
+      { key: 'what', label: 'Where + what', type: 'text', placeholder: 'North side · 9am–noon' },
     ]},
   ],
   service_pro: [
-    { key: 'license_info', label: 'License info', type: 'text', placeholder: 'License #ER40036247' },
-    { key: 'neighborhoods_served', label: 'Neighborhoods served', type: 'string-array' },
-    { key: 'testimonial', label: 'Testimonial', type: 'object', fields: [
-      { key: 'text', label: 'Quote', type: 'textarea' },
-      { key: 'source', label: 'Source', type: 'text', placeholder: '— J. & M.' },
+    { key: 'license_info', label: 'License / credential (optional)', type: 'text', placeholder: 'License #ER40036247' },
+    { key: 'neighborhoods_served', label: 'Neighborhoods you cover', type: 'string-array', help: 'Comma-separated. Example: Wash Park, Cherry Creek, Cap Hill' },
+    { key: 'testimonial', label: 'A favorite testimonial (optional)', type: 'object', help: 'One review that captures what you\'re about', fields: [
+      { key: 'text', label: 'The quote', type: 'textarea', placeholder: 'Jimmy walked us through Wash Park for half a day before we even talked offers.' },
+      { key: 'source', label: 'Who said it', type: 'text', placeholder: '— J. & M., bought May 2025' },
     ]},
   ],
   dogs: [
-    { key: 'pups', label: 'Pups', type: 'object-array', max: 8, fields: [
-      { key: 'emoji', label: 'Emoji', type: 'text' },
-      { key: 'name', label: 'Name', type: 'text' },
-      { key: 'breed', label: 'Breed', type: 'text' },
+    { key: 'pups', label: 'The regular dogs', type: 'object-array', max: 8, help: 'Add the pups who show up most often', fields: [
+      { key: 'emoji', label: 'Dog emoji', type: 'text', placeholder: '🐶' },
+      { key: 'name', label: 'Pup\'s name', type: 'text', placeholder: 'Gravy' },
+      { key: 'breed', label: 'Breed + age', type: 'text', placeholder: 'pit mix · 8yr' },
     ]},
-    { key: 'favorite_parks', label: 'Favorite parks', type: 'string-array' },
+    { key: 'favorite_parks', label: 'Favorite parks', type: 'string-array', help: 'Comma-separated. Example: Berkeley Lake, Highland Pet Park, Cheesman' },
   ],
   climbing: [
-    { key: 'lead_grade', label: 'Lead grade', type: 'text' },
-    { key: 'boulder_grade', label: 'Boulder grade', type: 'text' },
-    { key: 'project_note', label: 'Project note', type: 'textarea' },
-    { key: 'partner_call', label: 'Partner call', type: 'textarea' },
+    { key: 'lead_grade', label: 'Lead climbing grade', type: 'text', placeholder: '5.10b' },
+    { key: 'boulder_grade', label: 'Bouldering grade', type: 'text', placeholder: 'V4' },
+    { key: 'project_note', label: 'Current project / goal', type: 'textarea', placeholder: 'Working a 5.10d at Clear Creek. Trying to send my first multi-pitch this summer.' },
+    { key: 'partner_call', label: 'Partners wanted?', type: 'textarea', placeholder: 'Looking for Saturday outdoor partners. Mid-grade. Will catch your 5.11 if you\'ll catch my 5.10.' },
   ],
   supper_club: [
-    { key: 'next_dinner', label: 'Next dinner', type: 'object', fields: [
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'host', label: 'Host', type: 'text' },
-      { key: 'date', label: 'Date', type: 'text' },
-      { key: 'seats', label: 'Seats', type: 'text' },
+    { key: 'next_dinner', label: 'Next dinner', type: 'object', help: 'When the next gathering is and who\'s hosting', fields: [
+      { key: 'title', label: 'Theme / name', type: 'text', placeholder: 'Italian Night' },
+      { key: 'host', label: 'Who\'s hosting', type: 'text', placeholder: 'Marisol' },
+      { key: 'date', label: 'When', type: 'text', placeholder: 'Sat Jun 14, 7pm' },
+      { key: 'seats', label: 'Spots open', type: 'text', placeholder: '6 of 8 seats' },
     ]},
-    { key: 'meal_photos', label: 'Meal photos', type: 'string-array', help: 'emoji photos, like 🍝, 🥘, 🍷' },
-    { key: 'dietary_note', label: 'Dietary note', type: 'text' },
-    { key: 'format_note', label: 'Format note', type: 'text' },
+    { key: 'meal_photos', label: 'Past meals (emoji)', type: 'string-array', help: 'Comma-separated emoji. Example: 🍝, 🥘, 🍷' },
+    { key: 'dietary_note', label: 'Dietary stance', type: 'text', placeholder: 'Veg + omni mix. Alert hosts to allergies.' },
+    { key: 'format_note', label: 'How dinners run', type: 'text', placeholder: 'Sit-down, conversation-led, BYOB' },
   ],
   art: [
-    { key: 'mediums', label: 'Mediums', type: 'string-array' },
-    { key: 'next_session', label: 'Next session', type: 'object', fields: [
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'location', label: 'Location', type: 'text' },
-      { key: 'date', label: 'Date', type: 'text' },
+    { key: 'mediums', label: 'Mediums you work in', type: 'string-array', help: 'Comma-separated. Example: Pen & ink, Watercolor, Charcoal, Gouache' },
+    { key: 'next_session', label: 'Next sketch session', type: 'object', help: 'Optional — when the group meets next', fields: [
+      { key: 'title', label: 'What kind of session', type: 'text', placeholder: 'Plein air · Confluence Park' },
+      { key: 'location', label: 'Meeting spot', type: 'text', placeholder: 'Meet at Whittier Café' },
+      { key: 'date', label: 'When', type: 'text', placeholder: 'Sat May 31, 9am' },
     ]},
-    { key: 'sample_works', label: 'Sample works', type: 'string-array', help: 'emoji samples' },
+    { key: 'sample_works', label: 'Sample work emojis', type: 'string-array', help: 'Comma-separated emoji that hint at your style. Example: 🎨, ✏️, 🖌, 🖼' },
   ],
   language: [
-    { key: 'offered', label: 'Languages offered', type: 'string-array', help: 'language codes like EN, ES, FR' },
-    { key: 'wanted', label: 'Languages wanted', type: 'string-array' },
-    { key: 'meet_info', label: 'Meet info', type: 'textarea', placeholder: 'Thursdays 6:30pm · Goosetown in LoDo' },
-    { key: 'level_range', label: 'Level range', type: 'text', placeholder: 'A2–C1' },
+    { key: 'offered', label: 'Languages you can speak / teach', type: 'string-array', help: 'Short codes, comma-separated. Example: EN, ES, FR' },
+    { key: 'wanted', label: 'Languages you want to practice', type: 'string-array', help: 'Short codes, comma-separated. Example: JA, PT, KO' },
+    { key: 'meet_info', label: 'When + where you meet', type: 'textarea', placeholder: 'Thursdays 6:30pm at Goosetown in LoDo' },
+    { key: 'level_range', label: 'Skill range welcome', type: 'text', placeholder: 'A2–C1' },
   ],
   photography: [
-    { key: 'gear', label: 'Gear', type: 'text', placeholder: 'Leica M6 · Mamiya 645' },
-    { key: 'currently_shooting', label: 'Currently shooting', type: 'textarea' },
-    { key: 'photo_walk_when', label: 'Next photo walk', type: 'text' },
-    { key: 'style_tags', label: 'Style tags', type: 'string-array' },
-    { key: 'frames', label: 'Frames', type: 'object-array', max: 5, fields: [
-      { key: 'emoji', label: 'Emoji', type: 'text' },
-      { key: 'label', label: 'Label', type: 'text' },
+    { key: 'gear', label: 'Your gear', type: 'text', placeholder: 'Leica M6 · Mamiya 645 · Sony A7iii for clients' },
+    { key: 'currently_shooting', label: 'Current project', type: 'textarea', placeholder: '"South Side Light" — a series on porches in Wash Park.' },
+    { key: 'photo_walk_when', label: 'Next photo walk', type: 'text', placeholder: 'Sat Jun 1 · Five Points morning light · 7am' },
+    { key: 'style_tags', label: 'Style tags', type: 'string-array', help: 'Comma-separated. Example: Street, Portrait, Documentary, Landscape' },
+    { key: 'frames', label: 'Sample frames', type: 'object-array', max: 5, help: 'Up to 5 emoji + caption pairs that hint at your portfolio', fields: [
+      { key: 'emoji', label: 'Emoji', type: 'text', placeholder: '🎞' },
+      { key: 'label', label: 'Caption (place + style)', type: 'text', placeholder: 'CHEESMAN · 35MM TRI-X' },
     ]},
   ],
 };
