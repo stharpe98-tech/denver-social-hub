@@ -669,6 +669,13 @@ const showWelcomeTour = !tourSeen;
   .card:hover { box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
   .card:active { transform: translateY(1px); }
 
+  /* Shared community tab strip — used on /community, /groups, /organizers. */
+  .cb-tabs-strip { background: #FAF8F4; border-top: 1px solid #E8E2D5; border-bottom: 1px solid #E8E2D5; display: flex; justify-content: center; gap: 4px; padding: 14px 16px 0; flex-wrap: wrap; margin-bottom: 0; }
+  .cb-tab-link { padding: 9px 18px; border-radius: 999px 999px 0 0; font-size: 13px; font-weight: 600; color: #888; text-decoration: none; border: 1px solid transparent; border-bottom: none; transition: color .15s, background .15s; }
+  .cb-tab-link:hover { color: #1A1A1A; background: rgba(0,0,0,0.04); }
+  .cb-tab-link-on { color: #1A1A1A; background: #fff; border-color: #E8E2D5; }
+  @media (max-width: 540px) { .cb-tab-link { padding: 8px 14px; font-size: 12px; } }
+
   .btn-cta {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     padding: 12px 24px; border-radius: var(--radius-pill);

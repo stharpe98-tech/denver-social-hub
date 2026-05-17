@@ -176,6 +176,12 @@ function timeAgo(iso: string): string {
 
   {true && (
     <div class="board-wrap">
+      <nav class="bd-tabs" aria-label="Community sections">
+        <a href="/community" class="bd-tab bd-tab-on">📌 Flyers</a>
+        <a href="/groups" class="bd-tab">👥 Groups</a>
+        <a href="/organizers" class="bd-tab">⭐ Organizers</a>
+      </nav>
+
       <section class="bd-hero">
         <div class="bd-hero-tag">DENVER · NEIGHBORHOOD BY NEIGHBORHOOD</div>
         <h2 class="bd-hero-h">A flyer wall for your <span>block.</span></h2>
@@ -224,8 +230,6 @@ function timeAgo(iso: string): string {
 
         <div class="bd-extra">
           <a href="/calendar" class="bd-calendar-btn">📅 See the community calendar →</a>
-          <a href="/organizers" class="bd-calendar-btn bd-organizers-btn">👥 Meet the organizers →</a>
-          <a href="/groups" class="bd-calendar-btn bd-groups-btn">👥 Browse groups →</a>
         </div>
       </section>
 
@@ -447,7 +451,13 @@ function timeAgo(iso: string): string {
   .board-wrap { margin: 0 -16px; }
   @media (min-width: 700px) { .board-wrap { margin: 0 -32px; } }
 
-  .bd-hero { background: #FAF8F4; padding: 40px 24px 0; text-align: center; border-top: 1px solid #E8E2D5; border-bottom: 1px solid #E8E2D5; }
+  .bd-tabs { background: #FAF8F4; border-top: 1px solid #E8E2D5; display: flex; justify-content: center; gap: 4px; padding: 14px 16px 0; flex-wrap: wrap; }
+  .bd-tab { padding: 9px 18px; border-radius: 999px 999px 0 0; font-size: 13px; font-weight: 600; color: #888; text-decoration: none; border: 1px solid transparent; border-bottom: none; transition: all .15s; }
+  .bd-tab:hover { color: #1A1A1A; background: rgba(0,0,0,0.04); }
+  .bd-tab-on { color: #1A1A1A; background: #fff; border-color: #E8E2D5; }
+  @media (max-width: 540px) { .bd-tab { padding: 8px 14px; font-size: 12px; } }
+
+  .bd-hero { background: #FAF8F4; padding: 24px 24px 0; text-align: center; border-bottom: 1px solid #E8E2D5; }
   .bd-hero-tag { font-size: 11px; letter-spacing: 3px; font-weight: 700; color: #C9A55D; margin-bottom: 12px; }
   .bd-hero-h { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(28px, 4.4vw, 48px); font-weight: 800; color: #1A1A1A; letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 14px; max-width: 720px; margin-left: auto; margin-right: auto; }
   .bd-hero-h span { color: #C9A55D; font-style: italic; }
