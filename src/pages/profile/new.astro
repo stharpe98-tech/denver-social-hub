@@ -139,7 +139,18 @@ import Base from '../../layouts/Base.astro';
   </script>
 
   <style>
-    .wrap { max-width: 880px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
+    /* Stone-tone backdrop — warm sandstone with subtle grain */
+    .wrap {
+      padding: var(--space-6) var(--space-4) var(--space-8);
+      background:
+        radial-gradient(circle at 20% 18%, rgba(255,255,255,0.45) 0%, transparent 55%),
+        radial-gradient(circle at 80% 75%, rgba(0,0,0,0.04) 0%, transparent 55%),
+        repeating-linear-gradient(125deg, transparent 0 3px, rgba(0,0,0,0.022) 3px 4px),
+        linear-gradient(160deg, #E8DFCF 0%, #D8CBB4 100%);
+      min-height: 100vh;
+    }
+    .wrap > * { max-width: 880px; margin-left: auto; margin-right: auto; }
+    .wrap > .tiers { max-width: 880px; }
     .intro { text-align: center; margin-bottom: var(--space-6); }
     .intro-tag { font-family: 'SF Mono', Menlo, monospace; font-size: 11px; letter-spacing: 2px; color: var(--accent, #7C3AED); font-weight: 700; margin-bottom: var(--space-2); }
     .intro-h1 { font-family: var(--font-display, 'Playfair Display', serif); font-size: clamp(28px, 5vw, 40px); font-weight: 800; line-height: 1.1; margin-bottom: var(--space-2); color: var(--text); }
@@ -148,11 +159,12 @@ import Base from '../../layouts/Base.astro';
 
     .tiers { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-6); }
     @media (max-width: 720px) { .tiers { grid-template-columns: 1fr; } }
-    .tier-card { display: block; text-decoration: none; color: inherit; padding: var(--space-5); border-radius: var(--radius-lg, 20px); border: 1.5px solid var(--border); background: var(--surface, #F8F9FB); transition: transform .15s, box-shadow .15s, border-color .15s; }
-    .tier-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(124,58,237,0.10); border-color: var(--accent, #7C3AED); }
-    .tier-card:active { transform: translateY(0); }
-    .tier-regular { background: #fff; }
-    .tier-organizer { background: linear-gradient(135deg, #FAF5FF, #EEF2FF); }
+    .tier-card { display: block; text-decoration: none; color: inherit; padding: var(--space-5); border-radius: var(--radius-lg, 20px); border: 1.5px solid rgba(0,0,0,0.08); background: #FFFEFA; transition: transform .15s, box-shadow .15s, border-color .15s; box-shadow: 0 8px 24px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06); }
+    .tier-card:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(0,0,0,0.14), 0 2px 4px rgba(0,0,0,0.08); border-color: rgba(0,0,0,0.18); }
+    .tier-card:active { transform: translateY(-1px); }
+    .tier-regular { background: #FFFEFA; }
+    .tier-organizer { background: linear-gradient(135deg, #FFFEFA 0%, #F4ECDC 100%); border-color: rgba(201,165,93,0.4); }
+    .tier-organizer:hover { border-color: #C9A55D; box-shadow: 0 16px 36px rgba(201,165,93,0.22), 0 2px 4px rgba(0,0,0,0.08); }
     .tier-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
     .tier-emoji { font-size: 28px; }
     .tier-tag { font-family: 'SF Mono', Menlo, monospace; font-size: 10px; letter-spacing: 2px; color: var(--accent, #7C3AED); font-weight: 700; }
@@ -163,7 +175,7 @@ import Base from '../../layouts/Base.astro';
     .tier-list li:last-child { border-bottom: none; }
     .tier-cta { font-weight: 700; color: var(--accent, #7C3AED); font-size: 14px; }
 
-    .claim-box { background: var(--surface, #F8F9FB); border: 1.5px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-5); max-width: 480px; margin: 0 auto var(--space-4); }
+    .claim-box { background: #FFFEFA; border: 1.5px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg, 20px); padding: var(--space-5); max-width: 480px; margin: 0 auto var(--space-4); box-shadow: 0 8px 24px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06); }
     .claim-h { font-family: var(--font-display, sans-serif); font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 4px; }
     .claim-sub { text-align: center; font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-4); }
     .claim-field { margin-bottom: var(--space-3); }
