@@ -6,6 +6,7 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
 import { setProfileCookie } from '../../../lib/profile-auth';
+import { setAdminCookie, getAllowedAdminEmails } from '../../../lib/admin-auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const db = getDB();
@@ -46,6 +47,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   await db.prepare(`UPDATE profile_codes SET used = 1 WHERE rowid = ?`).bind(row.id).run();
   await setProfileCookie({ cookies } as any, profile.slug);
+
+  // Auto-elevate to admin if this email is on the allowlist (config.admin_emails).
+  // Means signing in via /profile/new with an allowlisted address also surfaces
+  // the Admin nav link without a separate /admin/login round-trip.
+  try {
+    const allowed = await getAllowedAdminEmails(db);
+    if (allowed.some(a => a.toLowerCase() === email)) {
+      await setAdminCookie({ cookies } as any, email);
+    }
+  } catch { /* non-fatal */ }
 
   // Organizers go to their editor; regulars go to /profile.
   const redirect = profile.tier === 'organizer' ? `/u/${profile.slug}/edit` : '/profile';

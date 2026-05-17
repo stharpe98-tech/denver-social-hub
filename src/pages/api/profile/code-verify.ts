@@ -1,6 +1,19 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
 import { clearProfileCookie, getCurrentProfile, setProfileCookie, validateSlug } from '../../../lib/profile-auth';
+import { setAdminCookie, getAllowedAdminEmails } from '../../../lib/admin-auth';
+
+// Auto-elevate to admin if this email is on config.admin_emails. Called
+// from every success branch so signing up via /profile/new also surfaces
+// the Admin nav link without a separate /admin/login round-trip.
+async function maybeElevate(db: D1Database, cookies: any, email: string): Promise<void> {
+  try {
+    const allowed = await getAllowedAdminEmails(db);
+    if (allowed.some(a => a.toLowerCase() === email.toLowerCase())) {
+      await setAdminCookie({ cookies } as any, email);
+    }
+  } catch { /* non-fatal */ }
+}
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const db = getDB();
@@ -44,6 +57,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
     clearProfileCookie({ cookies } as any, existingMe.slug);
     await setProfileCookie({ cookies } as any, slug);
+    await maybeElevate(db, cookies, email);
     return new Response(JSON.stringify({ ok: true, redirect: `/u/${slug}/edit` }), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -73,6 +87,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
   }
   await setProfileCookie({ cookies } as any, slug);
+  await maybeElevate(db, cookies, email);
   const redirect = isNewProfile ? `/u/${slug}/welcome` : `/u/${slug}/edit`;
   return new Response(JSON.stringify({ ok: true, redirect }), {
     headers: { 'Content-Type': 'application/json' },

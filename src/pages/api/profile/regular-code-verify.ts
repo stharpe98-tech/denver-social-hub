@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
 import { generateRegularSlug, setProfileCookie } from '../../../lib/profile-auth';
+import { setAdminCookie, getAllowedAdminEmails } from '../../../lib/admin-auth';
 
 function pendingSlugFor(email: string): string {
   return `r-pending-${email}`.slice(0, 80);
@@ -67,6 +68,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   await setProfileCookie({ cookies } as any, slug);
+  // Auto-elevate to admin if this email is on the allowlist.
+  try {
+    const allowed = await getAllowedAdminEmails(db);
+    if (allowed.some(a => a.toLowerCase() === email.toLowerCase())) {
+      await setAdminCookie({ cookies } as any, email);
+    }
+  } catch { /* non-fatal */ }
   return new Response(JSON.stringify({ ok: true, redirect: '/profile' }), {
     headers: { 'Content-Type': 'application/json' },
   });
