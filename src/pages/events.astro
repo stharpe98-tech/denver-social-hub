@@ -131,6 +131,16 @@ const typeLabel: Record<string,string> = { dinner:"dinner",game_night:"game_nigh
 const typeSet = new Set(cards.map(c => c.type).filter(Boolean));
 const allTypes = Array.from(typeSet);
 const content = await getContent();
+
+// Upcoming potluck for spotlight banner above the grid.
+let upcomingPotluck: any = null;
+try {
+  if (db) {
+    upcomingPotluck = await db.prepare(
+      "SELECT id, slug, title, date_label, location FROM potlucks WHERE status='upcoming' ORDER BY id ASC LIMIT 1"
+    ).first();
+  }
+} catch {}
 ---
 <Base title="Browse Events">
 <div class="ev-page">
@@ -204,6 +214,18 @@ const content = await getContent();
   </script>
 
   <!-- Event grid -->
+  {upcomingPotluck && (
+    <a href={upcomingPotluck.slug ? `/${upcomingPotluck.slug}` : `/potlucks/${upcomingPotluck.id}`} class="ev-potluck-pill">
+      <span>🥘 This week's potluck — {upcomingPotluck.date_label}</span>
+      <span class="ev-potluck-pill-arrow">→</span>
+    </a>
+  )}
+  <style is:inline>
+    .ev-potluck-pill { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 16px; padding: 10px 16px; border-radius: 999px; background: linear-gradient(135deg, #D1FAE5, #E0F2FE); border: 1px solid #A7F3D0; color: var(--text, #111); text-decoration: none; font-size: 14px; font-weight: 600; transition: transform 0.15s, box-shadow 0.15s; }
+    .ev-potluck-pill:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(16,185,129,0.18); }
+    .ev-potluck-pill-arrow { color: #047857; font-weight: 700; }
+  </style>
+
   {cards.length > 0 ? (
     <div class="ev-grid" id="eventGrid">
       {cards.map((c) => (

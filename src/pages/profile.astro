@@ -5,7 +5,7 @@ import { getCurrentProfile } from '../lib/profile-auth';
 
 const db = getDB();
 const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
-if (!me) return Astro.redirect('/profile/new');
+if (!me) return Astro.redirect('/u/new');
 
 // Hosted events and posted flyers — best-effort counts.
 let hostedCount = 0;

@@ -13,10 +13,6 @@ const isAdmin = adminCookie.split('.').length >= 3; // lightweight signal; real 
 const cookieHeader = Astro.request.headers.get('cookie') || '';
 const hasProfileSession = /(^|;\s*)dsn_profile_[a-z0-9-]+=/i.test(cookieHeader);
 const currentPath = Astro.url.pathname;
-// Tour is rendered for visitors who haven't dismissed it. Cookie is
-// the source of truth — localStorage is a client-side fallback.
-const tourSeen = Astro.cookies.get('dsn_tour_seen')?.value === '1';
-const showWelcomeTour = !tourSeen;
 ---
 <html lang="en">
 <head>
@@ -57,7 +53,7 @@ const showWelcomeTour = !tourSeen;
       </nav>
 
       <div class="site-auth">
-        {!hasProfileSession && <a href="/profile/new" class="site-cta">Sign up</a>}
+        {!hasProfileSession && <a href="/u/new" class="site-cta">Sign up</a>}
         {isAdmin && <a href="/api/admin/logout" class="site-logout">Admin sign out</a>}
       </div>
     </div>
@@ -85,7 +81,7 @@ const showWelcomeTour = !tourSeen;
 
     <div class="mob-drawer-foot">
       {!hasProfileSession && (
-        <a href="/profile/new" class="mob-drawer-cta">Sign up</a>
+        <a href="/u/new" class="mob-drawer-cta">Sign up</a>
       )}
       {isAdmin && (
         <a href="/api/admin/logout" class="mob-drawer-cta mob-drawer-cta-ghost">Admin sign out</a>
@@ -114,9 +110,8 @@ const showWelcomeTour = !tourSeen;
       </div>
       <div class="footer-col">
         <div class="footer-col-title">People</div>
-        <a href="/organizers">Organizers</a>
         <a href="/groups">Groups</a>
-        <a href="/profile/new">Sign up</a>
+        <a href="/u/new">Sign up</a>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">About</div>
@@ -133,73 +128,6 @@ const showWelcomeTour = !tourSeen;
     </div>
   </footer>
 
-  {showWelcomeTour && (
-    <div id="welcome-tour" class="wt-overlay" hidden>
-      <div class="wt-modal" role="dialog" aria-modal="true" aria-labelledby="wt-title">
-        <button class="wt-close" id="wt-close" aria-label="Close">×</button>
-
-        <div class="wt-slide wt-slide-intro" data-step="0">
-          <div class="wt-emoji">👋</div>
-          <h2 id="wt-title">Hey. You new here?</h2>
-          <p>This is where Denver people meet other Denver people. Hikes, dinners, game nights, brewery hops, whatever. You show up, you meet people, you go home. We promise it's less awkward than it sounds.</p>
-          <div class="wt-actions">
-            <button class="wt-btn wt-btn-primary" data-action="start">Show me around</button>
-            <button class="wt-btn wt-btn-ghost" data-action="skip">I'm good, let me explore</button>
-          </div>
-        </div>
-
-        <div class="wt-slide" data-step="1" hidden>
-          <div class="wt-emoji">📅</div>
-          <h2>Browse events</h2>
-          <p>Head to <strong>Events</strong> to see what's happening this week. Filter by type (dinner, hike, brewery…) and pick something that fits your vibe.</p>
-          <div class="wt-tip"><strong>Tip:</strong> "Vibe tags" like 🥤 Sober-friendly or 🤫 Introvert-friendly help you find the right room.</div>
-        </div>
-
-        <div class="wt-slide" data-step="2" hidden>
-          <div class="wt-emoji">🎉</div>
-          <h2>RSVP in one tap</h2>
-          <p>Click any event and pick <strong>Going</strong>, <strong>Maybe</strong>, or <strong>Can't make it</strong>. Spots are limited — when an event fills up, you'll be auto-added to a waitlist if you still want in.</p>
-          <div class="wt-tip"><strong>Add to calendar:</strong> RSVPed events give you Google and .ics one-click adds.</div>
-        </div>
-
-        <div class="wt-slide" data-step="3" hidden>
-          <div class="wt-emoji">👥</div>
-          <h2>Build your own circle</h2>
-          <p>Make a <strong>Group</strong> for your trivia crew, hiking buddies, or dinner club. Invite-only or public — your call. Post events scoped just to that group.</p>
-          <div class="wt-tip"><strong>Single-use invite links</strong> let you share carefully without random people slipping in.</div>
-        </div>
-
-        <div class="wt-slide" data-step="4" hidden>
-          <div class="wt-emoji">🏆</div>
-          <h2>Level up</h2>
-          <p>Your <strong>profile</strong> tracks every hangout you've gone to. The more you show up, the higher you level — and Denver starts knowing your name.</p>
-          <div class="wt-tip"><strong>Reliability score:</strong> show up to events you RSVPed for and your score climbs. Skip and it drops.</div>
-        </div>
-
-        <div class="wt-slide" data-step="5" hidden>
-          <div class="wt-emoji">🚀</div>
-          <h2>You're set</h2>
-          <p>Sign up free with Discord and you can RSVP, host, and start your own groups. Or just keep browsing — no pressure.</p>
-          <div class="wt-actions">
-            <button class="wt-btn wt-btn-primary" data-action="signin">Sign in / sign up</button>
-            <button class="wt-btn wt-btn-ghost" data-action="skip">Keep browsing</button>
-          </div>
-        </div>
-
-        <div class="wt-footer" id="wt-footer" hidden>
-          <button class="wt-step-btn" id="wt-prev" data-action="prev">← Back</button>
-          <div class="wt-dots">
-            <span class="wt-dot" data-dot="1"></span>
-            <span class="wt-dot" data-dot="2"></span>
-            <span class="wt-dot" data-dot="3"></span>
-            <span class="wt-dot" data-dot="4"></span>
-            <span class="wt-dot" data-dot="5"></span>
-          </div>
-          <button class="wt-step-btn wt-step-btn-primary" id="wt-next" data-action="next">Next →</button>
-        </div>
-      </div>
-    </div>
-  )}
 
   <script is:inline>
     (function() {
@@ -297,7 +225,7 @@ const showWelcomeTour = !tourSeen;
             html += '<div class="mc-phone-ok" style="background:#F0FDF4;color:#047857;border-color:#BBF7D0">Regular member — no public page.</div>';
           } else if (!hasViewer) {
             // No profile session — show a CTA to sign up.
-            html += '<a class="mc-btn mc-btn-primary" href="/profile/new?next=' + encodeURIComponent(window.location.pathname) + '">Sign up to message</a>';
+            html += '<a class="mc-btn mc-btn-primary" href="/u/new?next=' + encodeURIComponent(window.location.pathname) + '">Sign up to message</a>';
           } else {
             html += '<button class="mc-btn mc-btn-primary" id="mc-msg" data-email="' + escapeHtml(m.email) + '">💬 Message</button>';
             var sent = data.phoneRequest && data.phoneRequest.sent;
@@ -914,83 +842,3 @@ const showWelcomeTour = !tourSeen;
   .mob-drawer-link-sub { margin-left: 12px; opacity: 0.9; }
 </style>
 
-<script is:inline>
-  (function() {
-    var tour = document.getElementById('welcome-tour');
-    if (!tour) return;
-    try {
-      if (localStorage.getItem('dsn_welcome_seen')) return;
-    } catch (e) {}
-    // Show after a brief delay so the page settles first
-    setTimeout(function() { tour.removeAttribute('hidden'); }, 500);
-
-    var slides = tour.querySelectorAll('.wt-slide');
-    var footer = document.getElementById('wt-footer');
-    var prevBtn = document.getElementById('wt-prev');
-    var nextBtn = document.getElementById('wt-next');
-    var closeBtn = document.getElementById('wt-close');
-    var dots = tour.querySelectorAll('.wt-dot');
-    var step = 0;
-    var maxStep = slides.length - 1;
-
-    function dismiss() {
-      try { localStorage.setItem('dsn_welcome_seen', '1'); } catch (e) {}
-      // Cookie is the source of truth — survives localStorage clears,
-      // Safari private mode, etc. 1 year, root path.
-      try {
-        document.cookie = 'dsn_tour_seen=1; Path=/; Max-Age=31536000; SameSite=Lax';
-      } catch (e) {}
-      tour.setAttribute('hidden', '');
-    }
-
-    function show(n) {
-      step = Math.max(0, Math.min(maxStep, n));
-      slides.forEach(function(s, i) {
-        if (i === step) s.removeAttribute('hidden');
-        else s.setAttribute('hidden', '');
-      });
-      if (step >= 1 && step <= 5) {
-        footer.removeAttribute('hidden');
-        dots.forEach(function(d, i) {
-          d.classList.toggle('active', i === step - 1);
-        });
-        prevBtn.disabled = step === 1;
-        nextBtn.textContent = step === maxStep ? 'Done' : 'Next →';
-      } else {
-        footer.setAttribute('hidden', '');
-      }
-    }
-
-    tour.addEventListener('click', function(e) {
-      // Backdrop click closes
-      if (e.target === tour) { dismiss(); return; }
-      // Walk up to find the nearest [data-action] — tap targets on
-      // mobile can land on child spans inside a button
-      var el = e.target;
-      while (el && el !== tour) {
-        var action = el.getAttribute && el.getAttribute('data-action');
-        if (action) {
-          if (action === 'start') show(1);
-          else if (action === 'skip') dismiss();
-          else if (action === 'signin') {
-            dismiss();
-          }
-          else if (action === 'prev') show(step - 1);
-          else if (action === 'next') {
-            if (step === maxStep) dismiss();
-            else show(step + 1);
-          }
-          return;
-        }
-        el = el.parentNode;
-      }
-    });
-    closeBtn.addEventListener('click', dismiss);
-    document.addEventListener('keydown', function(e) {
-      if (tour.hasAttribute('hidden')) return;
-      if (e.key === 'Escape') dismiss();
-      else if (e.key === 'ArrowRight' && step >= 1 && step < maxStep) show(step + 1);
-      else if (e.key === 'ArrowLeft' && step > 1) show(step - 1);
-    });
-  })();
-</script>

@@ -6,7 +6,7 @@ import { getCurrentProfile } from '../../lib/profile-auth';
 
 const db = getDB();
 const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
-if (!me) return Astro.redirect('/profile/new?next=/events/new');
+if (!me) return Astro.redirect('/u/new?next=/events/new');
 
 // Hosting cap for regulars.
 const HOST_LIMIT = 3;

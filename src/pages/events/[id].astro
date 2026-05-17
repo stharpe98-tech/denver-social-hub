@@ -227,7 +227,7 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
       <div class="ev-rsvp-card" style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">
         <strong style="font-size:15px">🔒 Profile required to RSVP</strong>
         <span class="ev-rsvp-sub">The host wants to cut down on no-shows. Sign in or create a free profile to RSVP.</span>
-        <a href={`/profile/new?next=/events/${id}`} class="ev-rsvp-btn ev-rsvp-going" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px">
+        <a href={`/u/new?next=/events/${id}`} class="ev-rsvp-btn ev-rsvp-going" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px">
           <span class="ev-rsvp-emoji">✨</span><span>Sign in or create a profile</span>
         </a>
       </div>

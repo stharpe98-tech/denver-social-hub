@@ -123,7 +123,7 @@ function timeAgo(iso: string): string {
     </div>
     <div class="g-hero-actions">
       {!user && (
-        <a href={`/profile/new?next=/groups/${group.slug}`} class="btn-cta">Sign up to join</a>
+        <a href={`/u/new?next=/groups/${group.slug}`} class="btn-cta">Sign up to join</a>
       )}
       {canJoinDirect && (
         <button class="btn-cta" id="join-btn" data-group-id={group.id}>Join group</button>

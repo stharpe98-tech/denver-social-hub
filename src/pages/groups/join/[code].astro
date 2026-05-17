@@ -12,7 +12,7 @@ if (db) await ensureGroupsSchema(db);
 
 const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
 if (!me) {
-  return Astro.redirect('/profile/new?next=/groups/join/' + encodeURIComponent(code));
+  return Astro.redirect('/u/new?next=/groups/join/' + encodeURIComponent(code));
 }
 
 let error: string | null = null;

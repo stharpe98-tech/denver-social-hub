@@ -11,7 +11,7 @@ const db = getDB();
 if (!db) return new Response('DB unavailable', { status: 500 });
 
 const profile = await db.prepare(
-  `SELECT slug, display_name, headline, bio, photo_emoji, accent_color,
+  `SELECT slug, email, display_name, headline, bio, photo_emoji, accent_color,
           offers_json, links_json, contact_email, contact_phone, status
    FROM profiles WHERE slug = ?`
 ).bind(v.slug).first() as any;
@@ -19,6 +19,33 @@ const profile = await db.prepare(
 if (!profile || profile.status !== 'live') {
   return new Response('Not found', { status: 404 });
 }
+
+// Events hosted by this profile, sorted upcoming-first then most-recent past.
+const monthOrder: Record<string, number> = { JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11 };
+let hostedEvents: any[] = [];
+try {
+  const rows = (await db.prepare(
+    `SELECT id, title, event_month, event_day, location, zone, is_past
+     FROM events WHERE LOWER(submitted_by_email) = ?`
+  ).bind((profile.email || '').toLowerCase()).all())?.results || [];
+  const now = new Date();
+  const cm = now.getMonth();
+  const cd = now.getDate();
+  hostedEvents = (rows as any[]).map((e: any) => {
+    const m = monthOrder[(e.event_month || '').toUpperCase()] ?? 99;
+    const d = parseInt(e.event_day) || 99;
+    const past = !!e.is_past || m < cm || (m === cm && d < cd);
+    return { ...e, _m: m, _d: d, _past: past };
+  }).sort((a: any, b: any) => {
+    if (a._past !== b._past) return a._past ? 1 : -1;
+    if (a._past) {
+      if (b._m !== a._m) return b._m - a._m;
+      return b._d - a._d;
+    }
+    if (a._m !== b._m) return a._m - b._m;
+    return a._d - b._d;
+  });
+} catch {}
 
 let offers: Array<{ icon?: string; label: string }> = [];
 let links: Array<{ icon?: string; label: string; url: string }> = [];
@@ -38,6 +65,23 @@ const firstName = (profile.display_name || '').split(' ')[0] || 'them';
           {profile.headline && <p class="prof-headline">{profile.headline}</p>}
         </div>
       </header>
+
+      {hostedEvents.length > 0 && (
+        <div class="prof-events">
+          <h3 class="prof-h3">Events I'm hosting</h3>
+          <ul>
+            {hostedEvents.map((e: any) => (
+              <li class:list={["prof-event", { 'prof-event-past': e._past }]}>
+                <a href={`/events/${e.id}`}>
+                  <span class="prof-event-date">{e.event_month} {e.event_day}</span>
+                  <span class="prof-event-title">{e.title}</span>
+                  {e._past && <span class="prof-event-tag">past</span>}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {profile.bio && <p class="prof-bio">{profile.bio}</p>}
 
@@ -125,6 +169,15 @@ const firstName = (profile.display_name || '').split(' ')[0] || 'them';
     .prof-name { font-family: var(--font-display, sans-serif); font-size: 24px; font-weight: 800; color: var(--text); margin-bottom: 2px; line-height: 1.1; }
     .prof-headline { font-size: 14px; color: var(--text-sec); }
     .prof-bio { padding: var(--space-3) var(--space-5); font-size: 15px; color: var(--text); line-height: 1.55; white-space: pre-wrap; }
+    .prof-events { padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border); }
+    .prof-events ul { list-style: none; padding: 0; margin: 0; }
+    .prof-event a { display: flex; align-items: center; gap: 12px; padding: 8px 0; font-size: 14px; color: var(--text); text-decoration: none; border-bottom: 1px dashed var(--border); }
+    .prof-event:last-child a { border-bottom: none; }
+    .prof-event a:hover { color: var(--profile-accent); }
+    .prof-event-date { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); min-width: 60px; }
+    .prof-event-title { flex: 1; font-weight: 600; }
+    .prof-event-tag { font-size: 11px; color: var(--text-faint); padding: 2px 8px; background: var(--surface, #F8F9FB); border-radius: 999px; }
+    .prof-event-past .prof-event-title { color: var(--text-sec); font-weight: 500; }
     .prof-h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin-bottom: 8px; }
     .prof-offers { padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); }
     .prof-offers ul { list-style: none; padding: 0; margin: 0; }
