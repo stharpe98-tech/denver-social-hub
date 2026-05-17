@@ -1,3 +1,112 @@
 ---
-return Astro.redirect("/", 301);
+import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+import { getNeighborhood } from '../../lib/neighborhoods';
+
+const db = getDB();
+let organizers: any[] = [];
+try {
+  if (db) {
+    const r = await db.prepare(`
+      SELECT slug, display_name, headline, bio, photo_emoji, accent_color, neighborhood
+      FROM profiles
+      WHERE tier='organizer' AND status='live'
+      ORDER BY updated_at DESC, slug ASC
+    `).all();
+    organizers = (r.results || []) as any[];
+  }
+} catch { organizers = []; }
 ---
+<Base title="Organizers" description="The people running events, meetups, and gatherings on Denver Social.">
+<div class="o-wrap">
+
+  <nav class="cb-tabs-strip" aria-label="Community sections">
+    <a href="/community" class="cb-tab-link">📌 Flyers</a>
+    <a href="/groups" class="cb-tab-link">👥 Groups</a>
+    <a href="/organizers" class="cb-tab-link cb-tab-link-on">⭐ Organizers</a>
+  </nav>
+
+  <header class="o-hero">
+    <div class="o-tag">DENVER · ORGANIZERS</div>
+    <h1 class="o-h1">The people running <span>things.</span></h1>
+    <p class="o-sub">Realtors, instructors, makers, hosts. Each has a public page, hosts events, and shows up on the Community Board. Want a page too? <a href="/profile/new">Get started →</a></p>
+  </header>
+
+  {organizers.length === 0 ? (
+    <div class="o-empty">
+      <div class="o-empty-emoji">🌱</div>
+      <h2>No organizers yet.</h2>
+      <p>This area lights up as people claim their own pages. <a href="/profile/new">Be the first →</a></p>
+    </div>
+  ) : (
+    <div class="o-grid">
+      {organizers.map(o => {
+        const nbh = getNeighborhood(o.neighborhood);
+        const accent = o.accent_color || '#7C3AED';
+        return (
+          <a href={`/u/${o.slug}`} class="o-card" style={`--accent: ${accent}`}>
+            <div class="o-avatar">{o.photo_emoji || '👤'}</div>
+            <div class="o-name">{o.display_name}</div>
+            {o.headline && <div class="o-headline">{o.headline}</div>}
+            {nbh && <div class="o-nbh">📍 {nbh.label}</div>}
+            {o.bio && <p class="o-bio">{o.bio.slice(0, 120)}{o.bio.length > 120 ? '…' : ''}</p>}
+            <div class="o-cta">View page →</div>
+          </a>
+        );
+      })}
+    </div>
+  )}
+
+</div>
+
+<style>
+  .o-wrap { max-width: 1100px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  .o-hero { text-align: center; margin-bottom: 40px; }
+  .o-tag { font-family: 'SF Mono', Menlo, monospace; font-size: 11px; letter-spacing: 3px; color: #C9A55D; font-weight: 700; margin-bottom: 14px; }
+  .o-h1 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(32px, 5vw, 52px); font-weight: 800; color: var(--text, #1A1A1A); letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 16px; }
+  .o-h1 span { color: #C9A55D; font-style: italic; }
+  .o-sub { font-size: 16px; color: var(--text-sec, #555); max-width: 580px; margin: 0 auto; line-height: 1.55; }
+  .o-sub a { color: var(--accent, #7C3AED); font-weight: 600; }
+
+  .o-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .o-card {
+    display: block; background: #fff; border: 1.5px solid var(--border, #E8E2D5);
+    border-radius: 14px; padding: 20px 18px; text-decoration: none; color: inherit;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    position: relative; overflow: hidden;
+  }
+  .o-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px; background: var(--accent);
+  }
+  .o-card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+  .o-avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 12%, #fff);
+    border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
+    margin-bottom: 12px;
+  }
+  .o-name { font-family: 'Playfair Display', Georgia, serif; font-size: 19px; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
+  .o-headline { font-size: 13px; color: #555; font-style: italic; margin-bottom: 8px; }
+  .o-nbh { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: #888; text-transform: uppercase; margin-bottom: 10px; }
+  .o-bio { font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 12px; }
+  .o-cta { font-size: 12px; font-weight: 700; color: var(--accent); }
+
+  .o-empty {
+    text-align: center; padding: 64px 24px;
+    background: #FAF8F4; border: 1px dashed #E8E2D5; border-radius: 16px;
+    max-width: 480px; margin: 0 auto;
+  }
+  .o-empty-emoji { font-size: 48px; margin-bottom: 12px; }
+  .o-empty h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+  .o-empty p { font-size: 14px; color: #555; }
+  .o-empty a { color: var(--accent, #7C3AED); font-weight: 700; }
+
+  @media (max-width: 480px) {
+    .o-wrap { padding: 32px 16px 64px; }
+    .o-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</Base>

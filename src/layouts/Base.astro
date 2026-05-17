@@ -53,7 +53,7 @@ const currentPath = Astro.url.pathname;
       </nav>
 
       <div class="site-auth">
-        {!hasProfileSession && <a href="/u/new" class="site-cta">Sign up</a>}
+        {!hasProfileSession && <a href="/profile/new" class="site-cta">Sign up</a>}
         {isAdmin && <a href="/api/admin/logout" class="site-logout">Admin sign out</a>}
       </div>
     </div>
@@ -81,7 +81,7 @@ const currentPath = Astro.url.pathname;
 
     <div class="mob-drawer-foot">
       {!hasProfileSession && (
-        <a href="/u/new" class="mob-drawer-cta">Sign up</a>
+        <a href="/profile/new" class="mob-drawer-cta">Sign up</a>
       )}
       {isAdmin && (
         <a href="/api/admin/logout" class="mob-drawer-cta mob-drawer-cta-ghost">Admin sign out</a>
@@ -110,8 +110,9 @@ const currentPath = Astro.url.pathname;
       </div>
       <div class="footer-col">
         <div class="footer-col-title">People</div>
+        <a href="/organizers">Organizers</a>
         <a href="/groups">Groups</a>
-        <a href="/u/new">Sign up</a>
+        <a href="/profile/new">Sign up</a>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">About</div>
