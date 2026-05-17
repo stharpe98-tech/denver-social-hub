@@ -1,6 +1,7 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
 const stats: any[] = Array.isArray(templateData.impact_stats) ? templateData.impact_stats : [];
 const days: any[] = Array.isArray(templateData.upcoming_days) ? templateData.upcoming_days : [];
 ---
@@ -8,6 +9,7 @@ const days: any[] = Array.isArray(templateData.upcoming_days) ? templateData.upc
   <span class="pill">MONTHLY · FAMILY-FRIENDLY</span>
   <h1>{profile.display_name}</h1>
   {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  <ActionRow profile={profile} links={links} />
   {templateData.mission && <div class="mission">{templateData.mission}</div>}
   {stats.length > 0 && (
     <div class="stats">{stats.map(s => <div class="stat"><div class="sn">{s.n}</div><div class="sl">{s.label}</div></div>)}</div>

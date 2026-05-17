@@ -1,0 +1,78 @@
+---
+export interface Props {
+  profile: any;
+  links?: Array<{ icon?: string; label?: string; url?: string; kind?: string }>;
+}
+const { profile, links = [] } = Astro.props as Props;
+
+const email = (profile && profile.contact_email) ? String(profile.contact_email).trim() : '';
+const phone = (profile && profile.contact_phone) ? String(profile.contact_phone).trim() : '';
+
+type ActionLink = { icon: string; label: string; url: string; external?: boolean };
+const actions: ActionLink[] = [];
+if (email) actions.push({ icon: '📧', label: 'Email', url: `mailto:${email}` });
+if (phone) actions.push({ icon: '📱', label: 'Text', url: `sms:${phone.replace(/[^0-9+]/g, '')}` });
+
+const safeLinks = Array.isArray(links) ? links : [];
+for (const l of safeLinks) {
+  if (!l || typeof l !== 'object') continue;
+  const url = (l.url || '').toString().trim();
+  if (!url) continue;
+  const label = (l.label || '').toString().trim() || 'Link';
+  const icon = (l.icon || '').toString().trim() || '🔗';
+  actions.push({ icon, label, url, external: true });
+}
+
+const hasActions = actions.length > 0;
+---
+{hasActions && (
+  <div class="action-row" aria-label="Contact and links">
+    {actions.map(a => (
+      <a
+        href={a.url}
+        class="action-pill"
+        target={a.external ? '_blank' : undefined}
+        rel={a.external ? 'noopener nofollow' : undefined}
+      >
+        <span class="action-icon">{a.icon}</span>
+        <span class="action-label">{a.label}</span>
+      </a>
+    ))}
+  </div>
+)}
+
+<style>
+  .action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 16px;
+  }
+  .action-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #FFFFFF;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    color: #1A1A1A;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+  .action-pill:hover {
+    border-color: var(--profile-accent, #7C3AED);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  .action-pill:active { transform: translateY(0); }
+  .action-icon { font-size: 14px; line-height: 1; }
+  .action-label { white-space: nowrap; }
+  @media (max-width: 480px) {
+    .action-pill { font-size: 12px; padding: 7px 12px; }
+  }
+</style>

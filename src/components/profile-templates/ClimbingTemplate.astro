@@ -1,15 +1,21 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
+const hasGrades = !!(templateData.lead_grade || templateData.boulder_grade);
+const gradeCols = (templateData.lead_grade && templateData.boulder_grade) ? '1fr 1fr' : '1fr';
 ---
 <div class="t12">
   <span class="pill">LOOKING FOR PARTNERS</span>
   <h1>{(profile.display_name || '').toUpperCase()}</h1>
   {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
-  <div class="grades">
-    {templateData.lead_grade && <div class="grade"><div class="l">Lead</div><div class="v">{templateData.lead_grade}</div><div class="s">comfortable on most</div></div>}
-    {templateData.boulder_grade && <div class="grade"><div class="l">Bouldering</div><div class="v">{templateData.boulder_grade}</div><div class="s">{templateData.project_note || ''}</div></div>}
-  </div>
+  <ActionRow profile={profile} links={links} />
+  {hasGrades && (
+    <div class="grades" style={`grid-template-columns: ${gradeCols}`}>
+      {templateData.lead_grade && <div class="grade"><div class="l">Lead</div><div class="v">{templateData.lead_grade}</div><div class="s">comfortable on most</div></div>}
+      {templateData.boulder_grade && <div class="grade"><div class="l">Bouldering</div><div class="v">{templateData.boulder_grade}</div><div class="s">{templateData.project_note || ''}</div></div>}
+    </div>
+  )}
   {profile.bio && <p class="bio">{profile.bio}</p>}
   {templateData.partner_call && (
     <div class="call">

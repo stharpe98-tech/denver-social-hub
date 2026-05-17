@@ -1,7 +1,8 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
-const certs: string[] = Array.isArray(templateData.certifications) ? templateData.certifications : [];
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
+const certs: string[] = Array.isArray(templateData.certifications) ? templateData.certifications.filter(Boolean) : [];
 const sched: any[] = Array.isArray(templateData.weekly_schedule) ? templateData.weekly_schedule : [];
 ---
 <div class="t7">
@@ -10,6 +11,7 @@ const sched: any[] = Array.isArray(templateData.weekly_schedule) ? templateData.
     <h1>{profile.display_name}</h1>
     {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
   </div>
+  <ActionRow profile={profile} links={links} />
   {templateData.philosophy_quote && (
     <div class="quote">"{templateData.philosophy_quote}"
       <div class="quote-sig">— TEACHING PHILOSOPHY</div>

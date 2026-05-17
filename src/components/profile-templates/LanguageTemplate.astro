@@ -1,21 +1,32 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
-const offered: string[] = Array.isArray(templateData.offered) ? templateData.offered : [];
-const wanted: string[] = Array.isArray(templateData.wanted) ? templateData.wanted : [];
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
+const offered: string[] = Array.isArray(templateData.offered) ? templateData.offered.filter(Boolean) : [];
+const wanted: string[] = Array.isArray(templateData.wanted) ? templateData.wanted.filter(Boolean) : [];
+const hasOffered = offered.length > 0;
+const hasWanted = wanted.length > 0;
+const hasMatrix = hasOffered || hasWanted;
+const hasMeta = !!(templateData.meet_info || templateData.level_range);
+const matrixCols = (hasOffered && hasWanted) ? '1fr 1fr' : '1fr';
 ---
 <div class="t15">
   <span class="pill">CASUAL · DROP-IN · ALL LEVELS</span>
   <h1>{profile.display_name}</h1>
   {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
-  <div class="matrix">
-    <div class="col"><div class="l">OFFERED</div><div class="v">{offered.join(' · ')}</div></div>
-    <div class="col"><div class="l">WANTED</div><div class="v">{wanted.join(' · ')}</div></div>
-  </div>
-  <div class="meta">
-    {templateData.meet_info && <span class="mt">{templateData.meet_info}</span>}
-    {templateData.level_range && <span class="mt">🎯 {templateData.level_range}</span>}
-  </div>
+  <ActionRow profile={profile} links={links} />
+  {hasMatrix && (
+    <div class="matrix" style={`grid-template-columns: ${matrixCols}`}>
+      {hasOffered && <div class="col"><div class="l">OFFERED</div><div class="v">{offered.join(' · ')}</div></div>}
+      {hasWanted && <div class="col"><div class="l">WANTED</div><div class="v">{wanted.join(' · ')}</div></div>}
+    </div>
+  )}
+  {hasMeta && (
+    <div class="meta">
+      {templateData.meet_info && <span class="mt">{templateData.meet_info}</span>}
+      {templateData.level_range && <span class="mt">🎯 {templateData.level_range}</span>}
+    </div>
+  )}
   {profile.bio && <p class="bio">{profile.bio}</p>}
 </div>
 <style>

@@ -1,18 +1,23 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
 const tp = templateData.training_plan || {};
 const planPct = (tp.week && tp.total_weeks) ? Math.min(100, Math.round((tp.week / tp.total_weeks) * 100)) : 0;
+const hasStats = templateData.members_count != null || !!templateData.pace || templateData.weekly_miles != null;
 ---
 <div class="t6">
   <span class="pill">NEW MEMBERS WELCOME ✓</span>
   <h1>{(profile.display_name || '').toUpperCase()}</h1>
   {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
-  <div class="stats">
-    {templateData.members_count != null && <div class="stat"><div class="stat-n">{templateData.members_count}</div><div class="stat-l">runners</div></div>}
-    {templateData.pace && <div class="stat"><div class="stat-n">{templateData.pace}</div><div class="stat-l">avg pace</div></div>}
-    {templateData.weekly_miles != null && <div class="stat"><div class="stat-n">{templateData.weekly_miles}</div><div class="stat-l">mi / week</div></div>}
-  </div>
+  <ActionRow profile={profile} links={links} />
+  {hasStats && (
+    <div class="stats">
+      {templateData.members_count != null && <div class="stat"><div class="stat-n">{templateData.members_count}</div><div class="stat-l">runners</div></div>}
+      {templateData.pace && <div class="stat"><div class="stat-n">{templateData.pace}</div><div class="stat-l">avg pace</div></div>}
+      {templateData.weekly_miles != null && <div class="stat"><div class="stat-n">{templateData.weekly_miles}</div><div class="stat-l">mi / week</div></div>}
+    </div>
+  )}
   {tp.name && (
     <div class="plan">
       <div class="plan-l">▶ TRAINING PLAN</div>

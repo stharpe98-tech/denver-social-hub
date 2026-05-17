@@ -1,8 +1,10 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
 const photos: any[] = Array.isArray(templateData.meal_photos) ? templateData.meal_photos.slice(0, 3) : [];
 const nd = templateData.next_dinner || {};
+const hasMeta = !!(templateData.dietary_note || templateData.format_note);
 ---
 <div class="t13">
   {photos.length > 0 && (
@@ -12,18 +14,21 @@ const nd = templateData.next_dinner || {};
     {profile.neighborhood && <div class="eb">{profile.neighborhood.toUpperCase()} · MONTHLY</div>}
     <h1>{profile.display_name}</h1>
     {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
-    {(nd.title || nd.date) && (
+    <ActionRow profile={profile} links={links} />
+    {nd.title && (
       <div class="next">
         <div class="next-l">▶ NEXT DINNER</div>
-        <div class="next-t">{nd.title || ''}{nd.host ? ` · Hosted by ${nd.host}` : ''}</div>
+        <div class="next-t">{nd.title}{nd.host ? ` · Hosted by ${nd.host}` : ''}</div>
         <div class="next-m">{[nd.date, nd.seats].filter(Boolean).join(' · ')}</div>
       </div>
     )}
     {profile.bio && <p class="bio">{profile.bio}</p>}
-    <div class="meta">
-      {templateData.dietary_note && <div class="mi"><div class="l">DIETARY</div><div class="v">{templateData.dietary_note}</div></div>}
-      {templateData.format_note && <div class="mi"><div class="l">FORMAT</div><div class="v">{templateData.format_note}</div></div>}
-    </div>
+    {hasMeta && (
+      <div class="meta">
+        {templateData.dietary_note && <div class="mi"><div class="l">DIETARY</div><div class="v">{templateData.dietary_note}</div></div>}
+        {templateData.format_note && <div class="mi"><div class="l">FORMAT</div><div class="v">{templateData.format_note}</div></div>}
+      </div>
+    )}
   </div>
 </div>
 <style>

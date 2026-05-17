@@ -1,14 +1,17 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
 const cr = templateData.currently_reading || {};
 const pct = (cr.pages_total && cr.pages_read) ? Math.min(100, Math.round((cr.pages_read / cr.pages_total) * 100)) : 0;
+const ebText = [profile.neighborhood, templateData.founded_year ? `SINCE ${templateData.founded_year}` : null].filter(Boolean).join(' · ').toUpperCase();
 ---
 <div class="t1">
-  <div class="eb">{[profile.neighborhood, templateData.founded_year ? `SINCE ${templateData.founded_year}` : null].filter(Boolean).join(' · ').toUpperCase()}</div>
+  {ebText && <div class="eb">{ebText}</div>}
   <h1>{profile.display_name}</h1>
   {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
-  {(cr.title || cr.author) && (
+  <ActionRow profile={profile} links={links} />
+  {cr.title && (
     <div class="card">
       <div class="eb card-l">★ Currently reading</div>
       <div class="card-t">{cr.title || ''}</div>

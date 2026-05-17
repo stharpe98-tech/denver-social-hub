@@ -1,28 +1,35 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
-const games: string[] = Array.isArray(templateData.favorite_games) ? templateData.favorite_games : [];
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
+const games: string[] = Array.isArray(templateData.favorite_games) ? templateData.favorite_games.filter(Boolean) : [];
+const hasFavs = games.length > 0;
+const hasPlayerCount = !!templateData.player_count_note;
+const hasGrid = hasFavs || hasPlayerCount;
 ---
 <div class="t2">
   {profile.neighborhood && <div class="eb">{profile.neighborhood.toUpperCase()} · WEEKLY</div>}
   <h1>{profile.display_name}</h1>
   {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  <ActionRow profile={profile} links={links} />
   {templateData.next_night && (
     <div class="night">
       <div class="night-l">▶ NEXT GAME NIGHT</div>
       <div class="night-t">{templateData.next_night}</div>
     </div>
   )}
-  <div class="grid">
-    {games.length > 0 && (
-      <div class="gcard"><div class="gcard-h">★ FAVORITES</div>
-        <div class="gcard-b">{games.map(g => <span class="tag">{g}</span>)}</div>
-      </div>
-    )}
-    {templateData.player_count_note && (
-      <div class="gcard"><div class="gcard-h">🎯 PLAYER COUNT</div><div class="gcard-b">{templateData.player_count_note}</div></div>
-    )}
-  </div>
+  {hasGrid && (
+    <div class="grid">
+      {hasFavs && (
+        <div class="gcard"><div class="gcard-h">★ FAVORITES</div>
+          <div class="gcard-b">{games.map(g => <span class="tag">{g}</span>)}</div>
+        </div>
+      )}
+      {hasPlayerCount && (
+        <div class="gcard"><div class="gcard-h">🎯 PLAYER COUNT</div><div class="gcard-b">{templateData.player_count_note}</div></div>
+      )}
+    </div>
+  )}
   {profile.bio && <p class="bio">{profile.bio}</p>}
 </div>
 <style>

@@ -1,13 +1,15 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
 const pups: any[] = Array.isArray(templateData.pups) ? templateData.pups : [];
-const parks: string[] = Array.isArray(templateData.favorite_parks) ? templateData.favorite_parks : [];
+const parks: string[] = Array.isArray(templateData.favorite_parks) ? templateData.favorite_parks.filter(Boolean) : [];
 ---
 <div class="t11">
   <span class="pill">OFF-LEASH · SUNDAY MORNINGS</span>
   <h1>{profile.display_name}</h1>
   {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  <ActionRow profile={profile} links={links} />
   {pups.length > 0 && (
     <div class="pups">
       <div class="h">— The regulars</div>

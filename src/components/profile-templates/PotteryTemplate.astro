@@ -1,6 +1,7 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
 const gallery: any[] = Array.isArray(templateData.gallery) ? templateData.gallery.slice(0, 3) : [];
 const classes: any[] = Array.isArray(templateData.classes) ? templateData.classes : [];
 ---
@@ -18,6 +19,7 @@ const classes: any[] = Array.isArray(templateData.classes) ? templateData.classe
     )}
     <h1>{profile.display_name}</h1>
     {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+    <ActionRow profile={profile} links={links} />
     {profile.bio && <p class="bio">{profile.bio}</p>}
     {classes.length > 0 && (
       <>

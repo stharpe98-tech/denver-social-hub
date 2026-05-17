@@ -1,7 +1,8 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
-const meds: string[] = Array.isArray(templateData.mediums) ? templateData.mediums : [];
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
+const meds: string[] = Array.isArray(templateData.mediums) ? templateData.mediums.filter(Boolean) : [];
 const samples: any[] = Array.isArray(templateData.sample_works) ? templateData.sample_works.slice(0, 4) : [];
 const ns = templateData.next_session || {};
 ---
@@ -9,6 +10,7 @@ const ns = templateData.next_session || {};
   <div class="eb">PLEIN AIR + STUDIO · ALL LEVELS</div>
   <h1>{profile.display_name}</h1>
   {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  <ActionRow profile={profile} links={links} />
   {meds.length > 0 && <div class="mediums">{meds.map(m => <span class="med">{m}</span>)}</div>}
   {profile.bio && <p class="bio">{profile.bio}</p>}
   {(ns.title || ns.date) && (

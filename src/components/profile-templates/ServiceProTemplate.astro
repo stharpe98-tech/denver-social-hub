@@ -1,7 +1,8 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
-const hoods: string[] = Array.isArray(templateData.neighborhoods_served) ? templateData.neighborhoods_served : [];
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
+const hoods: string[] = Array.isArray(templateData.neighborhoods_served) ? templateData.neighborhoods_served.filter(Boolean) : [];
 const test = templateData.testimonial || {};
 ---
 <div class="t10">
@@ -15,12 +16,13 @@ const test = templateData.testimonial || {};
       {profile.neighborhood && <div class="loc">📍 {profile.neighborhood}</div>}
     </div>
   </div>
+  <ActionRow profile={profile} links={links} />
   {profile.bio && <p class="bio">"{profile.bio}"</p>}
   {hoods.length > 0 && (
     <div class="hoods">{hoods.map(h => <span class="hood">{h.toUpperCase()}</span>)}</div>
   )}
-  {(test.text || test.source) && (
-    <div class="test">"{test.text || ''}"<div class="test-sig">— {test.source || ''}</div></div>
+  {test.text && (
+    <div class="test">"{test.text}"{test.source && <div class="test-sig">— {test.source}</div>}</div>
   )}
 </div>
 <style>

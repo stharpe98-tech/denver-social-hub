@@ -1,10 +1,12 @@
 ---
+import ActionRow from './ActionRow.astro';
 export interface Props {
   profile: any;
   hostedEvents: any[];
   templateData: Record<string, any>;
+  links?: any[];
 }
-const { profile, hostedEvents = [] } = Astro.props;
+const { profile, hostedEvents = [], links = [] } = Astro.props;
 const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.accent_color : '#7C3AED';
 ---
 <div class="t5" style={`--accent: ${accent}`}>
@@ -16,6 +18,7 @@ const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.ac
       {profile.neighborhood && <div class="loc">📍 {profile.neighborhood}</div>}
     </div>
   </div>
+  <ActionRow profile={profile} links={links} />
   {profile.bio && <p class="bio">{profile.bio}</p>}
   {hostedEvents.length > 0 && (
     <div class="events">

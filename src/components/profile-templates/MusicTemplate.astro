@@ -1,12 +1,15 @@
 ---
-export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; }
-const { profile, templateData = {} } = Astro.props;
+import ActionRow from './ActionRow.astro';
+export interface Props { profile: any; hostedEvents: any[]; templateData: Record<string, any>; links?: any[]; }
+const { profile, templateData = {}, links = [] } = Astro.props;
 const gigs: any[] = Array.isArray(templateData.upcoming_gigs) ? templateData.upcoming_gigs : [];
+const hasMeta = !!(templateData.sound_link || templateData.looking_for);
 ---
 <div class="t8">
   {templateData.tagline && <div class="eb">{templateData.tagline.toUpperCase()}</div>}
   <h1>{profile.display_name}</h1>
   {profile.headline && <div class="caveat">~ {profile.headline} ~</div>}
+  <ActionRow profile={profile} links={links} />
   {profile.bio && <p class="bio">{profile.bio}</p>}
   {gigs.length > 0 && (
     <div class="gigs">
@@ -19,10 +22,12 @@ const gigs: any[] = Array.isArray(templateData.upcoming_gigs) ? templateData.upc
       ))}
     </div>
   )}
-  <div class="meta">
-    {templateData.sound_link && <div class="mi"><div class="l">SOUND</div><div class="v">🎧 {templateData.sound_link}</div></div>}
-    {templateData.looking_for && <div class="mi"><div class="l">LOOKING FOR</div><div class="v">{templateData.looking_for}</div></div>}
-  </div>
+  {hasMeta && (
+    <div class="meta">
+      {templateData.sound_link && <div class="mi"><div class="l">SOUND</div><div class="v">🎧 {templateData.sound_link}</div></div>}
+      {templateData.looking_for && <div class="mi"><div class="l">LOOKING FOR</div><div class="v">{templateData.looking_for}</div></div>}
+    </div>
+  )}
 </div>
 <style>
   .t8 { padding: 44px 32px; background: #0A0A0F; color: #fff; border-radius: 18px; }
