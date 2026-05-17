@@ -149,7 +149,7 @@ try {
   <div class="ev-header">
     <div class="ev-header-left">
       <span class="tag tag-orange">Events</span>
-      <h1 class="ev-h1">{cards.length} events live</h1>
+      <h1 class="ev-h1">{cards.length} {cards.length === 1 ? 'event' : 'events'} live</h1>
       <p class="ev-sub">{content.events_subtitle || 'Small groups, real plans, no flakes.'} <a href="/calendar" class="ev-sub-link">See the shared calendar →</a></p>
     </div>
     <a href="/events/new" class="btn btn-primary" id="createBtn">Post an event</a>

@@ -41,15 +41,12 @@ try {
     const currentMonth = now.getMonth();
     const currentDay = now.getDate();
     const monthOrder: Record<string, number> = { JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11 };
-    const allEvts = (await db.prepare("SELECT * FROM events WHERE is_past IS NULL OR is_past=0 ORDER BY id DESC").all())?.results || [];
-    upcomingEvents = allEvts.filter((e: any) => {
-      const m = monthOrder[(e.event_month || '').toUpperCase()];
-      const d = parseInt(e.event_day) || 99;
-      if (m === undefined) return false;
-      if (m < currentMonth) return false;
-      if (m === currentMonth && d < currentDay) return false;
-      return true;
-    }).sort((a: any, b: any) => {
+    const allEvts = (await db.prepare(
+      "SELECT * FROM events WHERE is_past IS NULL OR is_past = 0 ORDER BY id DESC LIMIT 12"
+    ).all())?.results || [];
+
+    // Trust is_past for visibility; sort by month/day for chronological order.
+    upcomingEvents = allEvts.sort((a: any, b: any) => {
       const ma = monthOrder[(a.event_month || '').toUpperCase()] ?? 99;
       const mb = monthOrder[(b.event_month || '').toUpperCase()] ?? 99;
       if (ma !== mb) return ma - mb;
@@ -104,7 +101,7 @@ const eventTypeChips = [
 
       <div class="hero-ctas">
         <a href="/events" class="btn-cta">Browse events →</a>
-        <a href="/events" class="btn-sec">See potlucks</a>
+        <a href="/events#potlucks" class="hero-link">or jump to potlucks</a>
       </div>
 
       <div class="hero-meta">
@@ -119,33 +116,10 @@ const eventTypeChips = [
         </div>
         <span class="hero-dot"></span>
         <div class="hero-stat">
-          <strong>Small</strong>
-          <span>groups</span>
+          <strong>6–12</strong>
+          <span>per event</span>
         </div>
       </div>
-    </div>
-  </section>
-
-  {/* PERSONAL PAGES CTA — full card */}
-  <section class="page-wrap personal-page-band">
-    <div class="pp-card">
-      <div class="pp-card-left">
-        <div class="pp-avatars">
-          <span class="pp-av pp-av-1">👨🏽‍💼</span>
-          <span class="pp-av pp-av-2">🧘🏻‍♀️</span>
-          <span class="pp-av pp-av-3">👨‍🍳</span>
-        </div>
-        <div class="pp-card-text">
-          <h3 class="pp-h">Have something you offer Denver?</h3>
-          <p class="pp-p">Free landing page for realtors, instructors, makers, dog-walkers — anyone with skills, services, or a side hustle. Your own URL, your contact info, your face on the neighborhood map.</p>
-          <ul class="pp-bullets">
-            <li>✓ Pick your own URL — <span class="mono">denversocialhub.com/u/yourname</span></li>
-            <li>✓ Free forever — no credit card, no account</li>
-            <li>✓ Live in 2 minutes — email yourself a code, edit, publish</li>
-          </ul>
-        </div>
-      </div>
-      <a href="/u/new" class="pp-card-cta">Make my page →</a>
     </div>
   </section>
 
@@ -231,6 +205,29 @@ const eventTypeChips = [
     </section>
   )}
 
+  {/* PERSONAL PAGES CTA — moved below event content (different audience than hero) */}
+  <section class="page-wrap personal-page-band">
+    <div class="pp-card">
+      <div class="pp-card-left">
+        <div class="pp-avatars">
+          <span class="pp-av pp-av-1">👨🏽‍💼</span>
+          <span class="pp-av pp-av-2">🧘🏻‍♀️</span>
+          <span class="pp-av pp-av-3">👨‍🍳</span>
+        </div>
+        <div class="pp-card-text">
+          <h3 class="pp-h">Have something you offer Denver?</h3>
+          <p class="pp-p">Free landing page for realtors, instructors, makers, dog-walkers — anyone with skills, services, or a side hustle. Your own URL, your contact info, your face on the neighborhood map.</p>
+          <ul class="pp-bullets">
+            <li>✓ Pick your own URL — <span class="mono">denversocialhub.com/u/yourname</span></li>
+            <li>✓ Free forever — no credit card, no account</li>
+            <li>✓ Live in 2 minutes — email yourself a code, edit, publish</li>
+          </ul>
+        </div>
+      </div>
+      <a href="/u/new" class="pp-card-cta">Make my page →</a>
+    </div>
+  </section>
+
 
   <!-- WHAT WE GET UP TO + HOST THE NEXT ONE -->
   <section class="page-wrap">
@@ -307,9 +304,11 @@ const eventTypeChips = [
     .hero-italic { font-style: italic; color: #7DD3FC; }
     .hero-em { background: linear-gradient(135deg, #38BDF8, #34D399); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
     .hero-sub { font-size: clamp(16px, 1.6vw, 18px); color: rgba(255,255,255,0.75); line-height: 1.6; max-width: 580px; margin: 0 auto var(--space-5); }
-    .hero-ctas { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; margin-bottom: var(--space-5); }
+    .hero-ctas { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; align-items: center; margin-bottom: var(--space-5); }
     .hero-ctas .btn-sec { background: rgba(255,255,255,0.2); color: #fff; border: 2px solid rgba(255,255,255,0.5); font-weight: 700; }
     .hero-ctas .btn-sec:hover { background: rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.7); }
+    .hero-link { color: rgba(255,255,255,0.78); font-size: 14px; text-decoration: underline; text-underline-offset: 4px; transition: color 0.15s; }
+    .hero-link:hover { color: #fff; }
     .hero-meta { display: inline-flex; align-items: center; gap: var(--space-3); padding: 10px 18px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; backdrop-filter: blur(12px); }
     .hero-stat { display: inline-flex; align-items: baseline; gap: 6px; font-size: 13px; color: rgba(255,255,255,0.6); }
     .hero-stat strong { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.02em; }
