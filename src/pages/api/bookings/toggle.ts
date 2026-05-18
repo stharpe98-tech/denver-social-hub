@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
-import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
+import { canEditProfileOrAdmin, validateSlug } from '../../../lib/profile-auth';
 import { ensureBookingsSchema } from '../../../lib/bookings-schema';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -14,7 +14,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const v = validateSlug(body?.slug || '');
   if (!v.ok) return j({ ok: false, error: v.error }, 400);
-  if (!(await canEditProfile(cookies, v.slug))) return j({ ok: false, error: 'Not authorized' }, 403);
+  if (!(await canEditProfileOrAdmin(cookies, v.slug))) return j({ ok: false, error: 'Not authorized' }, 403);
 
   const enabled = body?.enabled ? 1 : 0;
   await db.prepare(`UPDATE profiles SET has_booking_tool=? WHERE slug=?`).bind(enabled, v.slug).run();
