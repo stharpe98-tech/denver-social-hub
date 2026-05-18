@@ -14,6 +14,7 @@ if (db) {
        p.cover_photo_url, p.avatar_photo_url,
        (SELECT COUNT(*) FROM profile_reports r WHERE r.slug = p.slug) AS report_count
      FROM profiles p
+     WHERE COALESCE(p.tier, 'organizer') != 'regular'
      ORDER BY report_count DESC, p.created_at DESC
      LIMIT 200`
   ).all();

@@ -32,7 +32,7 @@ try {
   profile = await db.prepare(
     `SELECT slug, email, display_name, headline, bio, photo_emoji, accent_color,
             offers_json, links_json, contact_email, contact_phone, neighborhood,
-            template, template_data, cover_photo_url, avatar_photo_url, status
+            template, template_data, cover_photo_url, avatar_photo_url, status, tier
      FROM profiles WHERE slug = ?`
   ).bind(v.slug).first();
 } catch {
@@ -45,6 +45,10 @@ try {
 }
 
 if (!profile || profile.status !== 'live') {
+  return new Response('Not found', { status: 404 });
+}
+// Regular-tier profiles are private; they have no public /u/ page.
+if (profile.tier === 'regular') {
   return new Response('Not found', { status: 404 });
 }
 
