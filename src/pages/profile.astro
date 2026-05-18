@@ -31,9 +31,6 @@ try {
   flyerCount = Number(r2?.c || 0);
 } catch {}
 
-const HOST_LIMIT = 3;
-const remaining = me.tier === 'organizer' ? null : Math.max(0, HOST_LIMIT - hostedCount);
-
 // Saved contact details (used to auto-prefill flyer + RSVP forms).
 let savedContactEmail = '';
 let savedContactPhone = '';
@@ -60,10 +57,7 @@ try {
       <div class="stat">
         <div class="stat-num">{hostedCount}</div>
         <div class="stat-lbl">Events hosted</div>
-        {me.tier !== 'organizer' && remaining !== null && (
-          <div class="stat-sub">{remaining > 0 ? `${remaining} left` : 'limit reached'}</div>
-        )}
-        {me.tier === 'organizer' && <div class="stat-sub">unlimited</div>}
+        <div class="stat-sub">unlimited</div>
       </div>
       <div class="stat">
         <div class="stat-num">{flyerCount}</div>
@@ -74,7 +68,7 @@ try {
     {me.tier === 'regular' && (
       <section class="upgrade">
         <h2 class="up-h">Want a public page?</h2>
-        <p class="up-sub">Become an Organizer to get a page at <span class="mono">/u/yourname</span>, unlimited event hosting, group creation, and DMs from members.</p>
+        <p class="up-sub">Become an Organizer to get a public page at <span class="mono">/u/yourname</span>, group creation, booking tools, and DMs from members.</p>
         <a class="up-cta" href="/u/new">Upgrade to Organizer →</a>
       </section>
     )}

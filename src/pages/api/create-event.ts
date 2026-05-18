@@ -5,8 +5,6 @@ import { mirrorEventCreate } from '../../lib/event-sync/outbound';
 import { ensureEventsSchema } from '../../lib/events-schema';
 import { getCurrentProfile } from '../../lib/profile-auth';
 
-const REGULAR_HOST_LIMIT = 3;
-
 async function notifyAdmin(db: D1Database, eventTitle: string, submittedBy: string) {
   try {
     const cfgRows = await db.prepare("SELECT key, value FROM config").all();
@@ -61,24 +59,7 @@ export async function POST({ request, cookies }: APIContext) {
       }), { status: 401 });
     }
 
-    // Tier-based hosting cap.
-    if (me.tier !== 'organizer') {
-      let hosted = 0;
-      try {
-        const r: any = await db.prepare(
-          `SELECT COUNT(*) AS c FROM events WHERE LOWER(submitted_by_email) = ?`
-        ).bind(me.email).first();
-        hosted = Number(r?.c || 0);
-      } catch {}
-      if (hosted >= REGULAR_HOST_LIMIT) {
-        return new Response(JSON.stringify({
-          error: 'limit_reached',
-          message: 'Upgrade to Organizer to host more.',
-        }), { status: 403 });
-      }
-    }
-
-    const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day, vibe_tags, group_id: rawGroupId, rsvp_requires_profile } = await request.json() as any;
+const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day, vibe_tags, group_id: rawGroupId, rsvp_requires_profile } = await request.json() as any;
     void subcat;
 
     // Only organizers can gate RSVP behind a profile. Regulars always

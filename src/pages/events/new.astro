@@ -8,19 +8,6 @@ const db = getDB();
 const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
 if (!me) return Astro.redirect('/u/new?next=/events/new');
 
-// Hosting cap for regulars.
-const HOST_LIMIT = 3;
-let hostedCount = 0;
-if (me.tier !== 'organizer' && db) {
-  try {
-    const r: any = await db.prepare(
-      `SELECT COUNT(*) AS c FROM events WHERE LOWER(submitted_by_email) = ?`
-    ).bind(me.email).first();
-    hostedCount = Number(r?.c || 0);
-  } catch {}
-}
-const atLimit = me.tier !== 'organizer' && hostedCount >= HOST_LIMIT;
-
 const groupSlug = Astro.url.searchParams.get('group') || '';
 let postingInGroup: any = null;
 if (groupSlug && db) {
@@ -44,15 +31,6 @@ const TYPES = [
 ];
 ---
 <Base title="Create an event" description="Plan a small-group event in Denver.">
-{atLimit && (
-  <div class="ne-wrap">
-    <a href="/events" class="ne-back">← Events</a>
-    <h1 class="ne-title">You've hosted 3 events.</h1>
-    <p class="ne-sub">Regular accounts can host up to 3 events. Want to host more? <strong>Upgrade to Organizer</strong> — you'll get a public page, unlimited hosting, and group tools.</p>
-    <a href="/u/new" class="ne-submit" style="display:inline-block;text-align:center;text-decoration:none;max-width:320px;">Upgrade to Organizer →</a>
-  </div>
-)}
-{!atLimit && (
 <div class="ne-wrap">
   <a href={postingInGroup ? `/groups/${postingInGroup.slug}` : '/events'} class="ne-back">← {postingInGroup ? postingInGroup.name : 'Events'}</a>
   <h1 class="ne-title">Plan an event.</h1>
@@ -198,7 +176,6 @@ const TYPES = [
     <div id="ne-err" class="ne-err"></div>
   </form>
 </div>
-)}
 
 <style>
   .ne-wrap { max-width: 680px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
