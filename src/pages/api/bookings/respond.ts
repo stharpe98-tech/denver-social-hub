@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
-import { canEditProfile } from '../../../lib/profile-auth';
+import { canEditProfileOrAdmin } from '../../../lib/profile-auth';
 import { ensureBookingsSchema, formatDenverHuman } from '../../../lib/bookings-schema';
 
 function escapeHtml(s: string): string {
@@ -135,7 +135,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (action !== 'confirm' && action !== 'decline') return j({ ok: false, error: 'Invalid action' }, 400);
   const booking = await db.prepare(`SELECT * FROM bookings WHERE id=?`).bind(id).first() as any;
   if (!booking) return j({ ok: false, error: 'Not found' }, 404);
-  if (!(await canEditProfile(cookies, String(booking.profile_slug)))) return j({ ok: false, error: 'Not authorized' }, 403);
+  if (!(await canEditProfileOrAdmin(cookies, String(booking.profile_slug)))) return j({ ok: false, error: 'Not authorized' }, 403);
   if (booking.status !== 'pending') return j({ ok: false, error: 'Already ' + booking.status });
   await performAction(db, booking, action, request);
   return j({ ok: true });

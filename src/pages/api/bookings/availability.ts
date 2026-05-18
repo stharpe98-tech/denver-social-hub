@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
-import { canEditProfile } from '../../../lib/profile-auth';
+import { canEditProfileOrAdmin } from '../../../lib/profile-auth';
 import { ensureBookingsSchema } from '../../../lib/bookings-schema';
 
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -37,7 +37,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!Number.isFinite(offeringId)) return j({ ok: false, error: 'Missing offering_id' }, 400);
     const slug = await slugForOffering(db, offeringId);
     if (!slug) return j({ ok: false, error: 'Offering not found' }, 404);
-    if (!(await canEditProfile(cookies, slug))) return j({ ok: false, error: 'Not authorized' }, 403);
+    if (!(await canEditProfileOrAdmin(cookies, slug))) return j({ ok: false, error: 'Not authorized' }, 403);
 
     const dow = parseInt(body?.day_of_week, 10);
     if (!(dow >= 0 && dow <= 6)) return j({ ok: false, error: 'Invalid day_of_week' }, 400);
@@ -65,7 +65,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
        JOIN bookable_offerings o ON o.id = a.offering_id WHERE a.id=?`
     ).bind(id).first() as any;
     if (!row) return j({ ok: false, error: 'Not found' }, 404);
-    if (!(await canEditProfile(cookies, row.profile_slug))) return j({ ok: false, error: 'Not authorized' }, 403);
+    if (!(await canEditProfileOrAdmin(cookies, row.profile_slug))) return j({ ok: false, error: 'Not authorized' }, 403);
     await db.prepare(`DELETE FROM offering_availability WHERE id=?`).bind(id).run();
     return j({ ok: true });
   }

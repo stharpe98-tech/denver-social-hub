@@ -6,15 +6,12 @@ import { getDB } from '../../lib/db';
 const gate = await requireApprovedOrg(Astro);
 if (gate instanceof Response) return gate;
 
-// TODO(moderation): when an admin sets status='offline', uploaded R2 photos
-// (cover_photo_url / avatar_photo_url) are intentionally kept. Add an explicit
-// "Delete photos" button + R2 cleanup here if/when we want moderator photo nuke.
-
 const db = getDB();
 let rows: any[] = [];
 if (db) {
   const r = await db.prepare(
     `SELECT p.slug, p.display_name, p.email, p.status, p.tier, p.template, p.created_at,
+       p.cover_photo_url, p.avatar_photo_url,
        (SELECT COUNT(*) FROM profile_reports r WHERE r.slug = p.slug) AS report_count
      FROM profiles p
      ORDER BY report_count DESC, p.created_at DESC
@@ -30,28 +27,52 @@ if (db) {
       <p class="sub">Every claimed page, its reports, and a one-click take-offline.</p>
     </div>
 
+    <div class="bulk-bar" id="bulk-bar" hidden>
+      <span class="bulk-count"><span id="bulk-count">0</span> selected</span>
+      <button class="bulk-btn" id="bulk-delete">Delete selected</button>
+      <button class="bulk-link" id="bulk-clear">Clear</button>
+    </div>
+
     <div class="mod-table">
       <div class="mod-row mod-head">
-        <div>Slug</div><div>Name</div><div>Email</div><div>Tier · Template</div><div>Reports</div><div>Action</div>
+        <div class="cell-check"><input type="checkbox" id="check-all" aria-label="Select all"/></div>
+        <div>Slug</div>
+        <div>Name</div>
+        <div>Photos</div>
+        <div>Email</div>
+        <div>Tier · Template</div>
+        <div>Reports</div>
+        <div>Action</div>
       </div>
       {rows.length === 0 && (
-        <div class="mod-row"><div colspan="6" style="grid-column: 1 / -1; text-align: center; color: var(--text-faint); padding: 24px;">No pages claimed yet.</div></div>
+        <div class="mod-row"><div style="grid-column: 1 / -1; text-align: center; color: var(--text-faint); padding: 24px;">No pages claimed yet.</div></div>
       )}
       {rows.map((r: any) => (
         <div class:list={["mod-row", { "mod-flagged": (r.report_count || 0) > 0, "mod-offline": r.status === 'offline' }]} data-slug={r.slug}>
+          <div class="cell-check"><input type="checkbox" class="row-check" data-slug={r.slug} aria-label={`Select /u/${r.slug}`}/></div>
           <div><a href={`/u/${r.slug}`} target="_blank">/u/{r.slug}</a></div>
           <div>{r.display_name || '(no name)'}</div>
+          <div class="cell-photos">
+            {r.cover_photo_url
+              ? <img class="thumb thumb-cover" src={r.cover_photo_url} alt="cover" loading="lazy"/>
+              : <span class="thumb thumb-empty" title="No cover">📷</span>}
+            {r.avatar_photo_url
+              ? <img class="thumb thumb-avatar" src={r.avatar_photo_url} alt="avatar" loading="lazy"/>
+              : <span class="thumb thumb-empty" title="No avatar">👤</span>}
+          </div>
           <div class="cell-email">{r.email}</div>
           <div class="cell-tier"><span class:list={['tier-badge', `tier-${r.tier || 'regular'}`]}>{r.tier || 'regular'}</span><span class="cell-tpl">{r.template || 'host'}</span></div>
           <div>{(r.report_count || 0) > 0 ? `${r.report_count} 🚩` : '0'}</div>
           <div class="cell-actions">
             <a class="mini" href={`/u/${r.slug}`} target="_blank">View</a>
+            <a class="mini" href={`/u/${r.slug}/edit`} target="_blank">Edit</a>
             {r.status === 'live' ? (
               <button class="mini mini-danger" data-action="toggle" data-status="offline">Take offline</button>
             ) : (
               <button class="mini" data-action="toggle" data-status="live">Bring back</button>
             )}
             <button class="mini mini-nuke" data-action="delete">Delete forever</button>
+            <button class="mini-link" data-action="clear-photos" type="button">Clear photos</button>
           </div>
         </div>
       ))}
@@ -61,6 +82,70 @@ if (db) {
   </div>
 
   <script is:inline>
+    // --- Bulk selection ---
+    var bulkBar = document.getElementById('bulk-bar');
+    var bulkCount = document.getElementById('bulk-count');
+    var checkAll = document.getElementById('check-all');
+    var rowChecks = document.querySelectorAll('.row-check');
+
+    function selectedSlugs() {
+      var out = [];
+      document.querySelectorAll('.row-check:checked').forEach(function(cb) { out.push(cb.getAttribute('data-slug')); });
+      return out;
+    }
+    function updateBulkBar() {
+      var n = selectedSlugs().length;
+      if (bulkCount) bulkCount.textContent = String(n);
+      if (bulkBar) bulkBar.hidden = (n === 0);
+      if (checkAll) {
+        var total = rowChecks.length;
+        checkAll.checked = (n > 0 && n === total);
+        checkAll.indeterminate = (n > 0 && n < total);
+      }
+    }
+    rowChecks.forEach(function(cb) { cb.addEventListener('change', updateBulkBar); });
+    if (checkAll) {
+      checkAll.addEventListener('change', function() {
+        rowChecks.forEach(function(cb) { cb.checked = checkAll.checked; });
+        updateBulkBar();
+      });
+    }
+    var clearBtn = document.getElementById('bulk-clear');
+    if (clearBtn) clearBtn.addEventListener('click', function() {
+      rowChecks.forEach(function(cb) { cb.checked = false; });
+      updateBulkBar();
+    });
+
+    var bulkDelete = document.getElementById('bulk-delete');
+    if (bulkDelete) bulkDelete.addEventListener('click', async function() {
+      var slugs = selectedSlugs();
+      if (slugs.length === 0) return;
+      var preview = slugs.slice(0, 5).join(', ') + (slugs.length > 5 ? ', …' : '');
+      var ans = prompt('Delete ' + slugs.length + ' pages: ' + preview + '\n\nType "DELETE" to confirm.');
+      if (ans !== 'DELETE') { if (ans !== null) alert('Cancelled — must type DELETE exactly.'); return; }
+      bulkDelete.disabled = true; var orig = bulkDelete.textContent; bulkDelete.textContent = '…';
+      try {
+        var r = await fetch('/api/admin/profile-bulk-delete', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slugs: slugs, confirm: 'DELETE' })
+        });
+        var d = await r.json();
+        if (d.ok) {
+          var msg = 'Deleted ' + (d.deleted ? d.deleted.length : 0) + ' / ' + slugs.length;
+          if (d.errors && d.errors.length) msg += '\n\nErrors:\n' + d.errors.slice(0, 20).map(function(e) { return e.slug + ': ' + e.error; }).join('\n');
+          alert(msg);
+          location.reload();
+        } else {
+          alert(d.error || 'Bulk delete failed');
+          bulkDelete.disabled = false; bulkDelete.textContent = orig;
+        }
+      } catch (e) {
+        alert('Network error');
+        bulkDelete.disabled = false; bulkDelete.textContent = orig;
+      }
+    });
+
+    // --- Per-row toggle ---
     document.querySelectorAll('[data-action=toggle]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var row = btn.closest('.mod-row');
@@ -79,6 +164,7 @@ if (db) {
       });
     });
 
+    // --- Per-row single delete ---
     document.querySelectorAll('[data-action=delete]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var row = btn.closest('.mod-row');
@@ -112,15 +198,75 @@ if (db) {
         } catch (e) { alert('Network error'); btn.disabled = false; btn.textContent = orig; }
       });
     });
+
+    // --- Per-row clear photos ---
+    document.querySelectorAll('[data-action=clear-photos]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var row = btn.closest('.mod-row');
+        var slug = row.getAttribute('data-slug');
+        if (!confirm('Delete both photos for /u/' + slug + '? The page stays.')) return;
+        btn.disabled = true; var orig = btn.textContent; btn.textContent = '…';
+        try {
+          var r = await fetch('/api/admin/profile-photo-clear', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug })
+          });
+          var d = await r.json();
+          if (d.ok) {
+            // Replace photos cell in-place — no page reload.
+            var cell = row.querySelector('.cell-photos');
+            if (cell) cell.innerHTML = '<span class="thumb thumb-empty" title="No cover">📷</span><span class="thumb thumb-empty" title="No avatar">👤</span>';
+            btn.textContent = 'Cleared';
+            btn.disabled = true;
+          } else {
+            alert(d.error || 'Failed');
+            btn.disabled = false; btn.textContent = orig;
+          }
+        } catch (e) { alert('Network error'); btn.disabled = false; btn.textContent = orig; }
+      });
+    });
+
+    updateBulkBar();
   </script>
 
   <style>
-    .wrap { max-width: 980px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
     .hd { margin-bottom: var(--space-4); }
     .hd h1 { font-family: var(--font-display, sans-serif); font-size: 26px; font-weight: 800; margin-bottom: 4px; }
     .sub { font-size: 14px; color: var(--text-sec); }
+
+    .bulk-bar {
+      position: sticky; top: 8px; z-index: 5;
+      display: flex; align-items: center; gap: 12px;
+      background: var(--accent, #7C3AED); color: #fff;
+      padding: 10px 16px; border-radius: var(--radius, 14px);
+      box-shadow: var(--card-shadow);
+      margin-bottom: var(--space-3); font-size: 13px;
+    }
+    .bulk-count { font-weight: 700; }
+    .bulk-btn {
+      background: #fff; color: #991B1B; border: none;
+      padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+    }
+    .bulk-btn:hover { background: #FEF2F2; }
+    .bulk-btn:active { transform: translateY(1px); }
+    .bulk-link { background: transparent; border: none; color: rgba(255,255,255,0.85); cursor: pointer; font-size: 12px; text-decoration: underline; font-family: inherit; margin-left: auto; }
+    .bulk-link:hover { color: #fff; }
+
     .mod-table { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: 13px; background: var(--bg); }
-    .mod-row { display: grid; grid-template-columns: 130px 1fr 1.3fr 150px 70px 200px; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); align-items: center; }
+    .mod-row {
+      display: grid;
+      grid-template-columns: 36px 130px 1fr 90px 1.3fr 150px 70px 220px;
+      gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); align-items: center;
+    }
+    .cell-check { display: flex; align-items: center; justify-content: center; }
+    .cell-check input { width: 16px; height: 16px; cursor: pointer; }
+    .cell-photos { display: flex; gap: 4px; align-items: center; }
+    .thumb { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); background: var(--surface); display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
+    .thumb-cover { border-radius: 6px; width: 40px; height: 24px; }
+    .thumb-empty { color: var(--text-faint); }
+
     .cell-tier { display: flex; flex-direction: column; gap: 2px; font-size: 11px; }
     .tier-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
     .tier-organizer { background: #FFFAEB; color: #92400E; border: 1px solid #FCD34D; align-self: flex-start; }
@@ -136,17 +282,21 @@ if (db) {
     .cell-actions { display: flex; gap: 4px; flex-wrap: wrap; }
     .mini { padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); font-size: 11px; cursor: pointer; text-decoration: none; color: var(--text); display: inline-block; font-family: inherit; }
     .mini:hover { background: var(--surface, #F8F9FB); }
+    .mini:active { transform: translateY(1px); }
     .mini-danger { color: #DC2626; border-color: #FECACA; }
     .mini-danger:hover { background: #FEF2F2; }
     .mini-nuke { color: #fff; background: #991B1B; border-color: #991B1B; }
     .mini-nuke:hover { background: #7F1D1D; border-color: #7F1D1D; }
+    .mini-link { background: transparent; border: none; color: var(--text-faint); font-size: 11px; cursor: pointer; text-decoration: underline; font-family: inherit; padding: 4px 0; }
+    .mini-link:hover { color: #991B1B; }
     .back { margin-top: var(--space-4); font-size: 13px; }
     .back a { color: var(--text-sec); text-decoration: none; }
     .back a:hover { color: var(--text); }
 
-    @media (max-width: 700px) {
-      .mod-row { grid-template-columns: 1fr 1fr; }
-      .mod-row > div:nth-child(3), .mod-row > div:nth-child(5) { display: none; }
+    @media (max-width: 900px) {
+      .mod-row { grid-template-columns: 28px 1fr 1fr; }
+      .mod-row > div:nth-child(4), .mod-row > div:nth-child(5),
+      .mod-row > div:nth-child(6), .mod-row > div:nth-child(7) { display: none; }
       .mod-row > .cell-actions { display: flex; grid-column: 1 / -1; }
     }
   </style>

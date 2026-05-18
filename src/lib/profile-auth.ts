@@ -62,6 +62,17 @@ export async function canEditProfile(cookies: CookieCtx['cookies'], slug: string
   return diff === 0;
 }
 
+/**
+ * Like canEditProfile, but also returns true if the visitor is an admin.
+ * Used to let admins force-edit any /u/[slug] page without owning the
+ * per-slug cookie.
+ */
+export async function canEditProfileOrAdmin(cookies: CookieCtx['cookies'], slug: string): Promise<boolean> {
+  if (await canEditProfile(cookies, slug)) return true;
+  const { isAdmin } = await import('./admin-auth');
+  return await isAdmin(cookies);
+}
+
 async function verifyProfileTokenForSlug(raw: string, slug: string): Promise<boolean> {
   const parts = raw.split('.');
   if (parts.length < 3) return false;

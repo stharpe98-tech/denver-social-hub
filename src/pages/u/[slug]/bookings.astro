@@ -1,7 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import { getDB } from '../../../lib/db';
-import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
+import { canEditProfileOrAdmin, validateSlug } from '../../../lib/profile-auth';
 import { ensureBookingsSchema, formatDenverHuman } from '../../../lib/bookings-schema';
 
 const rawSlug = Astro.params.slug || '';
@@ -18,7 +18,7 @@ const profile = await db.prepare(
 ).bind(slug).first() as any;
 if (!profile) return new Response('Not found', { status: 404 });
 
-const authed = await canEditProfile(Astro.cookies, slug);
+const authed = await canEditProfileOrAdmin(Astro.cookies, slug);
 
 const e = profile.email || '';
 const atIdx = e.indexOf('@');

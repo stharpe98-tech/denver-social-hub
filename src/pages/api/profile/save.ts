@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
-import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
+import { canEditProfileOrAdmin, validateSlug } from '../../../lib/profile-auth';
 import { PROFILE_TEMPLATE_KEYS } from '../../../lib/profile-templates';
 
 const ALLOWED_FIELDS = new Set([
@@ -20,7 +20,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const v = validateSlug(body?.slug || '');
   if (!v.ok) return new Response(JSON.stringify({ ok: false, error: v.error }), { status: 400 });
   const slug = v.slug;
-  if (!(await canEditProfile(cookies, slug))) {
+  if (!(await canEditProfileOrAdmin(cookies, slug))) {
     return new Response(JSON.stringify({ ok: false, error: 'Not authorized' }), { status: 401 });
   }
   const field = (body?.field || '').toString();

@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
-import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
+import { canEditProfileOrAdmin, validateSlug } from '../../../lib/profile-auth';
 import { ensureBookingsSchema } from '../../../lib/bookings-schema';
 
 function clamp(n: any, min: number, max: number, fallback: number): number {
@@ -46,7 +46,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
   }
   if (!editorSlug) return j({ ok: false, error: 'Missing slug' }, 400);
-  if (!(await canEditProfile(cookies, editorSlug))) return j({ ok: false, error: 'Not authorized' }, 403);
+  if (!(await canEditProfileOrAdmin(cookies, editorSlug))) return j({ ok: false, error: 'Not authorized' }, 403);
 
   if (action === 'create') {
     const title = s(body?.title, 120).trim();

@@ -1,7 +1,8 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import { getDB } from '../../../lib/db';
-import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
+import { canEditProfile, canEditProfileOrAdmin, validateSlug } from '../../../lib/profile-auth';
+import { isAdmin } from '../../../lib/admin-auth';
 import { PROFILE_TEMPLATES, parseTemplateData, defaultTemplateData, templateSchema } from '../../../lib/profile-templates';
 
 const rawSlug = Astro.params.slug || '';
@@ -30,7 +31,10 @@ try {
 
 if (!profile) return new Response('Not found', { status: 404 });
 
-const authed = await canEditProfile(Astro.cookies, slug);
+const authed = await canEditProfileOrAdmin(Astro.cookies, slug);
+const ownerAuthed = await canEditProfile(Astro.cookies, slug);
+const adminAuthed = await isAdmin(Astro.cookies);
+const adminForceEdit = authed && !ownerAuthed && adminAuthed;
 const isOrganizer = (profile.tier || '') === 'organizer';
 
 // Load bookable offerings + per-offering availability for the booking settings panel.
@@ -107,6 +111,11 @@ const SWATCHES = [
       </div>
     ) : (
       <div class="editor" data-slug={slug}>
+        {adminForceEdit && (
+          <div class="admin-banner">
+            ⚠ Editing as admin — you are not the owner of /u/{slug}. Changes save to {profile.email}'s profile.
+          </div>
+        )}
         <div class="editor-toolbar">
           <span class="editor-status" id="editor-status">● Saved</span>
           <a href={`/u/${slug}`} class="editor-preview" target="_blank">👁 Preview public page</a>
@@ -811,6 +820,7 @@ const SWATCHES = [
 
   <style>
     .wrap { max-width: 760px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-8); }
+    .admin-banner { background: #FFFBEB; border: 1.5px solid #FCD34D; color: #92400E; padding: 12px 16px; border-radius: var(--radius, 14px); font-size: 13px; font-weight: 600; margin-bottom: var(--space-3); }
 
     /* Claim/re-auth box */
     .claim-box { background: var(--surface, #F8F9FB); border: 1.5px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-5); max-width: 480px; margin: 0 auto; }

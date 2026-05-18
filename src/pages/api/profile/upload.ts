@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getDB } from '../../../lib/db';
-import { canEditProfile, validateSlug } from '../../../lib/profile-auth';
+import { canEditProfileOrAdmin, validateSlug } from '../../../lib/profile-auth';
 
 export const prerender = false;
 
@@ -50,7 +50,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (!v.ok) return err(400, v.error);
   const slug = v.slug;
 
-  if (!(await canEditProfile(cookies, slug))) return err(401, 'Not authorized');
+  if (!(await canEditProfileOrAdmin(cookies, slug))) return err(401, 'Not authorized');
 
   if (kind !== 'cover' && kind !== 'avatar') return err(400, 'Invalid kind');
   const column = kind === 'cover' ? 'cover_photo_url' : 'avatar_photo_url';
