@@ -51,6 +51,7 @@ if (db) {
             ) : (
               <button class="mini" data-action="toggle" data-status="live">Bring back</button>
             )}
+            <button class="mini mini-nuke" data-action="delete">Delete forever</button>
           </div>
         </div>
       ))}
@@ -74,6 +75,40 @@ if (db) {
           });
           var d = await r.json();
           if (d.ok) location.reload(); else { alert(d.error || 'Failed'); btn.disabled = false; btn.textContent = orig; }
+        } catch (e) { alert('Network error'); btn.disabled = false; btn.textContent = orig; }
+      });
+    });
+
+    document.querySelectorAll('[data-action=delete]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var row = btn.closest('.mod-row');
+        var slug = row.getAttribute('data-slug');
+        var confirmText = prompt(
+          'PERMANENTLY DELETE /u/' + slug + '?\n\n' +
+          'This wipes the profile, photos, bookings, offerings, codes, and reports. ' +
+          'Community flyers + events stay but get unlinked from the deleted account.\n\n' +
+          'Type the slug "' + slug + '" to confirm:'
+        );
+        if (!confirmText || confirmText.trim().toLowerCase() !== slug) {
+          if (confirmText !== null) alert('Slug didn\'t match. Nothing deleted.');
+          return;
+        }
+        btn.disabled = true; var orig = btn.textContent; btn.textContent = '…';
+        try {
+          var r = await fetch('/api/admin/profile-delete', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug, confirm: slug })
+          });
+          var d = await r.json();
+          if (d.ok) {
+            if (d.errors && d.errors.length) {
+              alert('Deleted with warnings:\n' + d.errors.join('\n'));
+            }
+            location.reload();
+          } else {
+            alert(d.error || 'Delete failed');
+            btn.disabled = false; btn.textContent = orig;
+          }
         } catch (e) { alert('Network error'); btn.disabled = false; btn.textContent = orig; }
       });
     });
@@ -103,6 +138,8 @@ if (db) {
     .mini:hover { background: var(--surface, #F8F9FB); }
     .mini-danger { color: #DC2626; border-color: #FECACA; }
     .mini-danger:hover { background: #FEF2F2; }
+    .mini-nuke { color: #fff; background: #991B1B; border-color: #991B1B; }
+    .mini-nuke:hover { background: #7F1D1D; border-color: #7F1D1D; }
     .back { margin-top: var(--space-4); font-size: 13px; }
     .back a { color: var(--text-sec); text-decoration: none; }
     .back a:hover { color: var(--text); }
