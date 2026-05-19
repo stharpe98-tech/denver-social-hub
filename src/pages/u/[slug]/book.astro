@@ -99,6 +99,17 @@ const displayName = profile.display_name || slug;
             <div class="bk-done-emoji">✓</div>
             <h2>Request sent</h2>
             <p id="bk-done-msg"></p>
+
+            <div class="bk-share" id="bk-share">
+              <p class="bk-share-h">Know someone who'd love {displayName}?</p>
+              <div class="bk-share-row">
+                <input type="text" id="bk-share-url" readonly/>
+                <button type="button" id="bk-share-copy" class="bk-share-btn">Copy</button>
+                <button type="button" id="bk-share-native" class="bk-share-btn bk-share-native" hidden>Share</button>
+              </div>
+              <p class="bk-share-status" id="bk-share-status" aria-live="polite"></p>
+            </div>
+
             <a href={`/u/${slug}`} class="bk-link">← Back to profile</a>
           </div>
         </section>
@@ -274,6 +285,7 @@ const displayName = profile.display_name || slug;
             doneSec.hidden = false;
             document.getElementById('bk-done-msg').textContent =
               'Your request was sent. ' + displayName + ' will email you to confirm or decline.';
+            initShare();
             doneSec.scrollIntoView({ behavior: 'smooth' });
           } else {
             errEl.textContent = (d && d.error) || 'Could not send request.';
@@ -283,6 +295,45 @@ const displayName = profile.display_name || slug;
         }
         btn.disabled = false; btn.textContent = orig;
       });
+
+      // Vanity share URL for the post-booking card.
+      function initShare() {
+        var input = document.getElementById('bk-share-url');
+        if (!input) return;
+        var origin = location.origin;
+        var shareUrl = origin + '/' + slug;
+        input.value = shareUrl;
+        var status = document.getElementById('bk-share-status');
+        var copy = document.getElementById('bk-share-copy');
+        if (copy && !copy._wired) {
+          copy._wired = true;
+          copy.addEventListener('click', async function () {
+            try {
+              await navigator.clipboard.writeText(shareUrl);
+              status.textContent = 'Copied ✓';
+              status.setAttribute('data-tone', 'ok');
+            } catch {
+              input.select(); input.setSelectionRange(0, 9999);
+              status.textContent = 'Press Cmd/Ctrl-C to copy.';
+            }
+            setTimeout(function () { status.textContent = ''; status.removeAttribute('data-tone'); }, 2400);
+          });
+        }
+        var native = document.getElementById('bk-share-native');
+        if (native && navigator.share) {
+          native.hidden = false;
+          if (!native._wired) {
+            native._wired = true;
+            native.addEventListener('click', function () {
+              navigator.share({
+                title: displayName + ' on Denver Social',
+                text: 'I just booked with ' + displayName + ' — check them out:',
+                url: shareUrl,
+              }).catch(function () {});
+            });
+          }
+        }
+      }
 
       // Auto-load slots for the first offering.
       if (offBtns.length > 0) pickOffering(offBtns[0]);
@@ -349,5 +400,31 @@ const displayName = profile.display_name || slug;
     .bk-done-emoji { font-size:48px;color:#10B981; }
     .bk-done h2 { font-family:'Outfit',sans-serif;margin:8px 0 6px;color:#047857; }
     .bk-done p { color:#374151;margin:0 0 16px; }
+
+    .bk-share {
+      margin: 20px auto 16px; max-width: 380px;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px;
+      text-align: left;
+    }
+    .bk-share-h { font-size: 13px; font-weight: 700; color: var(--text); margin: 0 0 10px; text-align: center; }
+    .bk-share-row { display: flex; gap: 8px; align-items: stretch; }
+    .bk-share-row input {
+      flex: 1; min-width: 0;
+      padding: 9px 12px; font-size: 13px;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); color: var(--text);
+      font-family: ui-monospace, Menlo, monospace;
+    }
+    .bk-share-btn {
+      padding: 9px 14px; font-size: 13px; font-weight: 600;
+      background: var(--profile-accent, #7C3AED); color: #fff;
+      border: none; border-radius: 8px; cursor: pointer;
+      transition: filter 0.15s, transform 0.15s;
+    }
+    .bk-share-btn:hover { filter: brightness(1.06); }
+    .bk-share-btn:active { transform: translateY(1px); }
+    .bk-share-status { font-size: 12px; color: var(--text-sec); margin: 8px 0 0; min-height: 1em; text-align: center; }
+    .bk-share-status[data-tone="ok"] { color: #047857; }
   </style>
 </Base>

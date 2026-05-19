@@ -356,6 +356,86 @@ async function sendBookingReminders(env: Env): Promise<{ sent: number; errors: n
   return { sent, errors, skipped: null };
 }
 
+// Post-appointment review request. Daily cron picks up confirmed
+// bookings whose slot_end fell in the last 6-30 hours and that haven't
+// been asked yet. Each email contains 5 one-tap rating links into
+// /u/<slug>/review?token=&rating=N so the customer can leave a review
+// in two clicks.
+async function sendReviewRequests(env: Env): Promise<{ sent: number; errors: number; skipped: string | null }> {
+  const db = env.DB;
+  if (!db) return { sent: 0, errors: 0, skipped: 'no_db' };
+  await ensureBookingsSchema(db);
+
+  const cfgRows = await db.prepare("SELECT key, value FROM config").all();
+  const cfg: Record<string, string> = {};
+  (cfgRows.results ?? []).forEach((r: any) => { cfg[r.key] = r.value; });
+  if (!cfg.resend_api_key) return { sent: 0, errors: 0, skipped: 'no_resend_key' };
+
+  const siteUrl = cfg.site_url || 'https://denversocialhub.com';
+  const fromEmail = cfg.from_email || 'Denver Social <noreply@denversocialhub.com>';
+
+  // Window: slot_end is 6-30 hours ago. Wide enough to survive a
+  // skipped cron tick; narrow enough that emails feel timely.
+  const now = Date.now();
+  const lo = new Date(now - 30 * 3600 * 1000).toISOString();
+  const hi = new Date(now - 6 * 3600 * 1000).toISOString();
+
+  const { results } = await db.prepare(`
+    SELECT b.id, b.confirm_token, b.profile_slug, b.slot_start, b.requester_name, b.requester_email,
+           o.title AS offering_title,
+           p.display_name AS organizer_name
+      FROM bookings b
+      LEFT JOIN bookable_offerings o ON o.id = b.offering_id
+      LEFT JOIN profiles p ON p.slug = b.profile_slug
+     WHERE b.status = 'confirmed'
+       AND b.slot_end >= ? AND b.slot_end < ?
+       AND (b.review_requested_at IS NULL OR b.review_requested_at = '')
+       AND (b.reviewed_at IS NULL OR b.reviewed_at = '')
+       AND b.requester_email IS NOT NULL AND b.requester_email != ''
+  `).bind(lo, hi).all();
+
+  let sent = 0;
+  let errors = 0;
+  for (const row of (results ?? []) as any[]) {
+    try {
+      const firstName = String(row.requester_name || 'there').split(' ')[0];
+      const title = String(row.offering_title || 'your session');
+      const organizer = String(row.organizer_name || row.profile_slug || 'the organizer');
+      const reviewBase = `${siteUrl}/u/${encodeURIComponent(row.profile_slug)}/review?token=${encodeURIComponent(row.confirm_token)}`;
+      const starsHtml = [1,2,3,4,5].map((n) =>
+        `<a href="${reviewBase}&rating=${n}" style="display:inline-block;width:48px;height:48px;line-height:48px;text-align:center;text-decoration:none;font-size:28px;color:#F59E0B;border:1.5px solid #FCD34D;border-radius:10px;margin:0 3px;background:#FFFBEB" aria-label="${n} star${n===1?'':'s'}">★</a>`
+      ).join('');
+
+      const subject = `How was ${title}?`;
+      const html = `<!DOCTYPE html><html><body style="margin:0;background:#F8F9FB;font-family:system-ui,sans-serif;color:#111827">
+        <div style="max-width:520px;margin:32px auto;padding:24px;background:#fff;border:1px solid #E5E7EB;border-radius:18px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#7C3AED;margin-bottom:8px">Quick favor</div>
+          <h2 style="margin:0 0 12px;font-size:22px">How was it, ${escapeHtml(firstName)}?</h2>
+          <p style="color:#374151;line-height:1.55;margin:0 0 20px">
+            Tap a star to leave a quick review for <strong>${escapeHtml(organizer)}</strong>. Takes two clicks — your rating, then optionally a sentence about what stood out.
+          </p>
+          <div style="text-align:center;padding:8px 0 20px">${starsHtml}</div>
+          <p style="font-size:13px;color:#6B7280;margin:0;text-align:center">
+            Or <a href="${reviewBase}" style="color:#7C3AED">open the review page</a>.
+          </p>
+        </div>
+      </body></html>`;
+      const text = `How was it, ${firstName}?\n\nLeave a quick review for ${organizer}:\n${reviewBase}\n`;
+
+      const resp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${cfg.resend_api_key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: fromEmail, to: [row.requester_email], subject, html, text }),
+      });
+      if (!resp.ok) { errors++; continue; }
+      await db.prepare("UPDATE bookings SET review_requested_at = ? WHERE id = ?")
+        .bind(new Date().toISOString(), row.id).run();
+      sent++;
+    } catch { errors++; }
+  }
+  return { sent, errors, skipped: null };
+}
+
 function escapeHtml(s: string): string {
   return String(s || '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c] as string));
 }
@@ -406,6 +486,13 @@ export default {
         console.log(`[booking-reminders] sent=${r.sent} errors=${r.errors} skipped=${r.skipped ?? 'none'}`);
       }).catch((e) => {
         console.error('[booking-reminders] failed', e);
+      }),
+    );
+    ctx.waitUntil(
+      sendReviewRequests(env).then((r) => {
+        console.log(`[review-requests] sent=${r.sent} errors=${r.errors} skipped=${r.skipped ?? 'none'}`);
+      }).catch((e) => {
+        console.error('[review-requests] failed', e);
       }),
     );
   },
