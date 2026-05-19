@@ -63,14 +63,23 @@ export async function ensureBookingsSchema(db: D1Database): Promise<void> {
   await db.prepare(`CREATE INDEX IF NOT EXISTS idx_bookings_slug ON bookings(profile_slug, status, slot_start)`).run();
   await db.prepare(`CREATE INDEX IF NOT EXISTS idx_bookings_token ON bookings(confirm_token)`).run();
 
-  // Track 24h-before reminder emails so the daily cron never double-sends.
+  // Track reminder + review email lifecycle so the daily cron never double-sends.
   try {
     const bCols = await db.prepare("PRAGMA table_info(bookings)").all();
     const bNames = new Set((bCols.results ?? []).map((r: any) => r.name));
-    if (!bNames.has('reminder_sent_at')) {
-      try { await db.prepare(`ALTER TABLE bookings ADD COLUMN reminder_sent_at TEXT DEFAULT ''`).run(); } catch {}
+    for (const [col, type] of [
+      ['reminder_sent_at',    "TEXT DEFAULT ''"],
+      ['review_requested_at', "TEXT DEFAULT ''"],
+      ['reviewed_at',         "TEXT DEFAULT ''"],
+      ['rating',              "INTEGER"],
+      ['review_text',         "TEXT DEFAULT ''"],
+    ] as const) {
+      if (!bNames.has(col)) {
+        try { await db.prepare(`ALTER TABLE bookings ADD COLUMN ${col} ${type}`).run(); } catch {}
+      }
     }
   } catch {}
+  try { await db.prepare(`CREATE INDEX IF NOT EXISTS idx_bookings_reviews ON bookings(profile_slug, rating)`).run(); } catch {}
 
   // Master on/off switch for the reservation engine on each profile.
   // Off by default — nobody is opted in until they activate it from /dashboard/booking-setup.

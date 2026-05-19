@@ -1,0 +1,197 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { getDB } from '../../../lib/db';
+import { validateSlug } from '../../../lib/profile-auth';
+import { ensureBookingsSchema, formatDenverHuman } from '../../../lib/bookings-schema';
+
+const rawSlug = Astro.params.slug || '';
+const v = validateSlug(rawSlug);
+if (!v.ok) return Astro.redirect('/404');
+const slug = v.slug;
+
+const db = getDB();
+if (!db) return new Response('DB unavailable', { status: 500 });
+await ensureBookingsSchema(db);
+
+const profile = await db.prepare(
+  `SELECT slug, display_name FROM profiles WHERE slug=?`
+).bind(slug).first() as any;
+if (!profile) return new Response('Not found', { status: 404 });
+
+const token = (Astro.url.searchParams.get('token') || '').trim();
+const initialRating = Math.min(5, Math.max(1, parseInt(Astro.url.searchParams.get('rating') || '0', 10))) || 0;
+
+let booking: any = null;
+let errorMsg = '';
+if (!token) {
+  errorMsg = 'Missing review link.';
+} else {
+  booking = await db.prepare(
+    `SELECT b.id, b.status, b.slot_start, b.slot_end, b.rating, b.review_text, b.reviewed_at, b.profile_slug,
+            o.title AS offering_title
+       FROM bookings b
+       LEFT JOIN bookable_offerings o ON o.id = b.offering_id
+      WHERE b.confirm_token=?`
+  ).bind(token).first();
+  if (!booking) errorMsg = 'That review link is no longer valid.';
+  else if (booking.profile_slug !== slug) errorMsg = 'Review link does not match this profile.';
+  else if (booking.status !== 'confirmed') errorMsg = 'Only confirmed bookings can be reviewed.';
+  else if (booking.slot_end && Date.parse(String(booking.slot_end)) > Date.now()) {
+    errorMsg = `Reviews open after your appointment ends.`;
+  }
+}
+
+const displayName = profile.display_name || slug;
+const alreadyReviewed = booking?.reviewed_at && booking?.rating;
+const slotHuman = booking?.slot_start ? formatDenverHuman(String(booking.slot_start)) : '';
+---
+<Base title={`Review ${displayName}`} description={`Leave a review for ${displayName}.`}>
+  <div class="rv-wrap">
+    {errorMsg ? (
+      <section class="rv-card rv-error">
+        <div class="rv-emoji">😕</div>
+        <h1>Can't load that review</h1>
+        <p>{errorMsg}</p>
+        <a class="btn-sec" href={`/u/${slug}`}>← Back to {displayName}'s page</a>
+      </section>
+    ) : alreadyReviewed ? (
+      <section class="rv-card">
+        <div class="rv-emoji">✓</div>
+        <h1>You already left a review</h1>
+        <p>Thanks for the feedback — it helps others find {displayName}.</p>
+        <div class="rv-stars-static" aria-label={`Your rating: ${booking.rating} out of 5`}>
+          {[1,2,3,4,5].map(n => <span class={n <= booking.rating ? 'on' : ''}>★</span>)}
+        </div>
+        {booking.review_text && <blockquote class="rv-quote">"{booking.review_text}"</blockquote>}
+        <a class="btn-sec" href={`/u/${slug}`}>Back to {displayName}'s page →</a>
+      </section>
+    ) : (
+      <section class="rv-card">
+        <p class="rv-eyebrow">How was your session?</p>
+        <h1>Review {displayName}</h1>
+        {booking?.offering_title && (
+          <p class="rv-sub">
+            <strong>{booking.offering_title}</strong>
+            {slotHuman && <> · {slotHuman}</>}
+          </p>
+        )}
+
+        <form id="rv-form" data-token={token} data-initial={initialRating}>
+          <fieldset class="rv-stars" aria-label="Rating (1 to 5 stars)">
+            {[1,2,3,4,5].map(n => (
+              <label class="rv-star">
+                <input type="radio" name="rating" value={n} checked={n === initialRating}/>
+                <span>★</span>
+              </label>
+            ))}
+          </fieldset>
+
+          <label class="rv-field">
+            <span>What stood out? <em>(optional)</em></span>
+            <textarea name="review_text" rows="4" maxlength="1000" placeholder={`Tell others what to expect from ${displayName}…`}></textarea>
+          </label>
+
+          <button type="submit" class="btn-cta" id="rv-submit">Post review</button>
+          <p class="rv-status" id="rv-status" aria-live="polite"></p>
+        </form>
+      </section>
+    )}
+  </div>
+
+  <style>
+    .rv-wrap { max-width: 520px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-9); }
+    .rv-card { background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-5); box-shadow: var(--card-shadow, 0 1px 3px rgba(0,0,0,0.06)); text-align: center; }
+    .rv-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 var(--space-2); }
+    .rv-card h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin: 0 0 var(--space-2); color: var(--text); }
+    .rv-sub { color: var(--text-sec); font-size: 14px; margin: 0 0 var(--space-4); }
+    .rv-emoji { font-size: 40px; margin-bottom: var(--space-2); }
+    .rv-error h1 { color: var(--text); }
+
+    .rv-stars {
+      display: inline-flex; gap: var(--space-1);
+      border: none; padding: 0; margin: 0 auto var(--space-4);
+      direction: rtl;
+    }
+    .rv-star input { position: absolute; opacity: 0; pointer-events: none; }
+    .rv-star span {
+      display: inline-block;
+      font-size: 36px; line-height: 1;
+      color: var(--border-hover);
+      cursor: pointer;
+      transition: color 0.12s, transform 0.12s;
+      padding: 4px;
+    }
+    .rv-star:hover span,
+    .rv-star:hover ~ .rv-star span,
+    .rv-star input:checked ~ span,
+    .rv-star:has(input:checked) span,
+    .rv-star:has(input:checked) ~ .rv-star span {
+      color: #F59E0B;
+    }
+    .rv-star input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+    .rv-star span:active { transform: scale(1.15); }
+
+    .rv-stars-static { font-size: 28px; letter-spacing: 4px; color: var(--border-hover); margin: var(--space-2) 0; }
+    .rv-stars-static .on { color: #F59E0B; }
+
+    .rv-field { display: block; text-align: left; margin-bottom: var(--space-4); }
+    .rv-field span { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .rv-field em { font-style: normal; color: var(--text-faint); font-weight: 400; }
+    .rv-field textarea {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid var(--border); border-radius: 12px;
+      background: var(--surface); color: var(--text);
+      font-family: inherit; font-size: 14px; line-height: 1.5;
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+      box-sizing: border-box; resize: vertical;
+    }
+    .rv-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); background: var(--bg); }
+
+    .rv-quote { background: var(--surface); border-left: 3px solid var(--accent); padding: 12px 16px; margin: var(--space-3) 0; font-style: italic; color: var(--text); border-radius: 0 8px 8px 0; text-align: left; }
+    .rv-status { font-size: 13px; min-height: 1em; margin-top: var(--space-3); color: var(--text-sec); }
+    .rv-status[data-tone="ok"] { color: var(--green); }
+    .rv-status[data-tone="err"] { color: var(--red); }
+
+    #rv-submit { margin-top: var(--space-2); width: 100%; }
+  </style>
+
+  <script is:inline>
+    (function () {
+      var form = document.getElementById('rv-form');
+      if (!form) return;
+      var status = document.getElementById('rv-status');
+      var submit = document.getElementById('rv-submit');
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var token = form.dataset.token;
+        var rating = parseInt((form.querySelector('input[name=rating]:checked') || {}).value, 10);
+        if (!rating) { status.textContent = 'Pick a rating first.'; status.setAttribute('data-tone', 'err'); return; }
+        var text = (form.querySelector('textarea[name=review_text]').value || '').trim();
+        submit.disabled = true;
+        status.removeAttribute('data-tone');
+        status.textContent = 'Posting…';
+        try {
+          var r = await fetch('/api/bookings/review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token, rating: rating, review_text: text }),
+          });
+          var d = await r.json().catch(function () { return {}; });
+          if (!d.ok) {
+            status.textContent = d.error || 'Could not post — try again.';
+            status.setAttribute('data-tone', 'err');
+            submit.disabled = false;
+            return;
+          }
+          status.textContent = 'Thanks! Reloading…';
+          status.setAttribute('data-tone', 'ok');
+          setTimeout(function () { location.reload(); }, 600);
+        } catch (err) {
+          status.textContent = 'Network issue — try again.';
+          status.setAttribute('data-tone', 'err');
+          submit.disabled = false;
+        }
+      });
+    })();
+  </script>
+</Base>

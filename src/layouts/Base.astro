@@ -1,5 +1,16 @@
 ---
-const { title = "Denver Social", description = "Real small-group events across Denver. Show up, meet people." } = Astro.props;
+const {
+  title = "Denver Social",
+  description = "Real small-group events across Denver. Show up, meet people.",
+  ogTitle,
+  ogDescription,
+  ogImage,
+  ogType = "website",
+} = Astro.props;
+
+const _ogTitle = ogTitle || title;
+const _ogDescription = ogDescription || description;
+const canonicalUrl = new URL(Astro.url.pathname + Astro.url.search, Astro.url.origin).toString();
 
 // Auth is admin-only now (email-code gate). Public pages have no
 // concept of a "logged-in user" — we only check the dsn_admin cookie
@@ -20,6 +31,17 @@ const currentPath = Astro.url.pathname;
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content={description} />
   <title>{title} · Denver Social</title>
+  <link rel="canonical" href={canonicalUrl} />
+  <meta property="og:type" content={ogType} />
+  <meta property="og:site_name" content="Denver Social" />
+  <meta property="og:title" content={_ogTitle} />
+  <meta property="og:description" content={_ogDescription} />
+  <meta property="og:url" content={canonicalUrl} />
+  {ogImage && <meta property="og:image" content={ogImage} />}
+  <meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
+  <meta name="twitter:title" content={_ogTitle} />
+  <meta name="twitter:description" content={_ogDescription} />
+  {ogImage && <meta name="twitter:image" content={ogImage} />}
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -93,6 +93,30 @@ try {
   hasBookableOfferings = !!(row && row.n > 0);
 } catch {}
 
+// Reviews — average rating + most recent reviews.
+let avgRating = 0;
+let reviewCount = 0;
+let recentReviews: Array<{ rating: number; review_text: string; requester_name: string; reviewed_at: string }> = [];
+try {
+  const agg = await db.prepare(
+    `SELECT AVG(rating) AS avg_r, COUNT(*) AS n
+       FROM bookings
+      WHERE profile_slug=? AND rating IS NOT NULL`
+  ).bind(v.slug).first() as any;
+  if (agg && agg.n > 0) {
+    reviewCount = Number(agg.n);
+    avgRating = Math.round(Number(agg.avg_r) * 10) / 10;
+  }
+  if (reviewCount > 0) {
+    recentReviews = ((await db.prepare(
+      `SELECT rating, review_text, requester_name, reviewed_at
+         FROM bookings
+        WHERE profile_slug=? AND rating IS NOT NULL
+        ORDER BY reviewed_at DESC LIMIT 5`
+    ).bind(v.slug).all())?.results || []) as any[];
+  }
+} catch {}
+
 const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.accent_color : '#7C3AED';
 const firstName = (profile.display_name || '').split(' ')[0] || 'them';
 
@@ -119,7 +143,14 @@ const TEMPLATE_MAP: Record<string, any> = {
 };
 const TemplateComponent = TEMPLATE_MAP[templateKey] || HostTemplate;
 ---
-<Base title={`${profile.display_name} — Denver Social`} description={profile.headline || `${profile.display_name} on Denver Social`}>
+<Base
+  title={`${profile.display_name} — Denver Social`}
+  description={profile.headline || `${profile.display_name} on Denver Social`}
+  ogTitle={profile.display_name}
+  ogDescription={profile.headline || (reviewCount > 0 ? `★ ${avgRating} · ${reviewCount} review${reviewCount === 1 ? '' : 's'}` : `${profile.display_name} on Denver Social`)}
+  ogImage={profile.cover_photo_url || profile.avatar_photo_url || undefined}
+  ogType="profile"
+>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Serif+Display&family=Bebas+Neue&family=Lora:wght@500;700&family=Space+Mono&display=swap"/>
   <div class="wrap">
     <div class="profile" style={`--profile-accent: ${accent}`} data-slug={profile.slug}>
@@ -131,7 +162,35 @@ const TemplateComponent = TEMPLATE_MAP[templateKey] || HostTemplate;
       {hasBookableOfferings && (
         <div class="prof-book-row">
           <a href={`/u/${profile.slug}/book`} class="prof-book-cta">📅 Book a session →</a>
+          {reviewCount > 0 && (
+            <div class="prof-rating-line">
+              <span class="prof-stars" aria-label={`${avgRating} out of 5`}>
+                {[1,2,3,4,5].map(n => <span class={n <= Math.round(avgRating) ? 'on' : ''}>★</span>)}
+              </span>
+              <strong>{avgRating}</strong>
+              <span class="prof-rating-sub">· {reviewCount} review{reviewCount === 1 ? '' : 's'}</span>
+            </div>
+          )}
         </div>
+      )}
+
+      {recentReviews.length > 0 && (
+        <section class="prof-reviews">
+          <h3 class="prof-h3"><span class="prof-h3-bar"></span>Reviews</h3>
+          <div class="prof-reviews-grid">
+            {recentReviews.map(r => (
+              <article class="prof-review">
+                <div class="prof-review-head">
+                  <span class="prof-stars sm" aria-label={`${r.rating} out of 5`}>
+                    {[1,2,3,4,5].map(n => <span class={n <= r.rating ? 'on' : ''}>★</span>)}
+                  </span>
+                  <span class="prof-review-name">{(r.requester_name || 'Anonymous').split(' ')[0]}</span>
+                </div>
+                {r.review_text && <p class="prof-review-text">"{r.review_text}"</p>}
+              </article>
+            ))}
+          </div>
+        </section>
       )}
 
       {(offers.length > 0 || links.length > 0 || profile.contact_email || profile.contact_phone) && (
@@ -240,6 +299,27 @@ const TemplateComponent = TEMPLATE_MAP[templateKey] || HostTemplate;
     }
     .prof-book-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
     .prof-book-cta:active { transform: translateY(0); filter: brightness(0.95); }
+    .prof-rating-line {
+      display: flex; align-items: center; gap: 8px;
+      justify-content: center; margin-top: 10px;
+      font-size: 13px; color: var(--text-sec);
+    }
+    .prof-rating-line strong { color: var(--text); font-weight: 700; }
+    .prof-rating-sub { color: var(--text-faint); }
+    .prof-stars { letter-spacing: 1px; color: var(--border-hover); font-size: 14px; }
+    .prof-stars.sm { font-size: 13px; }
+    .prof-stars .on { color: #F59E0B; }
+    .prof-reviews { padding: var(--space-4) var(--space-5); background: #fff; border: 1.5px solid var(--border); border-radius: 18px; margin-top: 16px; }
+    .prof-reviews-grid { display: grid; gap: 12px; }
+    .prof-review {
+      background: var(--surface, #F8F9FB);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .prof-review-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .prof-review-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .prof-review-text { font-size: 14px; line-height: 1.5; color: var(--text); margin: 0; font-style: italic; }
     .prof-h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-faint); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
     .prof-h3-bar { width: 24px; height: 2px; background: var(--profile-accent, #7C3AED); border-radius: 999px; display: inline-block; }
     .prof-offers { margin-bottom: var(--space-4); }
