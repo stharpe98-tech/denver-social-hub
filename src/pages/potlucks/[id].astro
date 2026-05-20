@@ -201,6 +201,9 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   .pk-cat-card.selected { border-color: var(--green); background: rgba(16, 185, 129, 0.06); }
   .pk-cat-card.full { opacity: 0.4; cursor: default; }
   .pk-cat-card.full:hover { border-color: var(--border); background: var(--surface); transform: none; }
+  .pk-cat-custom { border-style: dashed; color: var(--text-sec); }
+  .pk-cat-custom:hover { border-style: solid; }
+  .pk-cat-custom.selected { border-style: solid; }
   .pk-cat-emoji { font-size: 28px; }
   .pk-cat-name { font-size: 13px; font-weight: 600; color: var(--text); text-align: center; line-height: 1.2; }
   .pk-cat-status { font-size: 11px; font-weight: 600; }
@@ -508,6 +511,28 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
             </button>
           );
         })}
+        <button type="button" class="pk-cat-card pk-cat-custom" id="cat-custom-btn">
+          <span class="pk-cat-emoji">＋</span>
+          <span class="pk-cat-name">Something else</span>
+          <span class="pk-cat-status open">Add your own</span>
+        </button>
+      </div>
+
+      <div id="custom-cat-wrap" class="pk-dish-wrap" style="display:none">
+        <label class="pk-dish-label">Pick a category <span class="opt">(or type your own)</span></label>
+        <input type="text" class="pk-input" id="f-custom-cat" list="cat-suggestions" placeholder="e.g. Bread, Side, Salad…" autocomplete="off"/>
+        <datalist id="cat-suggestions">
+          <option value="🥗 Salad"></option>
+          <option value="🍞 Bread"></option>
+          <option value="🥦 Side"></option>
+          <option value="🍰 Dessert"></option>
+          <option value="🥤 Drinks"></option>
+          <option value="🍿 Snack"></option>
+          <option value="🧀 Cheese board"></option>
+          <option value="🍎 Fruit"></option>
+          <option value="🧊 Ice"></option>
+          <option value="🍴 Plates & utensils"></option>
+        </datalist>
       </div>
 
       <div id="dish-input-wrap" class="pk-dish-wrap" style="display:none">
@@ -654,15 +679,23 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
 
   // ── Category card picker ─────────────────────────────
   var selectedCategory = '';
+  var isCustomCat = false;
   var catCards = document.querySelectorAll('.pk-cat-card');
   catCards.forEach(function (card) {
     card.addEventListener('click', function () {
       if (card.disabled) return;
       catCards.forEach(function (c) { c.classList.remove('selected'); });
       card.classList.add('selected');
-      selectedCategory = card.getAttribute('data-category') || '';
+      isCustomCat = card.id === 'cat-custom-btn';
+      if (isCustomCat) {
+        selectedCategory = '';
+        $('custom-cat-wrap').style.display = 'block';
+        $('f-custom-cat').focus();
+      } else {
+        selectedCategory = card.getAttribute('data-category') || '';
+        $('custom-cat-wrap').style.display = 'none';
+      }
       $('dish-input-wrap').style.display = 'block';
-      $('f-dish').focus();
       $('save-btn').disabled = false;
       $('step2-err').classList.remove('show');
     });
@@ -675,7 +708,17 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
 
   // ── Save pick → submit with category + dish text ────
   $('save-btn').addEventListener('click', function () {
-    if (!selectedCategory) {
+    var category = selectedCategory;
+    if (isCustomCat) {
+      category = val('f-custom-cat');
+      if (!category) {
+        $('step2-err').textContent = 'Type a category name (e.g. "Salad", "Bread").';
+        $('step2-err').classList.add('show');
+        $('f-custom-cat').focus();
+        return;
+      }
+    }
+    if (!category) {
       $('step2-err').textContent = 'Pick a category first, or tap "Just showing up".';
       $('step2-err').classList.add('show');
       return;
@@ -688,7 +731,7 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
       return;
     }
     $('step2-err').classList.remove('show');
-    submitRsvp(dish, selectedCategory);
+    submitRsvp(dish, category);
   });
 
   // ── Submit to API ────────────────────────────────────
