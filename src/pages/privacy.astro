@@ -1,0 +1,61 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Privacy" description="What Denver Social collects, what it doesn't, and how to wipe your data.">
+  <div class="hp-wrap">
+    <header class="hp-header">
+      <h1>Privacy</h1>
+      <p class="hp-sub">Denver Social is a small community site run by one person in Denver — not a tech company, not a startup, not VC-backed. The data practices reflect that.</p>
+    </header>
+
+    <section class="hp-sec">
+      <h2>What we collect</h2>
+      <ul>
+        <li>Your email — for sign-in codes and event RSVPs.</li>
+        <li>Slug + display name — only if you make an organizer page.</li>
+        <li>Profile photos — stored in Cloudflare R2.</li>
+        <li>IP address — only as part of Cloudflare's standard request logs, used to investigate abuse.</li>
+      </ul>
+    </section>
+
+    <section class="hp-sec">
+      <h2>What we don't</h2>
+      <ul>
+        <li>No tracking pixels.</li>
+        <li>No third-party ads.</li>
+        <li>No data sales — ever.</li>
+      </ul>
+    </section>
+
+    <section class="hp-sec">
+      <h2>Third parties</h2>
+      <ul>
+        <li><strong>Resend</strong> — sends transactional email (sign-in codes, RSVP confirmations).</li>
+        <li><strong>Cloudflare</strong> — hosting, R2 (photos), D1 (database).</li>
+        <li><strong>Groq</strong> — AI features (event summaries, suggestion cleanup).</li>
+      </ul>
+    </section>
+
+    <section class="hp-sec">
+      <h2>Deletion</h2>
+      <p>Email <a href="mailto:stharpe98@gmail.com">stharpe98@gmail.com</a> and your data will be wiped within 7 days. No forms, no friction.</p>
+    </section>
+
+    <p class="hp-updated">Last updated: 2026-05-20</p>
+  </div>
+
+  <style>
+    .hp-wrap { max-width: 720px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+    .hp-header { margin-bottom: 32px; }
+    .hp-header h1 { font-family: var(--font-display); font-size: clamp(28px, 4.5vw, 38px); font-weight: 900; letter-spacing: -0.025em; color: var(--text); margin-bottom: 12px; }
+    .hp-sub { font-size: 16px; line-height: 1.6; color: var(--text-sec); }
+    .hp-sec { margin-bottom: 28px; }
+    .hp-sec h2 { font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); margin-bottom: 12px; }
+    .hp-sec p { font-size: 15px; line-height: 1.6; color: var(--text); margin-bottom: 8px; }
+    .hp-sec ul { padding-left: 20px; }
+    .hp-sec li { font-size: 15px; line-height: 1.7; color: var(--text); margin-bottom: 4px; }
+    .hp-sec a { color: var(--accent); font-weight: 600; }
+    .hp-sec a:hover { text-decoration: underline; }
+    .hp-updated { font-size: 13px; color: var(--text-faint); margin-top: 32px; }
+  </style>
+</Base>

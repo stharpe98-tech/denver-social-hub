@@ -1,11 +1,10 @@
 ---
-import { requireApprovedOrg, isSuperAdmin } from '../../lib/admin-auth';
+import { requireApprovedOrg } from '../../lib/admin-auth';
 import { getDB } from '../../lib/db';
 
 const gate = await requireApprovedOrg(Astro);
 if (gate instanceof Response) return gate;
 const org = gate;
-const showApprovalUI = isSuperAdmin(org);
 const db = getDB();
 
 // ── Safe count helper — tables may not all exist on every deploy ─────
@@ -55,18 +54,6 @@ const communityPostCount = await safeCount(
 
 // ── Sources of truth ─────────────────────────────────────────────────
 const eventSources = await safeAll<any>("SELECT id, kind, label, url, enabled FROM event_sources ORDER BY id DESC LIMIT 20");
-
-// ── Pending organizer approvals (super admin only) ───────────────────
-let pendingOrgs: any[] = [];
-let approvedOrgs: any[] = [];
-if (showApprovalUI && db) {
-  try {
-    const all = await db.prepare("SELECT id, name, email, approved_for_potlucks FROM organizers ORDER BY id DESC").all();
-    const rows = (all.results ?? []) as any[];
-    pendingOrgs = rows.filter(r => !r.approved_for_potlucks);
-    approvedOrgs = rows.filter(r => !!r.approved_for_potlucks);
-  } catch {}
-}
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -279,7 +266,7 @@ if (showApprovalUI && db) {
     </div>
 
     {/* ─ B. Today / Now ─ */}
-    {(statBookings > 0 || flaggedPages > 0 || pendingEventSubs > 0 || openReports > 0) && (
+    {(statBookings > 0 || flaggedPages > 0 || openReports > 0) && (
       <>
         <div class="sec-head">Needs your attention</div>
         <div class="now-grid">
@@ -293,12 +280,6 @@ if (showApprovalUI && db) {
             <a href="/admin/pages" class="now-card">
               <div class="now-count">{flaggedPages}</div>
               <div class="now-label">flagged /u/ page{flaggedPages === 1 ? '' : 's'}</div>
-            </a>
-          )}
-          {pendingEventSubs > 0 && (
-            <a href="/admin/pending" class="now-card">
-              <div class="now-count">{pendingEventSubs}</div>
-              <div class="now-label">pending event submission{pendingEventSubs === 1 ? '' : 's'}</div>
             </a>
           )}
           {openReports > 0 && (
@@ -431,34 +412,6 @@ if (showApprovalUI && db) {
       </div>
     </details>
 
-    {showApprovalUI && (
-      <details class="section">
-        <summary>Organizer access <span class="section-count">{pendingOrgs.length} pending · {approvedOrgs.length} approved</span></summary>
-        <div class="section-body">
-          {pendingOrgs.length > 0 && (
-            <div style="margin-bottom:14px">
-              <div style="font-size:11px;font-weight:700;color:#5B21B6;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Pending approval</div>
-              {pendingOrgs.map((o: any) => (
-                <div class="row">
-                  <div><div class="row-title">{o.name}</div><div class="row-meta">{o.email}</div></div>
-                  <button class="btn-approve" data-approve-id={o.id}>Approve</button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style="font-size:11px;font-weight:700;color:var(--text-faint);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Approved</div>
-          {approvedOrgs.map((o: any) => (
-            <div class="row">
-              <div><div class="row-title">{o.name}</div><div class="row-meta">{o.email}</div></div>
-              {o.email.toLowerCase() === 'stharpe98@gmail.com'
-                ? <span style="font-size:11px;color:var(--text-faint);padding:4px 10px">super</span>
-                : <button class="btn-secondary" data-revoke-id={o.id} style="font-size:12px;padding:5px 12px">Revoke</button>}
-            </div>
-          ))}
-        </div>
-      </details>
-    )}
-
   </div>
 
   <div class="toast" id="toast"></div>
@@ -475,23 +428,6 @@ if (showApprovalUI && db) {
       location.href = '/admin/login';
     });
 
-    document.querySelectorAll('[data-approve-id]').forEach(function(btn) {
-      btn.addEventListener('click', async function() {
-        var id = parseInt(btn.getAttribute('data-approve-id'));
-        var res = await fetch('/api/admin/organizers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve', id: id }) });
-        var data = await res.json();
-        if (data.ok) location.reload();
-      });
-    });
-    document.querySelectorAll('[data-revoke-id]').forEach(function(btn) {
-      btn.addEventListener('click', async function() {
-        if (!confirm('Revoke potluck admin access for this user?')) return;
-        var id = parseInt(btn.getAttribute('data-revoke-id'));
-        var res = await fetch('/api/admin/organizers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'revoke', id: id }) });
-        var data = await res.json();
-        if (data.ok) location.reload();
-      });
-    });
   </script>
 
   <script>

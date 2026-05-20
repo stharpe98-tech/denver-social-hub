@@ -1,3 +1,49 @@
 ---
-return Astro.redirect('/conduct#terms', 301);
+import Base from '../layouts/Base.astro';
 ---
+<Base title="Terms" description="The short, friendly ground rules for using Denver Social.">
+  <div class="hp-wrap">
+    <header class="hp-header">
+      <h1>Terms</h1>
+      <p class="hp-sub">Short version: show up, be a good neighbor. That's most of it.</p>
+    </header>
+
+    <section class="hp-sec">
+      <h2>Who can use this</h2>
+      <p>Anyone 18+ in the Denver metro area. That's the only bar.</p>
+    </section>
+
+    <section class="hp-sec">
+      <h2>What you can post</h2>
+      <p>Real events, real flyers, real community happenings. No spam, no hate, no commercial pitches dressed up as meetups. If you wouldn't pin it to a coffee-shop corkboard, don't post it here.</p>
+    </section>
+
+    <section class="hp-sec">
+      <h2>What gets removed</h2>
+      <p>Admin can take any page offline at any time, with no appeal. This is a community site, not a platform — there's no obligation to keep anything up.</p>
+    </section>
+
+    <section class="hp-sec">
+      <h2>Liability</h2>
+      <p>We don't vet attendees. Meet in public until you trust someone. You are responsible for your own safety and your own choices about who to spend time with.</p>
+    </section>
+
+    <section class="hp-sec">
+      <h2>Changes</h2>
+      <p>These terms may update over time. Check back occasionally.</p>
+    </section>
+
+    <p class="hp-updated">Last updated: 2026-05-20</p>
+  </div>
+
+  <style>
+    .hp-wrap { max-width: 720px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
+    .hp-header { margin-bottom: 32px; }
+    .hp-header h1 { font-family: var(--font-display); font-size: clamp(28px, 4.5vw, 38px); font-weight: 900; letter-spacing: -0.025em; color: var(--text); margin-bottom: 12px; }
+    .hp-sub { font-size: 16px; line-height: 1.6; color: var(--text-sec); }
+    .hp-sec { margin-bottom: 28px; }
+    .hp-sec h2 { font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); margin-bottom: 12px; }
+    .hp-sec p { font-size: 15px; line-height: 1.6; color: var(--text); margin-bottom: 8px; }
+    .hp-updated { font-size: 13px; color: var(--text-faint); margin-top: 32px; }
+  </style>
+</Base>
