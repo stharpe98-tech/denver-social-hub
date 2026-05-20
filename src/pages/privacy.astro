@@ -2,60 +2,197 @@
 import Base from '../layouts/Base.astro';
 ---
 <Base title="Privacy" description="What Denver Social collects, what it doesn't, and how to wipe your data.">
-  <div class="hp-wrap">
-    <header class="hp-header">
-      <h1>Privacy</h1>
-      <p class="hp-sub">Denver Social is a small community site run by one person in Denver — not a tech company, not a startup, not VC-backed. The data practices reflect that.</p>
-    </header>
+  <div class="canvas">
+    <div class="hp">
+      <header class="hp-h">
+        <p class="kicker">Privacy · Updated 2026-05-20</p>
+        <h1>Privacy <span class="amp">&amp;</span> data.</h1>
+        <p class="lede">Denver Social is a small community site run by one person in Denver — not a tech company, not a startup, not VC-backed. The data practices reflect that.</p>
+        <a href="/terms" class="hp-cta">Read the terms →</a>
+      </header>
 
-    <section class="hp-sec">
-      <h2>What we collect</h2>
-      <ul>
-        <li>Your email — for sign-in codes and event RSVPs.</li>
-        <li>Slug + display name — only if you make an organizer page.</li>
-        <li>Profile photos — stored in Cloudflare R2.</li>
-        <li>IP address — only as part of Cloudflare's standard request logs, used to investigate abuse.</li>
-      </ul>
-    </section>
+      <section class="hp-s">
+        <div class="h2-block"><h2>The details.</h2><p class="h2-cap">Collect · Exclude · Third parties · Deletion</p></div>
 
-    <section class="hp-sec">
-      <h2>What we don't</h2>
-      <ul>
-        <li>No tracking pixels.</li>
-        <li>No third-party ads.</li>
-        <li>No data sales — ever.</li>
-      </ul>
-    </section>
+        <details class="card">
+          <summary><h3>What we collect</h3><span class="plus" aria-hidden="true"><i></i><i></i></span></summary>
+          <div class="ans">
+            <ul>
+              <li>Your email — for sign-in codes and event RSVPs.</li>
+              <li>Slug + display name — only if you make an organizer page.</li>
+              <li>Profile photos — stored in Cloudflare R2.</li>
+              <li>IP address — only as part of Cloudflare's standard request logs, used to investigate abuse.</li>
+            </ul>
+          </div>
+        </details>
 
-    <section class="hp-sec">
-      <h2>Third parties</h2>
-      <ul>
-        <li><strong>Resend</strong> — sends transactional email (sign-in codes, RSVP confirmations).</li>
-        <li><strong>Cloudflare</strong> — hosting, R2 (photos), D1 (database).</li>
-        <li><strong>Groq</strong> — AI features (event summaries, suggestion cleanup).</li>
-      </ul>
-    </section>
+        <details class="card">
+          <summary><h3>What we don't</h3><span class="plus" aria-hidden="true"><i></i><i></i></span></summary>
+          <div class="ans">
+            <ul>
+              <li>No tracking pixels.</li>
+              <li>No third-party ads.</li>
+              <li>No data sales — ever.</li>
+            </ul>
+          </div>
+        </details>
 
-    <section class="hp-sec">
-      <h2>Deletion</h2>
-      <p>Email <a href="mailto:stharpe98@gmail.com">stharpe98@gmail.com</a> and your data will be wiped within 7 days. No forms, no friction.</p>
-    </section>
+        <details class="card">
+          <summary><h3>Third parties</h3><span class="plus" aria-hidden="true"><i></i><i></i></span></summary>
+          <div class="ans">
+            <ul>
+              <li><strong>Resend</strong> — sends transactional email (sign-in codes, RSVP confirmations).</li>
+              <li><strong>Cloudflare</strong> — hosting, R2 (photos), D1 (database).</li>
+              <li><strong>Groq</strong> — AI features (event summaries, suggestion cleanup).</li>
+            </ul>
+          </div>
+        </details>
 
-    <p class="hp-updated">Last updated: 2026-05-20</p>
+        <details class="card">
+          <summary><h3>Deletion</h3><span class="plus" aria-hidden="true"><i></i><i></i></span></summary>
+          <div class="ans">
+            <p>Email <a href="mailto:stharpe98@gmail.com">stharpe98@gmail.com</a> and your data will be wiped within 7 days. No forms, no friction.</p>
+          </div>
+        </details>
+      </section>
+
+      <footer class="hp-foot">
+        <p>See also: <a href="/terms">Terms</a> · <a href="/contact">Contact</a></p>
+      </footer>
+    </div>
   </div>
 
   <style>
-    .hp-wrap { max-width: 720px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 80px; }
-    .hp-header { margin-bottom: 32px; }
-    .hp-header h1 { font-family: var(--font-display); font-size: clamp(28px, 4.5vw, 38px); font-weight: 900; letter-spacing: -0.025em; color: var(--text); margin-bottom: 12px; }
-    .hp-sub { font-size: 16px; line-height: 1.6; color: var(--text-sec); }
-    .hp-sec { margin-bottom: 28px; }
-    .hp-sec h2 { font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); margin-bottom: 12px; }
-    .hp-sec p { font-size: 15px; line-height: 1.6; color: var(--text); margin-bottom: 8px; }
-    .hp-sec ul { padding-left: 20px; }
-    .hp-sec li { font-size: 15px; line-height: 1.7; color: var(--text); margin-bottom: 4px; }
-    .hp-sec a { color: var(--accent); font-weight: 600; }
-    .hp-sec a:hover { text-decoration: underline; }
-    .hp-updated { font-size: 13px; color: var(--text-faint); margin-top: 32px; }
+    .canvas { background: #FDFBF7; min-height: 100vh; }
+
+    .hp {
+      max-width: 760px; margin: 0 auto;
+      padding: 56px clamp(20px, 5vw, 32px) 96px;
+      color: #1C1B1F;
+    }
+
+    .hp-h { margin-bottom: 32px; }
+    .kicker {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: #6B6A70; margin-bottom: 16px;
+    }
+    .hp-h h1 {
+      font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
+      font-size: clamp(44px, 7vw, 64px); font-weight: 800;
+      letter-spacing: -0.035em; line-height: 1.02;
+      margin-bottom: 18px; color: #1C1B1F;
+    }
+    .hp-h h1 em { font-style: italic; font-weight: 500; color: #7C3AED; }
+    .hp-h h1 .amp {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-style: italic; font-weight: 300;
+      color: #B5AFA3; padding: 0 0.08em;
+    }
+    .lede {
+      font-size: 18px; line-height: 1.55;
+      color: #6B6A70; max-width: 56ch;
+      margin-bottom: 14px;
+    }
+    .lede a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    .lede a:hover { color: #7C3AED; }
+    .hp-cta {
+      display: inline-flex; align-items: center;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 13px; font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #7C3AED; text-decoration: underline;
+      text-underline-offset: 5px; text-decoration-thickness: 1px;
+      transition: color 280ms cubic-bezier(0.16,1,0.3,1);
+    }
+    .hp-cta:hover { color: #5B21B6; }
+
+    .hp-s { margin-bottom: 96px; scroll-margin-top: 88px; }
+    .hp-s:last-of-type { margin-bottom: 56px; }
+    .h2-block {
+      padding-bottom: 14px;
+      border-bottom: 1px solid #E8E0D0;
+      margin-bottom: 18px;
+    }
+    .hp-s h2 {
+      font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
+      font-size: clamp(28px, 4vw, 36px); font-weight: 800;
+      letter-spacing: -0.025em; line-height: 1.05;
+      color: #1C1B1F; margin: 0;
+    }
+    .h2-cap {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: #9A938A; margin: 6px 0 0;
+    }
+
+    .card {
+      border: 1px solid rgba(232, 224, 208, 0.8);
+      background: rgba(255,255,255,0.35);
+      border-radius: 22px;
+      margin-bottom: 8px;
+      overflow: hidden;
+      transition: background 360ms cubic-bezier(0.16,1,0.3,1), border-color 360ms cubic-bezier(0.16,1,0.3,1), box-shadow 360ms cubic-bezier(0.16,1,0.3,1);
+    }
+    .card:hover { border-color: rgba(220, 208, 184, 0.9); }
+    .card[open] {
+      background: #FFFFFF;
+      border-color: #D9CFB8;
+      box-shadow: 0 4px 20px -4px rgba(28,27,31,0.05);
+    }
+    .card summary:hover h3 { color: #7C3AED; }
+    .card summary h3 { transition: color 200ms cubic-bezier(0.16,1,0.3,1); }
+    .card summary {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 20px 22px; cursor: pointer;
+      list-style: none;
+    }
+    .card summary::-webkit-details-marker { display: none; }
+    .card summary h3 {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 16px; font-weight: 600;
+      letter-spacing: -0.005em;
+      color: #1C1B1F; margin: 0;
+    }
+    .plus {
+      flex-shrink: 0; position: relative;
+      width: 20px; height: 20px;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: transform 360ms cubic-bezier(0.16,1,0.3,1), color 280ms cubic-bezier(0.16,1,0.3,1);
+      color: #9A938A;
+    }
+    .plus i {
+      position: absolute; background: currentColor; border-radius: 2px;
+      transition: transform 360ms cubic-bezier(0.16,1,0.3,1);
+    }
+    .plus i:nth-child(1) { width: 14px; height: 2px; }
+    .plus i:nth-child(2) { width: 2px; height: 14px; }
+    .card[open] .plus { color: #7C3AED; transform: rotate(90deg); }
+    .card[open] .plus i:nth-child(2) { transform: scaleY(0); }
+    .ans {
+      padding: 4px 22px 22px;
+      border-top: 1px solid rgba(28,27,31,0.06);
+      margin-top: 0;
+    }
+    .ans p {
+      font-size: 15px; line-height: 1.7;
+      color: #4A4850; margin: 14px 0 0;
+    }
+    .ans p:first-child { margin-top: 14px; }
+    .ans ul { margin: 14px 0 0; padding-left: 20px; }
+    .ans li { font-size: 15px; line-height: 1.7; color: #4A4850; margin-bottom: 6px; }
+    .ans a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    .ans a:hover { color: #7C3AED; }
+    .ans strong { color: #1C1B1F; font-weight: 600; }
+
+    .hp-foot {
+      margin-top: 64px; padding-top: 28px;
+      border-top: 1px solid #EDE6D7;
+      font-size: 14px; color: #6B6A70; text-align: center;
+    }
+    .hp-foot a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; }
+    .hp-foot a:hover { color: #7C3AED; }
   </style>
 </Base>
