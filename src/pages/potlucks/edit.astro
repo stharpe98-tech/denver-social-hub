@@ -24,6 +24,9 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
     .btn-save:hover { box-shadow: 0 6px 20px rgba(249,115,22,0.35); transform: translateY(-1px); }
     .btn-cancel { width: 100%; padding: 11px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--bg); color: var(--red); font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 10px; transition: background 0.15s; }
     .btn-cancel:hover { background: var(--red-dim); }
+    .btn-add { width: 100%; padding: 11px; border-radius: var(--radius-pill); border: 1px dashed var(--border); background: var(--bg); color: var(--text-sec); font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+    .btn-add:hover { border-style: solid; color: var(--text); border-color: var(--text-sec); }
+    .add-err { font-size: 12px; color: var(--red); margin-top: 6px; }
     .divider { height: 1px; background: var(--border); margin: var(--space-4) 0; }
     .result { text-align: center; padding: var(--space-6) var(--space-4); }
     .result-emoji { font-size: 52px; display: block; margin-bottom: 14px; }
@@ -67,6 +70,39 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
             <textarea id="f-dietary" placeholder="Leave blank if none"></textarea>
           </div>
           <button class="btn-save" id="save-btn">Save changes</button>
+
+          <div class="divider"></div>
+
+          <!-- Add another item -->
+          <div class="add-wrap">
+            <button type="button" class="btn-add" id="add-toggle">＋ Bring something else too</button>
+            <div id="add-form" class="hidden" style="margin-top:14px">
+              <div class="field">
+                <label>Category</label>
+                <input type="text" id="add-cat" list="add-cat-suggestions" placeholder="e.g. Salad, Bread, Dessert…"/>
+                <datalist id="add-cat-suggestions">
+                  <option value="🥗 Salad"></option>
+                  <option value="🍞 Bread"></option>
+                  <option value="🥦 Side"></option>
+                  <option value="🍰 Dessert"></option>
+                  <option value="🥤 Drinks"></option>
+                  <option value="🍿 Snack"></option>
+                  <option value="🧀 Cheese board"></option>
+                  <option value="🍎 Fruit"></option>
+                  <option value="🧊 Ice"></option>
+                  <option value="🍴 Plates & utensils"></option>
+                </datalist>
+              </div>
+              <div class="field">
+                <label>What are you bringing?</label>
+                <input type="text" id="add-dish" placeholder="e.g. Caesar salad"/>
+              </div>
+              <button class="btn-save" id="add-save">Add it</button>
+              <div class="add-err" id="add-err"></div>
+            </div>
+            <div id="add-ok" class="hidden" style="margin-top:10px;padding:10px 12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;font-size:13px;color:#065F46">✓ Added! You can keep adding more or close this tab.</div>
+          </div>
+
           <div class="divider"></div>
           <button class="btn-cancel" id="cancel-btn">Cancel my spot</button>
         </div>
@@ -179,6 +215,40 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
     }
 
     document.getElementById('cancel-btn').addEventListener('click', doCancel);
+
+    // ── Add another item ──────────────────────────────────
+    document.getElementById('add-toggle').addEventListener('click', function() {
+      var f = document.getElementById('add-form');
+      f.classList.toggle('hidden');
+      if (!f.classList.contains('hidden')) document.getElementById('add-cat').focus();
+    });
+    document.getElementById('add-save').addEventListener('click', async function() {
+      var cat = document.getElementById('add-cat').value.trim();
+      var dish = document.getElementById('add-dish').value.trim();
+      var err = document.getElementById('add-err');
+      if (!cat || !dish) {
+        err.textContent = 'Need both a category and a dish.';
+        return;
+      }
+      err.textContent = '';
+      var btn = document.getElementById('add-save');
+      btn.disabled = true; btn.textContent = 'Adding…';
+      var res = await fetch('/api/potluck-edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add_item', token: token, dish: dish, dishCategory: cat })
+      });
+      var data = await res.json();
+      btn.disabled = false; btn.textContent = 'Add it';
+      if (data.ok) {
+        document.getElementById('add-cat').value = '';
+        document.getElementById('add-dish').value = '';
+        document.getElementById('add-form').classList.add('hidden');
+        document.getElementById('add-ok').classList.remove('hidden');
+      } else {
+        err.textContent = data.error || 'Could not add. Try again.';
+      }
+    });
 
     load();
   </script>

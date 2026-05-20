@@ -32,6 +32,26 @@ export const POST: APIRoute = async ({ request }) => {
         .bind(b.dish??'', b.dishCategory??'', parseInt(b.guestCount??'1'), b.dietary??'', token).run();
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
     }
+    if (action === 'add_item') {
+      const orig: any = await db.prepare(
+        `SELECT potluck_id, name, email, phone, handle, platforms FROM potluck_rsvp WHERE cancel_token=?`
+      ).bind(token).first();
+      if (!orig) return new Response(JSON.stringify({ ok: false, error: 'Not found' }), { status: 404 });
+      const dish = (b.dish ?? '').toString().trim();
+      const dishCategory = (b.dishCategory ?? '').toString().trim();
+      if (!dish || !dishCategory) {
+        return new Response(JSON.stringify({ ok: false, error: 'Need a category and a dish' }), { status: 400 });
+      }
+      const newToken = crypto.randomUUID();
+      await db.prepare(`
+        INSERT INTO potluck_rsvp (potluck_id, name, email, phone, handle, platforms, rsvp, guest_count, dish, dish_category, dietary, notes, utensils, early_arrive, seating, cancel_token)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `).bind(
+        orig.potluck_id, orig.name, orig.email ?? '', orig.phone ?? '', orig.handle ?? '', orig.platforms ?? '',
+        'yes', 0, dish, dishCategory, '', '', 0, 0, 0, newToken
+      ).run();
+      return new Response(JSON.stringify({ ok: true, token: newToken }), { headers: { 'Content-Type': 'application/json' } });
+    }
     return new Response(JSON.stringify({ ok: false, error: 'Unknown action' }), { status: 400 });
   } catch (e: any) {
     return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500 });
