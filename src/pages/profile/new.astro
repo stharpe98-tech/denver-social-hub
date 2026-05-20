@@ -52,17 +52,23 @@ const initialTier = (Astro.url.searchParams.get('tier') || 'regular').toLowerCas
         <p class="sub">Pick your kind of presence. Both are free.</p>
       </header>
 
+      {initialTier === 'organizer' && (
+        <div class="org-banner">
+          Setting up your organizer page. Pick a slug below — that's your URL: <span class="mono">denversocialnights.com/u/yourname</span>
+        </div>
+      )}
+
       <!-- Tier toggle: Regular / Organizer -->
       <div class="tier-toggle" role="tablist" aria-label="Pick a tier">
         <button class="tier-btn" id="tier-regular" data-tier="regular" role="tab">
           <span class="tier-emoji">👋</span>
           <span class="tier-name">Regular</span>
-          <span class="tier-blurb">Save your identity. Post on the board. RSVP. Host up to 3 events.</span>
+          <span class="tier-blurb">RSVP to events, post on the community board, message neighbors.</span>
         </button>
         <button class="tier-btn" id="tier-organizer" data-tier="organizer" role="tab">
           <span class="tier-emoji">✨</span>
           <span class="tier-name">Organizer</span>
-          <span class="tier-blurb">Public page at /u/yourname, unlimited hosting, groups.</span>
+          <span class="tier-blurb">All of Regular, plus your own claimable /u/yourname page to host events and take bookings.</span>
         </button>
       </div>
 
@@ -340,7 +346,12 @@ const initialTier = (Astro.url.searchParams.get('tier') || 'regular').toLowerCas
         try {
           var r = await fetch('/api/profile/code-verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug, email: email, code: code }) });
           var d = await r.json();
-          if (d.ok) { location.href = d.redirect || ('/u/' + slug + '/edit'); return; }
+          if (d.ok) {
+            // Signup flow always lands on welcome — both for brand-new organizer
+            // accounts and for regulars who just upgraded to organizer.
+            location.href = '/u/' + slug + '/welcome';
+            return;
+          }
           showErr('org-code-err', d.error || 'Invalid or expired code.');
         } catch (e) { showErr('org-code-err', 'Network hiccup — try again.'); }
         btn.textContent = orig; btn.disabled = false;
@@ -406,6 +417,13 @@ const initialTier = (Astro.url.searchParams.get('tier') || 'regular').toLowerCas
     .sub { font-size: 15px; color: var(--text-sec, #555); line-height: 1.5; }
     .mono { font-family: 'SF Mono', Menlo, monospace; background: rgba(124,58,237,0.10); padding: 1px 6px; border-radius: 4px; font-size: 0.92em; color: var(--accent, #7C3AED); }
 
+    .org-banner {
+      background: #FAF5FF; border: 1px solid #E9D5FF; border-radius: 12px;
+      padding: 12px 16px; margin-bottom: var(--space-4); font-size: 14px;
+      color: var(--text, #1A1A1A); line-height: 1.5;
+    }
+    .org-banner .mono { font-family: 'SF Mono', Menlo, monospace; background: rgba(124,58,237,0.10); padding: 1px 6px; border-radius: 4px; font-size: 0.92em; color: var(--accent, #7C3AED); }
+
     .tier-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: var(--space-4); }
     .tier-btn {
       background: #FFFEFA; border: 1.5px solid rgba(0,0,0,0.08);
@@ -413,6 +431,7 @@ const initialTier = (Astro.url.searchParams.get('tier') || 'regular').toLowerCas
       transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
       display: flex; flex-direction: column; gap: 6px; font-family: inherit;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      min-height: 56px;
     }
     .tier-btn:hover { transform: translateY(-2px); border-color: rgba(0,0,0,0.18); }
     .tier-btn.on { border-color: var(--accent, #7C3AED); box-shadow: 0 6px 20px rgba(124,58,237,0.18); background: linear-gradient(135deg, #FFFEFA, #FAF5FF); }
@@ -428,11 +447,12 @@ const initialTier = (Astro.url.searchParams.get('tier') || 'regular').toLowerCas
     .field { margin-bottom: var(--space-3); }
     .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sec, #555); margin-bottom: 6px; }
     .field label .opt { font-weight: 400; color: var(--text-faint, #888); }
-    .field input { width: 100%; padding: 11px 13px; border-radius: 10px; border: 1.5px solid var(--border, #E5E7EB); font-size: 14px; background: #fff; font-family: inherit; }
+    .field input { width: 100%; padding: 11px 13px; border-radius: 10px; border: 1.5px solid var(--border, #E5E7EB); font-size: 16px; background: #fff; font-family: inherit; }
     .field input:focus { outline: none; border-color: var(--accent, #7C3AED); }
+    #si-code, #reg-code, #org-code { font-size: 22px; letter-spacing: 2px; text-align: center; font-family: monospace; }
     .slug-row { display: flex; align-items: stretch; border: 1.5px solid var(--border, #E5E7EB); border-radius: 10px; overflow: hidden; background: #fff; }
     .slug-prefix { padding: 11px 12px; background: var(--surface, #F8F9FB); color: var(--text-faint, #888); font-size: 13px; font-family: monospace; border-right: 1px solid var(--border, #E5E7EB); }
-    .slug-row input { flex: 1; border: none; padding: 11px 13px; font-size: 14px; outline: none; font-family: monospace; }
+    .slug-row input { flex: 1; border: none; padding: 11px 13px; font-size: 16px; outline: none; font-family: monospace; }
     .slug-check { font-size: 12px; margin-top: 6px; }
 
     .cta { width: 100%; padding: 14px; border-radius: 999px; border: none; background: var(--accent, #7C3AED); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: var(--space-2); }
