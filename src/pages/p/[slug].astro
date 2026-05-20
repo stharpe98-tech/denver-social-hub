@@ -1,0 +1,187 @@
+---
+// Organizer "design preset" page — intentionally bypasses <Base>.
+//
+// This route is the sandboxed canvas described in the design brief: the
+// active preset owns 100% of the viewport, with no Denver Social header,
+// footer, or canvas color leaking in. Standard profile views still live
+// at /u/<slug> and continue to use <Base> like every other page.
+//
+// The preset is resolved from the profiles.theme_preset column when
+// present, with a ?preset=<key> query override for live previewing.
+
+import { getDB } from '../../lib/db';
+import { validateSlug } from '../../lib/profile-auth';
+import {
+  resolvePreset,
+  type OrganizerThemeProps,
+  type OrganizerPresetKey,
+} from '../../lib/organizer-themes';
+import BrutalistTheme from '../../components/organizer-themes/BrutalistTheme.astro';
+import ZineTheme from '../../components/organizer-themes/ZineTheme.astro';
+import CyberTheme from '../../components/organizer-themes/CyberTheme.astro';
+
+const rawSlug = Astro.params.slug || '';
+const v = validateSlug(rawSlug);
+if (!v.ok) return Astro.redirect('/404');
+
+const db = getDB();
+if (!db) return new Response('DB unavailable', { status: 500 });
+
+// Pull the profile. theme_preset is optional in the schema — if the column
+// hasn't been added yet, fall back to a query that omits it. Mirrors the
+// pattern used by /u/[slug].astro for cover_photo_url etc.
+let profile: any = null;
+try {
+  profile = await db.prepare(
+    `SELECT slug, email, display_name, headline, bio, photo_emoji, accent_color,
+            offers_json, links_json, neighborhood, theme_preset, status, tier,
+            cover_photo_url, avatar_photo_url
+     FROM profiles WHERE slug = ?`,
+  ).bind(v.slug).first();
+} catch {
+  profile = await db.prepare(
+    `SELECT slug, email, display_name, headline, bio, photo_emoji, accent_color,
+            offers_json, links_json, neighborhood, status, tier,
+            cover_photo_url, avatar_photo_url
+     FROM profiles WHERE slug = ?`,
+  ).bind(v.slug).first();
+}
+
+if (!profile || profile.status !== 'live') {
+  return new Response('Not found', { status: 404 });
+}
+if (profile.tier !== 'organizer') {
+  // Regular members don't get a public organizer page; bounce them to
+  // the standard profile route so deep links still resolve.
+  return Astro.redirect(`/u/${profile.slug}`, 302);
+}
+
+// Hosted events — same ordering rules as /u/[slug]: upcoming-first then
+// most-recent past.
+const monthOrder: Record<string, number> = {
+  JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+  JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11,
+};
+let events: OrganizerThemeProps['events'] = [];
+try {
+  const rows = (await db.prepare(
+    `SELECT id, title, event_month, event_day, location, zone, is_past
+     FROM events WHERE LOWER(submitted_by_email) = ?`,
+  ).bind((profile.email || '').toLowerCase()).all())?.results || [];
+  const now = new Date();
+  const cm = now.getMonth();
+  const cd = now.getDate();
+  const enriched = (rows as any[]).map((e) => {
+    const m = monthOrder[(e.event_month || '').toUpperCase()] ?? 99;
+    const d = parseInt(e.event_day) || 99;
+    const past = !!e.is_past || m < cm || (m === cm && d < cd);
+    return {
+      id: e.id,
+      title: e.title,
+      month: (e.event_month || '').toUpperCase(),
+      day: String(e.event_day || ''),
+      location: e.location || null,
+      past,
+      _m: m,
+      _d: d,
+    };
+  });
+  enriched.sort((a, b) => {
+    if (a.past !== b.past) return a.past ? 1 : -1;
+    if (a.past) {
+      if (b._m !== a._m) return b._m - a._m;
+      return b._d - a._d;
+    }
+    if (a._m !== b._m) return a._m - b._m;
+    return a._d - b._d;
+  });
+  events = enriched.map(({ _m, _d, ...rest }) => rest);
+} catch {}
+
+let offers: OrganizerThemeProps['offers'] = [];
+let links: OrganizerThemeProps['links'] = [];
+try {
+  const arr = JSON.parse(profile.offers_json || '[]');
+  if (Array.isArray(arr)) offers = arr;
+} catch {}
+try {
+  const arr = JSON.parse(profile.links_json || '[]');
+  if (Array.isArray(arr)) links = arr;
+} catch {}
+
+// Query-string override lets organizers preview presets before saving;
+// the persisted choice in profiles.theme_preset is the source of truth.
+const queryPreset = Astro.url.searchParams.get('preset');
+const preset = resolvePreset(queryPreset || profile.theme_preset);
+
+const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '')
+  ? profile.accent_color
+  : preset.defaultAccent;
+
+const themeProps: OrganizerThemeProps = {
+  profile: {
+    slug: profile.slug,
+    display_name: profile.display_name,
+    headline: profile.headline || null,
+    bio: profile.bio || null,
+    photo_emoji: profile.photo_emoji || null,
+    accent_color: accent,
+    neighborhood: profile.neighborhood || null,
+    cover_photo_url: profile.cover_photo_url || null,
+    avatar_photo_url: profile.avatar_photo_url || null,
+  },
+  events,
+  offers,
+  links,
+  accent,
+};
+
+const THEME_MAP: Record<OrganizerPresetKey, any> = {
+  brutalist: BrutalistTheme,
+  zine: ZineTheme,
+  cyber: CyberTheme,
+};
+const ThemeComponent = THEME_MAP[preset.key];
+
+const pageTitle = `${profile.display_name} — ${preset.label}`;
+const pageDescription = profile.headline || `${profile.display_name} on Denver Social.`;
+---
+<!doctype html>
+<html lang="en" data-preset={preset.key}>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content={pageDescription} />
+  <meta name="theme-color" content={preset.key === 'cyber' ? '#07080C' : accent} />
+  <title>{pageTitle}</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta property="og:title" content={profile.display_name} />
+  <meta property="og:description" content={pageDescription} />
+  <meta property="og:type" content="profile" />
+  <meta property="og:url" content={Astro.url.href} />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href={preset.fontHref} />
+</head>
+<body>
+  <ThemeComponent {...themeProps} />
+
+  <style is:global>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100vh; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    body { background: #000; }
+    /* Preset-specific body backgrounds — keep the fallback in case
+       the theme component is slow to paint (FOUC guard). */
+    html[data-preset='brutalist'] body { background: #F4F1EA; color: #0B0B0C; }
+    html[data-preset='zine'] body { background: #F6EFE1; color: #2A241B; }
+    html[data-preset='cyber'] body { background: #07080C; color: #E6EEF6; }
+
+    a { color: inherit; }
+    img { display: block; max-width: 100%; }
+    button { font-family: inherit; cursor: pointer; }
+    @media (max-width: 600px) {
+      input, select, textarea { font-size: 16px; }
+    }
+  </style>
+</body>
+</html>
