@@ -518,7 +518,7 @@ const currentPath = Astro.url.pathname;
   /* ── Mobile hamburger + drawer ── */
   .mob-hamburger {
     display: none; /* mobile only — see media query */
-    width: 40px; height: 40px; border-radius: 10px;
+    width: 44px; height: 44px; border-radius: 10px;
     background: transparent; border: none; cursor: pointer; padding: 0;
     flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   }
@@ -866,5 +866,12 @@ const currentPath = Astro.url.pathname;
   .mc-phone-ok { padding: 10px 14px; border-radius: 999px; background: var(--accent2-dim); color: #047857; font-weight: 700; font-size: 14px; }
 
   .mob-drawer-link-sub { margin-left: 12px; opacity: 0.9; }
+
+  /* ── Mobile responsive safety net ── */
+  html, body { overflow-x: hidden; }
+  /* Prevent iOS auto-zoom on focus by enforcing 16px on form fields below 600px */
+  @media (max-width: 600px) {
+    input, select, textarea { font-size: 16px; }
+  }
 </style>
 
