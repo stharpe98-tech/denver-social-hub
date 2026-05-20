@@ -1,0 +1,413 @@
+---
+import type { OrganizerThemeProps } from '../../lib/organizer-themes';
+const { profile, events, offers, links, accent } = Astro.props as OrganizerThemeProps;
+const upcoming = events.filter((e) => !e.past);
+const past = events.filter((e) => e.past);
+---
+<main class="b-stage" style={`--ink: #0B0B0C; --paper: #F4F1EA; --rule: #1A1A1C; --accent: ${accent};`}>
+  <header class="b-mast">
+    <div class="b-stamp">
+      <span>DSN · ORG</span>
+      <span class="b-stamp-dot">●</span>
+      <span>{(profile.slug || '').toUpperCase()}</span>
+    </div>
+    <div class="b-mast-rule" aria-hidden="true"></div>
+  </header>
+
+  <section class="b-hero">
+    <div class="b-hero-meta">
+      <div class="b-meta-label">FILE</div>
+      <div class="b-meta-val">No. {String((profile.slug || '').length).padStart(2, '0')}</div>
+      <div class="b-meta-label">LOCALE</div>
+      <div class="b-meta-val">{profile.neighborhood || 'DENVER, CO'}</div>
+      {profile.headline && (
+        <>
+          <div class="b-meta-label">SUBJECT</div>
+          <div class="b-meta-val">{profile.headline}</div>
+        </>
+      )}
+    </div>
+    <h1 class="b-name">{profile.display_name}</h1>
+    {profile.avatar_photo_url ? (
+      <div class="b-portrait"><img src={profile.avatar_photo_url} alt={profile.display_name} loading="eager"/></div>
+    ) : (
+      <div class="b-portrait b-portrait-emoji"><span>{profile.photo_emoji || '◼'}</span></div>
+    )}
+  </section>
+
+  {profile.bio && (
+    <section class="b-bio">
+      <span class="b-drop">{(profile.bio || '').slice(0, 1)}</span><span>{(profile.bio || '').slice(1)}</span>
+    </section>
+  )}
+
+  {(upcoming.length > 0 || past.length > 0) && (
+    <section class="b-events">
+      <div class="b-section-head">
+        <h2>Programme</h2>
+        <span class="b-count">{String(events.length).padStart(2, '0')} listed</span>
+      </div>
+      <ol class="b-event-list">
+        {upcoming.map((e, i) => (
+          <li class="b-event">
+            <span class="b-event-num">{String(i + 1).padStart(2, '0')}</span>
+            <span class="b-event-when">
+              <span class="b-event-m">{e.month}</span>
+              <span class="b-event-d">{e.day}</span>
+            </span>
+            <a class="b-event-title" href={`/events/${e.id}`}>{e.title}</a>
+            <span class="b-event-loc">{e.location || '—'}</span>
+          </li>
+        ))}
+        {past.map((e) => (
+          <li class="b-event b-event-past">
+            <span class="b-event-num">··</span>
+            <span class="b-event-when">
+              <span class="b-event-m">{e.month}</span>
+              <span class="b-event-d">{e.day}</span>
+            </span>
+            <a class="b-event-title" href={`/events/${e.id}`}>{e.title}</a>
+            <span class="b-event-loc">past · {e.location || '—'}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
+
+  {offers.length > 0 && (
+    <section class="b-offers">
+      <div class="b-section-head">
+        <h2>What's on offer</h2>
+        <span class="b-count">{String(offers.length).padStart(2, '0')}</span>
+      </div>
+      <div class="b-offer-grid">
+        {offers.map((o, i) => (
+          <div class="b-offer">
+            <span class="b-offer-num">{String(i + 1).padStart(2, '0')}</span>
+            <span class="b-offer-label">{o.label}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  {links.length > 0 && (
+    <section class="b-links">
+      <div class="b-section-head"><h2>Elsewhere</h2></div>
+      <ul class="b-link-list">
+        {links.map((l) => (
+          <li><a href={l.url} target="_blank" rel="noopener nofollow">{l.label} <span aria-hidden="true">↗</span></a></li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  <footer class="b-foot">
+    <div class="b-foot-rule" aria-hidden="true"></div>
+    <div class="b-foot-row">
+      <span>DENVER · SOCIAL</span>
+      <span>{profile.display_name}</span>
+      <a href={`/u/${profile.slug}`} class="b-foot-link">Standard view ↗</a>
+    </div>
+  </footer>
+</main>
+
+<style>
+  .b-stage {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 32px 24px 96px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* Masthead — hairline rule with a single typographic stamp at top */
+  .b-mast { padding-top: 8px; }
+  .b-stamp {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--ink);
+    text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: 12px;
+  }
+  .b-stamp-dot { color: var(--accent); font-size: 13px; line-height: 1; }
+  .b-mast-rule {
+    height: 2px; background: var(--rule);
+    margin-top: 16px; margin-bottom: 64px;
+  }
+
+  /* Hero — radically asymmetric. The display name occupies a massive
+     block; metadata column is intentionally cramped & technical. */
+  .b-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    margin-bottom: 96px;
+    position: relative;
+  }
+
+  .b-name {
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-weight: 900;
+    font-variation-settings: 'opsz' 144;
+    font-size: clamp(64px, 14vw, 192px);
+    line-height: 0.86;
+    letter-spacing: -0.045em;
+    color: var(--ink);
+    margin: 0;
+    grid-column: 1 / -1;
+    text-wrap: balance;
+  }
+
+  .b-hero-meta {
+    display: grid;
+    grid-template-columns: 84px 1fr;
+    column-gap: 16px;
+    row-gap: 4px;
+    max-width: 480px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+    align-self: end;
+  }
+  .b-meta-label {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: 0.5;
+    align-self: start;
+    padding-top: 3px;
+  }
+  .b-meta-val {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px; font-weight: 500;
+    color: var(--ink);
+    line-height: 1.35;
+  }
+
+  .b-portrait {
+    width: 160px; height: 200px;
+    border: 1.5px solid var(--rule);
+    background: color-mix(in srgb, var(--accent) 6%, var(--paper));
+    overflow: hidden;
+    justify-self: end;
+    align-self: end;
+  }
+  .b-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .b-portrait-emoji {
+    display: grid; place-items: center;
+    font-size: 92px;
+    color: var(--ink);
+  }
+
+  @media (min-width: 768px) {
+    .b-hero {
+      grid-template-columns: 1fr 200px;
+      grid-template-rows: auto auto;
+      column-gap: 48px;
+      row-gap: 56px;
+      align-items: end;
+    }
+    .b-name { grid-column: 1 / -1; }
+    .b-hero-meta { grid-column: 1; }
+    .b-portrait { grid-column: 2; }
+  }
+
+  /* Body — single-column max-width 60ch for readability, with a drop cap */
+  .b-bio {
+    max-width: 64ch;
+    font-family: 'Fraunces', serif;
+    font-variation-settings: 'opsz' 24;
+    font-size: clamp(18px, 2.4vw, 22px);
+    font-weight: 400;
+    line-height: 1.55;
+    color: var(--ink);
+    margin-bottom: 96px;
+  }
+  .b-drop {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: 'opsz' 144;
+    font-weight: 900;
+    font-size: 5em;
+    line-height: 0.8;
+    float: left;
+    margin: 6px 12px 0 -2px;
+    color: var(--accent);
+  }
+
+  /* Section heads — tiny mono label + thick black rule, no decoration */
+  .b-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    border-top: 2px solid var(--rule);
+    padding-top: 12px;
+    margin-bottom: 32px;
+  }
+  .b-section-head h2 {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: 'opsz' 96;
+    font-weight: 800;
+    font-size: clamp(28px, 4vw, 44px);
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .b-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: 0.55;
+  }
+
+  /* Events — table-like list with numbered columns, no card boxes */
+  .b-events { margin-bottom: 96px; }
+  .b-event-list { list-style: none; padding: 0; margin: 0; }
+  .b-event {
+    display: grid;
+    grid-template-columns: 36px 56px 1fr auto;
+    column-gap: 16px;
+    align-items: baseline;
+    padding: 16px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--rule) 18%, var(--paper));
+    transition: background 320ms cubic-bezier(0.16, 1, 0.3, 1),
+                padding 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .b-event:hover {
+    background: color-mix(in srgb, var(--accent) 6%, var(--paper));
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .b-event-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+  .b-event-when {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: 'opsz' 96;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .b-event-m {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.16em;
+    color: var(--ink);
+    opacity: 0.55;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .b-event-d {
+    display: block;
+    font-size: 28px;
+    letter-spacing: -0.03em;
+  }
+  .b-event-title {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: 'opsz' 24;
+    font-weight: 700;
+    font-size: clamp(16px, 1.8vw, 20px);
+    color: var(--ink);
+    text-decoration: none;
+    transition: color 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .b-event-title:hover { color: var(--accent); }
+  .b-event-loc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.14em;
+    color: var(--ink); opacity: 0.55;
+    text-transform: uppercase;
+    text-align: right;
+  }
+  .b-event-past .b-event-num,
+  .b-event-past .b-event-d,
+  .b-event-past .b-event-title { opacity: 0.45; }
+
+  /* Offers — chunky numbered grid */
+  .b-offers { margin-bottom: 96px; }
+  .b-offer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0;
+    border-top: 1px solid var(--rule);
+    border-left: 1px solid var(--rule);
+  }
+  .b-offer {
+    display: flex; align-items: baseline; gap: 14px;
+    padding: 20px 18px;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper);
+    transition: background 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .b-offer:hover { background: color-mix(in srgb, var(--accent) 8%, var(--paper)); }
+  .b-offer-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+  .b-offer-label {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 17px;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  /* Links */
+  .b-links { margin-bottom: 96px; }
+  .b-link-list { list-style: none; padding: 0; margin: 0; }
+  .b-link-list li { border-bottom: 1px solid color-mix(in srgb, var(--rule) 18%, var(--paper)); }
+  .b-link-list a {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px;
+    padding: 16px 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 15px; font-weight: 500;
+    color: var(--ink);
+    text-decoration: none;
+    transition: padding 320ms cubic-bezier(0.16, 1, 0.3, 1),
+                color 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .b-link-list a:hover { padding-left: 8px; color: var(--accent); }
+  .b-link-list a:active { padding-left: 4px; }
+
+  /* Foot */
+  .b-foot { margin-top: 96px; }
+  .b-foot-rule { height: 2px; background: var(--rule); margin-bottom: 12px; }
+  .b-foot-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: 0.65;
+  }
+  .b-foot-link { color: var(--ink); text-decoration: none; transition: color 320ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .b-foot-link:hover { color: var(--accent); }
+  .b-foot-link:active { opacity: 0.7; }
+
+  @media (max-width: 600px) {
+    .b-stage { padding: 24px 20px 64px; }
+    .b-mast-rule { margin-bottom: 32px; }
+    .b-hero { margin-bottom: 56px; gap: 24px; }
+    .b-portrait { width: 120px; height: 144px; justify-self: start; }
+    .b-bio { margin-bottom: 56px; }
+    .b-events, .b-offers, .b-links { margin-bottom: 56px; }
+    .b-event { grid-template-columns: 28px 44px 1fr; row-gap: 4px; }
+    .b-event-loc { grid-column: 2 / -1; text-align: left; }
+  }
+</style>
