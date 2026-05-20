@@ -1,3 +1,5 @@
 ---
-return Astro.redirect('/profile/new?mode=signup', 301);
+const tier = Astro.url.searchParams.get('tier');
+const dest = tier ? `/profile/new?mode=signup&tier=${encodeURIComponent(tier)}` : '/profile/new?mode=signup';
+return Astro.redirect(dest, tier ? 302 : 301);
 ---
