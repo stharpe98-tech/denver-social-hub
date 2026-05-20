@@ -82,43 +82,24 @@ const eventTypeChips = [
 <Base title="Real events, real people" description="Small-group hangouts across Denver. Pick one, RSVP, show up.">
 
   <!-- HERO -->
-  <section class="hero">
-    <div class="hero-photos">
-      <img src="/hero/red-rocks.jpg" alt="Red Rocks Amphitheatre at night" class="hero-photo hp-1" loading="eager" />
-      <img src="/hero/skyline.jpg" alt="Denver skyline with the Rockies behind" class="hero-photo hp-2" loading="eager" />
-      <img src="/hero/foothills.jpg" alt="Snowy Colorado foothills trail" class="hero-photo hp-3" loading="eager" />
-    </div>
-    <div class="hero-overlay"></div>
-    <div class="hero-inner">
-      <span class="hero-eyebrow">Denver · Community · Since 2026</span>
-      <h1 class="hero-title">
-        Post your event. <span class="hero-italic">Find one.</span><br/>
-        Or <span class="hero-em">pin a flyer</span> on the board.
+  <section class="home-hero">
+    <div class="home-hero-inner">
+      <p class="hh-kicker">Denver · Community · Since 2026</p>
+      <h1 class="hh-title">
+        Post an event. <em>Find</em> one.<br/>
+        Or pin a flyer <span class="amp">&amp;</span> show up.
       </h1>
-      <p class="hero-sub">
+      <p class="hh-lede">
         Pick something on the calendar, RSVP, and show up. Dinners, art, outdoors, game nights, big potlucks at Cheesman, and more — something for everyone.
       </p>
+      <a href="/events" class="hh-cta">Browse events →</a>
 
-      <div class="hero-ctas">
-        <a href="/events" class="btn-cta">Browse events →</a>
-        <a href="/events#potlucks" class="hero-link">or jump to potlucks</a>
-      </div>
-
-      <div class="hero-meta">
-        <div class="hero-stat">
-          <strong>{memberCount}+</strong>
-          <span>locals</span>
-        </div>
-        <span class="hero-dot"></span>
-        <div class="hero-stat">
-          <strong>{eventCount}</strong>
-          <span>upcoming</span>
-        </div>
-        <span class="hero-dot"></span>
-        <div class="hero-stat">
-          <strong>6–12</strong>
-          <span>per event</span>
-        </div>
+      <div class="hh-meta">
+        <span><strong>{memberCount}+</strong> locals</span>
+        <span class="hh-dot"></span>
+        <span><strong>{eventCount}</strong> upcoming</span>
+        <span class="hh-dot"></span>
+        <span><strong>6–12</strong> per event</span>
       </div>
     </div>
   </section>
@@ -257,62 +238,69 @@ const eventTypeChips = [
     .page-wrap { max-width: 1100px; margin: 0 auto; padding: var(--space-7) var(--space-5); }
     @media(max-width: 700px) { .page-wrap { padding: var(--space-6) var(--space-4); } }
 
-    /* HERO */
-    .hero { position: relative; overflow: hidden; padding: var(--space-9) var(--space-5) var(--space-7); background: #0c1a2a; min-height: 520px; }
-
-    /* Slideshow background */
-    .hero-photos {
-      position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0;
-      overflow: hidden;
+    /* HERO — editorial */
+    .home-hero {
+      background: #FDFBF7;
+      padding: 72px clamp(20px, 5vw, 32px) 64px;
+      color: #1C1B1F;
     }
-    .hero-photo {
-      position: absolute; top: 0; left: 0;
-      width: 100%; height: 100%;
-      object-fit: cover; object-position: center;
-      opacity: 0;
-      animation: heroFade 21s infinite;
-      filter: saturate(0.85) brightness(0.9);
-      transform: scale(1.05);
+    .home-hero-inner { max-width: 820px; margin: 0 auto; }
+    .hh-kicker {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: #6B6A70; margin-bottom: 18px;
     }
-    .hp-1 { animation-delay: 0s; }
-    .hp-2 { animation-delay: 7s; }
-    .hp-3 { animation-delay: 14s; }
-
-    @keyframes heroFade {
-      0%   { opacity: 0; transform: scale(1.05); }
-      5%   { opacity: 1; transform: scale(1.02); }
-      30%  { opacity: 1; transform: scale(1); }
-      38%  { opacity: 0; transform: scale(1); }
-      100% { opacity: 0; transform: scale(1.05); }
+    .hh-title {
+      font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
+      font-size: clamp(44px, 7vw, 72px);
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      line-height: 1.02;
+      color: #1C1B1F;
+      margin: 0 0 20px;
     }
-
-    /* Gradient overlay for text readability */
-    .hero-overlay {
-      position: absolute; inset: 0; z-index: 1;
-      background:
-        linear-gradient(180deg, rgba(12,26,42,0.35) 0%, rgba(12,26,42,0.7) 55%, rgba(12,26,42,0.92) 100%),
-        radial-gradient(ellipse 80% 60% at 50% 30%, rgba(14,165,233,0.12), transparent 70%);
+    .hh-title em {
+      font-style: italic; font-weight: 500; color: #7C3AED;
     }
-
-    .hero-inner { position: relative; max-width: 820px; margin: 0 auto; text-align: center; z-index: 2; }
-
-    @media(max-width: 700px) {
-      .hero { padding: var(--space-7) var(--space-4) var(--space-6); min-height: 440px; }
+    .hh-title .amp {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-style: italic; font-weight: 300;
+      color: #B5AFA3; padding: 0 0.08em;
     }
-    .hero-eyebrow { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: #7DD3FC; margin-bottom: var(--space-4); padding: 6px 14px; background: rgba(14,165,233,0.15); border: 1px solid rgba(14,165,233,0.25); border-radius: 999px; }
-    .hero-title { font-family: var(--font-display); font-size: clamp(40px, 7vw, 68px); line-height: 1.05; letter-spacing: -0.03em; color: #FFFFFF; margin-bottom: var(--space-4); font-weight: 800; text-shadow: 0 2px 20px rgba(0,0,0,0.3); }
-    .hero-italic { font-style: italic; color: #7DD3FC; }
-    .hero-em { background: linear-gradient(135deg, #38BDF8, #34D399); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
-    .hero-sub { font-size: clamp(16px, 1.6vw, 18px); color: rgba(255,255,255,0.75); line-height: 1.6; max-width: 580px; margin: 0 auto var(--space-5); }
-    .hero-ctas { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; align-items: center; margin-bottom: var(--space-5); }
-    .hero-ctas .btn-sec { background: rgba(255,255,255,0.2); color: #fff; border: 2px solid rgba(255,255,255,0.5); font-weight: 700; }
-    .hero-ctas .btn-sec:hover { background: rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.7); }
-    .hero-link { color: rgba(255,255,255,0.78); font-size: 14px; text-decoration: underline; text-underline-offset: 4px; transition: color 0.15s; }
-    .hero-link:hover { color: #fff; }
-    .hero-meta { display: inline-flex; align-items: center; gap: var(--space-3); padding: 10px 18px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; backdrop-filter: blur(12px); }
-    .hero-stat { display: inline-flex; align-items: baseline; gap: 6px; font-size: 13px; color: rgba(255,255,255,0.6); }
-    .hero-stat strong { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.02em; }
-    .hero-dot { width: 4px; height: 4px; background: rgba(255,255,255,0.25); border-radius: 50%; }
+    .hh-lede {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 18px; line-height: 1.55;
+      color: #6B6A70; max-width: 56ch;
+      margin: 0 0 18px;
+    }
+    .hh-cta {
+      display: inline-flex; align-items: center;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 13px; font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #7C3AED; text-decoration: underline;
+      text-underline-offset: 5px; text-decoration-thickness: 1px;
+      transition: color 280ms cubic-bezier(0.16,1,0.3,1);
+    }
+    .hh-cta:hover { color: #5B21B6; }
+    .hh-cta:active { color: #4C1D95; }
+    .hh-meta {
+      margin-top: 28px;
+      display: inline-flex; flex-wrap: wrap; align-items: center; gap: 14px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: #9A938A;
+    }
+    .hh-meta strong {
+      font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
+      font-weight: 700; color: #1C1B1F; letter-spacing: -0.02em;
+      font-size: 15px;
+    }
+    .hh-dot { width: 3px; height: 3px; background: #D9CFB8; border-radius: 50%; }
+    @media (max-width: 700px) {
+      .home-hero { padding: 56px var(--space-4) 48px; }
+    }
 
     /* SECTION HEAD */
     .sec-head { margin-bottom: var(--space-5); }
