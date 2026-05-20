@@ -17,7 +17,7 @@ import Base from '../../layouts/Base.astro';
       <div class="field two">
         <div>
           <label>Date</label>
-          <input id="p-event-date" type="date"/>
+          <input id="p-event-date" type="date" min={new Date().toISOString().slice(0,10)}/>
         </div>
         <div>
           <label>Time (optional)</label>
@@ -55,6 +55,12 @@ import Base from '../../layouts/Base.astro';
         var loc = document.getElementById('p-location').value.trim();
         if (!title) { showErr('Title is required.'); return; }
         if (!loc) { showErr('Location is required.'); return; }
+        var dateRaw = document.getElementById('p-event-date').value;
+        if (dateRaw) {
+          var today = new Date(); today.setHours(0,0,0,0);
+          var picked = new Date(dateRaw + 'T12:00:00');
+          if (picked < today) { showErr('Date is in the past. Pick today or later.'); return; }
+        }
         var btn = document.getElementById('submit-btn');
         var orig = btn.textContent; btn.disabled = true; btn.textContent = 'Creating…';
 

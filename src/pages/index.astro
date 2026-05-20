@@ -24,6 +24,7 @@ if (db) {
       const r = await fetch(`https://discord.com/api/guilds/${encodeURIComponent(guildId)}/widget.json`, {
         headers: { 'User-Agent': 'DenverSocialHub/1.0' },
         cf: { cacheTtl: 60, cacheEverything: true } as any,
+        signal: AbortSignal.timeout(3000),
       });
       if (r.ok) {
         const w: any = await r.json();
