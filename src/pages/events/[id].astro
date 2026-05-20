@@ -138,7 +138,6 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
     <h1 class="ev-title">{event.title}</h1>
     <div class="ev-tags">
       <span class="tag tag-blue">{typeLabel[event.event_type] || 'Event'}</span>
-      {event.karma_min > 0 && <span class="tag tag-yellow">🔒 {event.karma_min}+ karma</span>}
       {event.account_age_min > 0 && <span class="tag tag-yellow">🔒 {event.account_age_min}d+ account</span>}
       {parseVibeTags(event.vibe_tags).map((key:string) => {
         const t = vibeLabel(key);
@@ -600,11 +599,6 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
             </div>
             <p class="ev-comment-body">{c.body}</p>
             <div class="ev-comment-actions">
-              <span class="ev-votes">
-                <button class="ev-vote" data-id={c.id} data-dir="up">▲</button>
-                <span class="ev-score">{(c.upvotes || 0) - (c.downvotes || 0)}</span>
-                <button class="ev-vote" data-id={c.id} data-dir="down">▼</button>
-              </span>
               <button class="ev-reply-btn" data-parent={c.id}>Reply</button>
             </div>
 
@@ -616,13 +610,6 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
                   <span class="ev-comment-time">{new Date(reply.created_at).toLocaleDateString()}</span>
                 </div>
                 <p class="ev-comment-body">{reply.body}</p>
-                <div class="ev-comment-actions">
-                  <span class="ev-votes">
-                    <button class="ev-vote">▲</button>
-                    <span class="ev-score">{(reply.upvotes || 0) - (reply.downvotes || 0)}</span>
-                    <button class="ev-vote">▼</button>
-                  </span>
-                </div>
               </div>
             ))}
           </div>
@@ -1558,23 +1545,7 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
       });
     }
 
-    // ── Vote buttons ──
-    document.querySelectorAll('.ev-vote[data-id]').forEach(function(btn) {
-      btn.addEventListener('click', async function() {
-        var commentId = btn.getAttribute('data-id');
-        var dir = btn.getAttribute('data-dir');
-        try {
-          await fetch('/api/comments/vote', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ comment_id: commentId, direction: dir })
-          });
-          window.location.reload();
-        } catch (err) {}
-      });
-    });
-
-    // ── Reply buttons ──
+// ── Reply buttons ──
     document.querySelectorAll('.ev-reply-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var parentId = btn.getAttribute('data-parent');

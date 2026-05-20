@@ -114,7 +114,7 @@ if (db) {
 const totalUnread = 0;
 
 function otherName(c: any): string {
-  return c.other_name || c.other_reddit || c.other_discord
+  return c.other_name
     || (c.member_a_email?.toLowerCase() === (user?.email || '').toLowerCase()
         ? (c.member_b_email || '').split('@')[0]
         : (c.member_a_email || '').split('@')[0])
