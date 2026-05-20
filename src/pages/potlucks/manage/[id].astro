@@ -315,15 +315,13 @@ const catEmoji: Record<string,string> = { 'Salads':'🥗', 'Mains':'🍖', 'Side
         : (
           <div class="guest-wrap">
             <table class="guest-table">
-              <thead><tr><th>Name</th><th>Contact</th><th>Bringing</th><th>Guests</th><th>From</th><th>Dietary</th><th></th></tr></thead>
+              <thead><tr><th>Name</th><th>Email</th><th>Bringing</th><th>Guests</th><th>From</th><th>Dietary</th><th></th></tr></thead>
               <tbody>
                 {attending.map((s:any) => (
                   <tr>
                     <td>{s.name}{s.handle ? <span class="guest-sub">{s.handle}</span> : null}</td>
                     <td style="font-size:12px">
-                      {s.phone ? <div><a href={`tel:${s.phone}`}>📞 {s.phone}</a></div> : null}
-                      {s.email ? <div><a href={`mailto:${s.email}`} style="color:var(--muted)">{s.email}</a></div> : null}
-                      {!s.phone && !s.email ? <span style="color:var(--muted)">—</span> : null}
+                      {s.email ? <a href={`mailto:${s.email}`}>{s.email}</a> : <span style="color:var(--muted)">—</span>}
                     </td>
                     <td>{s.dish || '—'}{s.dish_category ? <span class="guest-sub">{s.dish_category}</span> : null}</td>
                     <td>{s.guest_count || 1}</td>

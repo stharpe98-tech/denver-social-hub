@@ -463,10 +463,6 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
           <label>Email <span class="opt">(for reminders)</span></label>
           <input type="email" class="pk-input" id="f-email" placeholder="you@example.com" autocomplete="email"/>
         </div>
-        <div class="pk-field">
-          <label>Phone <span class="opt">(for SMS)</span></label>
-          <input type="tel" class="pk-input" id="f-phone" placeholder="(720) 555-1234" autocomplete="tel"/>
-        </div>
       </div>
 
       <div class="pk-guests">
@@ -715,7 +711,7 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
         potluckId: String(potluckId),
         name: name,
         email: val('f-email'),
-        phone: val('f-phone'),
+        phone: '',
         handle: '', platforms: '',
         rsvp: 'yes',
         guestCount: String(guestCount),
