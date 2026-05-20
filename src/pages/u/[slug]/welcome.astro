@@ -156,7 +156,37 @@ const initialTemplate = (profile.template || 'host').toString();
       </div>
       <div class="foot"><a href={`/u/${slug}/edit`}>Edit later in /edit</a></div>
     </section>
+
+    <!-- Permanent "page is live" summary -->
+    <section class="card live-card">
+      <h2 class="card-h">Your page is live</h2>
+      <p class="card-sub">Share it, edit it, or take another look anytime.</p>
+      <div class="live-actions">
+        <a class="btn-primary live-btn" href={`/u/${slug}`}>View your page →</a>
+        <a class="btn-ghost live-btn" href={`/u/${slug}/edit`}>Edit details →</a>
+        <button type="button" class="btn-ghost live-btn" id="copy-share" data-slug={slug}>Copy share link</button>
+      </div>
+      <div class="copy-msg" id="copy-msg" aria-live="polite"></div>
+    </section>
   </div>
+
+  <script is:inline define:vars={{ slug }}>
+    (function() {
+      var btn = document.getElementById('copy-share');
+      if (!btn) return;
+      var msg = document.getElementById('copy-msg');
+      btn.addEventListener('click', async function() {
+        var url = window.location.origin + '/u/' + slug;
+        try {
+          await navigator.clipboard.writeText(url);
+          msg.textContent = 'Copied!';
+        } catch (e) {
+          msg.textContent = url;
+        }
+        setTimeout(function() { msg.textContent = ''; }, 2000);
+      });
+    })();
+  </script>
 
   <script is:inline define:vars={{ slug, TEMPLATE_BLURBS }}>
     (function() {
@@ -386,6 +416,11 @@ const initialTemplate = (profile.template || 'host').toString();
 
     .foot { text-align: center; margin-top: var(--space-3); font-size: 12px; }
     .foot a { color: #5a4f3d; }
+
+    .live-card { margin-top: var(--space-4); }
+    .live-actions { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-3); }
+    .live-btn { text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
+    .copy-msg { text-align: center; font-size: 13px; color: #047857; margin-top: var(--space-2); min-height: 18px; font-weight: 600; }
 
     @media (max-width: 600px) {
       .tpl-grid { grid-template-columns: repeat(3, 1fr); }

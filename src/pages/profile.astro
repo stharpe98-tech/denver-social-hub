@@ -41,6 +41,10 @@ try {
   savedContactEmail = (row?.contact_email || '').toString();
   savedContactPhone = (row?.contact_phone || '').toString();
 } catch { /* columns may not exist on stale envs */ }
+
+// "Start here" empty-state: brand-new users who haven't done anything yet.
+// We compute this from the data already fetched on this page.
+const isEmpty = hostedCount === 0 && flyerCount === 0;
 ---
 <Base title="Your account — Denver Social" description="Your Denver Social account.">
   <div class="wrap">
@@ -52,6 +56,17 @@ try {
         <span class={`tier-badge ${me.tier}`}>{me.tier === 'organizer' ? '✨ Organizer' : '👋 Regular'}</span>
       </div>
     </header>
+
+    {isEmpty && (
+      <section class="start-here">
+        <h2 class="sh-h">Welcome to Denver Social Nights</h2>
+        <p class="sh-sub">Here's how to dive in:</p>
+        <div class="sh-actions">
+          <a class="btn-cta" href="/events">Browse events →</a>
+          <a class="btn-sec" href="/community">Post on the board →</a>
+        </div>
+      </section>
+    )}
 
     <section class="stats">
       <div class="stat">
@@ -179,6 +194,17 @@ try {
     .tier-badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1px; padding: 4px 10px; border-radius: 999px; }
     .tier-badge.regular { background: #F0FDF4; color: #047857; border: 1px solid #BBF7D0; }
     .tier-badge.organizer { background: #EEF2FF; color: #4338CA; border: 1px solid #C7D2FE; }
+
+    .start-here { background: linear-gradient(135deg, #F8F9FB, #EEF2FF, #F0FDF4); border: 1px solid var(--border); border-radius: var(--radius-lg, 20px); padding: var(--space-5); margin-bottom: var(--space-5); text-align: center; }
+    .sh-h { font-family: var(--font-display, serif); font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .sh-sub { font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-3); }
+    .sh-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: center; }
+    .btn-cta { display: inline-block; padding: 12px 24px; border-radius: 50px; background: var(--cta-bg, #7C3AED); color: var(--cta-text, #fff); text-decoration: none; font-weight: 700; font-size: 15px; box-shadow: var(--card-shadow, 0 1px 3px rgba(0,0,0,0.06)); transition: filter .15s, transform .15s; }
+    .btn-cta:hover { filter: brightness(1.08); }
+    .btn-cta:active { filter: brightness(0.95); transform: translateY(1px); }
+    .btn-sec { display: inline-block; padding: 12px 24px; border-radius: 50px; background: #fff; color: var(--text); text-decoration: none; font-weight: 700; font-size: 15px; border: 1.5px solid var(--border); transition: border-color .15s, background .15s; }
+    .btn-sec:hover { border-color: var(--border-hover, #D1D5DB); background: var(--surface-hover, #F0F2F5); }
+    .btn-sec:active { background: var(--surface, #F8F9FB); }
 
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-bottom: var(--space-5); }
     .stat { padding: var(--space-4); background: var(--surface, #F8F9FB); border: 1px solid var(--border); border-radius: var(--radius, 14px); text-align: center; }
