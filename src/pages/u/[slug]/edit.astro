@@ -4,6 +4,8 @@ import { getDB } from '../../../lib/db';
 import { canEditProfile, canEditProfileOrAdmin, validateSlug } from '../../../lib/profile-auth';
 import { isAdmin } from '../../../lib/admin-auth';
 import { PROFILE_TEMPLATES, parseTemplateData, defaultTemplateData, templateSchema } from '../../../lib/profile-templates';
+import { ORGANIZER_PRESETS } from '../../../lib/organizer-themes';
+import { ensureProfileThemeColumn } from '../../../lib/profile-theme-schema';
 
 const rawSlug = Astro.params.slug || '';
 const v = validateSlug(rawSlug);
@@ -30,6 +32,19 @@ try {
 }
 
 if (!profile) return new Response('Not found', { status: 404 });
+
+// Ensure the theme_preset column exists and read the current value.
+let currentThemePreset: string | null = null;
+try {
+  await ensureProfileThemeColumn(db);
+  const row: any = await db.prepare(
+    `SELECT theme_preset FROM profiles WHERE slug = ?`
+  ).bind(slug).first();
+  const v = row?.theme_preset;
+  currentThemePreset = (typeof v === 'string' && v) ? v : null;
+} catch {
+  currentThemePreset = null;
+}
 
 const authed = await canEditProfileOrAdmin(Astro.cookies, slug);
 const ownerAuthed = await canEditProfile(Astro.cookies, slug);
@@ -225,6 +240,40 @@ const SWATCHES = [
             </details>
           </div>
         </details>
+
+        {isOrganizer && (
+          <details class="more">
+            <summary>Page theme (organizer landing)</summary>
+            <div class="editor-field">
+              <label>Pick a theme for your /p/{slug} landing page</label>
+              <div class="theme-grid" id="theme-grid" data-current={currentThemePreset || ''}>
+                <button
+                  type="button"
+                  class:list={["theme-card", { 'theme-active': currentThemePreset === null }]}
+                  data-preset=""
+                >
+                  <span class="theme-name">Standard</span>
+                  <span class="theme-desc">Default Denver Social look. No special theme.</span>
+                </button>
+                {ORGANIZER_PRESETS.map(p => (
+                  <button
+                    type="button"
+                    class:list={["theme-card", { 'theme-active': currentThemePreset === p.key }]}
+                    data-preset={p.key}
+                  >
+                    <span class="theme-name">{p.label}</span>
+                    <span class="theme-desc">{p.description}</span>
+                    <a class="theme-preview" href={`/p/${slug}?preset=${p.key}`} target="_blank" rel="noopener">Preview ↗</a>
+                  </button>
+                ))}
+              </div>
+              <div class="theme-row">
+                <button type="button" class="theme-save" id="theme-save">Save theme</button>
+                <span class="theme-status" id="theme-status"></span>
+              </div>
+            </div>
+          </details>
+        )}
 
         <!-- Advanced: offers + links -->
         <details class="more">
@@ -747,6 +796,61 @@ const SWATCHES = [
             else setBkStatus(d && d.error || 'Failed', '#DC2626');
           });
         }
+
+        // === Theme picker ===
+        (function() {
+          var grid = document.getElementById('theme-grid');
+          if (!grid) return;
+          var status = document.getElementById('theme-status');
+          var saveBtn = document.getElementById('theme-save');
+          var selected = grid.getAttribute('data-current') || '';
+          function paint() {
+            var cards = grid.querySelectorAll('.theme-card');
+            for (var i = 0; i < cards.length; i++) {
+              var k = cards[i].getAttribute('data-preset') || '';
+              if (k === selected) cards[i].classList.add('theme-active');
+              else cards[i].classList.remove('theme-active');
+            }
+          }
+          grid.addEventListener('click', function(e) {
+            var t = e.target;
+            // Don't hijack the Preview link
+            while (t && t !== grid) {
+              if (t.tagName === 'A') return;
+              if (t.classList && t.classList.contains('theme-card')) {
+                selected = t.getAttribute('data-preset') || '';
+                paint();
+                if (status) { status.textContent = ''; status.style.color = ''; }
+                return;
+              }
+              t = t.parentNode;
+            }
+          });
+          if (saveBtn) {
+            saveBtn.addEventListener('click', async function() {
+              if (status) { status.textContent = 'Saving…'; status.style.color = 'var(--text-faint)'; }
+              saveBtn.disabled = true;
+              try {
+                var payload = { slug: slug, preset: selected === '' ? null : selected };
+                var r = await fetch('/api/profile/theme', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload)
+                });
+                var d = await r.json();
+                if (d && d.ok) {
+                  if (status) { status.textContent = '✓ Saved'; status.style.color = '#047857'; }
+                } else {
+                  if (status) { status.textContent = (d && d.error) || 'Save failed'; status.style.color = '#DC2626'; }
+                }
+              } catch (err) {
+                if (status) { status.textContent = 'Network error'; status.style.color = '#DC2626'; }
+              } finally {
+                saveBtn.disabled = false;
+              }
+            });
+          }
+        })();
       })();
     </script>
   )}
@@ -981,5 +1085,23 @@ const SWATCHES = [
     .bk-add-rule:hover { color: var(--text); border-color: var(--accent, #7C3AED); }
     .bk-status { font-size: 12px; margin-top: 6px; color: var(--text-faint); }
     @media (max-width: 600px) { .bk-off-grid { grid-template-columns: 1fr 1fr; } }
+
+    /* Theme picker */
+    .theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); margin-top: var(--space-2); }
+    .theme-card { position: relative; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border: 1.5px solid var(--border); border-radius: var(--radius); background: #fff; cursor: pointer; text-align: left; font-family: inherit; box-shadow: var(--card-shadow); transition: border-color 0.15s, transform 0.05s; }
+    .theme-card:hover { border-color: var(--border-hover); }
+    .theme-card:active { transform: translateY(1px); }
+    .theme-card.theme-active { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent), var(--card-shadow); }
+    .theme-name { font-weight: 700; font-size: 14px; color: var(--text); }
+    .theme-desc { font-size: 12px; color: var(--text-sec); line-height: 1.4; }
+    .theme-preview { margin-top: var(--space-1); font-size: 12px; color: var(--accent); text-decoration: none; align-self: flex-start; }
+    .theme-preview:hover { text-decoration: underline; }
+    .theme-row { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); }
+    .theme-save { padding: 8px 20px; border-radius: 50px; border: none; background: var(--cta-bg); color: var(--cta-text); font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit; box-shadow: var(--card-shadow); transition: opacity 0.15s, transform 0.05s; }
+    .theme-save:hover { opacity: 0.92; }
+    .theme-save:active { transform: translateY(1px); }
+    .theme-save:disabled { opacity: 0.6; cursor: not-allowed; }
+    .theme-status { font-size: 13px; color: var(--text-faint); }
+    @media (max-width: 600px) { .theme-grid { grid-template-columns: 1fr; } }
   </style>
 </Base>
