@@ -89,7 +89,13 @@ for (const b of bookings) {
         </div>
 
         <div class="bk-panel" data-panel="pending">
-          {pending.length === 0 ? <div class="bk-zero">No pending requests right now.</div> :
+          {pending.length === 0 ? (
+            <div class="bk-zero">
+              <div style="font-size:24px;margin-bottom:6px">📬</div>
+              <div style="font-weight:600;color:var(--text);margin-bottom:4px">No pending requests</div>
+              <div>When someone books a session, it'll land here for you to confirm or decline. <a href={`/u/${slug}/book`} target="_blank" style="color:var(--accent);font-weight:600">View your public booking page →</a></div>
+            </div>
+          ) :
             pending.map(b => (
               <div class="bk-row" data-booking-id={b.id}>
                 <div class="bk-row-head">
@@ -114,7 +120,7 @@ for (const b of bookings) {
         </div>
 
         <div class="bk-panel" data-panel="confirmed" hidden>
-          {confirmed.length === 0 ? <div class="bk-zero">No confirmed bookings yet.</div> :
+          {confirmed.length === 0 ? <div class="bk-zero">Nothing confirmed yet. Approved requests show up here with the booker's contact info.</div> :
             confirmed.map(b => (
               <div class="bk-row" data-booking-id={b.id}>
                 <div class="bk-row-head">
@@ -135,7 +141,7 @@ for (const b of bookings) {
         </div>
 
         <div class="bk-panel" data-panel="other" hidden>
-          {other.length === 0 ? <div class="bk-zero">Nothing here yet.</div> :
+          {other.length === 0 ? <div class="bk-zero">Nothing declined or past. Declined and completed bookings are archived here.</div> :
             other.map(b => (
               <div class="bk-row" data-booking-id={b.id}>
                 <div class="bk-row-head">

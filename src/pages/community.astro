@@ -252,7 +252,8 @@ function timeAgo(iso: string): string {
 
         {(favors.length + nearbyFavors.length + people.length) === 0 ? (
           <div class="bd-empty">
-            <p>Nothing pinned to {currentNbh?.label || 'this board'} yet.</p>
+            <p>📌 Nothing pinned to {currentNbh?.label || 'this board'} yet.</p>
+            <p style="font-size:13px;color:#888;margin-top:6px">Be the first to offer something, ask for a hand, or share what's happening on your street.</p>
             <a href={`/community/post/new?nbh=${nbhSlug}`} class="bd-post" style="margin-top:14px">+ Pin the first flyer</a>
           </div>
         ) : (

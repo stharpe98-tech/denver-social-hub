@@ -165,7 +165,15 @@ function statusColor(s: string) {
       </div>
 
       {rows.length === 0 ? (
-        <div class="empty">No bookings match this filter.</div>
+        <div class="empty">
+          {safeFilter === 'all'
+            ? 'No bookings yet. The dashboard will fill in as people book sessions on /u/ pages.'
+            : safeFilter === 'pending'
+              ? 'No pending requests right now. Nothing waiting on an organizer.'
+              : safeFilter === 'confirmed'
+                ? 'No confirmed bookings in this view yet.'
+                : 'Nothing declined in this view.'}
+        </div>
       ) : rows.map((b: any) => {
         const sc = statusColor(b.status);
         let slotLabel = b.slot_start;
