@@ -8,10 +8,16 @@ import { getCurrentProfile } from '../../lib/profile-auth';
 import { isAdmin as isAdminCookie } from '../../lib/admin-auth';
 const db = getDB();
 const { id } = Astro.params;
-const user: any = null;
 const isAdmin = await isAdminCookie(Astro.cookies);
 const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
-void user;
+// Identity used to gate the post-RSVP confirmation UI. Prefer the signed-in
+// profile email; otherwise fall back to a cookie set by the open-RSVP form
+// after a successful submit (`dsn_rsvp_email_<event_id>`).
+const rsvpCookieEmail = (Astro.cookies.get(`dsn_rsvp_email_${id}`)?.value || '').toLowerCase();
+const viewerEmail = (me?.email || rsvpCookieEmail || '').toLowerCase();
+// Treat any identifiable viewer (profile or cookie-based) as a "user" for
+// the purposes of rendering confirmation/waitlist/photo-upload UI.
+const user: any = viewerEmail ? { email: viewerEmail, display_name: me?.display_name || '' } : null;
 
 let event: any = null;
 let rsvps: any[] = [];
@@ -50,7 +56,22 @@ try {
       ).bind(id).all();
       eventPhotos = ph?.results || [];
     } catch { /* table may not exist yet on fresh deploys */ }
-    // No logged-in viewer — myRsvp / myWaitlistEntry remain null.
+    // Look up the viewer's RSVP / waitlist row by email (profile email or
+    // open-rsvp cookie email). Without an email we can't identify them.
+    if (viewerEmail) {
+      try {
+        const mine: any = await db.prepare(
+          "SELECT * FROM event_rsvps WHERE event_id=? AND LOWER(member_email)=? LIMIT 1"
+        ).bind(id, viewerEmail).first();
+        if (mine) {
+          if (mine.waitlist_position !== null && mine.waitlist_position !== undefined) {
+            myWaitlistEntry = mine;
+          } else {
+            myRsvp = mine;
+          }
+        }
+      } catch {}
+    }
     if (event.group_id) {
       try {
         eventGroup = await db.prepare('SELECT id, slug, name FROM groups WHERE id=?').bind(event.group_id).first();
@@ -160,7 +181,12 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
       <div class="ev-info-detail">
         <span class="ev-info-label">Where</span>
         <span class="ev-info-value">
-          {event.location || event.zone || 'Denver'}
+          <a
+            href={`https://maps.google.com/?q=${encodeURIComponent(event.location || event.zone || 'Denver')}`}
+            target="_blank"
+            rel="noopener"
+            class="ev-cal-link"
+          >{event.location || event.zone || 'Denver'}</a>
         </span>
       </div>
     </div>
@@ -267,7 +293,19 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
           try {
             var r = await fetch('/api/rsvp', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
             var d = await r.json();
-            if (d.rsvped || d.waitlisted) { location.reload(); return; }
+            if (d.rsvped || d.waitlisted) {
+              // Remember which email RSVPed for this event so the server-rendered
+              // confirmation UI (cancel button, calendar, QR, bring picker) shows
+              // on the next page load. 30-day expiry to match profile cookie.
+              var emailForCookie = (body.contact_email || '').toString().trim().toLowerCase();
+              if (emailForCookie) {
+                var eid = form.getAttribute('data-event-id');
+                document.cookie = 'dsn_rsvp_email_' + eid + '=' + encodeURIComponent(emailForCookie) +
+                  '; path=/; max-age=' + (60*60*24*30) + '; samesite=lax';
+              }
+              location.reload();
+              return;
+            }
             msg.textContent = d.error || 'Could not RSVP — try again.';
           } catch { msg.textContent = 'Network error.'; }
         });
@@ -275,7 +313,7 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
     </script>
 
     {/* Already RSVP'd — show confirmed state + bring items picker */}
-    {user && myRsvp && (
+    {myRsvp && (
       <div class="ev-rsvp-confirmed">
         <div class="ev-rsvp-confirmed-top">
           <span class="ev-check">{myRsvp.status === 'maybe' ? '🤔' : '✓'}</span>
@@ -327,29 +365,31 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
             <p class="ev-bring-prompt">Want to bring something?</p>
             <div class="ev-bring-options">
               {unclaimedItems.map((item: any) => (
-                <form method="POST" action="/api/bring-claim" class="ev-bring-claim-form">
-                  <input type="hidden" name="item_id" value={item.id} />
-                  <input type="hidden" name="event_id" value={id} />
-                  <button type="submit" class="ev-bring-option">
-                    <span class="ev-bring-circle">○</span>
-                    <span class="ev-bring-name">{item.item_name}</span>
-                    <span class="ev-bring-action">Claim →</span>
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  class="ev-bring-option ev-bring-claim-btn"
+                  data-claim-item-id={item.id}
+                  data-claim-event-id={id}
+                >
+                  <span class="ev-bring-circle">○</span>
+                  <span class="ev-bring-name">{item.item_name}</span>
+                  <span class="ev-bring-action">Claim →</span>
+                </button>
               ))}
             </div>
+            <div class="err" id="bring-claim-err" style="display:none;color:#DC2626;font-size:13px;margin-top:8px"></div>
           </div>
         )}
       </div>
     )}
 
     {/* On waitlist */}
-    {user && !myRsvp && myWaitlistEntry && (
+    {!myRsvp && myWaitlistEntry && (
       <div class="ev-rsvp-waitlisted">
         <span class="ev-wl-badge">⏳</span>
         <div>
           <strong>You're on the waitlist</strong>
-          <span class="ev-wl-pos">Position #{waitlist.findIndex((w: any) => w.member_email === user.email) + 1} of {waitlist.length}</span>
+          <span class="ev-wl-pos">Position #{waitlist.findIndex((w: any) => (w.member_email || '').toLowerCase() === viewerEmail) + 1} of {waitlist.length}</span>
         </div>
         <button class="ev-cancel-btn" id="cancel-waitlist-btn" data-event-id={id}>Leave waitlist</button>
       </div>
@@ -561,7 +601,7 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
       ) : (
         <p class="ev-empty">No photos yet. Be the first to share one from the event.</p>
       )}
-      {user && myRsvp && (
+      {myRsvp && (
         <div class="ev-photo-upload">
           <label class="ev-photo-upload-btn">
             📤 Upload a photo
@@ -1485,18 +1525,59 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
       });
     }
 
+    // ── Bring-claim (post-RSVP picker): fetch + inline error ──
+    document.querySelectorAll('.ev-bring-claim-btn').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var errEl = document.getElementById('bring-claim-err');
+        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        var itemId = btn.getAttribute('data-claim-item-id');
+        var eventId = btn.getAttribute('data-claim-event-id');
+        btn.setAttribute('disabled', 'true');
+        try {
+          var fd = new FormData();
+          fd.append('item_id', itemId);
+          fd.append('event_id', eventId);
+          var res = await fetch('/api/bring-claim', { method: 'POST', body: fd });
+          if (res.redirected || res.ok) { location.reload(); return; }
+          var d = {};
+          try { d = await res.json(); } catch {}
+          if (errEl) {
+            errEl.textContent = (d && d.error) ? d.error : 'Could not claim — try again.';
+            errEl.style.display = 'block';
+          }
+          btn.removeAttribute('disabled');
+        } catch (e) {
+          if (errEl) {
+            errEl.textContent = 'Network error — try again.';
+            errEl.style.display = 'block';
+          }
+          btn.removeAttribute('disabled');
+        }
+      });
+    });
+
     // ── Cancel RSVP ──
+    function readCookie(name) {
+      var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+      return m ? decodeURIComponent(m[1]) : '';
+    }
+    function clearRsvpCookie(eventId) {
+      document.cookie = 'dsn_rsvp_email_' + eventId + '=; path=/; max-age=0; samesite=lax';
+    }
+
     var cancelBtn = document.getElementById('cancel-rsvp-btn');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', async function() {
         if (!confirm('Cancel your RSVP?')) return;
         var eventId = cancelBtn.getAttribute('data-event-id');
+        var cookieEmail = readCookie('dsn_rsvp_email_' + eventId);
         try {
           await fetch('/api/rsvp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event_id: eventId })
+            body: JSON.stringify({ event_id: eventId, contact_email: cookieEmail })
           });
+          clearRsvpCookie(eventId);
           window.location.reload();
         } catch (err) {
           alert('Something went wrong.');
