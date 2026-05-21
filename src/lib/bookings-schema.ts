@@ -70,7 +70,13 @@ export async function ensureBookingsSchema(db: D1Database): Promise<void> {
     if (!bNames.has('reminder_sent_at')) {
       try { await db.prepare(`ALTER TABLE bookings ADD COLUMN reminder_sent_at TEXT DEFAULT ''`).run(); } catch {}
     }
+    // Per-booking customer-facing cancel token. Separate from confirm_token so
+    // the organizer's accept/decline link can't double as a self-cancel link.
+    if (!bNames.has('cancel_token')) {
+      try { await db.prepare(`ALTER TABLE bookings ADD COLUMN cancel_token TEXT DEFAULT ''`).run(); } catch {}
+    }
   } catch {}
+  try { await db.prepare(`CREATE INDEX IF NOT EXISTS idx_bookings_cancel_token ON bookings(cancel_token)`).run(); } catch {}
 
   // Master on/off switch for the reservation engine on each profile.
   // Off by default — nobody is opted in until they activate it from /dashboard/booking-setup.

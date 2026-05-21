@@ -32,7 +32,8 @@ try {
   profile = await db.prepare(
     `SELECT slug, email, display_name, headline, bio, photo_emoji, accent_color,
             offers_json, links_json, contact_email, contact_phone, neighborhood,
-            template, template_data, cover_photo_url, avatar_photo_url, status, tier
+            template, template_data, cover_photo_url, avatar_photo_url, status, tier,
+            has_booking_tool
      FROM profiles WHERE slug = ?`
   ).bind(v.slug).first();
 } catch {
@@ -128,7 +129,7 @@ const TemplateComponent = TEMPLATE_MAP[templateKey] || HostTemplate;
       )}
       <TemplateComponent profile={profile} hostedEvents={hostedEvents} templateData={templateData} links={links} />
 
-      {hasBookableOfferings && (
+      {Number(profile.has_booking_tool) === 1 && hasBookableOfferings && (
         <div class="prof-book-row">
           <a href={`/u/${profile.slug}/book`} class="prof-book-cta">📅 Book a session →</a>
         </div>
@@ -179,7 +180,7 @@ const TemplateComponent = TEMPLATE_MAP[templateKey] || HostTemplate;
     <section class="make-yours">
       <div class="make-yours-inner">
         <div class="make-yours-text">Want a page like this?</div>
-        <a href="/profile/new" class="make-yours-cta">Make yours — free →</a>
+        <a href="/u/new" class="make-yours-cta">Make yours — free →</a>
       </div>
     </section>
   </div>

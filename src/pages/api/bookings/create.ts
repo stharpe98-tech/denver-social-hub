@@ -83,16 +83,17 @@ export const POST: APIRoute = async ({ request }) => {
   if (taken) return j({ ok: false, error: 'That slot was just taken' }, 409);
 
   const token = randomToken(24);
+  const cancelToken = randomToken(24);
   const r = await db.prepare(
     `INSERT INTO bookings
-       (profile_slug, offering_id, slot_start, slot_end, requester_name, requester_email, requester_phone, message, status, confirm_token)
-     VALUES (?,?,?,?,?,?,?,?, 'pending', ?)`
-  ).bind(slug, offeringId, slotStart, slotEnd, name, email, phone, message, token).run();
+       (profile_slug, offering_id, slot_start, slot_end, requester_name, requester_email, requester_phone, message, status, confirm_token, cancel_token)
+     VALUES (?,?,?,?,?,?,?,?, 'pending', ?, ?)`
+  ).bind(slug, offeringId, slotStart, slotEnd, name, email, phone, message, token, cancelToken).run();
   const id = (r as any).meta?.last_row_id;
 
   // Send notification emails (best-effort — don't block on failure).
   try { await notifyOrganizer(db, request, { slug, offering, slotStart, name, email, phone, message, token }); } catch {}
-  try { await notifyRequester(db, request, { slug, offering, slotStart, name, email, message }); } catch {}
+  try { await notifyRequester(db, request, { slug, offering, slotStart, name, email, message, cancelToken }); } catch {}
 
   return j({ ok: true, id });
 };
@@ -160,7 +161,7 @@ async function notifyOrganizer(db: D1Database, request: Request, p: {
 
 async function notifyRequester(db: D1Database, request: Request, p: {
   slug: string; offering: any; slotStart: string;
-  name: string; email: string; message: string;
+  name: string; email: string; message: string; cancelToken: string;
 }) {
   const cfgRows = await db.prepare(`SELECT key, value FROM config`).all();
   const cfg: Record<string, string> = {};
@@ -174,6 +175,7 @@ async function notifyRequester(db: D1Database, request: Request, p: {
 
   const origin = cfg.site_url || new URL(request.url).origin || 'https://denversocialhub.com';
   const profileUrl = `${origin}/u/${encodeURIComponent(p.slug)}`;
+  const cancelUrl = `${origin}/api/bookings/cancel?token=${encodeURIComponent(p.cancelToken)}`;
   const human = formatDenverHuman(p.slotStart);
   const title = String(p.offering.title);
   const firstName = (p.name || 'there').split(' ')[0];
@@ -194,8 +196,11 @@ async function notifyRequester(db: D1Database, request: Request, p: {
       <div style="font-size:12px;color:#9CA3AF;margin-top:24px">
         Organizer page: <a href="${profileUrl}" style="color:#7C3AED">${escapeHtml(profileUrl.replace(/^https?:\/\//, ''))}</a>
       </div>
+      <div style="font-size:13px;color:#6B7280;margin-top:16px;padding-top:14px;border-top:1px solid #E5E7EB">
+        Need to cancel? <a href="${cancelUrl}" style="color:#7C3AED;font-weight:600">Click here</a>.
+      </div>
     </div>`;
-  const text = `Got it, ${firstName} — your request is in.\n\nWe sent your request to ${organizer}. You'll get another email the moment it's confirmed.\n\n${title}\n${human}\n\n${profileUrl}`;
+  const text = `Got it, ${firstName} — your request is in.\n\nWe sent your request to ${organizer}. You'll get another email the moment it's confirmed.\n\n${title}\n${human}\n\n${profileUrl}\n\nNeed to cancel? ${cancelUrl}`;
 
   await fetch('https://api.resend.com/emails', {
     method: 'POST',

@@ -28,7 +28,7 @@ const offerings = bookingEnabled ? (((await db.prepare(
 const accent = /^#[0-9A-Fa-f]{6}$/.test(profile.accent_color || '') ? profile.accent_color : '#7C3AED';
 const displayName = profile.display_name || slug;
 ---
-<Base title={`Book with ${displayName} — Denver Social`} description={`Book a session with ${displayName}.`}>
+<Base title={`Request a session with ${displayName} — Denver Social`} description={`Request a session with ${displayName}.`}>
   <div class="wrap" style={`--profile-accent:${accent}`}>
     <div class="bk-head">
       <a href={`/u/${slug}`} class="bk-back">← Back to profile</a>
@@ -37,7 +37,7 @@ const displayName = profile.display_name || slug;
           ? <img class="bk-avatar" src={profile.avatar_photo_url} alt={displayName}/>
           : <div class="bk-avatar bk-avatar-emoji">{profile.photo_emoji || '👋'}</div>}
         <div>
-          <h1 class="bk-name">Book with {displayName}</h1>
+          <h1 class="bk-name">Request a session with {displayName}</h1>
           {profile.headline && <div class="bk-tag">{profile.headline}</div>}
         </div>
       </div>
@@ -79,6 +79,7 @@ const displayName = profile.display_name || slug;
         <section class="bk-section" id="bk-slots-sec" hidden>
           <h2 class="bk-h">3. Pick a time</h2>
           <div class="bk-slots" id="bk-slots"></div>
+          <p class="bk-note">This is a request — {displayName} will confirm or decline by email within 24 hours.</p>
         </section>
 
         <section class="bk-section" id="bk-form-sec" hidden>
@@ -334,6 +335,7 @@ const displayName = profile.display_name || slug;
     .bk-slot:hover { border-color: var(--profile-accent,#7C3AED); }
     .bk-slot-active { background: var(--profile-accent,#7C3AED); color:#fff; border-color: var(--profile-accent,#7C3AED); }
     .bk-loading { font-size:13px;color:var(--text-faint);padding:8px; }
+    .bk-note { font-size:13px;color:var(--text-sec);margin:12px 0 0;line-height:1.5; }
 
     .bk-form { display:flex;flex-direction:column;gap:10px;background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:16px; }
     .bk-summary { background:color-mix(in srgb, var(--profile-accent,#7C3AED) 6%, #fff); border:1px solid color-mix(in srgb, var(--profile-accent,#7C3AED) 18%, transparent); border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.4;color:var(--text);margin-bottom:6px; }
