@@ -7,7 +7,7 @@ import { isAdmin, getAdminEmail } from '../../lib/admin-auth';
 
 export const prerender = false;
 
-const VALID_KINDS = new Set(['event', 'group', 'member', 'comment']);
+const VALID_KINDS = new Set(['event', 'group', 'member', 'comment', 'flyer']);
 const VALID_REASONS = new Set(['harassment', 'spam', 'inaccurate', 'inappropriate', 'other']);
 
 function ok(data: any = {}) {

@@ -3,7 +3,6 @@ import Base from '../layouts/Base.astro';
 import { getDB } from '../lib/db';
 import { ensureCommunitySchema, BOARD_KINDS } from '../lib/community-schema';
 import { ensureGroupsSchema } from '../lib/groups-schema';
-import { ensureDmSchema } from '../lib/dm-schema';
 import {
   NEIGHBORHOODS, resolveNeighborhoodSlug, getNeighborhood,
   nearbyNeighborhoods, milesBetween, neighborhoodsByCity,
@@ -13,7 +12,7 @@ const db = getDB();
 // Accounts are offline; no logged-in viewer concept on this page.
 const user: any = null;
 
-const validTabs = new Set(['favors', 'groups', 'messages']);
+const validTabs = new Set(['favors', 'groups']);
 const rawTab = (Astro.url.searchParams.get('tab') || 'favors').toLowerCase();
 const tab = validTabs.has(rawTab) ? rawTab : 'favors';
 
@@ -105,9 +104,6 @@ if (db) {
       LIMIT 24
     `).all();
     discoverGroups = (discover.results || []) as any[];
-  } else if (tab === 'messages') {
-    // Messaging is offline while accounts are reworked.
-    await ensureDmSchema(db);
   }
 }
 

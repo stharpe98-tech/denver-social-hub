@@ -124,7 +124,7 @@ const hasContact = !!(f.contact_email || f.contact_phone);
       try {
         const res = await fetch('/api/report', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'create', target_kind: 'comment', target_id: String(favorId), reason: reason.toLowerCase().trim() }),
+          body: JSON.stringify({ action: 'create', target_kind: 'flyer', target_id: String(favorId), reason: reason.toLowerCase().trim() }),
         });
         const d = await res.json().catch(() => ({}));
         alert(d?.ok ? 'Thanks — we\'ll take a look.' : 'Report failed.');

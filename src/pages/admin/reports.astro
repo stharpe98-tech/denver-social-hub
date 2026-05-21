@@ -30,6 +30,7 @@ function reasonLabel(key: string) {
 function targetLink(kind: string, id: string): string | null {
   if (kind === 'event') return `/events/${id}`;
   if (kind === 'group') return `/groups/${id}`;
+  if (kind === 'flyer') return `/community/post/${id}`;
   if (kind === 'comment') return null;
   if (kind === 'member') return null;
   return null;
