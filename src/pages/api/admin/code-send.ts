@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
 import { getAllowedAdminEmails } from '../../../lib/admin-auth';
+import { ensureAdminCodesSchema } from '../../../lib/admin-codes-schema';
 
 function gen6(): string {
   // Use crypto.getRandomValues so the code isn't predictable.
@@ -12,6 +13,7 @@ function gen6(): string {
 export const POST: APIRoute = async ({ request }) => {
   const db = getDB();
   if (!db) return new Response(JSON.stringify({ ok: false, error: 'DB unavailable' }), { status: 500 });
+  await ensureAdminCodesSchema(db);
   let body: any;
   try { body = await request.json(); }
   catch { return new Response(JSON.stringify({ ok: false, error: 'Invalid body' }), { status: 400 }); }

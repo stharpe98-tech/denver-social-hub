@@ -1,10 +1,12 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
 import { getAllowedAdminEmails, setAdminCookie } from '../../../lib/admin-auth';
+import { ensureAdminCodesSchema } from '../../../lib/admin-codes-schema';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const db = getDB();
   if (!db) return new Response(JSON.stringify({ ok: false, error: 'DB unavailable' }), { status: 500 });
+  await ensureAdminCodesSchema(db);
   let body: any;
   try { body = await request.json(); }
   catch { return new Response(JSON.stringify({ ok: false, error: 'Invalid body' }), { status: 400 }); }
