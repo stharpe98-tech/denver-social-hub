@@ -23,9 +23,18 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const allowed = await getAllowedAdminEmails(db);
-  const cfgRows = await db.prepare(`SELECT key, value FROM config`).all();
   const cfg: Record<string, string> = {};
-  (cfgRows.results ?? []).forEach((r: any) => { cfg[r.key] = r.value; });
+  try {
+    const cfgRows = await db.prepare(`SELECT key, value FROM config`).all();
+    (cfgRows.results ?? []).forEach((r: any) => { cfg[r.key] = r.value; });
+  } catch (e: any) {
+    return new Response(JSON.stringify({
+      ok: false,
+      error: 'config table missing or unreadable',
+      hint: 'Run the admin setup once: visit /admin/settings or seed the config table with at least resend_api_key, from_email, and admin_emails rows.',
+      detail: e?.message || String(e),
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
 
   // Always respond ok=true to prevent allowlist enumeration. Only send
   // and insert a code when the address is actually allowed.
@@ -42,7 +51,14 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     let emailError: string | null = null;
-    if (cfg.resend_api_key) {
+    if (!cfg.resend_api_key) {
+      return new Response(JSON.stringify({
+        ok: false,
+        error: 'resend_api_key not configured',
+        hint: 'Add a row to the config table: key=resend_api_key, value=<your Resend API key>. Then set from_email to a verified-domain sender (or "onboarding@resend.dev" for testing).',
+      }), { status: 502, headers: { 'Content-Type': 'application/json' } });
+    }
+    {
       const subject = `Denver Social admin code: ${code}`;
       const text = `Your 6-digit admin sign-in code is:\n\n${code}\n\nIt expires in 10 minutes. If you didn't request this, ignore this email.`;
       const html = `
@@ -76,8 +92,6 @@ export const POST: APIRoute = async ({ request }) => {
         console.error('Resend admin-code-send network error', e);
         emailError = `Network error: ${e?.message || 'unknown'}`;
       }
-    } else {
-      emailError = 'resend_api_key not configured';
     }
 
     // If something went wrong with the email, surface it to the client
