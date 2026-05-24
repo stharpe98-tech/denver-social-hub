@@ -115,6 +115,15 @@ export const POST: APIRoute = async ({ request }) => {
       await db.prepare(`DELETE FROM potluck_rsvp WHERE id=?`).bind(b.id).run();
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
     }
+    if (action === 'delete_signup') {
+      // Removes every row tied to one signup_token (a person's whole signup,
+      // including all extra items they added).
+      if (!b.signup_token) {
+        return new Response(JSON.stringify({ ok: false, error: 'signup_token required' }), { status: 400 });
+      }
+      const r: any = await db.prepare(`DELETE FROM potluck_rsvp WHERE signup_token=?`).bind(b.signup_token).run();
+      return new Response(JSON.stringify({ ok: true, deleted: r?.meta?.changes ?? 0 }), { headers: { 'Content-Type': 'application/json' } });
+    }
     if (action === 'set_config') {
       await db.prepare(`INSERT OR REPLACE INTO config (key,value) VALUES (?,?)`).bind(b.key,b.value).run();
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });

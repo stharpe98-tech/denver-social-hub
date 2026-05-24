@@ -22,7 +22,28 @@ try {
 if (!potluck) return Astro.redirect('/potlucks');
 const attending = signups.filter((s:any) => s.rsvp === 'yes');
 const notComing = signups.filter((s:any) => s.rsvp !== 'yes');
-const guestTotal = attending.reduce((sum:number, s:any) => sum + (parseInt(s.guest_count)||1), 0);
+
+// Group attending rows by signup_token so each person shows once with all
+// their items. Legacy rows have unique tokens (one row per token) so they
+// naturally render as single-item entries.
+type GuestGroup = { token: string; name: string; email: string; handle: string; platforms: string; dietary: string; guest_count: number; items: Array<{id: number; dish: string; dish_category: string}>; row_ids: number[]; };
+const groupMap = new Map<string, GuestGroup>();
+for (const s of attending as any[]) {
+  const token = s.signup_token || `__row_${s.id}`;
+  let g = groupMap.get(token);
+  if (!g) {
+    g = { token, name: s.name || '', email: s.email || '', handle: s.handle || '', platforms: s.platforms || '', dietary: s.dietary || '', guest_count: parseInt(s.guest_count) || 1, items: [], row_ids: [] };
+    groupMap.set(token, g);
+  }
+  g.row_ids.push(s.id);
+  if (s.dish || s.dish_category) g.items.push({ id: s.id, dish: s.dish || '', dish_category: s.dish_category || '' });
+  // Primary row owns the guest count; only adopt if larger.
+  if (s.is_primary && (parseInt(s.guest_count) || 0) > g.guest_count) g.guest_count = parseInt(s.guest_count);
+  if (!g.email && s.email) g.email = s.email;
+  if (!g.dietary && s.dietary) g.dietary = s.dietary;
+}
+const attendingGroups = Array.from(groupMap.values());
+const guestTotal = attendingGroups.reduce((sum, g) => sum + g.guest_count, 0);
 const utensilPeople = attending.filter((s:any) => s.utensils);
 const earlyPeople = attending.filter((s:any) => s.early_arrive);
 const seatingPeople = attending.filter((s:any) => s.seating);
@@ -310,24 +331,33 @@ const catEmoji: Record<string,string> = { 'Salads':'🥗', 'Mains':'🍖', 'Side
     <!-- Guest List -->
     <div class="section">
       <div class="section-head">Guest List <span class="section-count">{attending.length}</span></div>
-      {attending.length === 0
+      {attendingGroups.length === 0
         ? <div class="empty">No sign-ups yet</div>
         : (
           <div class="guest-wrap">
             <table class="guest-table">
-              <thead><tr><th>Name</th><th>Email</th><th>Bringing</th><th>Guests</th><th>From</th><th>Dietary</th><th></th></tr></thead>
+              <thead><tr><th>Name</th><th>Email</th><th>Bringing</th><th>Guests</th><th>Dietary</th><th></th></tr></thead>
               <tbody>
-                {attending.map((s:any) => (
+                {attendingGroups.map((g) => (
                   <tr>
-                    <td>{s.name}{s.handle ? <span class="guest-sub">{s.handle}</span> : null}</td>
+                    <td>{g.name}{g.handle ? <span class="guest-sub">{g.handle}</span> : null}</td>
                     <td style="font-size:12px">
-                      {s.email ? <a href={`mailto:${s.email}`}>{s.email}</a> : <span style="color:var(--muted)">—</span>}
+                      {g.email ? <a href={`mailto:${g.email}`}>{g.email}</a> : <span style="color:var(--muted)">—</span>}
                     </td>
-                    <td>{s.dish || '—'}{s.dish_category ? <span class="guest-sub">{s.dish_category}</span> : null}</td>
-                    <td>{s.guest_count || 1}</td>
-                    <td style="font-size:12px;color:var(--muted)">{s.platforms || '—'}</td>
-                    <td style="font-size:12px;color:var(--muted)">{s.dietary || '—'}</td>
-                    <td><button class="btn btn-sm btn-danger" onclick={`deleteRsvp(${s.id})`}>✕</button></td>
+                    <td>
+                      {g.items.length === 0
+                        ? <span style="color:var(--muted)">—</span>
+                        : g.items.map((it, idx) => (
+                            <Fragment>
+                              {idx > 0 ? <span style="color:var(--muted)">, </span> : null}
+                              <span>{it.dish || it.dish_category}{it.dish && it.dish_category ? <span class="guest-sub" style="display:inline;margin-left:4px">({it.dish_category})</span> : null}</span>
+                              <button class="btn btn-sm btn-danger" onclick={`deleteRsvp(${it.id})`} title="Remove just this item" style="margin-left:6px;padding:1px 6px;font-size:10px">✕</button>
+                            </Fragment>
+                          ))}
+                    </td>
+                    <td>{g.guest_count}</td>
+                    <td style="font-size:12px;color:var(--muted)">{g.dietary || '—'}</td>
+                    <td><button class="btn btn-sm btn-danger" onclick={`deleteSignup('${g.token}', '${(g.name || 'this person').replace(/'/g, "\\'")}', ${g.row_ids.length})`} title="Remove this person and everything they signed up for">Remove all</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -350,12 +380,24 @@ const catEmoji: Record<string,string> = { 'Salads':'🥗', 'Mains':'🍖', 'Side
 
   <script define:vars={{ id, potluck }}>
     async function deleteRsvp(rsvpId) {
-      if (!confirm('Remove this sign-up?')) return;
+      if (!confirm('Remove this item?')) return;
       const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'delete_rsvp',id:rsvpId}) });
       const data = await res.json();
       if (data.ok) location.reload();
     }
     window.deleteRsvp = deleteRsvp;
+
+    async function deleteSignup(token, name, count) {
+      var msg = count > 1
+        ? 'Remove ' + name + ' and all ' + count + ' items they signed up for?'
+        : 'Remove ' + name + "'s sign-up?";
+      if (!confirm(msg)) return;
+      const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'delete_signup', signup_token: token}) });
+      const data = await res.json();
+      if (data.ok) location.reload();
+      else alert('Could not delete: ' + (data.error || 'unknown'));
+    }
+    window.deleteSignup = deleteSignup;
 
     async function saveEdit() {
       const body = { action:'update', id: parseInt(id), title: document.getElementById('e-title').value, date_label: document.getElementById('e-date').value, event_date: document.getElementById('e-event-date').value || null, time_label: document.getElementById('e-time').value, location: document.getElementById('e-loc').value, cover_photo: document.getElementById('e-cover').value.trim() || null, description: potluck.description || '', location_detail: potluck.location_detail || '', status: potluck.status };
