@@ -1,8 +1,10 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getDB } from '../../lib/db';
+import { ensurePotluckSignupSchema } from '../../lib/potluck-signup-schema';
 
 const db = getDB();
+if (db) { try { await ensurePotluckSignupSchema(db); } catch {} }
 const { id } = Astro.params;
 let potluck: any = null;
 let slots: any[] = [];
@@ -323,6 +325,83 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   .pk-join-nudge { text-align: center; padding: var(--space-4); color: var(--text-sec); font-size: 14px; border: 1px dashed var(--border); border-radius: var(--radius); margin-top: var(--space-3); }
   .pk-empty { padding: var(--space-5); text-align: center; color: var(--text-faint); font-style: italic; }
 
+  /* ── Your signup (multi-slot) card ─────────────────── */
+  .pk-mine { display: none; }
+  .pk-mine.show { display: block; }
+  .pk-mine-summary {
+    font-size: 14px; color: var(--text); margin-bottom: var(--space-3);
+    line-height: 1.5;
+  }
+  .pk-mine-summary strong { color: var(--accent); }
+  .pk-mine-list {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-bottom: var(--space-3);
+  }
+  .pk-mine-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 12px;
+  }
+  .pk-mine-item-text { flex: 1; min-width: 0; font-size: 14px; color: var(--text); }
+  .pk-mine-item-cat { font-size: 12px; color: var(--text-sec); margin-top: 2px; }
+  .pk-mine-item-btns { display: flex; gap: 6px; flex-shrink: 0; }
+  .pk-mine-mini {
+    background: none; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; color: var(--text-sec);
+    padding: 4px 8px; border-radius: 6px;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+  }
+  .pk-mine-mini:hover { background: var(--surface-hover); color: var(--text); }
+  .pk-mine-mini.danger:hover { color: #EF4444; }
+  .pk-mine-edit {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 12px;
+    background: var(--bg); border: 1.5px solid var(--accent);
+    border-radius: 12px;
+  }
+  @media (min-width: 500px) {
+    .pk-mine-edit { flex-direction: row; align-items: center; }
+    .pk-mine-edit .pk-input, .pk-mine-edit .pk-select { flex: 1; }
+  }
+  .pk-mine-edit-btns { display: flex; gap: 6px; }
+  .pk-mine-add {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 12px;
+    background: var(--surface); border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    margin-bottom: var(--space-3);
+  }
+  .pk-mine-add.open { border-color: var(--accent); background: var(--bg); }
+  @media (min-width: 500px) {
+    .pk-mine-add-fields { display: flex; gap: 8px; }
+    .pk-mine-add-fields > * { flex: 1; }
+  }
+  .pk-mine-add-toggle {
+    width: 100%; padding: 12px;
+    border-radius: var(--radius-pill);
+    border: 1.5px dashed var(--border);
+    background: var(--bg); color: var(--accent);
+    font-family: var(--font); font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .pk-mine-add-toggle:hover { border-color: var(--accent); background: var(--surface); }
+  .pk-mine-cancel-link {
+    display: block; text-align: center;
+    margin-top: var(--space-3);
+    font-size: 12px; color: var(--text-faint);
+    background: none; border: none; cursor: pointer;
+    font-family: inherit; padding: 4px;
+    text-decoration: underline;
+  }
+  .pk-mine-cancel-link:hover { color: #EF4444; }
+  .pk-mine-err {
+    font-size: 12px; color: #EF4444; margin-top: 6px; display: none;
+  }
+  .pk-mine-err.show { display: block; }
+
   /* ── Manage RSVP section ───────────────────────────── */
   .pk-manage {
     background: var(--surface); border: 1.5px solid var(--border);
@@ -546,6 +625,46 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
       </div>
       <div class="pk-error" id="step2-err"></div>
     </div>
+  </div>
+
+  <!-- ── YOUR SIGNUP (multi-slot, token-anchored) ──────── -->
+  <div class="pk-rsvp pk-mine" id="mine-card">
+    <div class="pk-step-label">Your signup</div>
+    <div class="pk-step-title" id="mine-title">You're in! 🎉</div>
+    <div class="pk-mine-summary" id="mine-summary"></div>
+
+    <div class="pk-guests" style="margin-bottom:var(--space-3)">
+      <span class="pk-guests-label">Guests</span>
+      <button type="button" id="mine-g-minus">−</button>
+      <span class="count" id="mine-g-count">1</span>
+      <button type="button" id="mine-g-plus">+</button>
+      <span class="note" id="mine-g-note">just me</span>
+    </div>
+
+    <div class="pk-mine-list" id="mine-list"></div>
+
+    <div class="pk-mine-add" id="mine-add">
+      <button type="button" class="pk-mine-add-toggle" id="mine-add-toggle">+ Bring something else</button>
+      <div id="mine-add-form" style="display:none">
+        <div class="pk-mine-add-fields">
+          <select class="pk-select" id="mine-add-cat">
+            <option value="">Category…</option>
+            {slots.map((slot: any) => (
+              <option value={slot.category}>{slot.category}</option>
+            ))}
+          </select>
+          <input type="text" class="pk-input" id="mine-add-dish" placeholder="What are you bringing?" autocomplete="off"/>
+        </div>
+        <div class="pk-mine-edit-btns" style="margin-top:8px">
+          <button type="button" class="pk-skip" id="mine-add-cancel">Cancel</button>
+          <button type="button" class="pk-save" id="mine-add-save">Add it</button>
+        </div>
+        <div class="pk-mine-err" id="mine-add-err"></div>
+      </div>
+    </div>
+
+    <button type="button" class="pk-mine-cancel-link" id="mine-cancel">Cancel my signup entirely</button>
+    <div class="pk-mine-err" id="mine-err"></div>
   </div>
 
   <!-- ── MANAGE YOUR RSVP ──────────────────────────────── -->
@@ -777,6 +896,9 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
         btn.textContent = origText;
         return;
       }
+      if (data.signup_token) {
+        try { localStorage.setItem('dsn_potluck_' + potluckId, data.signup_token); } catch (_) {}
+      }
       showConfirm(first, data.contact || {});
     })
     .catch(function () {
@@ -831,6 +953,267 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
       setTimeout(function () { t.classList.remove('show'); }, 2000);
     }).catch(function () {});
   });
+
+  // ── Your-signup (token-anchored multi-slot) ─────────
+  var STORAGE_KEY = 'dsn_potluck_' + potluckId;
+  var mineToken = '';
+  var mineSignups = [];
+  var minePrimary = null;
+  var guestUpdateTimer = null;
+
+  function getToken() {
+    try { return localStorage.getItem(STORAGE_KEY) || ''; } catch (_) { return ''; }
+  }
+  function clearToken() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+  }
+
+  function renderMine() {
+    if (!minePrimary) return;
+    var nonPrimary = mineSignups.filter(function (s) { return !s.is_primary; });
+    var dishItems = mineSignups.filter(function (s) { return s.dish; });
+    var gc = parseInt(minePrimary.guest_count) || 1;
+    var summary;
+    if (dishItems.length === 0) {
+      summary = "You're in for <strong>" + gc + (gc === 1 ? ' guest' : ' guests') + "</strong> — just hanging out, no dish.";
+    } else {
+      var names = dishItems.map(function (s) { return '<strong>' + escHtml(s.dish) + '</strong>'; }).join(', ');
+      summary = "You're in — bringing " + names + " for <strong>" + gc + (gc === 1 ? ' guest' : ' guests') + "</strong>.";
+    }
+    $('mine-title').textContent = "You're in, " + (minePrimary.name || 'friend').split(' ')[0] + "! 🎉";
+    $('mine-summary').innerHTML = '✓ ' + summary;
+    $('mine-g-count').textContent = gc;
+    $('mine-g-note').textContent = guestNote(gc);
+
+    var listEl = $('mine-list');
+    listEl.innerHTML = '';
+    mineSignups.forEach(function (s) {
+      if (!s.dish) return;
+      var row = document.createElement('div');
+      row.className = 'pk-mine-item';
+      row.setAttribute('data-id', s.id);
+      var canRemove = !s.is_primary;
+      row.innerHTML =
+        '<div class="pk-mine-item-text">' +
+          escHtml(s.dish) +
+          '<div class="pk-mine-item-cat">' + escHtml(s.dish_category || '') + '</div>' +
+        '</div>' +
+        '<div class="pk-mine-item-btns">' +
+          '<button type="button" class="pk-mine-mini" data-act="edit">Edit</button>' +
+          (canRemove ? '<button type="button" class="pk-mine-mini danger" data-act="remove">Remove</button>' : '') +
+        '</div>';
+      listEl.appendChild(row);
+    });
+  }
+
+  function showMineCard() {
+    $('rsvp-card').style.display = 'none';
+    $('mine-card').classList.add('show');
+  }
+
+  function loadMine(cb) {
+    var token = getToken();
+    if (!token) { if (cb) cb(false); return; }
+    fetch('/api/potlucks/mine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ potluck_id: parseInt(String(potluckId)), signup_token: token }),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (!data.ok || !data.signups || !data.signups.length) {
+        clearToken();
+        if (cb) cb(false);
+        return;
+      }
+      mineToken = token;
+      mineSignups = data.signups;
+      minePrimary = mineSignups.filter(function (s) { return s.is_primary; })[0] || mineSignups[0];
+      renderMine();
+      showMineCard();
+      if (cb) cb(true);
+    })
+    .catch(function () { if (cb) cb(false); });
+  }
+
+  // Guest counter on mine card (debounced PATCH)
+  $('mine-g-minus').addEventListener('click', function () {
+    if (!minePrimary) return;
+    var n = Math.max(1, (parseInt(minePrimary.guest_count) || 1) - 1);
+    minePrimary.guest_count = n;
+    $('mine-g-count').textContent = n;
+    $('mine-g-note').textContent = guestNote(n);
+    renderMine();
+    scheduleGuestUpdate(n);
+  });
+  $('mine-g-plus').addEventListener('click', function () {
+    if (!minePrimary) return;
+    var n = Math.min(20, (parseInt(minePrimary.guest_count) || 1) + 1);
+    minePrimary.guest_count = n;
+    $('mine-g-count').textContent = n;
+    $('mine-g-note').textContent = guestNote(n);
+    renderMine();
+    scheduleGuestUpdate(n);
+  });
+  function scheduleGuestUpdate(n) {
+    if (guestUpdateTimer) clearTimeout(guestUpdateTimer);
+    guestUpdateTimer = setTimeout(function () {
+      fetch('/api/potlucks/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: minePrimary.id, signup_token: mineToken, guest_count: n }),
+      }).catch(function () {});
+    }, 600);
+  }
+
+  // Edit / remove buttons on dish items (event delegation)
+  $('mine-list').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    var row = btn.closest('.pk-mine-item');
+    var id = parseInt(row.getAttribute('data-id'));
+    var act = btn.getAttribute('data-act');
+    var s = mineSignups.filter(function (x) { return x.id === id; })[0];
+    if (!s) return;
+    if (act === 'remove') {
+      if (!confirm('Remove "' + s.dish + '" from your signup?')) return;
+      fetch('/api/potlucks/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, signup_token: mineToken, action: 'delete' }),
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.ok) location.reload();
+      });
+    } else if (act === 'edit') {
+      openInlineEdit(row, s);
+    }
+  });
+
+  function openInlineEdit(row, s) {
+    var catOpts = '<option value="">Category…</option>';
+    document.querySelectorAll('#mine-add-cat option').forEach(function (o) {
+      if (!o.value) return;
+      var sel = (o.value === s.dish_category) ? ' selected' : '';
+      catOpts += '<option value="' + escHtml(o.value) + '"' + sel + '>' + escHtml(o.value) + '</option>';
+    });
+    row.classList.remove('pk-mine-item');
+    row.className = 'pk-mine-edit';
+    row.innerHTML =
+      '<select class="pk-select" data-role="cat">' + catOpts + '</select>' +
+      '<input type="text" class="pk-input" data-role="dish" value="' + escHtml(s.dish) + '"/>' +
+      '<div class="pk-mine-edit-btns">' +
+        '<button type="button" class="pk-skip" data-role="cancel">Cancel</button>' +
+        '<button type="button" class="pk-save" data-role="save">Save</button>' +
+      '</div>';
+    var errBox = document.createElement('div');
+    errBox.className = 'pk-mine-err';
+    errBox.setAttribute('data-role', 'err');
+    row.appendChild(errBox);
+    row.querySelector('[data-role=cancel]').addEventListener('click', function () { renderMine(); });
+    row.querySelector('[data-role=save]').addEventListener('click', function () {
+      var newDish = row.querySelector('[data-role=dish]').value.trim();
+      var newCat = row.querySelector('[data-role=cat]').value.trim();
+      if (!newDish) {
+        errBox.textContent = "Tell us what you're bringing.";
+        errBox.classList.add('show');
+        return;
+      }
+      var saveBtn = row.querySelector('[data-role=save]');
+      saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+      fetch('/api/potlucks/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: s.id, signup_token: mineToken, dish: newDish, dish_category: newCat || s.dish_category }),
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.ok) { location.reload(); return; }
+        saveBtn.disabled = false; saveBtn.textContent = 'Save';
+        errBox.textContent = data.error === 'slot_full' ? 'That category is full — try another.' : 'Could not save — try again.';
+        errBox.classList.add('show');
+      })
+      .catch(function () {
+        saveBtn.disabled = false; saveBtn.textContent = 'Save';
+        errBox.textContent = 'Network error — try again.';
+        errBox.classList.add('show');
+      });
+    });
+  }
+
+  // Add-item flow
+  $('mine-add-toggle').addEventListener('click', function () {
+    $('mine-add-form').style.display = 'block';
+    $('mine-add').classList.add('open');
+    $('mine-add-toggle').style.display = 'none';
+  });
+  $('mine-add-cancel').addEventListener('click', function () {
+    $('mine-add-form').style.display = 'none';
+    $('mine-add').classList.remove('open');
+    $('mine-add-toggle').style.display = '';
+    $('mine-add-err').classList.remove('show');
+    $('mine-add-cat').value = '';
+    $('mine-add-dish').value = '';
+  });
+  $('mine-add-save').addEventListener('click', function () {
+    var cat = $('mine-add-cat').value.trim();
+    var dish = $('mine-add-dish').value.trim();
+    if (!cat) {
+      $('mine-add-err').textContent = 'Pick a category.';
+      $('mine-add-err').classList.add('show');
+      return;
+    }
+    if (!dish) {
+      $('mine-add-err').textContent = "Tell us what you're bringing.";
+      $('mine-add-err').classList.add('show');
+      return;
+    }
+    var btn = $('mine-add-save');
+    btn.disabled = true; btn.textContent = 'Adding…';
+    fetch('/api/potlucks/add-item', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        potluck_id: parseInt(String(potluckId)),
+        signup_token: mineToken,
+        dish: dish, dish_category: cat,
+      }),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      btn.disabled = false; btn.textContent = 'Add it';
+      if (data.ok) { location.reload(); return; }
+      $('mine-add-err').textContent = data.error === 'slot_full' ? 'That category just filled up — try another.' : 'Could not add — try again.';
+      $('mine-add-err').classList.add('show');
+    })
+    .catch(function () {
+      btn.disabled = false; btn.textContent = 'Add it';
+      $('mine-add-err').textContent = 'Network error — try again.';
+      $('mine-add-err').classList.add('show');
+    });
+  });
+
+  // Cancel entire signup
+  $('mine-cancel').addEventListener('click', function () {
+    if (!minePrimary) return;
+    if (!confirm('Cancel your entire signup? This removes all your items.')) return;
+    fetch('/api/potlucks/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: minePrimary.id, signup_token: mineToken, action: 'delete' }),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok) {
+        clearToken();
+        location.reload();
+      }
+    });
+  });
+
+  // On mount: if we have a stored token, try to show the mine card.
+  loadMine();
 
   // ── RSVP lookup ──────────────────────────────────────
   $('m-lookup-btn').addEventListener('click', function () {

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getDB } from '../../lib/db';
 import { buildConfirmationEmail } from '../../lib/email';
 import { ensurePotluckSchema } from '../../lib/potluck-schema';
+import { ensurePotluckSignupSchema, generateSignupToken } from '../../lib/potluck-signup-schema';
 
 function generateToken(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -43,6 +44,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (!db) return new Response(JSON.stringify({ ok: false }), { status: 500 });
   try {
     await ensurePotluckSchema(db);
+    await ensurePotluckSignupSchema(db);
     const b = await request.json() as Record<string, any>;
 
     // Honeypot check — bots fill hidden fields, humans don't
@@ -64,28 +66,32 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
     const potluckId = parseInt(b.potluckId ?? '1');
 
-    // Slot validation
-    if (b.dish && b.rsvp === 'yes') {
-      const slot = await db.prepare(`
-        SELECT s.max_claims, COUNT(r.id) as claimed
-        FROM potluck_slots s
-        LEFT JOIN potluck_rsvp r ON LOWER(r.dish)=LOWER(s.suggestion)
-          AND r.potluck_id=s.potluck_id AND r.rsvp='yes'
-        WHERE s.potluck_id=? AND LOWER(s.suggestion)=LOWER(?)
-        GROUP BY s.id
-      `).bind(potluckId, b.dish).first() as any;
-      if (slot && slot.claimed >= slot.max_claims) {
-        return new Response(JSON.stringify({ ok: false, error: 'slot_full' }), { status: 409 });
+    // Re-check capacity by category inside the same SELECT-then-INSERT block
+    // to close the race window between read and write. We compare against
+    // potluck_slots.max_claims keyed on category (not the free-text dish).
+    if (b.dishCategory && b.rsvp === 'yes') {
+      const slot = await db.prepare(
+        `SELECT max_claims FROM potluck_slots WHERE potluck_id=? AND category=? LIMIT 1`
+      ).bind(potluckId, b.dishCategory).first() as any;
+      if (slot && slot.max_claims < 900) {
+        const claimed = await db.prepare(
+          `SELECT COUNT(*) as c FROM potluck_rsvp WHERE potluck_id=? AND dish_category=? AND rsvp='yes'`
+        ).bind(potluckId, b.dishCategory).first() as any;
+        if ((claimed?.c ?? 0) >= slot.max_claims) {
+          return new Response(JSON.stringify({ ok: false, error: 'slot_full' }), { status: 409 });
+        }
       }
     }
 
     const cancelToken = generateToken();
-    await db.prepare(`
-      INSERT INTO potluck_rsvp (potluck_id,name,email,phone,handle,platforms,rsvp,guest_count,dish,dish_category,dietary,notes,utensils,early_arrive,seating,cancel_token)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    const signupToken = generateSignupToken();
+    const insertRes = await db.prepare(`
+      INSERT INTO potluck_rsvp (potluck_id,name,email,phone,handle,platforms,rsvp,guest_count,dish,dish_category,dietary,notes,utensils,early_arrive,seating,cancel_token,signup_token,is_primary)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
     `).bind(potluckId, b.name??'', b.email??'', b.phone??'', b.handle??'', b.platforms??'', b.rsvp??'',
       parseInt(b.guestCount??'1'), b.dish??'', b.dishCategory??'', b.dietary??'', b.notes??'',
-      b.utensils?1:0, b.earlyArrive?1:0, b.seating?1:0, cancelToken).run();
+      b.utensils?1:0, b.earlyArrive?1:0, b.seating?1:0, cancelToken, signupToken).run();
+    const signupId = (insertRes as any).meta?.last_row_id ?? null;
 
     const potluck = await db.prepare(`SELECT * FROM potlucks WHERE id=?`).bind(potluckId).first() as any;
     const siteUrl = cfg.site_url || 'https://denversocialhub.com';
@@ -180,7 +186,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       stripe_link: cfg.stripe_link || '',
       cashapp_handle: cfg.cashapp_handle || '',
     };
-    return new Response(JSON.stringify({ ok: true, editUrl, contact }), { headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ ok: true, editUrl, contact, signup_token: signupToken, signup_id: signupId }), { headers: { 'Content-Type': 'application/json' } });
   } catch (e: any) {
     return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500 });
   }
