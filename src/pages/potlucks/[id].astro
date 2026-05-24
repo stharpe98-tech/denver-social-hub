@@ -69,19 +69,28 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   /* ── Hero ────────────────────────────────────────────── */
   .pk-hero {
     text-align: center;
-    padding: var(--space-6) var(--space-4) var(--space-5);
-    background: linear-gradient(160deg, #F0F9FF 0%, #ECFDF5 50%, #EDE9FE 100%);
+    padding: var(--space-7) var(--space-4) var(--space-6);
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(236,72,153,0.10), transparent 60%),
+      linear-gradient(168deg, #FBF4E6 0%, var(--bg) 55%, #F4E9F2 100%);
     border-bottom: 1px solid var(--border);
   }
-  .pk-emoji { font-size: 56px; margin-bottom: var(--space-2); }
+  .pk-emoji {
+    font-size: 40px; line-height: 1;
+    width: 84px; height: 84px; margin: 0 auto var(--space-3);
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 50%;
+    box-shadow: 0 6px 20px rgba(124,58,237,0.12), inset 0 1px 0 rgba(255,255,255,0.6);
+  }
   .pk-title {
     font-family: var(--font-display);
-    font-size: clamp(26px, 6vw, 38px);
-    font-weight: 800;
+    font-size: clamp(30px, 7vw, 46px);
+    font-weight: 900;
     color: var(--text);
-    letter-spacing: -0.03em;
-    margin-bottom: var(--space-2);
-    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-3);
+    line-height: 1.05;
   }
   .pk-meta {
     display: flex; flex-wrap: wrap; justify-content: center;
@@ -90,9 +99,10 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
     margin-bottom: var(--space-3);
   }
   .pk-meta span {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 999px; padding: 5px 12px;
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,0.6); border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 14px; font-weight: 500;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
   }
   .pk-desc {
     font-size: 15px; color: var(--text-sec); line-height: 1.6;
@@ -108,23 +118,26 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   }
   .pk-stat { text-align: center; }
   .pk-stat-num {
-    font-family: var(--font-display); font-size: 28px; font-weight: 800;
+    font-family: var(--font-display); font-size: 32px; font-weight: 900;
+    background: var(--cta-bg); -webkit-background-clip: text;
+    background-clip: text; -webkit-text-fill-color: transparent;
     color: var(--accent);
   }
   .pk-stat-label { font-size: 12px; color: var(--text-sec); margin-top: 2px; }
 
   /* ── RSVP card ──────────────────────────────────────── */
   .pk-rsvp {
-    background: var(--bg);
-    border: 2px solid var(--border);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: var(--space-5);
     margin-bottom: var(--space-5);
+    box-shadow: var(--card-shadow);
     transition: border-color 0.3s, box-shadow 0.3s;
   }
   .pk-rsvp.success {
     border-color: var(--green);
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+    box-shadow: 0 0 0 4px var(--green-dim);
   }
   .pk-step-label {
     font-size: 11px; font-weight: 700; text-transform: uppercase;
@@ -144,13 +157,14 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   }
   .pk-field label .opt { font-weight: 400; color: var(--text-faint); }
   .pk-input, .pk-select {
-    width: 100%; padding: 11px 14px;
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 10px; font-size: 15px; color: var(--text);
-    font-family: var(--font); outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%; padding: 12px 14px;
+    background: rgba(0,0,0,0.04); border: 1.5px solid transparent;
+    border-radius: 10px; font-size: 16px; color: var(--text);
+    font-family: var(--font); outline: none; -webkit-appearance: none;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
   }
-  .pk-input:focus, .pk-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .pk-input::placeholder { color: var(--text-faint); }
+  .pk-input:focus, .pk-select:focus { background: rgba(255,255,255,0.7); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
   .pk-input.invalid { border-color: #EF4444; }
 
   .pk-guests {
@@ -159,28 +173,28 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   }
   .pk-guests-label { font-size: 13px; color: var(--text-sec); font-weight: 600; }
   .pk-guests button {
-    width: 44px; height: 44px; border-radius: 8px;
+    width: 44px; height: 44px; border-radius: 50%;
     border: 1.5px solid var(--border); background: var(--bg);
-    color: var(--text-sec); font-size: 18px; font-weight: 600;
-    cursor: pointer; font-family: inherit;
-    transition: border-color 0.15s;
+    color: var(--text); font-size: 20px; font-weight: 600;
+    cursor: pointer; font-family: inherit; line-height: 1;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
   }
-  .pk-guests button:hover { border-color: var(--accent); color: var(--accent); }
+  .pk-guests button:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
   .pk-guests .count { font-weight: 700; font-size: 16px; min-width: 24px; text-align: center; color: var(--text); }
   .pk-guests .note { font-size: 13px; color: var(--text-faint); }
 
   /* CTA */
   .pk-cta {
-    width: 100%; padding: 14px;
+    width: 100%; padding: 15px;
     border-radius: var(--radius-pill);
     border: none; cursor: pointer;
     background: var(--cta-bg); color: var(--cta-text);
-    font-family: var(--font-display); font-size: 17px; font-weight: 700;
-    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
-    transition: box-shadow 0.2s, transform 0.15s;
+    font-family: var(--font-display); font-size: 17px; font-weight: 800;
+    box-shadow: 0 4px 16px var(--cta-glow);
+    transition: box-shadow 0.2s, transform 0.15s, filter 0.2s;
   }
-  .pk-cta:hover { box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4); transform: translateY(-1px); }
-  .pk-cta:active { transform: scale(0.98); }
+  .pk-cta:hover { box-shadow: 0 8px 24px var(--cta-glow); transform: translateY(-2px) scale(1.01); filter: saturate(1.08); }
+  .pk-cta:active { transform: translateY(0) scale(0.99); }
   .pk-cta:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
   /* Step 2 — Category Picker */
@@ -195,12 +209,12 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   .pk-cat-card {
     display: flex; flex-direction: column; align-items: center;
     gap: 4px; padding: 14px 8px;
-    background: var(--surface); border: 2px solid var(--border);
+    background: var(--bg); border: 1.5px solid var(--border);
     border-radius: 12px; cursor: pointer;
-    font-family: var(--font); transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    font-family: var(--font); transition: border-color 0.15s, background 0.15s, transform 0.1s, box-shadow 0.15s;
   }
-  .pk-cat-card:hover { border-color: var(--accent); background: var(--bg); transform: translateY(-1px); }
-  .pk-cat-card.selected { border-color: var(--green); background: rgba(16, 185, 129, 0.06); }
+  .pk-cat-card:hover { border-color: var(--accent); background: var(--bg); transform: translateY(-2px); box-shadow: var(--card-shadow); }
+  .pk-cat-card.selected { border-color: var(--accent); background: var(--accent-dim); box-shadow: inset 0 0 0 1px var(--accent); }
   .pk-cat-card.full { opacity: 0.4; cursor: default; }
   .pk-cat-card.full:hover { border-color: var(--border); background: var(--surface); transform: none; }
   .pk-cat-custom { border-style: dashed; color: var(--text-sec); }
@@ -231,14 +245,15 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   }
   .pk-skip:hover { border-color: var(--text-sec); color: var(--text); }
   .pk-save {
-    flex: 2; padding: 12px;
+    flex: 2; padding: 13px;
     border-radius: var(--radius-pill);
     border: none; cursor: pointer;
-    background: var(--green); color: #fff;
-    font-family: var(--font-display); font-size: 15px; font-weight: 700;
-    transition: box-shadow 0.2s, transform 0.15s;
+    background: var(--cta-bg); color: var(--cta-text);
+    font-family: var(--font-display); font-size: 15px; font-weight: 800;
+    box-shadow: 0 4px 14px var(--cta-glow);
+    transition: box-shadow 0.2s, transform 0.15s, filter 0.2s;
   }
-  .pk-save:hover { box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); transform: translateY(-1px); }
+  .pk-save:hover { box-shadow: 0 8px 22px var(--cta-glow); transform: translateY(-2px); filter: saturate(1.08); }
   .pk-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
   .pk-error { font-size: 13px; color: #EF4444; margin-top: var(--space-2); display: none; }
@@ -246,10 +261,11 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
 
   /* ── Section headings ──────────────────────────────── */
   .pk-section-title {
-    font-family: var(--font-display); font-size: 18px; font-weight: 700;
+    font-family: var(--font-display); font-size: 20px; font-weight: 800;
     color: var(--text); margin-bottom: var(--space-3);
     padding-bottom: var(--space-2);
-    border-bottom: 2px solid var(--surface);
+    border-bottom: 2px solid var(--border);
+    letter-spacing: -0.01em;
   }
 
   /* ── Sign-up sheet (SignUpGenius style) ────────────── */
@@ -313,8 +329,8 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
     min-width: 0;
   }
   .pk-avatar {
-    width: 28px; height: 28px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--green));
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--cta-bg);
     color: #fff; display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: 12px; flex-shrink: 0;
   }
