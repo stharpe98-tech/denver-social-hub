@@ -96,7 +96,10 @@ export async function getAllowedAdminEmails(db: D1Database): Promise<string[]> {
   try {
     const row = await db.prepare("SELECT value FROM config WHERE key = 'admin_emails'").first() as any;
     const csv = (row?.value || '').toString();
-    return csv.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+    const list = csv.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+    // If the row is missing or empty, fall back to the super admin so the
+    // system isn't bricked. This matches the catch-block behavior below.
+    return list.length > 0 ? list : [SUPER_ADMIN_EMAIL];
   } catch {
     return [SUPER_ADMIN_EMAIL];
   }
