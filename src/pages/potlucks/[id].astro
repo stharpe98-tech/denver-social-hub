@@ -30,14 +30,36 @@ try {
 
     // All sign-ups
     const r = await db.prepare(
-      `SELECT name, dish, dish_category, guest_count FROM potluck_rsvp WHERE potluck_id=? AND rsvp='yes' ORDER BY created_at ASC`
+      `SELECT name, dish, dish_category, guest_count, signup_token, is_primary FROM potluck_rsvp WHERE potluck_id=? AND rsvp='yes' ORDER BY created_at ASC`
     ).bind(id).all();
     signups = r?.results ?? [];
   }
 } catch (e) { console.error(e); }
 if (!potluck) return Astro.redirect('/events');
 
-const guestTotal = signups.reduce((sum: number, s: any) => sum + (parseInt(s.guest_count) || 1), 0);
+// One physical attendee may have multiple rows (one per item they're bringing).
+// Collapse them by signup_token so the "Who's coming" list shows each person once.
+type UniqueGuest = { name: string; dishes: string[]; guest_count: number };
+const guestByToken = new Map<string, UniqueGuest>();
+for (const s of signups as any[]) {
+  const key = s.signup_token || `__row_${signups.indexOf(s)}`;
+  const existing = guestByToken.get(key);
+  if (existing) {
+    if (s.dish) existing.dishes.push(s.dish);
+    // Primary row owns the guest_count; only adopt from primary if we haven't seen it.
+    if (s.is_primary && (parseInt(s.guest_count) || 0) > existing.guest_count) {
+      existing.guest_count = parseInt(s.guest_count) || 1;
+    }
+  } else {
+    guestByToken.set(key, {
+      name: s.name || '',
+      dishes: s.dish ? [s.dish] : [],
+      guest_count: parseInt(s.guest_count) || 1,
+    });
+  }
+}
+const uniqueGuests = Array.from(guestByToken.values());
+const guestTotal = uniqueGuests.reduce((sum, g) => sum + g.guest_count, 0);
 const totalSlots = slots.reduce((sum: number, s: any) => sum + (s.max_claims < 900 ? s.max_claims : 1), 0);
 const totalClaimed = slots.reduce((sum: number, s: any) => sum + s.claim_count, 0);
 
@@ -730,22 +752,22 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
 
   <!-- ── WHO'S COMING ─────────────────────────────────── -->
   <div class="pk-section-title" style="margin-top:var(--space-6)">Who's coming ({guestTotal})</div>
-  {signups.length === 0 ? (
+  {uniqueGuests.length === 0 ? (
     <div class="pk-empty">Nobody's signed up yet — be the first!</div>
   ) : (
     <Fragment>
       <div class="pk-guests-row">
-        {signups.map((s: any) => (
+        {uniqueGuests.map((g) => (
           <div class="pk-guest">
-            <div class="pk-avatar">{(s.name || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</div>
+            <div class="pk-avatar">{(g.name || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</div>
             <div class="pk-guest-info">
-              <div class="pk-guest-name">{(s.name || '').split(' ')[0]}{parseInt(s.guest_count) > 1 ? ` +${parseInt(s.guest_count) - 1}` : ''}</div>
-              {s.dish && <div class="pk-guest-dish">{s.dish}</div>}
+              <div class="pk-guest-name">{(g.name || '').split(' ')[0]}{g.guest_count > 1 ? ` +${g.guest_count - 1}` : ''}</div>
+              {g.dishes.length > 0 && <div class="pk-guest-dish">{g.dishes.join(' · ')}</div>}
             </div>
           </div>
         ))}
       </div>
-      {signups.length < 3 && (
+      {uniqueGuests.length < 3 && (
         <div class="pk-join-nudge">It's early — be one of the first to join!</div>
       )}
     </Fragment>
