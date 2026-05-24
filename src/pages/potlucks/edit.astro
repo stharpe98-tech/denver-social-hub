@@ -5,13 +5,13 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
 ---
 <Base title="Manage your sign-up" description="Edit or cancel your potluck sign-up.">
 <style is:inline>
-    body { padding: var(--space-7) var(--space-4) var(--space-8); }
-    .wrap { max-width: 520px; margin: 0 auto; }
-    .card { background: transparent; border: none; border-radius: var(--radius-lg); overflow: hidden; }
-    .card-header { background: linear-gradient(135deg, var(--sunset), var(--pink)); padding: var(--space-5) var(--space-5) var(--space-4); border-radius: var(--radius-lg); }
-    .card-header h1 { font-family: var(--font-display); font-size: 22px; color: #fff; margin-bottom: 4px; font-weight: 700; }
+    body { padding: 0 0 var(--space-8); }
+    .wrap { max-width: 100%; margin: 0; }
+    .card { background: transparent; border: none; overflow: hidden; }
+    .card-header { background: linear-gradient(135deg, var(--sunset), var(--pink)); padding: var(--space-6) var(--space-4) var(--space-5); border-radius: 0; }
+    .card-header h1 { font-family: var(--font-display); font-size: 24px; color: #fff; margin-bottom: 4px; font-weight: 700; }
     .card-header p { font-size: 13px; color: rgba(255,255,255,0.92); }
-    .card-body { padding: var(--space-5) 0 0; }
+    .card-body { padding: var(--space-5) var(--space-4) 0; max-width: 520px; margin: 0 auto; }
     .detail-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 14px; color: var(--text-sec); }
     .detail-row strong { color: var(--text); }
     .field { margin-bottom: var(--space-3); }
