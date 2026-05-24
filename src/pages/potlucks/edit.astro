@@ -80,19 +80,42 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
             <div id="add-form" class="hidden" style="margin-top:14px">
               <div class="field">
                 <label>Category</label>
-                <input type="text" id="add-cat" list="add-cat-suggestions" placeholder="e.g. Salad, Bread, Dessert…"/>
-                <datalist id="add-cat-suggestions">
-                  <option value="🥗 Salad"></option>
-                  <option value="🍞 Bread"></option>
-                  <option value="🥦 Side"></option>
-                  <option value="🍰 Dessert"></option>
-                  <option value="🥤 Drinks"></option>
-                  <option value="🍿 Snack"></option>
-                  <option value="🧀 Cheese board"></option>
-                  <option value="🍎 Fruit"></option>
-                  <option value="🧊 Ice"></option>
-                  <option value="🍴 Plates & utensils"></option>
-                </datalist>
+                <select id="add-cat">
+                  <option value="">Pick one…</option>
+                  <optgroup label="🍽 Food">
+                    <option value="🥗 Salad">🥗 Salad</option>
+                    <option value="🍞 Bread">🍞 Bread</option>
+                    <option value="🥦 Side">🥦 Side</option>
+                    <option value="🍰 Dessert">🍰 Dessert</option>
+                    <option value="🥤 Drinks">🥤 Drinks</option>
+                    <option value="🍿 Snack">🍿 Snack</option>
+                    <option value="🧀 Cheese board">🧀 Cheese board</option>
+                    <option value="🍎 Fruit">🍎 Fruit</option>
+                    <option value="🧊 Ice">🧊 Ice</option>
+                    <option value="🍕 Main dish">🍕 Main dish</option>
+                    <option value="🍳 Brunch">🍳 Brunch</option>
+                  </optgroup>
+                  <optgroup label="🎒 Supplies">
+                    <option value="🍴 Plates &amp; utensils">🍴 Plates &amp; utensils</option>
+                    <option value="🥤 Cups">🥤 Cups</option>
+                    <option value="🧻 Napkins">🧻 Napkins</option>
+                    <option value="🥄 Serving spoons">🥄 Serving spoons</option>
+                    <option value="🧊 Cooler">🧊 Cooler</option>
+                    <option value="🗑 Trash bags">🗑 Trash bags</option>
+                  </optgroup>
+                  <optgroup label="🛋 Setup">
+                    <option value="🪑 Chairs">🪑 Chairs</option>
+                    <option value="🟫 Tables">🟫 Tables</option>
+                    <option value="🧺 Tablecloth">🧺 Tablecloth</option>
+                    <option value="☂️ Tent / shade">☂️ Tent / shade</option>
+                    <option value="🔊 Bluetooth speaker">🔊 Bluetooth speaker</option>
+                    <option value="💡 Lights">💡 Lights</option>
+                    <option value="🎨 Decorations">🎨 Decorations</option>
+                    <option value="🎲 Games">🎲 Games</option>
+                  </optgroup>
+                  <option value="__custom__">＋ Something else (type it in)</option>
+                </select>
+                <input type="text" id="add-cat-custom" class="hidden" placeholder="Type a category (e.g. Sunscreen, Firewood)" style="margin-top:8px"/>
               </div>
               <div class="field">
                 <label>What are you bringing?</label>
@@ -223,8 +246,16 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
       f.classList.toggle('hidden');
       if (!f.classList.contains('hidden')) document.getElementById('add-cat').focus();
     });
+    document.getElementById('add-cat').addEventListener('change', function() {
+      var custom = document.getElementById('add-cat-custom');
+      if (this.value === '__custom__') { custom.classList.remove('hidden'); custom.focus(); }
+      else { custom.classList.add('hidden'); custom.value = ''; }
+    });
     document.getElementById('add-save').addEventListener('click', async function() {
-      var cat = document.getElementById('add-cat').value.trim();
+      var sel = document.getElementById('add-cat').value;
+      var cat = sel === '__custom__'
+        ? document.getElementById('add-cat-custom').value.trim()
+        : sel.trim();
       var dish = document.getElementById('add-dish').value.trim();
       var err = document.getElementById('add-err');
       if (!cat || !dish) {
@@ -243,6 +274,8 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
       btn.disabled = false; btn.textContent = 'Add it';
       if (data.ok) {
         document.getElementById('add-cat').value = '';
+        document.getElementById('add-cat-custom').value = '';
+        document.getElementById('add-cat-custom').classList.add('hidden');
         document.getElementById('add-dish').value = '';
         document.getElementById('add-form').classList.add('hidden');
         document.getElementById('add-ok').classList.remove('hidden');
