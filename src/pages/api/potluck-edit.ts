@@ -40,7 +40,7 @@ export const POST: APIRoute = async ({ request }) => {
       const dish = (b.dish ?? '').toString().trim();
       const dishCategory = (b.dishCategory ?? '').toString().trim();
       if (!dish || !dishCategory) {
-        return new Response(JSON.stringify({ ok: false, error: 'Need a category and a dish' }), { status: 400 });
+        return new Response(JSON.stringify({ ok: false, error: 'Pick a category and tell us what you\'re bringing' }), { status: 400 });
       }
       const newCancelToken = crypto.randomUUID();
       // Inherit signup_token so this extra item belongs to the same signup

@@ -55,7 +55,7 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
           <div class="divider"></div>
           <div class="field">
             <label>What are you bringing?</label>
-            <input type="text" id="f-dish" placeholder="e.g. Caesar Salad"/>
+            <input type="text" id="f-dish" placeholder="e.g. Caesar salad, Beer, 6 chairs…"/>
           </div>
           <div class="field">
             <label>How many people total?</label>
@@ -117,8 +117,8 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
                 <input type="text" id="add-cat-custom" class="hidden" placeholder="Type a category (e.g. Sunscreen, Firewood)" style="margin-top:8px"/>
               </div>
               <div class="field">
-                <label>What are you bringing?</label>
-                <input type="text" id="add-dish" placeholder="e.g. Caesar salad"/>
+                <label>What exactly?</label>
+                <input type="text" id="add-dish" placeholder="e.g. Caesar salad, Beer, 6 folding chairs…"/>
               </div>
               <button class="btn-save" id="add-save">Add it</button>
               <div class="add-err" id="add-err"></div>
@@ -245,10 +245,42 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
       f.classList.toggle('hidden');
       if (!f.classList.contains('hidden')) document.getElementById('add-cat').focus();
     });
+    var placeholderByCategory = {
+      'Appetizer': 'e.g. Hummus & pita, Charcuterie',
+      'Main dish': 'e.g. Jambalaya, Lasagna, Roast chicken',
+      'Side': 'e.g. Mashed potatoes, Roasted veggies',
+      'Salad': 'e.g. Caesar salad, Kale & quinoa',
+      'Bread': 'e.g. Sourdough loaf, Dinner rolls',
+      'Dessert': 'e.g. Brownies, Cheesecake',
+      'Drinks': 'e.g. Beer, Sparkling water, Lemonade',
+      'Snack': 'e.g. Chips & guac, Pretzels',
+      'Cheese board': 'e.g. Brie + crackers + grapes',
+      'Fruit': 'e.g. Strawberries, Watermelon',
+      'Brunch': 'e.g. Quiche, Cinnamon rolls',
+      'Ice': 'e.g. 2 bags of ice',
+      'Chairs': 'e.g. 6 folding chairs',
+      'Tables': 'e.g. 1 folding table',
+      'Tablecloth': 'e.g. Plastic tablecloth, Picnic blanket',
+      'Tent / shade': 'e.g. 10x10 pop-up tent',
+      'Plates & utensils': 'e.g. Compostable plates + forks for 20',
+      'Cups': 'e.g. 20 plastic cups',
+      'Napkins': 'e.g. Pack of 50 paper napkins',
+      'Serving spoons': 'e.g. 3 serving spoons',
+      'Cooler': 'e.g. Large cooler with ice',
+      'Trash bags': 'e.g. Pack of trash bags',
+      'Bluetooth speaker': 'e.g. JBL portable speaker',
+      'Lights': 'e.g. String lights',
+      'Decorations': 'e.g. Balloons, banner',
+      'Games': 'e.g. Cornhole, Spikeball',
+    };
     document.getElementById('add-cat').addEventListener('change', function() {
       var custom = document.getElementById('add-cat-custom');
       if (this.value === '__custom__') { custom.classList.remove('hidden'); custom.focus(); }
       else { custom.classList.add('hidden'); custom.value = ''; }
+      // Update dish placeholder based on category (strip leading emoji + space).
+      var dishField = document.getElementById('add-dish');
+      var catName = (this.value || '').replace(/^\S+\s+/, '').trim();
+      dishField.placeholder = placeholderByCategory[catName] || 'e.g. Caesar salad, Beer, 6 folding chairs…';
     });
     document.getElementById('add-save').addEventListener('click', async function() {
       var sel = document.getElementById('add-cat').value;
@@ -258,7 +290,7 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
       var dish = document.getElementById('add-dish').value.trim();
       var err = document.getElementById('add-err');
       if (!cat || !dish) {
-        err.textContent = 'Need both a category and a dish.';
+        err.textContent = 'Pick a category and tell us what you\'re bringing.';
         return;
       }
       err.textContent = '';
