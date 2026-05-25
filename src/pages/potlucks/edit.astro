@@ -26,6 +26,19 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
     .btn-cancel:hover { background: var(--red-dim); }
     .btn-add { width: 100%; padding: 12px; border-radius: var(--radius-pill); border: 1px dashed rgba(0,0,0,0.18); background: transparent; color: var(--text-sec); font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
     .btn-add:hover { border-style: solid; color: var(--text); border-color: var(--text-sec); }
+    .checklist-wrap { margin-top: var(--space-4); }
+    .checklist-title { font-size: 12px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .checklist-section { margin-bottom: 16px; }
+    .checklist-label { font-size: 13px; font-weight: 600; color: var(--text-sec); margin-bottom: 8px; }
+    .checklist-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    @media (min-width: 520px) { .checklist-grid { grid-template-columns: repeat(4, 1fr); } }
+    .chk { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 14px 6px; border-radius: 12px; border: none; background: rgba(0,0,0,0.04); cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 500; color: var(--text); text-align: center; line-height: 1.2; transition: all 0.15s; position: relative; min-height: 78px; }
+    .chk:hover { background: rgba(0,0,0,0.08); }
+    .chk-emoji { font-size: 26px; line-height: 1; }
+    .chk.on { background: var(--accent-dim, #ede9fe); color: var(--accent, #7c3aed); box-shadow: inset 0 0 0 2px var(--accent, #7c3aed); }
+    .chk.on::after { content: '✓'; position: absolute; top: 4px; right: 6px; font-size: 12px; font-weight: 700; color: var(--accent, #7c3aed); }
+    .chk.busy { opacity: 0.5; pointer-events: none; }
+    .checklist-err { font-size: 12px; color: var(--red); margin-top: 8px; min-height: 1em; }
     .add-err { font-size: 12px; color: var(--red); margin-top: 6px; }
     .divider { height: 1px; background: rgba(0,0,0,0.06); margin: var(--space-4) 0; }
     .result { text-align: center; padding: var(--space-6) var(--space-4); }
@@ -74,9 +87,27 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
 
           <div class="divider"></div>
 
-          <!-- Add another item -->
+          <!-- Quick checklist: tap to bring more -->
+          <div class="checklist-wrap">
+            <div class="checklist-title">Bring more · tap to add</div>
+            <div class="checklist-section">
+              <div class="checklist-label">🍽 Food</div>
+              <div class="checklist-grid" data-section="food"></div>
+            </div>
+            <div class="checklist-section">
+              <div class="checklist-label">🥤 Drinks</div>
+              <div class="checklist-grid" data-section="drinks"></div>
+            </div>
+            <div class="checklist-section">
+              <div class="checklist-label">🎒 Supplies</div>
+              <div class="checklist-grid" data-section="supplies"></div>
+            </div>
+            <div class="checklist-err" id="checklist-err"></div>
+          </div>
+
+          <!-- Add another item (custom / detailed) -->
           <div class="add-wrap">
-            <button type="button" class="btn-add" id="add-toggle">＋ Bring something else too</button>
+            <button type="button" class="btn-add" id="add-toggle">＋ Something else (custom)</button>
             <div id="add-form" class="hidden" style="margin-top:14px">
               <div class="field">
                 <label>Category</label>
@@ -187,8 +218,114 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
 
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('edit-form').classList.remove('hidden');
+        renderChecklist();
       } catch(e) {
         show('notfound-wrap');
+      }
+    }
+
+    // ── Quick-add checklist ─────────────────────────────
+    var CHECKLIST = {
+      food: [
+        { emoji: '🥨', label: 'Appetizer',  cat: '🥨 Appetizer'   },
+        { emoji: '🍕', label: 'Main dish',  cat: '🍕 Main dish'   },
+        { emoji: '🥗', label: 'Salad',      cat: '🥗 Salad'       },
+        { emoji: '🥦', label: 'Side',       cat: '🥦 Side'        },
+        { emoji: '🍞', label: 'Bread',      cat: '🍞 Bread'       },
+        { emoji: '🍰', label: 'Dessert',    cat: '🍰 Dessert'     },
+        { emoji: '🍿', label: 'Snack',      cat: '🍿 Snack'       },
+        { emoji: '🍎', label: 'Fruit',      cat: '🍎 Fruit'       },
+      ],
+      drinks: [
+        { emoji: '🍺', label: 'Beer',       cat: '🥤 Drinks' },
+        { emoji: '🍷', label: 'Wine',       cat: '🥤 Drinks' },
+        { emoji: '🥤', label: 'Soda',       cat: '🥤 Drinks' },
+        { emoji: '💧', label: 'Water',      cat: '🥤 Drinks' },
+        { emoji: '🧊', label: 'Ice',        cat: '🧊 Ice'    },
+      ],
+      supplies: [
+        { emoji: '🪑', label: 'Chairs',     cat: '🪑 Chairs'              },
+        { emoji: '🟫', label: 'Tables',     cat: '🟫 Tables'              },
+        { emoji: '🧺', label: 'Tablecloth', cat: '🧺 Tablecloth'          },
+        { emoji: '🍴', label: 'Plates',     cat: '🍴 Plates & utensils'   },
+        { emoji: '🥤', label: 'Cups',       cat: '🥤 Cups'                },
+        { emoji: '🧻', label: 'Napkins',    cat: '🧻 Napkins'             },
+        { emoji: '🔊', label: 'Speaker',    cat: '🔊 Bluetooth speaker'   },
+        { emoji: '💡', label: 'Lights',     cat: '💡 Lights'              },
+        { emoji: '🎲', label: 'Games',      cat: '🎲 Games'               },
+      ],
+    };
+    var myItems = []; // [{id, dish, dish_category}] from /api/potlucks/mine
+
+    async function fetchMyItems() {
+      if (!rsvpData || !rsvpData.signup_token || !rsvpData.potluck_id) { myItems = []; return; }
+      try {
+        var r = await fetch('/api/potlucks/mine', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ potluck_id: rsvpData.potluck_id, signup_token: rsvpData.signup_token }),
+        });
+        var d = await r.json();
+        myItems = d.ok ? d.signups : [];
+      } catch(e) { myItems = []; }
+    }
+
+    function findExisting(item) {
+      // Match by dish (the checklist label) + dish_category.
+      return myItems.find(function(s) {
+        return (s.dish || '').toLowerCase() === item.label.toLowerCase()
+          && (s.dish_category || '') === item.cat;
+      });
+    }
+
+    async function renderChecklist() {
+      await fetchMyItems();
+      Object.keys(CHECKLIST).forEach(function(section) {
+        var grid = document.querySelector('.checklist-grid[data-section="' + section + '"]');
+        if (!grid) return;
+        grid.innerHTML = '';
+        CHECKLIST[section].forEach(function(item) {
+          var existing = findExisting(item);
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'chk' + (existing ? ' on' : '');
+          btn.innerHTML = '<span class="chk-emoji">' + item.emoji + '</span><span>' + item.label + '</span>';
+          btn.addEventListener('click', function() { toggleChecklistItem(btn, item); });
+          grid.appendChild(btn);
+        });
+      });
+    }
+
+    async function toggleChecklistItem(btn, item) {
+      if (btn.classList.contains('busy')) return;
+      var errEl = document.getElementById('checklist-err');
+      errEl.textContent = '';
+      btn.classList.add('busy');
+      var existing = findExisting(item);
+      try {
+        if (existing) {
+          // Remove this row
+          var r = await fetch('/api/potlucks/update', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: existing.id, signup_token: rsvpData.signup_token, action: 'delete' }),
+          });
+          var d = await r.json();
+          if (!d.ok) throw new Error(d.error || 'Could not remove');
+        } else {
+          // Add via /api/potluck-edit add_item (inherits signup_token + is_primary=0)
+          var r2 = await fetch('/api/potluck-edit', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'add_item', token: token, dish: item.label, dishCategory: item.cat }),
+          });
+          var d2 = await r2.json();
+          if (!d2.ok) throw new Error(d2.error || 'Could not add');
+        }
+        await fetchMyItems();
+        // Re-toggle visual without full re-render of all cards.
+        btn.classList.toggle('on', !existing);
+      } catch(e) {
+        errEl.textContent = e.message;
+      } finally {
+        btn.classList.remove('busy');
       }
     }
 
