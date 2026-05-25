@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
     if (action === 'add_item') {
       const orig: any = await db.prepare(
-        `SELECT potluck_id, name, email, phone, handle, platforms FROM potluck_rsvp WHERE cancel_token=?`
+        `SELECT potluck_id, name, email, phone, handle, platforms, signup_token FROM potluck_rsvp WHERE cancel_token=?`
       ).bind(token).first();
       if (!orig) return new Response(JSON.stringify({ ok: false, error: 'Not found' }), { status: 404 });
       const dish = (b.dish ?? '').toString().trim();
@@ -42,15 +42,19 @@ export const POST: APIRoute = async ({ request }) => {
       if (!dish || !dishCategory) {
         return new Response(JSON.stringify({ ok: false, error: 'Need a category and a dish' }), { status: 400 });
       }
-      const newToken = crypto.randomUUID();
+      const newCancelToken = crypto.randomUUID();
+      // Inherit signup_token so this extra item belongs to the same signup
+      // (one person, multiple items) — without it the dedupe on /[id].astro
+      // and the manage page would count this as a second guest.
+      const signupToken = orig.signup_token || '';
       await db.prepare(`
-        INSERT INTO potluck_rsvp (potluck_id, name, email, phone, handle, platforms, rsvp, guest_count, dish, dish_category, dietary, notes, utensils, early_arrive, seating, cancel_token)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        INSERT INTO potluck_rsvp (potluck_id, name, email, phone, handle, platforms, rsvp, guest_count, dish, dish_category, dietary, notes, utensils, early_arrive, seating, cancel_token, signup_token, is_primary)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `).bind(
         orig.potluck_id, orig.name, orig.email ?? '', orig.phone ?? '', orig.handle ?? '', orig.platforms ?? '',
-        'yes', 0, dish, dishCategory, '', '', 0, 0, 0, newToken
+        'yes', 0, dish, dishCategory, '', '', 0, 0, 0, newCancelToken, signupToken, 0
       ).run();
-      return new Response(JSON.stringify({ ok: true, token: newToken }), { headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ ok: true, token: newCancelToken }), { headers: { 'Content-Type': 'application/json' } });
     }
     return new Response(JSON.stringify({ ok: false, error: 'Unknown action' }), { status: 400 });
   } catch (e: any) {
