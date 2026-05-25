@@ -272,12 +272,35 @@ const action = Astro.url.searchParams.get('action') ?? 'edit';
       var data = await res.json();
       btn.disabled = false; btn.textContent = 'Add it';
       if (data.ok) {
-        document.getElementById('add-cat').value = '';
-        document.getElementById('add-cat-custom').value = '';
-        document.getElementById('add-cat-custom').classList.add('hidden');
+        // Keep the form open so they can quickly add more (e.g. 3 different
+        // drinks). Keep the category selected — most likely they're adding
+        // more of the same kind. Just clear the dish field, flash a small
+        // confirmation, and re-focus.
         document.getElementById('add-dish').value = '';
-        document.getElementById('add-form').classList.add('hidden');
-        document.getElementById('add-ok').classList.remove('hidden');
+        var ok = document.getElementById('add-ok');
+        ok.textContent = '✓ Added "' + dish + '". Add another or tap Done below.';
+        ok.classList.remove('hidden');
+        document.getElementById('add-dish').focus();
+        // Show a "Done" button if not already there.
+        if (!document.getElementById('add-done')) {
+          var doneBtn = document.createElement('button');
+          doneBtn.id = 'add-done';
+          doneBtn.type = 'button';
+          doneBtn.className = 'btn-cancel';
+          doneBtn.textContent = 'Done adding';
+          doneBtn.style.marginTop = '8px';
+          doneBtn.addEventListener('click', function() {
+            document.getElementById('add-cat').value = '';
+            document.getElementById('add-cat-custom').value = '';
+            document.getElementById('add-cat-custom').classList.add('hidden');
+            document.getElementById('add-dish').value = '';
+            document.getElementById('add-form').classList.add('hidden');
+            ok.classList.add('hidden');
+            doneBtn.remove();
+            location.reload();
+          });
+          document.getElementById('add-form').appendChild(doneBtn);
+        }
       } else {
         err.textContent = data.error || 'Could not add. Try again.';
       }
