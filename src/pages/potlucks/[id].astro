@@ -542,7 +542,28 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   </div>
   {potluck.description && <p class="pk-desc">{potluck.description}</p>}
   {potluck.location_detail && <p class="pk-desc pk-desc-detail">{potluck.location_detail}</p>}
+  {(potluck.latitude && potluck.longitude) || potluck.plus_code ? (
+    <div class="pk-directions">
+      {potluck.plus_code && (
+        <span class="pk-pluscode" title="Google Plus Code — paste in Maps to find this spot">📍 {potluck.plus_code}</span>
+      )}
+      <a
+        class="pk-dir-btn"
+        href={potluck.latitude && potluck.longitude
+          ? `https://www.google.com/maps/dir/?api=1&destination=${potluck.latitude},${potluck.longitude}`
+          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(potluck.plus_code || potluck.location || '')}`}
+        target="_blank"
+        rel="noopener"
+      >Get directions →</a>
+    </div>
+  ) : null}
 </section>
+<style>
+  .pk-directions { margin-top: var(--space-3); display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
+  .pk-pluscode { background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font-family: monospace; font-size: 13px; color: var(--text-sec); }
+  .pk-dir-btn { background: var(--accent, #7c3aed); color: #fff; padding: 8px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(124,58,237,0.25); transition: transform 0.15s, box-shadow 0.15s; }
+  .pk-dir-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(124,58,237,0.35); }
+</style>
 
 <!-- ── STATS ──────────────────────────────────────────── -->
 <div class="pk-stats">

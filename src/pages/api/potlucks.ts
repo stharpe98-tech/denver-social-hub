@@ -71,8 +71,16 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(JSON.stringify({ ok: true, id: result.meta.last_row_id }), { headers: { 'Content-Type': 'application/json' } });
     }
     if (action === 'update') {
-      await db.prepare(`UPDATE potlucks SET title=?,description=?,date_label=?,time_label=?,location=?,location_detail=?,status=?,template=?,locked=?,organizer_email=?,event_date=?,cover_photo=? WHERE id=?`)
-        .bind(b.title,b.description,b.date_label,b.time_label,b.location,b.location_detail,b.status,b.template??'warm',b.locked?1:0,b.organizer_email??'',b.event_date??null,b.cover_photo??null,b.id).run();
+      await db.prepare(`UPDATE potlucks SET title=?,description=?,date_label=?,time_label=?,location=?,location_detail=?,status=?,template=?,locked=?,organizer_email=?,event_date=?,cover_photo=?,plus_code=?,latitude=?,longitude=? WHERE id=?`)
+        .bind(
+          b.title, b.description, b.date_label, b.time_label, b.location, b.location_detail,
+          b.status, b.template ?? 'warm', b.locked ? 1 : 0, b.organizer_email ?? '',
+          b.event_date ?? null, b.cover_photo ?? null,
+          (b.plus_code ?? '').toString().trim() || null,
+          (b.latitude === '' || b.latitude == null) ? null : parseFloat(b.latitude),
+          (b.longitude === '' || b.longitude == null) ? null : parseFloat(b.longitude),
+          b.id
+        ).run();
       // Backfill slug if missing or if event_date changed
       const cur: any = await db.prepare('SELECT slug, event_date FROM potlucks WHERE id=?').bind(b.id).first();
       if (cur && (!cur.slug || (b.event_date && b.event_date !== cur.event_date))) {

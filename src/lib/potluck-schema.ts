@@ -9,6 +9,15 @@ export async function ensurePotluckSchema(db: D1Database): Promise<void> {
   if (!potluckNames.has('cover_photo')) {
     await db.prepare("ALTER TABLE potlucks ADD COLUMN cover_photo TEXT").run();
   }
+  if (!potluckNames.has('plus_code')) {
+    try { await db.prepare("ALTER TABLE potlucks ADD COLUMN plus_code TEXT").run(); } catch {}
+  }
+  if (!potluckNames.has('latitude')) {
+    try { await db.prepare("ALTER TABLE potlucks ADD COLUMN latitude REAL").run(); } catch {}
+  }
+  if (!potluckNames.has('longitude')) {
+    try { await db.prepare("ALTER TABLE potlucks ADD COLUMN longitude REAL").run(); } catch {}
+  }
 
   const slotCols = await db.prepare("PRAGMA table_info(potluck_slots)").all();
   const slotNames = new Set((slotCols.results ?? []).map((r: any) => r.name));

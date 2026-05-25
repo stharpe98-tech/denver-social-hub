@@ -222,6 +222,9 @@ const catEmoji: Record<string,string> = { 'Salads':'🥗', 'Mains':'🍖', 'Side
         <div class="field"><label>Time</label><input type="text" id="e-time" value={potluck.time_label ?? ''}/></div>
         <div class="field"><label>Location</label><input type="text" id="e-loc" value={potluck.location ?? ''}/></div>
         <div class="field field-full"><label>Cover Photo URL</label><input type="text" id="e-cover" value={potluck.cover_photo ?? ''} placeholder="https://images.unsplash.com/…"/></div>
+        <div class="field"><label>Plus Code (Google)</label><input type="text" id="e-plus" value={potluck.plus_code ?? ''} placeholder="P2JJ+9PW Denver, Colorado"/></div>
+        <div class="field"><label>Latitude</label><input type="text" id="e-lat" value={potluck.latitude ?? ''} placeholder="39.731028"/></div>
+        <div class="field"><label>Longitude</label><input type="text" id="e-lng" value={potluck.longitude ?? ''} placeholder="-104.968177"/></div>
       </div>
       <button class="btn btn-primary" onclick="saveEdit()" style="margin-top:12px">Save changes</button>
     </div>
@@ -400,7 +403,21 @@ const catEmoji: Record<string,string> = { 'Salads':'🥗', 'Mains':'🍖', 'Side
     window.deleteSignup = deleteSignup;
 
     async function saveEdit() {
-      const body = { action:'update', id: parseInt(id), title: document.getElementById('e-title').value, date_label: document.getElementById('e-date').value, event_date: document.getElementById('e-event-date').value || null, time_label: document.getElementById('e-time').value, location: document.getElementById('e-loc').value, cover_photo: document.getElementById('e-cover').value.trim() || null, description: potluck.description || '', location_detail: potluck.location_detail || '', status: potluck.status };
+      const body = {
+        action: 'update', id: parseInt(id),
+        title: document.getElementById('e-title').value,
+        date_label: document.getElementById('e-date').value,
+        event_date: document.getElementById('e-event-date').value || null,
+        time_label: document.getElementById('e-time').value,
+        location: document.getElementById('e-loc').value,
+        cover_photo: document.getElementById('e-cover').value.trim() || null,
+        plus_code: document.getElementById('e-plus').value.trim() || null,
+        latitude: document.getElementById('e-lat').value.trim() || null,
+        longitude: document.getElementById('e-lng').value.trim() || null,
+        description: potluck.description || '',
+        location_detail: potluck.location_detail || '',
+        status: potluck.status,
+      };
       const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.ok) location.reload();
@@ -419,7 +436,7 @@ const catEmoji: Record<string,string> = { 'Salads':'🥗', 'Mains':'🍖', 'Side
 
     async function markPast() {
       if (!confirm('Mark this potluck as past?')) return;
-      const body = { action:'update', id: parseInt(id), title: potluck.title, description: potluck.description || '', date_label: potluck.date_label || '', event_date: potluck.event_date || null, time_label: potluck.time_label || '', location: potluck.location || '', location_detail: potluck.location_detail || '', cover_photo: potluck.cover_photo || null, status: 'past' };
+      const body = { action:'update', id: parseInt(id), title: potluck.title, description: potluck.description || '', date_label: potluck.date_label || '', event_date: potluck.event_date || null, time_label: potluck.time_label || '', location: potluck.location || '', location_detail: potluck.location_detail || '', cover_photo: potluck.cover_photo || null, plus_code: potluck.plus_code || null, latitude: potluck.latitude || null, longitude: potluck.longitude || null, status: 'past' };
       const res = await fetch('/api/potlucks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.ok) location.reload();
