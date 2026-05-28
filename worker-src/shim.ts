@@ -61,17 +61,22 @@ async function sendReminders(env: Env): Promise<{ sent: number; errors: number; 
     const dishes = rowsForPerson.map((r) => r.dish).filter(Boolean);
     try {
       const editUrl = `${siteUrl}/potlucks/edit?token=${primary.cancel_token}`;
-      const html = buildReminderEmail({
-        name: primary.name || '',
-        eventTitle: primary.title || '',
-        eventDate: primary.date_label || '',
-        eventTime: primary.time_label || '',
-        eventLocation: primary.location || '',
-        eventLocationDetail: primary.location_detail || '',
+
+      // Single source of truth: send through the published Resend template
+      // ("Potluck reminder"). If that fails for any reason, fall back to the
+      // inline HTML builder so reminders never silently stop going out.
+      const templateId = cfg.reminder_template_id || '9da80ee8-a30c-42b9-9b06-aba17723e46f';
+      const variables = {
+        name: primary.name || 'there',
+        event_title: primary.title || 'your potluck',
+        event_date: primary.date_label || '',
+        event_time: primary.time_label || '',
+        event_location: [primary.location, primary.location_detail].filter(Boolean).join(' · '),
         dish: dishes.join(', '),
-        editUrl,
-      });
-      const resp = await fetch('https://api.resend.com/emails', {
+        edit_url: editUrl,
+      };
+
+      let resp = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${cfg.resend_api_key}`,
@@ -80,10 +85,37 @@ async function sendReminders(env: Env): Promise<{ sent: number; errors: number; 
         body: JSON.stringify({
           from: fromEmail,
           to: [primary.email],
-          subject: `Tomorrow: ${primary.title}`,
-          html,
+          template: { id: templateId, variables },
         }),
       });
+
+      if (!resp.ok) {
+        // Fallback: render inline and send the old way.
+        const html = buildReminderEmail({
+          name: primary.name || '',
+          eventTitle: primary.title || '',
+          eventDate: primary.date_label || '',
+          eventTime: primary.time_label || '',
+          eventLocation: primary.location || '',
+          eventLocationDetail: primary.location_detail || '',
+          dish: dishes.join(', '),
+          editUrl,
+        });
+        resp = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${cfg.resend_api_key}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: [primary.email],
+            subject: `Tomorrow: ${primary.title}`,
+            html,
+          }),
+        });
+      }
+
       if (!resp.ok) {
         errors++;
         continue;
