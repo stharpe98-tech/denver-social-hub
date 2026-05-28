@@ -35,7 +35,7 @@ async function sendReminders(env: Env): Promise<{ sent: number; errors: number; 
 
   const { results } = await db.prepare(`
     SELECT r.id, r.potluck_id, r.name, r.email, r.dish, r.cancel_token,
-           p.title, p.date_label, p.time_label, p.location, p.location_detail
+           p.title, p.event_date, p.date_label, p.time_label, p.location, p.location_detail
     FROM potluck_rsvp r
     JOIN potlucks p ON p.id = r.potluck_id
     WHERE p.event_date = ?
@@ -61,6 +61,9 @@ async function sendReminders(env: Env): Promise<{ sent: number; errors: number; 
     const dishes = rowsForPerson.map((r) => r.dish).filter(Boolean);
     try {
       const editUrl = `${siteUrl}/potlucks/edit?token=${primary.cancel_token}`;
+      // Always derive the displayed date from the real event_date (correct
+      // weekday), falling back to the host's free-text label only if missing.
+      const displayDate = formatEventDate(primary.event_date) || primary.date_label || '';
 
       // Single source of truth: send through the published Resend template
       // ("Potluck reminder"). If that fails for any reason, fall back to the
@@ -69,7 +72,7 @@ async function sendReminders(env: Env): Promise<{ sent: number; errors: number; 
       const variables = {
         name: primary.name || 'there',
         event_title: primary.title || 'your potluck',
-        event_date: primary.date_label || '',
+        event_date: displayDate,
         event_time: primary.time_label || '',
         event_location: [primary.location, primary.location_detail].filter(Boolean).join(' · '),
         dish: dishes.join(', '),
@@ -94,7 +97,7 @@ async function sendReminders(env: Env): Promise<{ sent: number; errors: number; 
         const html = buildReminderEmail({
           name: primary.name || '',
           eventTitle: primary.title || '',
-          eventDate: primary.date_label || '',
+          eventDate: displayDate,
           eventTime: primary.time_label || '',
           eventLocation: primary.location || '',
           eventLocationDetail: primary.location_detail || '',
@@ -405,6 +408,17 @@ async function sendBookingReminders(env: Env): Promise<{ sent: number; errors: n
 
 function escapeHtml(s: string): string {
   return String(s || '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c] as string));
+}
+
+// Format a YYYY-MM-DD event date into "Saturday, May 30" — derived from the
+// stored date so the reminder can never show a weekday that disagrees with the
+// real date. Parsed at noon UTC to avoid any off-by-one at day boundaries.
+function formatEventDate(ymd: string): string {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return '';
+  const d = new Date(ymd + 'T12:00:00Z');
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `${days[d.getUTCDay()]}, ${months[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
 export default {
