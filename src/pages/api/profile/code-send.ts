@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
 import { validateSlug } from '../../../lib/profile-auth';
+import { buildCodeEmail } from '../../../lib/email';
 
 function gen6(): string {
   const arr = new Uint32Array(1);
@@ -12,13 +13,7 @@ async function sendCodeEmail(cfg: Record<string, string>, to: string, code: stri
   if (!cfg.resend_api_key) return;
   const subject = `Your Denver Social page code: ${code}`;
   const text = `Your 6-digit code to claim /u/${slug}:\n\n${code}\n\nExpires in 10 minutes.`;
-  const html = `
-    <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
-      <h2 style="margin:0 0 12px">Your Denver Social page</h2>
-      <p style="color:#555;margin:0 0 16px">Code to claim <strong>/u/${slug}</strong>:</p>
-      <div style="font-size:32px;letter-spacing:8px;font-weight:700;padding:16px 24px;background:#EEF2FF;border:1px solid #C7D2FE;border-radius:12px;text-align:center;color:#4338CA">${code}</div>
-      <p style="color:#888;font-size:13px;margin:16px 0 0">Expires in 10 minutes. If you didn't request this, you can ignore this email.</p>
-    </div>`;
+  const html = buildCodeEmail({ code, purpose: `claim your page /u/${slug}`, minutes: 10 });
   try {
     await fetch('https://api.resend.com/emails', {
       method: 'POST',

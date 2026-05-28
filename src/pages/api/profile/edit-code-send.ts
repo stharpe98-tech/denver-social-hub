@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
 import { validateSlug } from '../../../lib/profile-auth';
+import { buildCodeEmail } from '../../../lib/email';
 
 function gen6(): string {
   const arr = new Uint32Array(1);
@@ -36,13 +37,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
     if (cfg.resend_api_key) {
       const subject = `Edit your Denver Social page: ${code}`;
-      const html = `
-        <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
-          <h2 style="margin:0 0 12px">Edit your page</h2>
-          <p style="color:#555;margin:0 0 16px">Code to edit <strong>/u/${slug}</strong>:</p>
-          <div style="font-size:32px;letter-spacing:8px;font-weight:700;padding:16px 24px;background:#EEF2FF;border:1px solid #C7D2FE;border-radius:12px;text-align:center;color:#4338CA">${code}</div>
-          <p style="color:#888;font-size:13px;margin:16px 0 0">Expires in 10 minutes. If you didn't request this, ignore this email.</p>
-        </div>`;
+      const html = buildCodeEmail({ code, purpose: `edit your page /u/${slug}`, minutes: 10 });
       try {
         await fetch('https://api.resend.com/emails', {
           method: 'POST',

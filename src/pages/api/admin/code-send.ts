@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getDB } from '../../../lib/db';
 import { getAllowedAdminEmails } from '../../../lib/admin-auth';
 import { ensureAdminCodesSchema } from '../../../lib/admin-codes-schema';
+import { buildCodeEmail } from '../../../lib/email';
 
 function gen6(): string {
   // Use crypto.getRandomValues so the code isn't predictable.
@@ -61,13 +62,7 @@ export const POST: APIRoute = async ({ request }) => {
     {
       const subject = `Denver Social admin code: ${code}`;
       const text = `Your 6-digit admin sign-in code is:\n\n${code}\n\nIt expires in 10 minutes. If you didn't request this, ignore this email.`;
-      const html = `
-        <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
-          <h2 style="margin:0 0 12px">Denver Social admin</h2>
-          <p style="color:#555;margin:0 0 16px">Your one-time sign-in code:</p>
-          <div style="font-size:32px;letter-spacing:8px;font-weight:700;padding:16px 24px;background:#F5EFE3;border:1px solid #DDD2BB;border-radius:12px;text-align:center;color:#2A2730">${code}</div>
-          <p style="color:#888;font-size:13px;margin:16px 0 0">This code expires in 10 minutes. If you didn't request it, you can safely ignore this email.</p>
-        </div>`;
+      const html = buildCodeEmail({ code, purpose: 'sign in to the admin dashboard', minutes: 10 });
       try {
         const r = await fetch('https://api.resend.com/emails', {
           method: 'POST',
