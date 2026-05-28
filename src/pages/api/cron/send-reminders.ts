@@ -54,7 +54,7 @@ export const POST: APIRoute = async (ctx) => {
   let rows: any[] = [];
   try {
     const r = await db.prepare(`
-      SELECT r.id, r.name, r.email, r.cancel_token,
+      SELECT r.id, r.potluck_id, r.name, r.email, r.dish, r.cancel_token,
              p.title, p.event_date, p.date_label, p.time_label, p.location
       FROM potluck_rsvp r
       JOIN potlucks p ON p.id = r.potluck_id
@@ -71,12 +71,24 @@ export const POST: APIRoute = async (ctx) => {
     });
   }
 
+  // Dedup multi-item signups: one person (potluck + email) gets a single
+  // reminder listing everything they're bringing.
+  const groups = new Map<string, any[]>();
+  for (const row of rows) {
+    const key = `${row.potluck_id}::${String(row.email || '').toLowerCase()}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(row);
+  }
+
   let sent = 0;
   const errors: string[] = [];
 
-  for (const row of rows) {
+  for (const rowsForPerson of groups.values()) {
+    const row = rowsForPerson[0];
+    const dishes = rowsForPerson.map((r) => r.dish).filter(Boolean);
     const subject = `Reminder: ${row.title} is tomorrow`;
     const cancelUrl = `${siteUrl}/potlucks/edit?token=${encodeURIComponent(row.cancel_token || '')}&action=cancel`;
+    const dishLine = dishes.length ? `<div><strong>Bringing:</strong> ${escapeHtml(dishes.join(', '))}</div>` : '';
     const html = `
       <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;padding:24px">
         <h2 style="margin:0 0 12px">${escapeHtml(row.title)} is tomorrow</h2>
@@ -84,10 +96,11 @@ export const POST: APIRoute = async (ctx) => {
         <div style="padding:14px 16px;background:#F5EFE3;border:1px solid #DDD2BB;border-radius:10px;color:#2A2730;font-size:14px;line-height:1.6">
           <div><strong>When:</strong> ${escapeHtml(row.date_label || row.event_date || '')} ${escapeHtml(row.time_label || '')}</div>
           <div><strong>Where:</strong> ${escapeHtml(row.location || '')}</div>
+          ${dishLine}
         </div>
         <p style="color:#666;font-size:13px;margin:18px 0 0">Can't make it? <a href="${cancelUrl}" style="color:#7C3AED">Cancel your RSVP</a> so someone else can grab the spot.</p>
       </div>`;
-    const text = `${row.title} is tomorrow.\n\nWhen: ${row.date_label || row.event_date || ''} ${row.time_label || ''}\nWhere: ${row.location || ''}\n\nCan't make it? Cancel: ${cancelUrl}`;
+    const text = `${row.title} is tomorrow.\n\nWhen: ${row.date_label || row.event_date || ''} ${row.time_label || ''}\nWhere: ${row.location || ''}\n${dishes.length ? 'Bringing: ' + dishes.join(', ') + '\n' : ''}\nCan't make it? Cancel: ${cancelUrl}`;
 
     try {
       const res = await fetch('https://api.resend.com/emails', {
@@ -103,7 +116,9 @@ export const POST: APIRoute = async (ctx) => {
         errors.push(`rsvp ${row.id}: resend ${res.status} ${t.slice(0, 120)}`);
         continue;
       }
-      await db.prepare(`UPDATE potluck_rsvp SET reminder_sent_at = datetime('now') WHERE id = ?`).bind(row.id).run();
+      const ids = rowsForPerson.map((r) => r.id);
+      const placeholders = ids.map(() => '?').join(',');
+      await db.prepare(`UPDATE potluck_rsvp SET reminder_sent_at = datetime('now') WHERE id IN (${placeholders})`).bind(...ids).run();
       sent++;
     } catch (e: any) {
       errors.push(`rsvp ${row.id}: ${e?.message || 'network error'}`);

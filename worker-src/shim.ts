@@ -34,7 +34,7 @@ async function sendReminders(env: Env): Promise<{ sent: number; errors: number; 
   const fromEmail = cfg.from_email || 'Denver Social <noreply@denversocialhub.com>';
 
   const { results } = await db.prepare(`
-    SELECT r.id, r.name, r.email, r.dish, r.cancel_token,
+    SELECT r.id, r.potluck_id, r.name, r.email, r.dish, r.cancel_token,
            p.title, p.date_label, p.time_label, p.location, p.location_detail
     FROM potluck_rsvp r
     JOIN potlucks p ON p.id = r.potluck_id
@@ -44,19 +44,31 @@ async function sendReminders(env: Env): Promise<{ sent: number; errors: number; 
       AND r.reminder_sent_at IS NULL
   `).bind(tomorrow).all();
 
+  // A single person can have multiple rows now (multi-item signups share an
+  // email + signup_token). Group by potluck + email so we send ONE reminder
+  // listing everything they're bringing — not one email per dish.
+  const groups = new Map<string, any[]>();
+  for (const row of (results ?? []) as any[]) {
+    const key = `${row.potluck_id}::${String(row.email || '').toLowerCase()}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(row);
+  }
+
   let sent = 0;
   let errors = 0;
-  for (const row of (results ?? []) as any[]) {
+  for (const rowsForPerson of groups.values()) {
+    const primary = rowsForPerson[0];
+    const dishes = rowsForPerson.map((r) => r.dish).filter(Boolean);
     try {
-      const editUrl = `${siteUrl}/potlucks/edit?token=${row.cancel_token}`;
+      const editUrl = `${siteUrl}/potlucks/edit?token=${primary.cancel_token}`;
       const html = buildReminderEmail({
-        name: row.name || '',
-        eventTitle: row.title || '',
-        eventDate: row.date_label || '',
-        eventTime: row.time_label || '',
-        eventLocation: row.location || '',
-        eventLocationDetail: row.location_detail || '',
-        dish: row.dish || '',
+        name: primary.name || '',
+        eventTitle: primary.title || '',
+        eventDate: primary.date_label || '',
+        eventTime: primary.time_label || '',
+        eventLocation: primary.location || '',
+        eventLocationDetail: primary.location_detail || '',
+        dish: dishes.join(', '),
         editUrl,
       });
       const resp = await fetch('https://api.resend.com/emails', {
@@ -67,8 +79,8 @@ async function sendReminders(env: Env): Promise<{ sent: number; errors: number; 
         },
         body: JSON.stringify({
           from: fromEmail,
-          to: [row.email],
-          subject: `Tomorrow: ${row.title}`,
+          to: [primary.email],
+          subject: `Tomorrow: ${primary.title}`,
           html,
         }),
       });
@@ -76,8 +88,11 @@ async function sendReminders(env: Env): Promise<{ sent: number; errors: number; 
         errors++;
         continue;
       }
-      await db.prepare("UPDATE potluck_rsvp SET reminder_sent_at = ? WHERE id = ?")
-        .bind(new Date().toISOString(), row.id)
+      // Mark every row for this person so none re-trigger tomorrow's run.
+      const ids = rowsForPerson.map((r) => r.id);
+      const placeholders = ids.map(() => '?').join(',');
+      await db.prepare(`UPDATE potluck_rsvp SET reminder_sent_at = ? WHERE id IN (${placeholders})`)
+        .bind(new Date().toISOString(), ...ids)
         .run();
       sent++;
     } catch {
