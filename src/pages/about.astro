@@ -13,141 +13,75 @@ try {
 const memberLabel = totalMembers ? `${totalMembers}+` : '80+';
 ---
 <Base title="About" description="Why Denver Social exists, and the story behind the table for 8 that started it.">
-<div class="festival">
+<div class="about">
 
-  <section class="hero">
-    <div class="blur-1"></div><div class="blur-2"></div>
-    <div class="hero-in">
-      <span class="hero-pill">— SINCE 2026 · DENVER, COLORADO</span>
-      <h1>Making friends in Denver is <em>hard.</em></h1>
-      <span class="scribble">~ no clout, no algorithm, just dinner ~</span>
-      <p class="sub">A small community site, run by one person, built around the idea that you shouldn't need an app full of strangers to grab dinner on a Tuesday.</p>
-      <div class="hero-actions">
-        <a href="/events" class="btn-big">Find something to show up to →</a>
-        <a href="#how" class="btn-big-out">How it works</a>
-      </div>
-      <div class="float-row">
-        <div class="float-avs"><span>👨🏽‍💼</span><span>🧘🏻‍♀️</span><span>👨‍🍳</span><span>🎨</span><span>🥾</span></div>
-        <span class="float-cap"><strong>{memberLabel} neighbors</strong> · hosted by one guy from Louisiana</span>
-      </div>
-    </div>
-  </section>
+  <header class="hero"><div class="wrap-n">
+    <div class="k">Since 2026 · Denver, Colorado</div>
+    <h1>Making friends in Denver is <em>hard.</em></h1>
+    <p>A small community, run by one person, built around the idea that you shouldn't need an app full of strangers to grab dinner on a Tuesday.</p>
+  </div></header>
 
-  <section class="story"><div class="story-in">
-    <span class="story-eyebrow">— THE STORY</span>
+  <div class="wrap"><div class="photos">
+    <div class="p1"></div><div class="p2"></div><div class="p3"></div>
+  </div></div>
+
+  <section class="wrap-n story">
+    <div class="k">The story</div>
     <h2>How a table for 8 in RiNo turned into this.</h2>
-    <p class="story-byline">Seth · Host · Fellow Denverite</p>
-    <div class="story-body">
-      <p>I moved to Denver from Louisiana about two and a half years ago. As a fellow autistic guy, making friends in a new city was rough — bars were too loud, meetup groups had 400 people standing around awkwardly, and Bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
-      <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking <em>"when's the next one?"</em> — so we kept going. Bowling, hikes, pottery, game nights. There's <strong>{memberLabel}</strong> of us now — dinners stay small, but a hike or game night might be twenty.</p>
-      <p>I love organizing and helping the community. If you've ever found it hard to meet people here, that's the whole reason this site exists — I want to spread the love and make Denver feel a little smaller, one table at a time.</p>
-      <div class="rules">
-        <div class="rules-label">— THE RULES</div>
-        <p>Don't be a creep. Show up if you say you will. Be kind. <span>That's it.</span></p>
-      </div>
-    </div>
-  </div></section>
-
-  <section class="pillars"><div class="pillars-in">
-    <span class="section-eyebrow center">— WHY THIS WORKS</span>
-    <h2 class="section-h2">Three things we don't do.</h2>
-    <p class="section-sub">The whole platform is shaped around what we left out.</p>
-    <div class="pillar-grid">
-      <div class="pillar"><span class="pillar-num">01</span><div class="pillar-illus">🚫</div><h3>No algorithm</h3><p>Events show up in the order they happen. Nothing is "boosted." The thing on top is the thing happening soonest, not what an engagement model thinks you'll click on.</p></div>
-      <div class="pillar"><span class="pillar-num">02</span><div class="pillar-illus">💸</div><h3>No paid tier</h3><p>Hosting is free. Listing is free. RSVPing is free. There's no premium membership locked behind something that should be public.</p></div>
-      <div class="pillar"><span class="pillar-num">03</span><div class="pillar-illus">📭</div><h3>No spam DMs</h3><p>You can't message another member without a mutual RSVP. The whole point is the in-person meeting — the platform stays out of the way.</p></div>
-    </div>
-  </div></section>
-
-  <section class="faq"><div class="faq-in">
-    <span class="section-eyebrow center">— FAIR QUESTIONS</span>
-    <h2>Quick answers · no fluff</h2>
-    <details open><summary>Is this actually free?</summary><p>Yep. No fees, no premium tier, no upsell.</p></details>
-    <details><summary>I don't know anyone — is that weird?</summary><p>Most people show up solo. Events stay small enough that you actually meet everyone.</p></details>
-    <details><summary>Is it safe? What about creeps?</summary><p>Every event has a host, locations are public so you know exactly where you're going, and we remove anyone who makes others uncomfortable.</p></details>
-    <details><summary>How much does an event cost?</summary><p>Some are free (hikes, park hangs, coffee). Dinners run $20–35 a head. Price is always shown upfront.</p></details>
-    <details><summary>Can I post my own event?</summary><p>Yes — hit "Plan an event" from /events. You don't need permission to have a good idea.</p></details>
-    <details><summary>What if I RSVP and can't make it?</summary><p>Just cancel so someone else can grab the spot. Life happens — don't ghost repeatedly.</p></details>
-  </div></section>
-
-  <section class="steps" id="how"><div class="steps-in">
-    <span class="section-eyebrow center">— FROM ZERO TO YOUR FIRST EVENT</span>
-    <h2 class="section-h2">Three steps. Five minutes.</h2>
-    <p class="section-sub">No app to install, no profile to perfect.</p>
-    <div class="step-row">
-      <div class="step"><div class="step-num">1</div><h3>Pick something</h3><p>Browse the calendar by neighborhood, category, or just what's happening tonight.</p></div>
-      <div class="step"><div class="step-num">2</div><h3>RSVP with an email</h3><p>One code to your inbox, that's it. No account, no password, no Facebook.</p></div>
-      <div class="step"><div class="step-num">3</div><h3>Show up</h3><p>Location and host details unlock once you're confirmed. The platform's job is done.</p></div>
-    </div>
-  </div></section>
-
-  <section class="cta-final">
-    <h2>So — see you Saturday?</h2>
-    <p>Pick one event this week. That's the whole onboarding.</p>
-    <a href="/events" class="btn-yellow">Browse this week's events →</a>
+    <div class="by">Seth · Host · Fellow Denverite</div>
+    <p>I moved to Denver from Louisiana a couple years ago. Making friends in a new city was rough — bars too loud, meetups had 400 people standing around awkwardly, and Bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
+    <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking <em>"when's the next one?"</em> — so we kept going. Bowling, hikes, pottery, terrace hangs, big potlucks. There's <strong>{memberLabel}</strong> of us now — dinners stay small, but a hike or game night might be twenty.</p>
+    <p>If you've ever found it hard to meet people here, that's the whole reason this exists — to make Denver feel a little smaller, one table at a time.</p>
+    <div class="rules">Don't be a creep. Show up if you say you will. Be kind. <span>That's it.</span></div>
   </section>
+
+  <section class="pillars"><div class="wrap">
+    <div class="pgrid">
+      <div class="pill"><div class="e">🚫</div><h3>No algorithm</h3><p>Events show up in the order they happen. The thing on top is the thing happening soonest — not what an engagement model picks.</p></div>
+      <div class="pill"><div class="e">💸</div><h3>No paid tier</h3><p>Hosting is free. RSVPing is free. Always. Nothing locked behind a paywall.</p></div>
+      <div class="pill"><div class="e">📭</div><h3>No spam</h3><p>You can't message someone without a mutual RSVP. The whole point is the in-person meet.</p></div>
+    </div>
+  </div></section>
+
+  <section class="cta"><div class="wrap-n">
+    <h2>So — see you Saturday?</h2>
+    <a class="btn" href="/events">Find something this week</a>
+  </div></section>
 
 </div>
 
 <style>
-  .festival{--accent:#7C3AED;--accent2:#3B82F6;--surface:#F8F9FB;--border:#E5E7EB;--text:#111827;--text-sec:#6B7280;font-family:'Inter','Work Sans',system-ui,sans-serif;color:#111827;background:#fff}
-  .festival a{color:inherit;text-decoration:none}
-  .hero{position:relative;padding:var(--space-9) var(--space-5);background:linear-gradient(135deg,#FFFBEB,#FEF3C7 50%,#FDE68A);overflow:hidden;text-align:center}
-  .blur-1{position:absolute;top:-100px;left:-100px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.2),transparent 70%);filter:blur(60px)}
-  .blur-2{position:absolute;bottom:-120px;right:-80px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,.18),transparent 70%);filter:blur(60px)}
-  .hero-in{position:relative;max-width:760px;margin:0 auto}
-  .hero-pill{display:inline-block;font-size:11px;letter-spacing:2px;font-weight:700;background:#111;color:#FFD93D;padding:8px 16px;border-radius:50px;margin-bottom:var(--space-5)}
-  .hero h1{font-family:'Outfit';font-size:clamp(40px,6vw,80px);font-weight:900;letter-spacing:-.03em;line-height:1.05;margin-bottom:var(--space-3)}
-  .hero h1 em{font-style:normal;font-family:'Caveat';color:var(--accent);font-size:.95em}
-  .scribble{font-family:'Caveat';color:var(--accent);font-size:28px;display:block;margin-bottom:var(--space-4);transform:rotate(-2deg)}
-  .hero .sub{font-size:18px;color:#3F2D04;max-width:560px;margin:0 auto var(--space-6)}
-  .hero-actions{display:flex;gap:var(--space-3);flex-wrap:wrap;justify-content:center;margin-bottom:var(--space-7)}
-  .btn-big{background:#111;color:#FFD93D;padding:16px 32px;border-radius:50px;font-weight:800;font-size:15px;box-shadow:0 8px 20px rgba(0,0,0,.2);display:inline-block}
-  .btn-big-out{background:#fff;color:#111;padding:16px 32px;border-radius:50px;font-weight:700;font-size:15px;border:1.5px solid #111;display:inline-block}
-  .float-row{display:inline-flex;align-items:center;gap:12px;background:rgba(255,255,255,.7);border:1px solid rgba(0,0,0,.06);padding:8px 16px;border-radius:50px}
-  .float-avs span{font-size:20px;margin-left:-6px}.float-avs span:first-child{margin-left:0}
-  .float-cap{font-size:13px;color:#3F2D04}.float-cap strong{color:#111}
-  .story{padding:var(--space-9) var(--space-5);background:#fff}.story-in{max-width:720px;margin:0 auto}
-  .story-eyebrow,.section-eyebrow{display:block;font-size:11px;letter-spacing:3px;font-weight:800;color:var(--accent);margin-bottom:var(--space-3)}
-  .section-eyebrow.center{text-align:center}
-  .story h2{font-family:'Outfit';font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.02em;margin-bottom:var(--space-2)}
-  .story-byline{color:var(--text-sec);font-size:14px;font-weight:600;margin-bottom:var(--space-6)}
-  .story-body p{font-size:17px;line-height:1.7;color:#374151;margin-bottom:var(--space-4)}
-  .story-body em{color:var(--accent);font-style:italic}
-  .rules{margin-top:var(--space-6);background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:var(--space-5)}
-  .rules-label{font-size:11px;letter-spacing:2px;font-weight:800;color:var(--accent);margin-bottom:var(--space-2)}
-  .rules p{font-size:18px;font-weight:700;color:var(--text)}
+  .about{background:var(--bg);color:var(--text)}
+  .about .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+  .about .wrap-n{max-width:820px;margin:0 auto;padding:0 24px}
+  .about a{text-decoration:none}
+  .about .k{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+  .hero{text-align:center;padding:64px 0 28px}
+  .hero h1{font-family:var(--font-display);font-size:clamp(34px,5.5vw,60px);font-weight:800;letter-spacing:-.02em;margin-bottom:16px}
+  .hero h1 em{font-style:normal;color:var(--accent)}
+  .hero p{color:var(--text-sec);font-size:19px;max-width:560px;margin:0 auto}
+  .photos{display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;gap:12px;height:340px;margin:40px 0}
+  .photos div{border-radius:18px;background-size:cover;background-position:center}
+  .photos .p1{grid-row:1/3;background-image:url('/hero/red-rocks.jpg')}
+  .photos .p2{background-image:url('/hero/foothills.jpg')}
+  .photos .p3{background-image:url('/hero/skyline.jpg')}
+  @media(max-width:620px){.photos{height:240px}}
+  .story{padding:24px 0}
+  .story h2{font-family:var(--font-display);font-size:clamp(26px,3.6vw,38px);font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+  .story .by{color:var(--text-sec);font-size:14px;font-weight:600;margin-bottom:20px}
+  .story p{font-size:17px;color:#3a342c;line-height:1.7;margin-bottom:18px}
+  .story em{color:var(--accent);font-style:italic}
+  .rules{background:var(--accent-soft);border-radius:18px;padding:24px;margin:8px 0;font-size:18px;font-weight:700}
   .rules span{color:var(--accent)}
-  .pillars{padding:var(--space-9) var(--space-5);background:var(--surface)}.pillars-in{max-width:1240px;margin:0 auto}
-  .section-h2{font-family:'Outfit';text-align:center;font-size:clamp(34px,4.5vw,52px);font-weight:800;margin-bottom:var(--space-4);max-width:760px;margin:0 auto var(--space-4);letter-spacing:-.02em}
-  .section-sub{text-align:center;color:var(--text-sec);font-size:18px;max-width:600px;margin:0 auto var(--space-8)}
-  .pillar-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5)}
-  .pillar{background:#fff;border-radius:24px;padding:var(--space-6);position:relative;overflow:hidden;border:1px solid var(--border)}
-  .pillar-num{font-family:'Outfit';font-size:96px;font-weight:900;line-height:1;letter-spacing:-.05em;color:var(--accent);opacity:.15;position:absolute;top:8px;right:20px}
-  .pillar h3{font-family:'Outfit';font-size:24px;font-weight:800;margin-bottom:var(--space-3);position:relative}
-  .pillar p{font-size:15px;color:var(--text-sec);line-height:1.6;position:relative}
-  .pillar .pillar-illus{font-size:32px;margin-bottom:var(--space-5);width:56px;height:56px;border-radius:14px;background:var(--surface);display:flex;align-items:center;justify-content:center}
-  @media (max-width:880px){.pillar-grid{grid-template-columns:1fr}}
-  .faq{padding:var(--space-9) var(--space-5);background:#fff}.faq-in{max-width:760px;margin:0 auto}
-  .faq h2{font-family:'Outfit';text-align:center;font-size:clamp(30px,4vw,44px);font-weight:800;margin-bottom:var(--space-6)}
-  details{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:10px;cursor:pointer}
-  details[open]{background:#fff;border-color:var(--accent);box-shadow:0 4px 12px rgba(124,58,237,.08)}
-  summary{font-weight:700;font-size:16px;display:flex;justify-content:space-between;align-items:center;list-style:none}
-  summary::after{content:"+";font-family:'Outfit';font-size:24px;color:var(--accent);font-weight:300}
-  details[open] summary::after{content:"−"}
-  details p{margin-top:12px;font-size:15px;color:var(--text-sec);line-height:1.6}
-  .steps{padding:var(--space-9) var(--space-5);background:linear-gradient(180deg,var(--surface),#fff)}.steps-in{max-width:1100px;margin:0 auto}
-  .step-row{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6)}
-  .step{background:#fff;border-radius:20px;padding:var(--space-6);text-align:center;border:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.04)}
-  .step-num{width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;font-family:'Outfit';font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-5);box-shadow:0 4px 12px rgba(124,58,237,.4)}
-  .step h3{font-family:'Outfit';font-size:20px;font-weight:800;margin-bottom:var(--space-2)}
-  .step p{font-size:14px;color:var(--text-sec);line-height:1.5}
-  @media (max-width:880px){.step-row{grid-template-columns:1fr}}
-  .cta-final{padding:var(--space-9) var(--space-5);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;text-align:center}
-  .cta-final h2{font-family:'Outfit';font-size:clamp(36px,5vw,64px);font-weight:900;margin-bottom:var(--space-4);color:#fff}
-  .cta-final p{font-size:18px;max-width:600px;margin:0 auto var(--space-6);opacity:.9}
-  .btn-yellow{background:#FFD93D;color:#111;padding:16px 36px;border-radius:50px;font-weight:800;font-size:16px;display:inline-block}
-  @media (max-width:680px){.hero,.story,.pillars,.faq,.steps,.cta-final{padding-left:16px;padding-right:16px}}
+  .pillars{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:64px 0;margin-top:40px}
+  .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .pill .e{font-size:30px;margin-bottom:10px}
+  .pill h3{font-family:var(--font-display);font-size:20px;font-weight:800;margin-bottom:8px}
+  .pill p{font-size:14.5px;color:var(--text-sec);line-height:1.6}
+  @media(max-width:720px){.pgrid{grid-template-columns:1fr}}
+  .cta{text-align:center;padding:64px 0}
+  .cta h2{font-family:var(--font-display);font-size:clamp(28px,4vw,42px);font-weight:800;margin-bottom:16px}
+  .btn{display:inline-block;background:var(--accent);color:#fff;font-weight:700;padding:15px 30px;border-radius:999px;box-shadow:0 8px 22px rgba(240,87,61,.3)}
+  .btn:hover{transform:translateY(-2px)}
 </style>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&display=swap" />
 </Base>
