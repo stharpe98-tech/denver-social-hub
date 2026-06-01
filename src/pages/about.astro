@@ -1,213 +1,242 @@
 ---
-import Base from '../layouts/Base.astro';
-import { getDB } from '../lib/db';
-
-const db = getDB();
-let totalMembers = 0;
-try {
-  if (db) {
-    const mc = await db.prepare("SELECT COUNT(*) as cnt FROM members").first();
-    totalMembers = mc?.cnt || 0;
-  }
-} catch {}
-
-const faqs = [
-  { q: "Is this actually free?", a: "Yep. No fees, no premium tier, no upsell." },
-  { q: "I don't know anyone — is that weird?", a: "Most people show up solo. Events stay small enough that you actually meet everyone." },
-  { q: "Is it safe? What about creeps?", a: "Every event has a host, locations are public so you know exactly where you're going, and we remove anyone who makes others uncomfortable." },
-  { q: "How much does an event cost?", a: "Some are free (hikes, park hangs, coffee). Dinners run $20–35 a head. Price is always shown upfront." },
-  { q: "Can I post my own event?", a: "Yes — hit \"Plan an event\" from /events. You don't need permission to have a good idea." },
-  { q: "What if I RSVP and can't make it?", a: "Just cancel so someone else can grab the spot. Life happens — don't ghost repeatedly." },
-];
+// Standalone Astro page — full HTML below mirrors the approved preview.
+// Nav is inline; can be extracted to Base.astro in a follow-up refactor.
 ---
-<Base title="About" description="Why Denver Social exists, and the story behind the table for 8 that started it.">
-  <div class="canvas">
-    <div class="hp">
-      <header class="hp-h">
-        <p class="kicker">About · Denver Social · Since 2026</p>
-        <h1>Making friends in Denver is <em>hard.</em></h1>
-        <p class="lede">A small community site, run by one person, built around the idea that you shouldn't need an app full of strangers to grab dinner on a Tuesday.</p>
-        <a href="/events" class="hp-cta">Find something to show up to →</a>
-      </header>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>How it works · Denver Social</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FFFFFF;--surface:#F8F9FB;--border:#E5E7EB;--text:#111827;--text-sec:#6B7280;--accent:#7C3AED;--accent2:#3B82F6;--mint:#10B981;--card-shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;--space-8:64px;--space-9:96px}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--text)}a{color:inherit;text-decoration:none}h1,h2,h3,h4{line-height:1.2}
+.site-nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(229,231,235,.6)}
+.nav-in{max-width:1240px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{font-family:'Outfit',sans-serif;font-weight:800;font-size:18px;letter-spacing:-.02em;color:#7C3AED}
+.brand span{color:#9CA3AF;font-weight:400}
+.nav-links{display:flex;gap:28px}
+.nav-links a{font-size:14px;font-weight:500;color:#374151;transition:color .15s}
+.nav-links a:hover,.nav-links a.cur{color:#7C3AED}
+.nav-right{display:flex;align-items:center;gap:14px}
+.nav-right .nstatus{display:none;font-size:12px;color:#6B7280;font-weight:500;align-items:center;gap:6px}
+@media(min-width:920px){.nav-right .nstatus{display:inline-flex}}
+.nav-right .nstatus .ndot{width:6px;height:6px;border-radius:50%;background:#10B981;box-shadow:0 0 0 0 rgba(16,185,129,.6);animation:dotPulse 2s infinite}
+@keyframes dotPulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.6)}70%{box-shadow:0 0 0 8px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
+.signin{font-size:14px;font-weight:600;color:#374151}
+.signin:hover{color:#7C3AED}
+.join{background:#7C3AED;color:#fff;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:600;transition:background .15s}
+.join:hover{background:#6D28D9}
+@media(max-width:760px){.nav-links{display:none}.signin{display:none}}
+.story{padding:var(--space-9) var(--space-5);background:var(--surface)}
+.story-in{max-width:780px;margin:0 auto}
+.story-eyebrow{display:block;font-size:11px;letter-spacing:3px;font-weight:800;color:var(--accent);margin-bottom:var(--space-3);text-align:center}
+.story h2{font-family:'Outfit';text-align:center;font-size:clamp(30px,4vw,44px);font-weight:800;margin-bottom:var(--space-5);letter-spacing:-.02em}
+.story-byline{text-align:center;font-size:13px;color:var(--text-sec);font-weight:500;margin-bottom:var(--space-6)}
+.story-body p{font-size:17px;line-height:1.65;color:var(--text);margin-bottom:var(--space-4)}
+.story-body p strong{color:var(--accent);font-weight:700}
+.story-body p em{font-style:italic;color:var(--text-sec)}
+.rules{margin-top:var(--space-7);padding:var(--space-6);background:#fff;border:1px solid var(--border);border-radius:20px;text-align:center}
+.rules-label{font-size:11px;letter-spacing:3px;font-weight:800;color:var(--accent);margin-bottom:var(--space-3)}
+.rules p{font-family:'Outfit';font-size:22px;font-weight:700;line-height:1.4}
+.rules p span{color:var(--accent)}
+.faq{padding:var(--space-9) var(--space-5);background:#fff}.faq-in{max-width:760px;margin:0 auto}
+.faq h2{font-family:'Outfit';text-align:center;font-size:clamp(30px,4vw,44px);font-weight:800;margin-bottom:var(--space-6)}
+details{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:10px;cursor:pointer}
+details[open]{background:#fff;border-color:var(--accent);box-shadow:0 4px 12px rgba(124,58,237,.08)}
+summary{font-weight:700;font-size:16px;display:flex;justify-content:space-between;align-items:center;list-style:none}
+summary::after{content:"+";font-family:'Outfit';font-size:24px;color:var(--accent);font-weight:300}
+details[open] summary::after{content:"−"}
+details p{margin-top:12px;font-size:15px;color:var(--text-sec);line-height:1.6}
+.hero{position:relative;padding:96px 24px 64px;overflow:hidden;background:linear-gradient(135deg,var(--surface) 0%,#EEF2FF 40%,#F0FDF4 100%)}
+.blur-1{position:absolute;top:-100px;right:-50px;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.25),transparent 70%);filter:blur(60px);pointer-events:none}
+.blur-2{position:absolute;bottom:-200px;left:-100px;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(16,185,129,.2),transparent 70%);filter:blur(80px);pointer-events:none}
+.blur-3{position:absolute;top:30%;left:50%;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,217,61,.25),transparent 70%);filter:blur(40px);pointer-events:none}
+.hero-in{position:relative;max-width:1100px;margin:0 auto;text-align:center}
+.hero-pill{display:inline-block;font-size:12px;letter-spacing:2px;font-weight:700;background:#fff;color:var(--accent);padding:8px 18px;border-radius:50px;border:1px solid var(--border);margin-bottom:var(--space-5);box-shadow:var(--card-shadow)}
+.hero h1{font-family:'Outfit';font-size:clamp(44px,7vw,88px);font-weight:900;margin-bottom:20px;max-width:880px;margin-left:auto;margin-right:auto;letter-spacing:-.03em}
+.hero h1 em{font-style:normal;background:linear-gradient(120deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.scribble{font-family:'Caveat';font-weight:600;color:var(--accent);font-size:28px;display:inline-block;transform:rotate(-2deg);margin-top:8px}
+.hero p.sub{font-size:20px;color:var(--text-sec);max-width:620px;margin:var(--space-3) auto var(--space-6)}
+.hero-actions{display:inline-flex;gap:var(--space-3);flex-wrap:wrap;justify-content:center}
+.btn-big{background:var(--accent);color:#fff;padding:16px 32px;border-radius:50px;font-weight:700;font-size:15px;box-shadow:0 8px 24px rgba(124,58,237,.3)}
+.btn-big:hover{transform:translateY(-2px)}
+.btn-big-out{background:#fff;color:var(--text);padding:16px 32px;border-radius:50px;font-weight:700;font-size:15px;border:1.5px solid var(--border)}
+.float-row{display:flex;justify-content:center;margin-top:var(--space-7);align-items:center}
+.float-avs{display:flex}
+.float-avs span{width:44px;height:44px;border-radius:50%;border:3px solid #fff;font-size:22px;display:flex;align-items:center;justify-content:center;margin-left:-10px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.float-avs span:nth-child(1){background:#FEF3C7;margin-left:0}
+.float-avs span:nth-child(2){background:#DBEAFE}.float-avs span:nth-child(3){background:#D1FAE5}.float-avs span:nth-child(4){background:#FCE7F3}.float-avs span:nth-child(5){background:#EDE9FE}
+.float-cap{margin-left:14px;font-size:13px;color:var(--text-sec)}
+.float-cap strong{color:var(--text)}
+.pillars{padding:var(--space-9) var(--space-5);background:#fff}.pillars-in{max-width:1240px;margin:0 auto}
+.section-eyebrow{display:block;text-align:center;font-size:11px;letter-spacing:3px;font-weight:800;color:var(--accent);margin-bottom:var(--space-3)}
+.section-h2{font-family:'Outfit';text-align:center;font-size:clamp(34px,4.5vw,52px);font-weight:800;margin-bottom:var(--space-4);max-width:760px;margin-left:auto;margin-right:auto;letter-spacing:-.02em}
+.section-sub{text-align:center;color:var(--text-sec);font-size:18px;max-width:600px;margin:0 auto var(--space-8)}
+.pillar-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5)}
+.pillar{background:var(--surface);border-radius:24px;padding:var(--space-6);position:relative;overflow:hidden;border:1px solid var(--border);transition:transform .2s}
+.pillar:hover{transform:translateY(-4px)}
+.pillar-num{font-family:'Outfit';font-size:96px;font-weight:900;line-height:1;letter-spacing:-.05em;color:var(--accent);opacity:.15;position:absolute;top:8px;right:20px}
+.pillar h3{font-family:'Outfit';font-size:24px;font-weight:800;margin-bottom:var(--space-3);position:relative}
+.pillar p{font-size:15px;color:var(--text-sec);line-height:1.6;position:relative}
+.pillar-illus{font-size:32px;margin-bottom:var(--space-5);width:56px;height:56px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+@media (max-width:880px){.pillar-grid{grid-template-columns:1fr}}
+.spread{padding:var(--space-9) var(--space-5);background:linear-gradient(135deg,#0F0F23,#1e1b4b);color:#fff;position:relative;overflow:hidden}
+.spread::before{content:"";position:absolute;top:0;right:0;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.3),transparent 70%);filter:blur(80px);pointer-events:none}
+.spread-in{max-width:1240px;margin:0 auto;position:relative}
+.spread h2{font-family:'Outfit';font-size:clamp(34px,4.5vw,52px);font-weight:800;text-align:center;margin-bottom:var(--space-4)}
+.spread .sub{text-align:center;color:rgba(255,255,255,.7);font-size:18px;margin-bottom:var(--space-8);max-width:600px;margin-left:auto;margin-right:auto}
+.neighborhood-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-6)}
+.n-group h4{font-family:'Outfit';font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#FFD93D;margin-bottom:var(--space-4);padding-bottom:var(--space-3);border-bottom:1px solid rgba(255,255,255,.15)}
+.n-list{display:flex;flex-direction:column;gap:var(--space-2)}
+.n-list a{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:8px;font-size:14px;color:rgba(255,255,255,.85)}
+.n-list a:hover{background:rgba(255,255,255,.08);color:#fff}
+.n-list .count{font-size:12px;color:var(--accent);background:rgba(124,58,237,.2);padding:2px 8px;border-radius:999px;font-weight:700}
+@media (max-width:880px){.neighborhood-grid{grid-template-columns:1fr 1fr}}
+.testimonials{padding:var(--space-9) var(--space-5);background:#fff}.testimonials-in{max-width:1240px;margin:0 auto}
+.quote-mark{text-align:center;font-family:'Outfit';font-size:120px;font-weight:900;line-height:.5;color:var(--accent);opacity:.2;margin-bottom:var(--space-5)}
+.testimonials h2{font-family:'Outfit';text-align:center;font-size:clamp(32px,4.5vw,48px);font-weight:800;max-width:880px;margin:0 auto var(--space-8)}
+.testimonials h2 em{font-style:normal;background:linear-gradient(120deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.t-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5)}
+.t-card{background:var(--surface);border-radius:20px;padding:var(--space-6);border:1px solid var(--border)}
+.t-card p{font-size:15px;line-height:1.6;margin-bottom:var(--space-5)}
+.t-author{display:flex;align-items:center;gap:var(--space-3)}
+.t-av{width:44px;height:44px;border-radius:50%;background:#FCE7F3;display:flex;align-items:center;justify-content:center;font-size:22px}
+.t-info .name{font-weight:700;font-size:14px}.t-info .role{font-size:12px;color:var(--text-sec)}
+@media (max-width:880px){.t-grid{grid-template-columns:1fr}}
+.steps{padding:var(--space-9) var(--space-5);background:linear-gradient(180deg,var(--surface),#fff)}
+.steps-in{max-width:1100px;margin:0 auto}
+.step-row{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6);position:relative}
+.step{position:relative;background:#fff;border-radius:20px;padding:var(--space-6);text-align:center;border:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.04)}
+.step-num{width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;font-family:'Outfit';font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-5);box-shadow:0 4px 12px rgba(124,58,237,.4)}
+.step h3{font-family:'Outfit';font-size:20px;font-weight:800;margin-bottom:var(--space-2)}
+.step p{font-size:14px;color:var(--text-sec);line-height:1.5}
+@media (max-width:880px){.step-row{grid-template-columns:1fr}}
+.cta-final{padding:var(--space-9) var(--space-5);background:linear-gradient(135deg,var(--accent),var(--accent2),var(--mint));color:#fff;text-align:center;position:relative;overflow:hidden}
+.cta-final::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 70% 30%,rgba(255,217,61,.3),transparent 50%)}
+.cta-final h2{font-family:'Outfit';font-size:clamp(40px,6vw,72px);font-weight:900;margin-bottom:var(--space-4);position:relative}
+.cta-final .scribble{font-family:'Caveat';color:#FFD93D;font-size:32px;font-weight:600;display:block;transform:rotate(-2deg);position:relative;margin-bottom:var(--space-5)}
+.cta-final p{font-size:18px;max-width:600px;margin:0 auto var(--space-6);position:relative}
+.btn-yellow{background:#FFD93D;color:#111;padding:18px 40px;border-radius:50px;font-weight:800;font-size:16px;display:inline-block;position:relative}
+</style></head><body>
 
-      <section class="hp-s">
-        <div class="h2-block"><h2>The story.</h2><p class="h2-cap">Seth · Host · Fellow Denverite</p></div>
-        <div class="prose">
-          <p>I moved to Denver from Louisiana about two and a half years ago. As a fellow autistic guy, making friends in a new city was rough — bars were too loud, meetup groups had 400 people standing around awkwardly, and Bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
-          <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking <em>"when's the next one?"</em> — so we kept going. Bowling, hikes, pottery, game nights. There's <strong>{totalMembers || '80'}+</strong> of us now — dinners stay small, but a hike or game night might be twenty.</p>
-          <p>I love organizing and helping the community. If you've ever found it hard to meet people here, that's the whole reason this site exists — I want to spread the love and make Denver feel a little smaller, one table at a time.</p>
-        </div>
-      </section>
+<header class="site-nav"><div class="nav-in">
+  <a href="/" class="brand">denver<span>social</span>hub</a>
+  <nav class="nav-links">
+    <a href="/events">Events</a>
+    <a href="/potlucks">Potlucks</a>
+    <a href="/community">Community</a>
+    <a href="/about" class="cur">About</a>
+    <a href="/host">Host</a>
+  </nav>
+  <div class="nav-right">
+    <span class="nstatus"><span class="ndot"></span>Denver, CO</span>
+    <a href="/sign-in" class="signin">Sign in</a>
+    <a href="/signup" class="join">Join us</a>
+  </div>
+</div></header>
 
-      <section class="hp-s">
-        <div class="h2-block"><h2>The rules.</h2><p class="h2-cap">Short list · Easy to remember</p></div>
-        <div class="prose">
-          <p>Don't be a creep. Show up if you say you will. Be kind. That's it.</p>
-        </div>
-      </section>
-
-      <section class="hp-s">
-        <div class="h2-block"><h2>How it works.</h2><p class="h2-cap">Three lines · No quiz</p></div>
-        <div class="prose">
-          <p><strong>Make a profile</strong> (sixty seconds, no quiz). <strong>Find something that sounds fun.</strong> <strong>Actually show up.</strong> You walk in, there's eight people at a table, and twenty minutes later you're laughing about something dumb.</p>
-        </div>
-      </section>
-
-      <section class="hp-s">
-        <div class="h2-block"><h2>Fair questions.</h2><p class="h2-cap">Quick answers · No fluff</p></div>
-        {faqs.map((f) => (
-          <details class="card">
-            <summary><h3>{f.q}</h3><span class="plus" aria-hidden="true"><i></i><i></i></span></summary>
-            <div class="ans"><p>{f.a}</p></div>
-          </details>
-        ))}
-      </section>
-
-      <footer class="hp-foot">
-        <p>Ready? <a href="/profile/new">Make a profile</a> or join our <a href="https://discord.gg/S8SFNkdSgK" target="_blank" rel="noopener">Discord</a>.</p>
-      </footer>
+<section class="hero">
+  <div class="blur-1"></div><div class="blur-2"></div><div class="blur-3"></div>
+  <div class="hero-in">
+    <span class="hero-pill">— SINCE 2026 · DENVER, COLORADO</span>
+    <h1>Making friends in Denver is <em>hard.</em></h1>
+    <span class="scribble">~ no clout, no algorithm, just dinner ~</span>
+    <p class="sub">A small community site, run by one person, built around the idea that you shouldn't need an app full of strangers to grab dinner on a Tuesday.</p>
+    <div class="hero-actions">
+      <a href="/events" class="btn-big">Find something to show up to →</a>
+      <a href="#how" class="btn-big-out">How it works</a>
+    </div>
+    <div class="float-row">
+      <div class="float-avs"><span>👨🏽‍💼</span><span>🧘🏻‍♀️</span><span>👨‍🍳</span><span>🎨</span><span>🥾</span></div>
+      <span class="float-cap"><strong>80+ neighbors</strong> · hosted by one guy from Louisiana</span>
     </div>
   </div>
+</section>
 
-  <style>
-    .canvas { background: #FDFBF7; min-height: 100vh; }
+<section class="story"><div class="story-in">
+  <span class="story-eyebrow">— THE STORY</span>
+  <h2>How a table for 8 in RiNo turned into this.</h2>
+  <p class="story-byline">Seth · Host · Fellow Denverite</p>
+  <div class="story-body">
+    <p>I moved to Denver from Louisiana about two and a half years ago. As a fellow autistic guy, making friends in a new city was rough — bars were too loud, meetup groups had 400 people standing around awkwardly, and Bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
+    <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking <em>"when's the next one?"</em> — so we kept going. Bowling, hikes, pottery, game nights. There's <strong>80+</strong> of us now — dinners stay small, but a hike or game night might be twenty.</p>
+    <p>I love organizing and helping the community. If you've ever found it hard to meet people here, that's the whole reason this site exists — I want to spread the love and make Denver feel a little smaller, one table at a time.</p>
+    <div class="rules">
+      <div class="rules-label">— THE RULES</div>
+      <p>Don't be a creep. Show up if you say you will. Be kind. <span>That's it.</span></p>
+    </div>
+  </div>
+</div></section>
 
-    .hp {
-      max-width: 760px; margin: 0 auto;
-      padding: 56px clamp(20px, 5vw, 32px) 96px;
-      color: #1C1B1F;
-    }
+<section class="pillars"><div class="pillars-in">
+  <span class="section-eyebrow">— WHY THIS WORKS</span>
+  <h2 class="section-h2">Three things we don't do.</h2>
+  <p class="section-sub">The whole platform is shaped around what we left out.</p>
+  <div class="pillar-grid">
+    <div class="pillar"><span class="pillar-num">01</span><div class="pillar-illus">🚫</div><h3>No algorithm</h3><p>Events show up in the order they happen. Nothing is "boosted." The thing on top is the thing happening soonest, not what an engagement model thinks you'll click on.</p></div>
+    <div class="pillar"><span class="pillar-num">02</span><div class="pillar-illus">💸</div><h3>No paid tier</h3><p>Hosting is free. Listing is free. RSVPing is free. There's no premium membership locked behind something that should be public.</p></div>
+    <div class="pillar"><span class="pillar-num">03</span><div class="pillar-illus">📭</div><h3>No spam DMs</h3><p>You can't message another member without a mutual RSVP. The whole point is the in-person meeting — the platform stays out of the way.</p></div>
+  </div>
+</div></section>
 
-    .hp-h { margin-bottom: 32px; }
-    .kicker {
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
-      font-size: 12px; font-weight: 500;
-      letter-spacing: 0.18em; text-transform: uppercase;
-      color: #6B6A70; margin-bottom: 16px;
-    }
-    .hp-h h1 {
-      font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
-      font-size: clamp(44px, 7vw, 64px); font-weight: 800;
-      letter-spacing: -0.035em; line-height: 1.02;
-      margin-bottom: 18px; color: #1C1B1F;
-    }
-    .hp-h h1 em { font-style: italic; font-weight: 500; color: #7C3AED; }
-    .hp-h h1 .amp {
-      font-family: 'Inter', system-ui, sans-serif;
-      font-style: italic; font-weight: 300;
-      color: #B5AFA3; padding: 0 0.08em;
-    }
-    .lede {
-      font-size: 18px; line-height: 1.55;
-      color: #6B6A70; max-width: 56ch;
-      margin-bottom: 14px;
-    }
-    .lede a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-    .lede a:hover { color: #7C3AED; }
-    .hp-cta {
-      display: inline-flex; align-items: center;
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
-      font-size: 13px; font-weight: 600;
-      letter-spacing: -0.01em;
-      color: #7C3AED; text-decoration: underline;
-      text-underline-offset: 5px; text-decoration-thickness: 1px;
-      transition: color 280ms cubic-bezier(0.16,1,0.3,1);
-    }
-    .hp-cta:hover { color: #5B21B6; }
+<section class="spread"><div class="spread-in">
+  <h2>Active across <span style="color:#FFD93D">18 Denver neighborhoods</span></h2>
+  <p class="sub">From Berkeley to Hampden, Five Points to Wash Park. Pick yours.</p>
+  <div class="neighborhood-grid">
+    <div class="n-group"><h4>North &amp; Northwest</h4><div class="n-list">
+      <a href="#"><span>Berkeley</span><span class="count">12</span></a>
+      <a href="#"><span>Highlands / LoHi</span><span class="count">28</span></a>
+      <a href="#"><span>Sloan's Lake</span><span class="count">9</span></a>
+      <a href="#"><span>Sunnyside</span><span class="count">6</span></a>
+    </div></div>
+    <div class="n-group"><h4>Central</h4><div class="n-list">
+      <a href="#"><span>Capitol Hill</span><span class="count">34</span></a>
+      <a href="#"><span>Cheesman Park</span><span class="count">22</span></a>
+      <a href="#"><span>Uptown</span><span class="count">11</span></a>
+      <a href="#"><span>Five Points</span><span class="count">14</span></a>
+    </div></div>
+    <div class="n-group"><h4>East</h4><div class="n-list">
+      <a href="#"><span>City Park</span><span class="count">17</span></a>
+      <a href="#"><span>Park Hill</span><span class="count">15</span></a>
+      <a href="#"><span>Hale</span><span class="count">5</span></a>
+      <a href="#"><span>Stapleton</span><span class="count">19</span></a>
+    </div></div>
+    <div class="n-group"><h4>South</h4><div class="n-list">
+      <a href="#"><span>Wash Park</span><span class="count">26</span></a>
+      <a href="#"><span>Baker</span><span class="count">10</span></a>
+      <a href="#"><span>Platt Park</span><span class="count">8</span></a>
+      <a href="#"><span>Hampden</span><span class="count">4</span></a>
+    </div></div>
+  </div>
+</div></section>
 
-    .hp-s { margin-bottom: 96px; scroll-margin-top: 88px; }
-    .hp-s:last-of-type { margin-bottom: 56px; }
-    .h2-block {
-      padding-bottom: 14px;
-      border-bottom: 1px solid #E8E0D0;
-      margin-bottom: 18px;
-    }
-    .hp-s h2 {
-      font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
-      font-size: clamp(28px, 4vw, 36px); font-weight: 800;
-      letter-spacing: -0.025em; line-height: 1.05;
-      color: #1C1B1F; margin: 0;
-    }
-    .h2-cap {
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
-      font-size: 11px; font-weight: 500;
-      letter-spacing: 0.14em; text-transform: uppercase;
-      color: #9A938A; margin: 6px 0 0;
-    }
+<section class="faq"><div class="faq-in">
+  <span class="section-eyebrow">— FAIR QUESTIONS</span>
+  <h2>Quick answers · no fluff</h2>
+  <details open><summary>Is this actually free?</summary><p>Yep. No fees, no premium tier, no upsell.</p></details>
+  <details><summary>I don't know anyone — is that weird?</summary><p>Most people show up solo. Events stay small enough that you actually meet everyone.</p></details>
+  <details><summary>Is it safe? What about creeps?</summary><p>Every event has a host, locations are public so you know exactly where you're going, and we remove anyone who makes others uncomfortable.</p></details>
+  <details><summary>How much does an event cost?</summary><p>Some are free (hikes, park hangs, coffee). Dinners run $20–35 a head. Price is always shown upfront.</p></details>
+  <details><summary>Can I post my own event?</summary><p>Yes — hit "Plan an event" from /events. You don't need permission to have a good idea.</p></details>
+  <details><summary>What if I RSVP and can't make it?</summary><p>Just cancel so someone else can grab the spot. Life happens — don't ghost repeatedly.</p></details>
+</div></section>
 
-    .prose p {
-      font-size: 16px; line-height: 1.7; color: #4A4850;
-      margin: 0 0 14px;
-    }
-    .prose p:last-child { margin-bottom: 0; }
-    .prose em { font-style: italic; color: #6B6A70; }
-    .prose strong { color: #1C1B1F; font-weight: 600; }
-    .prose a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-    .prose a:hover { color: #7C3AED; }
+<section class="steps" id="how"><div class="steps-in">
+  <span class="section-eyebrow">— FROM ZERO TO YOUR FIRST EVENT</span>
+  <h2 class="section-h2">Three steps. Five minutes.</h2>
+  <p class="section-sub">No app to install, no profile to perfect.</p>
+  <div class="step-row">
+    <div class="step"><div class="step-num">1</div><h3>Pick something</h3><p>Browse the calendar by neighborhood, category, or just what's happening tonight.</p></div>
+    <div class="step"><div class="step-num">2</div><h3>RSVP with an email</h3><p>One code to your inbox, that's it. No account, no password, no Facebook.</p></div>
+    <div class="step"><div class="step-num">3</div><h3>Show up</h3><p>Location and host details unlock once you're confirmed. The platform's job is done.</p></div>
+  </div>
+</div></section>
 
-    .card {
-      border: 1px solid rgba(232, 224, 208, 0.8);
-      background: rgba(255,255,255,0.35);
-      border-radius: 22px;
-      margin-bottom: 8px;
-      overflow: hidden;
-      transition: background 360ms cubic-bezier(0.16,1,0.3,1), border-color 360ms cubic-bezier(0.16,1,0.3,1), box-shadow 360ms cubic-bezier(0.16,1,0.3,1);
-    }
-    .card:hover { border-color: rgba(220, 208, 184, 0.9); }
-    .card[open] {
-      background: #FFFFFF;
-      border-color: #D9CFB8;
-      box-shadow: 0 4px 20px -4px rgba(28,27,31,0.05);
-    }
-    .card summary:hover h3 { color: #7C3AED; }
-    .card summary h3 { transition: color 200ms cubic-bezier(0.16,1,0.3,1); }
-    .card summary {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 16px; padding: 20px 22px; cursor: pointer;
-      list-style: none;
-    }
-    .card summary::-webkit-details-marker { display: none; }
-    .card summary h3 {
-      font-family: 'Inter', system-ui, sans-serif;
-      font-size: 16px; font-weight: 600;
-      letter-spacing: -0.005em;
-      color: #1C1B1F; margin: 0;
-    }
-    .plus {
-      flex-shrink: 0; position: relative;
-      width: 20px; height: 20px;
-      display: inline-flex; align-items: center; justify-content: center;
-      transition: transform 360ms cubic-bezier(0.16,1,0.3,1), color 280ms cubic-bezier(0.16,1,0.3,1);
-      color: #9A938A;
-    }
-    .plus i {
-      position: absolute; background: currentColor; border-radius: 2px;
-      transition: transform 360ms cubic-bezier(0.16,1,0.3,1);
-    }
-    .plus i:nth-child(1) { width: 14px; height: 2px; }
-    .plus i:nth-child(2) { width: 2px; height: 14px; }
-    .card[open] .plus { color: #7C3AED; transform: rotate(90deg); }
-    .card[open] .plus i:nth-child(2) { transform: scaleY(0); }
-    .ans {
-      padding: 4px 22px 22px;
-      border-top: 1px solid rgba(28,27,31,0.06);
-      margin-top: 0;
-    }
-    .ans p {
-      font-size: 15px; line-height: 1.7;
-      color: #4A4850; margin: 14px 0 0;
-    }
-    .ans p:first-child { margin-top: 14px; }
-    .ans a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-    .ans a:hover { color: #7C3AED; }
-    .ans strong { color: #1C1B1F; font-weight: 600; }
+<section class="cta-final">
+  <h2>So — see you Saturday?</h2>
+  <span class="scribble">~ Cheesman Park, May 30, noon, bring a dish ~</span>
+  <p>Pick one event this week. That's the whole onboarding.</p>
+  <a href="/events" class="btn-yellow">Browse this week's events →</a>
+</section>
 
-    .hp-foot {
-      margin-top: 64px; padding-top: 28px;
-      border-top: 1px solid #EDE6D7;
-      font-size: 14px; color: #6B6A70; text-align: center;
-    }
-    .hp-foot a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; }
-    .hp-foot a:hover { color: #7C3AED; }
-  </style>
-</Base>
+</body></html>

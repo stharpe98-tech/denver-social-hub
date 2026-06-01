@@ -1,6 +1,160 @@
 ---
-// Deprecated — superseded by /community (flyer board). Forwards any
-// neighborhood param so external links still land somewhere sensible.
-const nbh = Astro.url.searchParams.get('nbh') || Astro.url.searchParams.get('slug') || '';
-return Astro.redirect(nbh ? `/community?nbh=${encodeURIComponent(nbh)}` : '/community');
+// Standalone Astro page — full HTML below mirrors the approved preview.
+// Nav is inline; can be extracted to Base.astro in a follow-up refactor.
 ---
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Neighborhoods · Denver Social</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FFFFFF;--surface:#F8F9FB;--border:#E5E7EB;--text:#111827;--text-sec:#6B7280;--accent:#7C3AED;--accent2:#3B82F6;--mint:#10B981;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;--space-8:64px;--space-9:96px}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--text)}a{color:inherit;text-decoration:none}h1,h2,h3,h4{line-height:1.2}
+.site-nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(229,231,235,.6)}
+.nav-in{max-width:1240px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{font-family:'Outfit',sans-serif;font-weight:800;font-size:18px;letter-spacing:-.02em;color:#7C3AED}
+.brand span{color:#9CA3AF;font-weight:400}
+.nav-links{display:flex;gap:28px}
+.nav-links a{font-size:14px;font-weight:500;color:#374151;transition:color .15s}
+.nav-links a:hover{color:#7C3AED}
+.nav-right{display:flex;align-items:center;gap:14px}
+.nav-right .nstatus{display:none;font-size:12px;color:#6B7280;font-weight:500;align-items:center;gap:6px}
+@media(min-width:920px){.nav-right .nstatus{display:inline-flex}}
+.nav-right .nstatus .ndot{width:6px;height:6px;border-radius:50%;background:#10B981;box-shadow:0 0 0 0 rgba(16,185,129,.6);animation:dotPulse 2s infinite}
+@keyframes dotPulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.6)}70%{box-shadow:0 0 0 8px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
+.signin{font-size:14px;font-weight:600;color:#374151}
+.signin:hover{color:#7C3AED}
+.join{background:#7C3AED;color:#fff;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:600;transition:background .15s}
+.join:hover{background:#6D28D9}
+@media(max-width:760px){.nav-links{display:none}.signin{display:none}}
+.galaxy-hero{position:relative;min-height:64vh;background:radial-gradient(ellipse at center,#1e1b4b 0%,#0F0F23 60%,#000 100%);color:#fff;overflow:hidden;display:flex;align-items:center;padding:64px 24px;text-align:center}
+.stars{position:absolute;inset:0;background-image:radial-gradient(1px 1px at 10% 20%,#fff,transparent),radial-gradient(1px 1px at 30% 60%,#fff,transparent),radial-gradient(2px 2px at 50% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 80%,#fff,transparent),radial-gradient(1px 1px at 90% 40%,#fff,transparent),radial-gradient(2px 2px at 20% 90%,#fff,transparent),radial-gradient(1px 1px at 80% 10%,#fff,transparent),radial-gradient(1px 1px at 40% 70%,#fff,transparent),radial-gradient(2px 2px at 60% 50%,#fff,transparent);background-size:200% 200%;opacity:.6}
+.orb{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none}
+.orb-1{width:400px;height:400px;background:rgba(124,58,237,.6);top:10%;left:-100px}
+.orb-2{width:500px;height:500px;background:rgba(59,130,246,.5);bottom:-200px;right:-100px}
+.orb-3{width:300px;height:300px;background:rgba(16,185,129,.4);top:50%;left:60%}
+.gh-in{position:relative;max-width:900px;margin:0 auto;z-index:2}
+.gh-pill{display:inline-block;font-size:11px;letter-spacing:2px;font-weight:700;background:rgba(255,255,255,.1);backdrop-filter:blur(8px);padding:8px 18px;border-radius:50px;border:1px solid rgba(255,255,255,.2);margin-bottom:24px}
+.gh-in h1{font-family:'Outfit';font-size:clamp(48px,8vw,96px);font-weight:900;margin-bottom:20px;letter-spacing:-.03em}
+.gh-in h1 em{font-style:normal;background:linear-gradient(120deg,#FFD93D,#FB923C,#FF6B9D);-webkit-background-clip:text;background-clip:text;color:transparent}
+.gh-in p{font-size:20px;color:rgba(255,255,255,.85);max-width:600px;margin:0 auto 32px}
+.btn-stars{background:#fff;color:#111;padding:16px 32px;border-radius:50px;font-weight:800;font-size:15px;display:inline-block}
+.map-section{padding:var(--space-9) var(--space-5);background:#0F0F23;color:#fff;overflow:hidden}.map-in{max-width:1240px;margin:0 auto;text-align:center}
+.section-eyebrow{display:block;font-size:11px;letter-spacing:3px;font-weight:800;color:#FFD93D;margin-bottom:var(--space-3)}
+.map-in h2{font-family:'Outfit';font-size:clamp(34px,4.5vw,52px);font-weight:800;margin-bottom:var(--space-4)}
+.map-in .sub{color:rgba(255,255,255,.7);font-size:17px;margin-bottom:var(--space-7)}
+.planet-map{position:relative;height:560px;background:radial-gradient(circle at center,rgba(124,58,237,.1),transparent 70%);border-radius:32px;border:1px solid rgba(255,255,255,.08);max-width:1000px;margin:0 auto}
+.planet{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;transition:transform .25s;color:#111;font-family:'Outfit';font-weight:800;text-align:center}
+.planet:hover{transform:scale(1.08);z-index:5}
+.planet .pn{font-size:11px;line-height:1.1}.planet .pc{font-size:18px;line-height:1;margin-top:2px}
+.planet small{font-size:9px;font-weight:600;opacity:.7;text-transform:uppercase;letter-spacing:1px}
+.p1{width:110px;height:110px;background:#FFD93D;top:38%;left:42%}
+.p2{width:90px;height:90px;background:#10B981;top:18%;left:28%;color:#fff}
+.p3{width:80px;height:80px;background:#3B82F6;top:62%;left:62%;color:#fff}
+.p4{width:70px;height:70px;background:#FF6B9D;top:14%;left:60%;color:#fff}
+.p5{width:75px;height:75px;background:#7C3AED;top:70%;left:22%;color:#fff}
+.p6{width:60px;height:60px;background:#F59E0B;top:32%;left:14%}
+.p7{width:65px;height:65px;background:#06B6D4;top:78%;left:50%;color:#fff}
+.p8{width:55px;height:55px;background:#EF4444;top:48%;left:78%;color:#fff}
+.p9{width:50px;height:50px;background:#84CC16;top:20%;left:80%}
+.p10{width:48px;height:48px;background:#A855F7;top:60%;left:8%;color:#fff}
+.legend{display:flex;justify-content:center;gap:var(--space-5);flex-wrap:wrap;margin-top:var(--space-6);font-size:13px;color:rgba(255,255,255,.6)}
+.legend-item{display:flex;align-items:center;gap:8px}.legend-dot{width:12px;height:12px;border-radius:50%}
+.deep{padding:var(--space-9) var(--space-5);background:#fff}.deep-in{max-width:1240px;margin:0 auto}
+.deep h2{font-family:'Outfit';font-size:clamp(32px,4.5vw,48px);font-weight:800;margin-bottom:var(--space-2);text-align:center}
+.deep .sub{text-align:center;color:var(--text-sec);font-size:17px;margin-bottom:var(--space-7)}
+.hood-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5)}
+.hood{background:#fff;border:1px solid var(--border);border-radius:24px;overflow:hidden;transition:transform .2s,box-shadow .2s;color:inherit;display:block}
+.hood:hover{transform:translateY(-4px);box-shadow:0 20px 40px rgba(0,0,0,.08)}
+.hood-banner{height:140px;position:relative;display:flex;align-items:flex-end;padding:20px}
+.b1{background:linear-gradient(135deg,#FCE7F3,#FBCFE8)}.b2{background:linear-gradient(135deg,#DBEAFE,#93C5FD)}.b3{background:linear-gradient(135deg,#D1FAE5,#6EE7B7)}
+.b4{background:linear-gradient(135deg,#FEF3C7,#FCD34D)}.b5{background:linear-gradient(135deg,#EDE9FE,#C4B5FD)}.b6{background:linear-gradient(135deg,#FFE4E6,#FDA4AF)}
+.hood-emoji{position:absolute;top:16px;right:20px;font-size:48px;opacity:.5}
+.hood-pill{display:inline-block;font-size:10px;letter-spacing:1.5px;font-weight:800;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);padding:4px 10px;border-radius:999px;color:#111}
+.hood-body{padding:var(--space-5)}
+.hood h3{font-family:'Outfit';font-size:24px;font-weight:800;margin-bottom:6px}
+.hood .desc{font-size:14px;color:var(--text-sec);line-height:1.5;margin-bottom:var(--space-4)}
+.hood-stats{display:flex;gap:var(--space-4);margin-bottom:var(--space-4);font-size:12px}
+.hs{display:flex;flex-direction:column}
+.hs strong{font-family:'Outfit';font-size:22px;color:var(--text);font-weight:900;line-height:1}
+.hs span{color:var(--text-sec);font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+.hood-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:var(--space-4)}
+.ht{font-size:11px;background:var(--surface);padding:4px 10px;border-radius:999px;font-weight:600;color:var(--text-sec)}
+.go{display:inline-block;font-size:13px;font-weight:700;color:var(--accent)}
+@media (max-width:880px){.hood-grid{grid-template-columns:1fr}}
+.cta-final{padding:var(--space-9) var(--space-5);text-align:center;background:#fff;border-top:1px solid var(--border)}
+.cta-final h2{font-family:'Outfit';font-size:clamp(32px,4.5vw,48px);font-weight:900;margin-bottom:var(--space-3)}
+.scribble{font-family:'Caveat';color:var(--accent);font-size:26px;display:block;margin-bottom:var(--space-5);transform:rotate(-2deg)}
+.btn-big{background:var(--accent);color:#fff;padding:18px 36px;border-radius:50px;font-weight:800;font-size:15px;box-shadow:0 8px 24px rgba(124,58,237,.3);display:inline-block}
+.btn-big:hover{transform:translateY(-2px)}
+</style></head><body>
+
+<header class="site-nav"><div class="nav-in">
+  <a href="/" class="brand">denver<span>social</span>hub</a>
+  <nav class="nav-links">
+    <a href="/events">Events</a>
+    <a href="/potlucks">Potlucks</a>
+    <a href="/community">Community</a>
+    <a href="/about">About</a>
+    <a href="/host">Host</a>
+  </nav>
+  <div class="nav-right">
+    <span class="nstatus"><span class="ndot"></span>Denver, CO</span>
+    <a href="/sign-in" class="signin">Sign in</a>
+    <a href="/signup" class="join">Join us</a>
+  </div>
+</div></header>
+
+<section class="galaxy-hero">
+  <div class="stars"></div><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+  <div class="gh-in">
+    <span class="gh-pill">— 18 DENVER NEIGHBORHOODS</span>
+    <h1>Find <em>your</em> corner of Denver.</h1>
+    <p>Every neighborhood has its own thing — its regulars, its weekly routine, its inside jokes. Drop in to whichever feels closest, or wander.</p>
+    <a href="#map" class="btn-stars">Explore the map ↓</a>
+  </div>
+</section>
+
+<section class="map-section" id="map"><div class="map-in">
+  <span class="section-eyebrow">— DENVER, BY ACTIVITY DENSITY</span>
+  <h2>The bigger the planet, the more is happening.</h2>
+  <p class="sub">Hover to see this month's count. Tap to dive in.</p>
+  <div class="planet-map">
+    <a href="#" class="planet p1"><div class="pn">Cap Hill</div><div class="pc">34</div><small>events</small></a>
+    <a href="#" class="planet p2"><div class="pn">Highlands</div><div class="pc">28</div><small>events</small></a>
+    <a href="#" class="planet p3"><div class="pn">Wash Park</div><div class="pc">26</div><small>events</small></a>
+    <a href="#" class="planet p4"><div class="pn">Cheesman</div><div class="pc">22</div><small>events</small></a>
+    <a href="#" class="planet p5"><div class="pn">Stapleton</div><div class="pc">19</div><small>events</small></a>
+    <a href="#" class="planet p6"><div class="pn">City Park</div><div class="pc">17</div><small>events</small></a>
+    <a href="#" class="planet p7"><div class="pn">Park Hill</div><div class="pc">15</div><small>events</small></a>
+    <a href="#" class="planet p8"><div class="pn">Five Pts</div><div class="pc">14</div><small>events</small></a>
+    <a href="#" class="planet p9"><div class="pn">Berkeley</div><div class="pc">12</div><small>events</small></a>
+    <a href="#" class="planet p10"><div class="pn">Baker</div><div class="pc">10</div><small>events</small></a>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:#FFD93D"></span>Hot zone (20+ events/month)</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#10B981"></span>Active (10–19/month)</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#3B82F6"></span>Growing (under 10)</div>
+  </div>
+</div></section>
+
+<section class="deep"><div class="deep-in">
+  <h2>Neighborhoods up close</h2>
+  <p class="sub">A taste of what's regular in a few of Denver's busiest zones.</p>
+  <div class="hood-grid">
+    <a href="#" class="hood"><div class="hood-banner b1"><span class="hood-emoji">🌳</span><span class="hood-pill">CENTRAL</span></div><div class="hood-body"><h3>Capitol Hill</h3><p class="desc">Stoop hangs, book swaps, the unofficial home of Denver's potluck circuit.</p><div class="hood-stats"><div class="hs"><strong>34</strong><span>this month</span></div><div class="hs"><strong>8</strong><span>hosts</span></div><div class="hs"><strong>4.9</strong><span>rating</span></div></div><div class="hood-tags"><span class="ht">Potlucks</span><span class="ht">Stoop sessions</span><span class="ht">Book swaps</span></div><span class="go">See what's on →</span></div></a>
+    <a href="#" class="hood"><div class="hood-banner b2"><span class="hood-emoji">🏔</span><span class="hood-pill">NORTHWEST</span></div><div class="hood-body"><h3>Highlands / LoHi</h3><p class="desc">Pizza nights, sunrise runs, more brunches than any one neighborhood should have.</p><div class="hood-stats"><div class="hs"><strong>28</strong><span>this month</span></div><div class="hs"><strong>11</strong><span>hosts</span></div><div class="hs"><strong>4.8</strong><span>rating</span></div></div><div class="hood-tags"><span class="ht">Brunch</span><span class="ht">Run club</span><span class="ht">Pizza Night</span></div><span class="go">See what's on →</span></div></a>
+    <a href="#" class="hood"><div class="hood-banner b3"><span class="hood-emoji">🌷</span><span class="hood-pill">SOUTH</span></div><div class="hood-body"><h3>Wash Park</h3><p class="desc">Picnics, volleyball, dog meetups, the kind of slow Saturdays that take all day.</p><div class="hood-stats"><div class="hs"><strong>26</strong><span>this month</span></div><div class="hs"><strong>7</strong><span>hosts</span></div><div class="hs"><strong>4.9</strong><span>rating</span></div></div><div class="hood-tags"><span class="ht">Picnics</span><span class="ht">Dog walks</span><span class="ht">Volleyball</span></div><span class="go">See what's on →</span></div></a>
+    <a href="#" class="hood"><div class="hood-banner b4"><span class="hood-emoji">🎨</span><span class="hood-pill">CENTRAL</span></div><div class="hood-body"><h3>Cheesman Park</h3><p class="desc">Home of the Big Potluck. Yoga at sunrise, frisbee at sunset, everyone in between.</p><div class="hood-stats"><div class="hs"><strong>22</strong><span>this month</span></div><div class="hs"><strong>6</strong><span>hosts</span></div><div class="hs"><strong>5.0</strong><span>rating</span></div></div><div class="hood-tags"><span class="ht">Big Potluck</span><span class="ht">Yoga</span><span class="ht">Frisbee</span></div><span class="go">See what's on →</span></div></a>
+    <a href="#" class="hood"><div class="hood-banner b5"><span class="hood-emoji">🎲</span><span class="hood-pill">EAST</span></div><div class="hood-body"><h3>Stapleton</h3><p class="desc">Family-friendly chunk of the city — trivia nights, kid-included picnics, board game pubs.</p><div class="hood-stats"><div class="hs"><strong>19</strong><span>this month</span></div><div class="hs"><strong>5</strong><span>hosts</span></div><div class="hs"><strong>4.7</strong><span>rating</span></div></div><div class="hood-tags"><span class="ht">Trivia</span><span class="ht">Kid-friendly</span><span class="ht">Board games</span></div><span class="go">See what's on →</span></div></a>
+    <a href="#" class="hood"><div class="hood-banner b6"><span class="hood-emoji">🎭</span><span class="hood-pill">NORTH</span></div><div class="hood-body"><h3>Five Points</h3><p class="desc">Salsa nights, jazz clubs, the spillover from RiNo's art walks. Always on.</p><div class="hood-stats"><div class="hs"><strong>14</strong><span>this month</span></div><div class="hs"><strong>4</strong><span>hosts</span></div><div class="hs"><strong>4.8</strong><span>rating</span></div></div><div class="hood-tags"><span class="ht">Salsa</span><span class="ht">Live music</span><span class="ht">Art walks</span></div><span class="go">See what's on →</span></div></a>
+  </div>
+</div></section>
+
+<section class="cta-final">
+  <h2>Don't see your neighborhood?</h2>
+  <span class="scribble">~ start it. that's how all the others did. ~</span>
+  <a href="#" class="btn-big">Become a host →</a>
+</section>
+
+</body></html>
