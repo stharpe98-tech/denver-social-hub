@@ -94,7 +94,7 @@ const tracks = [
 <Base title="Real events, real people" description="Small-group hangouts across Denver. Pick one, RSVP, show up.">
 <div class="festival">
 
-  <!-- HERO (your photo slideshow + festival type) -->
+  <!-- HERO — brutalist festival cover over your photo slideshow -->
   <section class="hero">
     <div class="hero-photos">
       <img src="/hero/red-rocks.jpg" alt="Red Rocks Amphitheatre at night" class="hero-photo hp-1" loading="eager" />
@@ -102,18 +102,27 @@ const tracks = [
       <img src="/hero/foothills.jpg" alt="Snowy Colorado foothills trail" class="hero-photo hp-3" loading="eager" />
     </div>
     <div class="hero-overlay"></div>
-    <svg class="peaks" viewBox="0 0 1440 200" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0,200 L0,140 L160,60 L320,120 L480,40 L640,100 L800,30 L960,90 L1120,50 L1280,110 L1440,70 L1440,200 Z" fill="rgba(255,255,255,0.08)"/>
-      <path d="M0,200 L0,170 L120,100 L280,140 L440,80 L600,130 L760,70 L920,120 L1080,90 L1240,140 L1440,110 L1440,200 Z" fill="rgba(0,0,0,0.25)"/>
-    </svg>
+
+    <div class="hero-topline">
+      <span class="hero-loc">DENVER, COLORADO // SINCE 2026</span>
+      {memberCount > 0 && <span class="hero-active">{memberCount} NEIGHBORS</span>}
+    </div>
+
     <div class="hero-in">
-      <span class="hero-eyebrow"><span class="pulse"></span>DENVER · COMMUNITY · SINCE 2026</span>
-      <h1>Show up.<span class="accent">— that's the whole pitch.</span></h1>
-      <p class="tag">Real small-group events across the city. Hikes, dinners, plunges, potlucks at Cheesman — something every week. RSVP with an email and go.</p>
+      <h1 class="hero-title">
+        <span class="l1">SHOW UP.</span>
+        <span class="l2">MEET PEOPLE.</span>
+        <span class="l3">THAT'S IT.</span>
+      </h1>
+      <p class="tag">Real small-group events across Denver — hikes, dinners, plunges, potlucks at Cheesman. RSVP with an email and go.</p>
       <div class="hero-actions">
-        <a href="/events" class="btn-hero">Browse events →</a>
-        <a href="/events#potlucks" class="btn-hero-out">Jump to potlucks</a>
+        <a href="/events" class="btn-hero">Explore the lineup →</a>
+        <a href="/events#potlucks" class="btn-hero-out">Open potlucks</a>
       </div>
+    </div>
+
+    <div class="hero-marquee" aria-hidden="true">
+      <div class="hero-marquee-track">hikes • dinners • potlucks at cheesman • cold plunges • game nights • pottery • coffee walks • art crawls &nbsp;•&nbsp; hikes • dinners • potlucks at cheesman • cold plunges • game nights • pottery • coffee walks • art crawls &nbsp;•&nbsp; </div>
     </div>
   </section>
 
@@ -268,22 +277,30 @@ const tracks = [
   .festival h1,.festival h2,.festival h3,.festival h4{line-height:1.2}
   .festival .btn-hero,.festival .btn-hero-out,.festival .btn-yellow,.festival .btn-cta,.festival .btn-clear{cursor:pointer}
 
-  /* HERO — photo slideshow background + festival typography */
-  .hero{position:relative;min-height:72vh;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0c1a2a;color:#fff;padding:var(--space-9) 24px var(--space-8)}
+  /* HERO — brutalist festival cover over the photo slideshow */
+  .hero{position:relative;min-height:90vh;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:#0b0c10;color:#fff}
   .hero-photos{position:absolute;inset:0;z-index:0;overflow:hidden}
-  .hero-photo{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:0;animation:heroFade 21s infinite;filter:saturate(.85) brightness(.9);transform:scale(1.05)}
+  .hero-photo{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:0;animation:heroFade 21s infinite;filter:brightness(.7) contrast(1.15) saturate(.9);transform:scale(1.05)}
   .hp-1{animation-delay:0s}.hp-2{animation-delay:7s}.hp-3{animation-delay:14s}
   @keyframes heroFade{0%{opacity:0;transform:scale(1.05)}5%{opacity:1;transform:scale(1.02)}30%{opacity:1;transform:scale(1)}38%{opacity:0;transform:scale(1)}100%{opacity:0;transform:scale(1.05)}}
-  .hero-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(15,15,35,.55) 0%,rgba(45,27,78,.62) 55%,rgba(124,58,237,.78) 100%),radial-gradient(ellipse 80% 60% at 50% 30%,rgba(59,130,246,.18),transparent 70%)}
-  .hero .peaks{position:absolute;bottom:0;left:0;width:100%;height:auto;opacity:.45;z-index:1}
-  .hero-in{position:relative;z-index:2;max-width:880px;margin:0 auto;width:100%;text-align:center}
-  .hero-eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:11px;letter-spacing:2px;font-weight:700;background:rgba(255,255,255,.14);backdrop-filter:blur(6px);padding:8px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.25);margin-bottom:24px}
-  .pulse{width:8px;height:8px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 0 rgba(16,185,129,.6);animation:pulse 2s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.6)}70%{box-shadow:0 0 0 10px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
-  .hero h1{font-family:'Outfit',sans-serif;font-size:clamp(44px,8vw,100px);font-weight:900;letter-spacing:-.04em;margin-bottom:16px;line-height:1;color:#fff;text-shadow:0 2px 30px rgba(0,0,0,.35)}
-  .hero h1 .accent{font-family:'Caveat',cursive;font-weight:600;font-size:.4em;color:#FFD93D;display:block;letter-spacing:0;transform:rotate(-2deg);margin-top:-8px}
-  .hero p.tag{font-size:20px;font-weight:500;max-width:560px;margin:0 auto 32px;color:rgba(255,255,255,.9)}
+  .hero-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(11,12,16,.72) 0%,rgba(11,12,16,.35) 38%,rgba(11,12,16,.95) 100%)}
+  .hero-topline{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:20px 24px}
+  .hero-loc{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#FFD93D;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border:1px solid rgba(255,217,61,.25);padding:8px 14px}
+  .hero-active{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;background:#FFD93D;color:#111;padding:7px 12px;white-space:nowrap}
+  .hero-in{position:relative;z-index:2;margin:auto;width:100%;max-width:1240px;padding:24px;text-align:center}
+  .hero-title{font-family:'Anton','Impact','Arial Narrow',sans-serif;text-transform:uppercase;line-height:.88;letter-spacing:.005em;display:flex;flex-direction:column;align-items:center;margin-bottom:24px}
+  .hero-title span{display:block;font-size:clamp(52px,12vw,150px);font-weight:400}
+  .hero-title .l1{color:#fff;text-shadow:0 6px 30px rgba(0,0,0,.5)}
+  .hero-title .l2{color:transparent;-webkit-text-stroke:1.5px rgba(255,255,255,.7);transition:color .3s}
+  .hero-title .l2:hover{color:#fff}
+  .hero-title .l3{color:#FFD93D;text-shadow:0 6px 30px rgba(0,0,0,.4)}
+  .hero p.tag{font-size:18px;font-weight:500;max-width:560px;margin:0 auto 28px;color:rgba(255,255,255,.88)}
   .hero-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+  .hero .btn-hero,.hero .btn-hero-out{border-radius:0;font-family:'Anton','Impact',sans-serif;letter-spacing:.04em;text-transform:uppercase;font-weight:400;padding:16px 30px;font-size:16px}
+  .hero .btn-hero-out{border-width:2px}
+  .hero-marquee{position:relative;z-index:2;background:#FFD93D;color:#111;overflow:hidden;white-space:nowrap;padding:11px 0}
+  .hero-marquee-track{display:inline-block;font-family:'Anton','Impact',sans-serif;text-transform:uppercase;letter-spacing:.16em;font-size:14px;animation:heroMarquee 30s linear infinite}
+  @keyframes heroMarquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .btn-hero{background:#FFD93D;color:#111;padding:16px 32px;border-radius:50px;font-weight:800;font-size:15px;letter-spacing:.5px;transition:transform .15s}
   .btn-hero:hover{transform:translateY(-2px)}.btn-hero:active{transform:translateY(0)}
   .btn-hero-out{background:rgba(255,255,255,.1);color:#fff;border:1.5px solid rgba(255,255,255,.3);padding:16px 32px;border-radius:50px;font-weight:700;font-size:15px;backdrop-filter:blur(6px)}
@@ -404,9 +421,9 @@ const tracks = [
   .btn-clear{background:rgba(255,255,255,.1);color:#fff;border:1.5px solid rgba(255,255,255,.3);padding:16px 32px;border-radius:50px;font-weight:700;font-size:15px;backdrop-filter:blur(6px);display:inline-block}
   .btn-clear:hover{background:rgba(255,255,255,.18)}
 
-  @media (max-width:680px){.hero{min-height:56vh;padding:32px 16px}.stats,.lineup,.programme,.pillars,.host-strip,.cta-final,.voting{padding-left:16px;padding-right:16px}}
+  @media (max-width:680px){.hero{min-height:80vh}.hero-loc{font-size:10px;letter-spacing:.2em}.stats,.lineup,.programme,.pillars,.host-strip,.cta-final,.voting{padding-left:16px;padding-right:16px}}
 </style>
 
 <!-- Festival display + script fonts (Base loads Caveat already; Outfit added here) -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Outfit:wght@500;600;700;800;900&display=swap" />
 </Base>
