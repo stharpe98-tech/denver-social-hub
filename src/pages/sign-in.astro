@@ -106,7 +106,7 @@ import Base from '../layouts/Base.astro';
       try{
         var r=await fetch('/api/profile/signin-verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,code:c})});
         var d=await r.json().catch(function(){return{};});
-        if(r.ok && d.ok){ location.href=d.redirect||'/profile'; return; }
+        if(r.ok && d.ok){ var nx=new URLSearchParams(location.search).get('next')||''; if(!/^\/[^/]/.test(nx)) nx=''; location.href=nx||d.redirect||'/profile'; return; }
         show(err2, d.error||"That code didn't work — try again.");
       }catch(_){ show(err2,'Network error — try again.'); }
       verifyBtn.disabled=false; verifyBtn.textContent='Sign in →';

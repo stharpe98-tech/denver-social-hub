@@ -6,7 +6,9 @@ import { getCurrentProfile } from '../../lib/profile-auth';
 
 const db = getDB();
 const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
-if (!me) return Astro.redirect('/u/new?next=/events/new');
+// Hosting just needs a member account — send logged-out hosts to the simple
+// signup (not the organizer /u/ page builder), then back here to post.
+if (!me) return Astro.redirect('/signup?next=/events/new');
 
 const groupSlug = Astro.url.searchParams.get('group') || '';
 let postingInGroup: any = null;
