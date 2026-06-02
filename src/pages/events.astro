@@ -84,39 +84,8 @@ try {
       });
     }
 
-    // -- Query potlucks --
-    const potluckRows = (await db.prepare(`
-      SELECT p.*, COUNT(DISTINCT CASE WHEN r.rsvp='yes' THEN r.id END) as attendee_count,
-        COUNT(DISTINCT CASE WHEN r.rsvp='yes' AND r.dish!='' THEN LOWER(r.dish) END) as dish_count
-      FROM potlucks p LEFT JOIN potluck_rsvp r ON r.potluck_id=p.id
-      WHERE p.status = 'upcoming' GROUP BY p.id
-    `).all())?.results || [];
-
-    for (const p of potluckRows) {
-      const parts = (p.date_label || '').trim().split(/\s+/);
-      const monthStr = (parts[0] || '').toLowerCase().replace(/[^a-z]/g, '');
-      const dayStr = (parts[1] || '').replace(/\D/g, '');
-      const sm = potluckMonthMap[monthStr] ?? potluckMonthMap[monthStr.slice(0,3)] ?? 99;
-      const sd = parseInt(dayStr) || 99;
-      // Skip past potlucks
-      if (sm < currentMonth || (sm === currentMonth && sd < currentDay)) continue;
-      let ds = p.date_label || 'TBD';
-      if (sm !== 99 && sd !== 99) {
-        const dt = new Date(2026, sm, sd);
-        ds = `${dayNames[dt.getDay()]}, ${monthAbbrs[sm]} ${sd}`;
-      }
-      cards.push({
-        kind: 'potluck', id: p.id, href: p.slug ? `/${p.slug}` : `/potlucks/${p.id}`,
-        title: p.title, description: p.description || '',
-        type: 'potluck',
-        dateStr: ds, timeStr: p.time_label || '',
-        sortMonth: sm, sortDay: sd,
-        location: p.location || 'Denver',
-        fillPct: 0, goingCount: p.attendee_count || 0, spotsLeft: -1,
-        hostName: '',
-        attendeeCount: p.attendee_count || 0, dishCount: p.dish_count || 0,
-      });
-    }
+    // Potlucks now live on their own /potlucks page — the events feed shows
+    // events only. (A "next potluck" spotlight still links over to /potlucks.)
   }
 } catch (err) { console.error('Events page query error:', err); }
 
