@@ -113,16 +113,18 @@ try {
 <Base title="Browse Events">
 <div class="ev-page">
 
-  <!-- Header -->
-  <div class="ev-header">
-    <div class="ev-header-left">
-      <span class="ev-kicker">What's on · Denver</span>
-      <h1 class="ev-h1">{cards.length > 0 ? `${cards.length} things to show up to` : 'Browse events'}</h1>
-      <p class="ev-sub">Small groups, real plans. Pick one and RSVP — spots are capped so it stays easy to meet everyone.</p>
-    </div>
-    <div class="ev-header-cta">
-      <a href="/events/new" class="ev-btn ev-btn-primary" id="createBtn">+ Host an event</a>
-      <a href="/potlucks/new" class="ev-btn ev-btn-sec">🥘 Host a potluck</a>
+  <!-- Full-bleed hero band -->
+  <div class="ev-herowrap">
+    <div class="ev-header">
+      <div class="ev-header-left">
+        <span class="ev-kicker">What's on · Denver</span>
+        <h1 class="ev-h1">{cards.length > 0 ? `${cards.length} things to show up to` : 'Browse events'}</h1>
+        <p class="ev-sub">Small groups, real plans. Pick one and RSVP — spots are capped so it stays easy to meet everyone.</p>
+      </div>
+      <div class="ev-header-cta">
+        <a href="/events/new" class="ev-btn ev-btn-primary" id="createBtn">+ Host an event</a>
+        <a href="/potlucks" class="ev-btn ev-btn-sec">🥗 Potlucks</a>
+      </div>
     </div>
   </div>
 
@@ -352,10 +354,20 @@ try {
 </Base>
 
 <style is:inline>
-  .ev-page { max-width: 1080px; margin: 0 auto; padding: 32px 24px 80px; }
+  .ev-page { max-width: 1080px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* Full-bleed hero band (full-screen header the floating nav sits over) */
+  .ev-herowrap { margin: 0 calc(50% - 50vw) 28px; width: 100vw; background: linear-gradient(140deg, #0E8A7D 0%, #16302B 100%); color: #fff; padding: 100px 24px 40px; }
+  @media (max-width: 900px) { .ev-herowrap { padding-top: 28px; } }
+  .ev-herowrap .ev-header { max-width: 1080px; margin: 0 auto; }
+  .ev-herowrap .ev-kicker { color: var(--accent2); }
+  .ev-herowrap .ev-h1 { color: #fff; }
+  .ev-herowrap .ev-sub { color: rgba(255,255,255,0.85); }
+  .ev-herowrap .ev-btn-primary { background: #fff; color: var(--text); box-shadow: none; }
+  .ev-herowrap .ev-btn-sec { background: rgba(255,255,255,0.14); color: #fff; border: 1.5px solid rgba(255,255,255,0.4); }
 
   /* Header */
-  .ev-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .ev-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .ev-kicker { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
   .ev-h1 { font-family: var(--font-display); font-size: clamp(28px,4vw,42px); font-weight: 800; letter-spacing: -.02em; margin: 8px 0; }
   .ev-sub { font-size: 16px; color: var(--text-sec); max-width: 520px; line-height: 1.5; }
