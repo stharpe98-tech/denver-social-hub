@@ -41,22 +41,31 @@ const activeCat = cat ? businessCategory(cat) : null;
 
   /* Hero */
   .biz-hero {
-    margin-top: -88px; padding: 120px var(--space-4) var(--space-6);
+    margin-top: -88px; padding: 116px var(--space-4) var(--space-6);
     text-align: center; color: #fff; position: relative; overflow: hidden;
-    background-color: #0E8A7D;
-    background-image: linear-gradient(135deg, #0E8A7D 0%, #15803D 45%, #7A53B0 100%);
+    background-color: #0C6E63;
+    background-image:
+      radial-gradient(circle at 14% 18%, rgba(21,128,61,0.95), transparent 42%),
+      radial-gradient(circle at 86% 12%, rgba(122,83,176,0.95), transparent 44%),
+      radial-gradient(circle at 78% 96%, rgba(232,144,42,0.85), transparent 40%),
+      radial-gradient(circle at 22% 92%, rgba(214,51,108,0.7), transparent 42%),
+      linear-gradient(135deg, #0E8A7D, #0B5C54);
   }
   @media (max-width: 900px) { .biz-hero { margin-top: 0; padding-top: 40px; } }
-  .biz-kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.82); margin-bottom: var(--space-2); }
-  .biz-h1 { font-family: 'Caveat','Bricolage Grotesque',cursive; font-size: clamp(46px,9vw,76px); font-weight: 700; line-height: 0.95; margin-bottom: var(--space-3); }
-  .biz-sub { font-size: 15px; color: rgba(255,255,255,0.92); max-width: 540px; margin: 0 auto var(--space-4); line-height: 1.55; }
+  .biz-kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.85); margin-bottom: var(--space-2); position: relative; z-index: 1; }
+  .biz-h1 { font-family: 'Caveat','Bricolage Grotesque',cursive; font-size: clamp(46px,9vw,80px); font-weight: 700; line-height: 0.92; margin-bottom: var(--space-3); position: relative; z-index: 1; text-shadow: 0 4px 24px rgba(0,0,0,0.18); }
+  .biz-h1 .hl { color: var(--accent2); }
+  .biz-sub { font-size: 15px; color: rgba(255,255,255,0.94); max-width: 540px; margin: 0 auto var(--space-4); line-height: 1.55; position: relative; z-index: 1; }
   .biz-hero-cta {
-    display: inline-block; background: var(--accent2); color: #16302B;
-    font-family: var(--font-display); font-weight: 700; font-size: 16px;
-    padding: 14px 30px; border-radius: var(--radius-pill); text-decoration: none;
-    box-shadow: 0 10px 26px rgba(0,0,0,0.25); transition: transform 0.15s, box-shadow 0.2s;
+    display: inline-block; background: #fff; color: var(--accent);
+    font-family: var(--font-display); font-weight: 800; font-size: 16px;
+    padding: 14px 32px; border-radius: var(--radius-pill); text-decoration: none;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.28); transition: transform 0.15s, box-shadow 0.2s;
+    position: relative; z-index: 1;
   }
-  .biz-hero-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0,0,0,0.32); }
+  .biz-hero-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 38px rgba(0,0,0,0.34); }
+  .biz-hero-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 580px; margin: var(--space-5) auto 0; position: relative; z-index: 1; }
+  .biz-hp { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: #fff; padding: 7px 14px; border-radius: 999px; background: var(--c); box-shadow: 0 5px 16px color-mix(in srgb, var(--c) 45%, transparent); }
 
   /* Category chips — color-dotted */
   .biz-cats { display: flex; gap: 8px; overflow-x: auto; padding: var(--space-5) 0 var(--space-4); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -131,9 +140,14 @@ const activeCat = cat ? businessCategory(cat) : null;
 
 <section class="biz-hero">
   <div class="biz-kicker">Denver Social · Neighbors</div>
-  <h1 class="biz-h1">Services & Side Hustles</h1>
+  <h1 class="biz-h1">Services & <span class="hl">Side Hustles</span></h1>
   <p class="biz-sub">Real businesses and neighbors making a little extra. Need a photographer, a dog walker, a babysitter, a tutor? Hire someone down the block.</p>
   <a href="/community/businesses/new" class="biz-hero-cta">+ List yours</a>
+  <div class="biz-hero-pills">
+    {BUSINESS_CATEGORIES.slice(0, 9).map((c) => (
+      <span class="biz-hp" style={`--c:${c.color}`}>{c.emoji} {c.label}</span>
+    ))}
+  </div>
 </section>
 
 <div class="biz">
