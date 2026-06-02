@@ -33,41 +33,41 @@ const currentPath = Astro.url.pathname;
   <meta name="twitter:image" content="https://denversocialhub.com/og-default.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
 
-  <!-- Top nav -->
-  <header class="site-header">
-    <div class="site-header-inner">
-      <button class="mob-hamburger" id="mob-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mob-drawer">
-        <span></span><span></span><span></span>
-      </button>
-
-      <nav class="site-nav site-nav-left">
-        <a href="/events" class:list={["site-nav-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
-        <a href="/community" class:list={["site-nav-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/neighborhoods") }]}>Community Board</a>
-        <a href="/perks" class:list={["site-nav-link", { active: currentPath.startsWith("/perks") }]}>Perks</a>
-      </nav>
-
-      <a href="/" class="site-logo" aria-label="Denver Social home">
-        <span class="site-logo-word">Denver<span>Social</span></span>
-      </a>
-
-      <nav class="site-nav site-nav-right">
-        <a href="/about" class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
-        <a href="/help"  class:list={["site-nav-link", { active: currentPath.startsWith("/help") }]}>Help</a>
-        {isAdmin && (
-          <a href="/admin/dashboard" class:list={["site-nav-link site-nav-admin", { active: currentPath.startsWith("/admin") }]}>⚙ Admin</a>
-        )}
-      </nav>
-
-      <div class="site-auth">
-        {!hasProfileSession && <a href="/sign-in" class="site-signin">Sign in</a>}
-        {!hasProfileSession && <a href="/signup" class="site-cta">Sign up</a>}
-        {isAdmin && <a href="/api/admin/logout" class="site-logout">Admin sign out</a>}
-      </div>
+  <!-- Left sidebar (desktop) -->
+  <aside class="site-sidebar">
+    <a href="/" class="sb-logo" aria-label="Denver Social home">Denver<span>Social</span></a>
+    <nav class="sb-nav">
+      <a href="/events" class:list={["sb-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
+      <a href="/potlucks" class:list={["sb-link", { active: currentPath.startsWith("/potlucks") }]}>Potlucks</a>
+      <a href="/community" class:list={["sb-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/neighborhoods") }]}>Community</a>
+      <a href="/perks" class:list={["sb-link", { active: currentPath.startsWith("/perks") }]}>Perks</a>
+      <a href="/about" class:list={["sb-link", { active: currentPath.startsWith("/about") }]}>About</a>
+      <a href="/help" class:list={["sb-link", { active: currentPath.startsWith("/help") }]}>Help</a>
+      {isAdmin && (
+        <a href="/admin/dashboard" class:list={["sb-link sb-admin", { active: currentPath.startsWith("/admin") }]}>⚙ Admin</a>
+      )}
+    </nav>
+    <div class="sb-foot">
+      <a href="/events/new" class="sb-cta">+ Host an event</a>
+      {!hasProfileSession && (
+        <div class="sb-auth"><a href="/sign-in">Sign in</a><span>·</span><a href="/signup">Sign up</a></div>
+      )}
+      {isAdmin && <a href="/api/admin/logout" class="sb-auth-link">Admin sign out</a>}
+      <div class="sb-tag">Denver, CO · since 2026</div>
     </div>
+  </aside>
+
+  <!-- Mobile top bar -->
+  <header class="mtop">
+    <button class="mob-hamburger" id="mob-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mob-drawer">
+      <span></span><span></span><span></span>
+    </button>
+    <a href="/" class="mtop-logo">Denver<span>Social</span></a>
+    {!hasProfileSession ? <a href="/signup" class="mtop-cta">Join</a> : <span style="width:44px"></span>}
   </header>
 
   <!-- Mobile drawer -->
@@ -103,6 +103,7 @@ const currentPath = Astro.url.pathname;
     </div>
   </aside>
 
+  <main class="site-main">
   <slot />
 
   <!-- Site footer -->
@@ -145,6 +146,7 @@ const currentPath = Astro.url.pathname;
       <span>Made in Denver, CO 🏔</span>
     </div>
   </footer>
+  </main>
 
 
   <script is:inline>
@@ -336,48 +338,48 @@ const currentPath = Astro.url.pathname;
      duo and warm grey for secondary text. Fraunces display + Work Sans
      body. Fun but restrained. */
   :root {
-    /* Surface — warm white */
-    --bg: #FFFCF8;
-    --surface: #FBF6EE;
-    --surface-hover: #F4ECDF;
-    --border: #EEE7DC;
-    --border-hover: #E0D6C4;
+    /* Surface — cool cream */
+    --bg: #F2F6F4;
+    --surface: #FFFFFF;
+    --surface-hover: #EAF1ED;
+    --border: #DCE7E2;
+    --border-hover: #C7D6CE;
 
-    /* Text — warm ink + grey */
-    --text: #221C16;
-    --text-sec: #736B62;
-    --text-faint: #A89E90;
+    /* Text — deep teal ink + grey */
+    --text: #16302B;
+    --text-sec: #5E7068;
+    --text-faint: #8FA39A;
 
-    /* Accents — warm coral primary, violet secondary */
-    --accent: #F0573D;       /* coral — primary */
-    --accent-dim: rgba(240, 87, 61, 0.12);
-    --accent-glow: rgba(240, 87, 61, 0.28);
-    --accent-soft: #FEEDE8;
-    --accent2: #8B5CF6;      /* violet */
-    --accent2-dim: rgba(139, 92, 246, 0.14);
-    --sunset: #F0573D;       /* legacy slot — coral */
-    --sunset-dim: rgba(240, 87, 61, 0.14);
-    --pink: #F43F5E;
-    --pink-dim: rgba(244, 63, 94, 0.14);
-    --mint: #15803D;
-    --marigold: #F59E0B;     /* legacy slot — amber */
-    --marigold-dim: rgba(245, 158, 11, 0.16);
+    /* Accents — teal primary, marigold secondary */
+    --accent: #0E8A7D;       /* teal — primary */
+    --accent-dim: rgba(14, 138, 125, 0.12);
+    --accent-glow: rgba(14, 138, 125, 0.28);
+    --accent-soft: #DCF1EC;
+    --accent2: #E8902A;      /* marigold */
+    --accent2-dim: rgba(232, 144, 42, 0.14);
+    --sunset: #E8902A;       /* legacy slot — marigold */
+    --sunset-dim: rgba(232, 144, 42, 0.14);
+    --pink: #E8902A;
+    --pink-dim: rgba(232, 144, 42, 0.14);
+    --mint: #0E8A7D;
+    --marigold: #E8902A;
+    --marigold-dim: rgba(232, 144, 42, 0.16);
 
-    /* CTA — solid coral */
-    --cta-bg: #F0573D;
-    --cta-bg-solid: #F0573D;
+    /* CTA — solid teal */
+    --cta-bg: #0E8A7D;
+    --cta-bg-solid: #0E8A7D;
     --cta-text: #FFFFFF;
-    --cta-glow: rgba(240, 87, 61, 0.32);
+    --cta-glow: rgba(14, 138, 125, 0.32);
 
     /* Tags */
-    --tag-bg: #FEEDE8;       /* coral soft */
-    --tag-text: #C2410C;
-    --tag-bg2: #E6F8EC;      /* green soft */
-    --tag-text2: #15803D;
-    --tag-bg3: #F1ECFF;      /* violet soft */
-    --tag-text3: #6D28D9;
-    --tag-bg4: #E5F8F6;      /* teal soft */
-    --tag-text4: #0E7490;
+    --tag-bg: #DCF1EC;       /* teal soft */
+    --tag-text: #0B6B61;
+    --tag-bg2: #FCEFD8;      /* marigold soft */
+    --tag-text2: #B5710F;
+    --tag-bg3: #E9F1ED;      /* sage soft */
+    --tag-text3: #3F6B5E;
+    --tag-bg4: #DCF1EC;
+    --tag-text4: #0B6B61;
 
     /* Status */
     --green: #16A34A;
@@ -389,7 +391,7 @@ const currentPath = Astro.url.pathname;
 
     /* Type */
     --font: 'Inter', system-ui, sans-serif;
-    --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
+    --font-display: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
 
     /* Shape */
     --radius: 14px;
@@ -418,6 +420,63 @@ const currentPath = Astro.url.pathname;
   img { display: block; max-width: 100%; }
   button { font-family: var(--font); }
   h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
+
+  /* ── Left sidebar (desktop) ── */
+  .site-sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 230px; z-index: 200;
+    background: var(--surface); border-right: 1px solid var(--border);
+    padding: 28px 22px; display: flex; flex-direction: column; overflow-y: auto;
+  }
+  .sb-logo {
+    font-family: var(--font-display); font-weight: 800; font-size: 24px;
+    letter-spacing: -0.02em; color: var(--text); line-height: 1.02;
+    text-decoration: none; margin-bottom: 34px;
+  }
+  .sb-logo span { color: var(--accent); }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-link {
+    font-size: 15.5px; font-weight: 500; color: var(--text-sec);
+    padding: 9px 10px; border-radius: 10px; text-decoration: none;
+    transition: color 0.15s, background 0.15s;
+  }
+  .sb-link:hover { color: var(--text); background: var(--surface-hover); }
+  .sb-link.active { color: var(--accent); background: var(--accent-dim); font-weight: 700; }
+  .sb-admin { color: var(--accent); }
+  .sb-foot { margin-top: auto; padding-top: 24px; }
+  .sb-cta {
+    display: block; text-align: center; background: var(--cta-bg); color: var(--cta-text);
+    font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    padding: 12px 16px; border-radius: 12px; text-decoration: none;
+    box-shadow: 0 6px 16px var(--accent-glow); transition: transform 0.15s;
+  }
+  .sb-cta:hover { transform: translateY(-2px); }
+  .sb-auth { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 14px; font-size: 13.5px; }
+  .sb-auth a { color: var(--text-sec); text-decoration: none; }
+  .sb-auth a:hover { color: var(--text); }
+  .sb-auth span { color: var(--text-faint); }
+  .sb-auth-link { display: block; text-align: center; margin-top: 12px; font-size: 13px; color: var(--text-sec); text-decoration: none; }
+  .sb-tag { margin-top: 16px; font-size: 11.5px; color: var(--text-faint); text-align: center; }
+
+  /* main column offset by the fixed sidebar */
+  .site-main { margin-left: 230px; min-height: 100vh; }
+
+  /* ── Mobile top bar ── */
+  .mtop { display: none; }
+  .mtop-logo { font-family: var(--font-display); font-weight: 800; font-size: 19px; letter-spacing: -0.02em; color: var(--text); text-decoration: none; }
+  .mtop-logo span { color: var(--accent); }
+  .mtop-cta { background: var(--cta-bg); color: var(--cta-text); font-weight: 600; font-size: 13px; padding: 9px 16px; border-radius: 999px; text-decoration: none; }
+
+  @media(max-width: 900px) {
+    .site-sidebar { display: none; }
+    .site-main { margin-left: 0; }
+    .mtop {
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 200; height: 60px; padding: 0 16px;
+      background: rgba(242,246,244,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .mtop .mob-hamburger { display: flex; }
+  }
 
   /* ── Site Header — dark slate, centered logo, nav split L/R ── */
   .site-header {
@@ -605,12 +664,10 @@ const currentPath = Astro.url.pathname;
   }
   .mob-drawer-cta-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 
-  @media(max-width: 760px) {
-    .mob-hamburger { display: flex; justify-self: start; }
-    .site-header-inner { grid-template-columns: auto 1fr auto; }
-    .site-nav-left, .site-nav-right { display: none; }
+  @media(max-width: 900px) {
+    .mob-hamburger { display: flex; }
   }
-  @media(min-width: 761px) {
+  @media(min-width: 901px) {
     .mob-drawer, .mob-backdrop { display: none !important; }
   }
 

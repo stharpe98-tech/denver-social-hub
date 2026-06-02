@@ -60,11 +60,11 @@ const typeLabel: Record<string, string> = {
 };
 // category pill colors [bg, text]
 const catColor: Record<string, [string, string]> = {
-  dinner: ['#FEEDE8', '#C2410C'], game_night: ['#F1ECFF', '#6D28D9'], outdoor: ['#E6F8EC', '#15803D'],
-  coffee: ['#FEF3E2', '#B45309'], arts: ['#FCE7F3', '#9D174D'], social: ['#E5F8F6', '#0E7490'],
-  brewery: ['#FEF3E2', '#B45309'], music: ['#F1ECFF', '#6D28D9'], active: ['#E6F8EC', '#15803D'],
+  dinner: ['#FCEFD8', '#B5710F'], game_night: ['#DCF1EC', '#0B6B61'], outdoor: ['#E9F1ED', '#3F6B5E'],
+  coffee: ['#FCEFD8', '#B5710F'], arts: ['#FCE7D8', '#B5530F'], social: ['#DCF1EC', '#0B6B61'],
+  brewery: ['#FCEFD8', '#B5710F'], music: ['#E9F1ED', '#3F6B5E'], active: ['#E9F1ED', '#3F6B5E'],
 };
-const pill = (t: string) => catColor[t] || ['#FEEDE8', '#C2410C'];
+const pill = (t: string) => catColor[t] || ['#FCEFD8', '#B5710F'];
 
 // What we do — evergreen tiles
 const tracks = [
@@ -177,7 +177,7 @@ const tracks = [
   .home a{text-decoration:none}
 
   /* HERO */
-  .hero{position:relative;min-height:90vh;display:flex;align-items:flex-end;overflow:hidden;color:#fff;margin-top:-72px;padding-top:72px}
+  .hero{position:relative;min-height:88vh;display:flex;align-items:flex-end;overflow:hidden;color:#fff}
   .hero-photos{position:absolute;inset:0;z-index:0}
   .hero-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;animation:heroFade 21s infinite}
   .hp-1{animation-delay:0s}.hp-2{animation-delay:7s}.hp-3{animation-delay:14s}
@@ -191,7 +191,7 @@ const tracks = [
   .hero p{font-size:19px;max-width:520px;color:rgba(255,255,255,.92);margin-bottom:26px}
   .hero-cta{display:flex;gap:12px;flex-wrap:wrap}
   .btn{padding:15px 28px;border-radius:999px;font-weight:700;font-size:15.5px;transition:transform .15s;display:inline-block}
-  .btn-1{background:var(--accent);color:#fff;box-shadow:0 10px 28px rgba(240,87,61,.4)}
+  .btn-1{background:var(--accent);color:#fff;box-shadow:0 10px 28px rgba(14,138,125,.4)}
   .btn-1:hover{transform:translateY(-2px)}
   .btn-2{background:rgba(255,255,255,.16);color:#fff;border:1.5px solid rgba(255,255,255,.5);backdrop-filter:blur(8px)}
   .btn-2:hover{background:rgba(255,255,255,.26)}
@@ -213,11 +213,11 @@ const tracks = [
   .tile .lab h3{font-family:var(--font-display);font-size:22px;font-weight:700;margin-top:4px;color:#fff}
   .tile .lab p{font-size:13.5px;opacity:.92;margin-top:2px}
   .tile.big{grid-column:span 2}
-  .tile-dinners{background:linear-gradient(135deg,#F0573D,#C2410C)}
-  .tile-game{background:linear-gradient(135deg,#8B5CF6,#6D28D9)}
-  .tile-sky{background:linear-gradient(135deg,#0EA5A0,#0E7490)}
-  .tile-bar{background:linear-gradient(135deg,#F59E0B,#B45309)}
-  .tile-big{background:linear-gradient(135deg,#16A34A,#15803D)}
+  .tile-dinners{background:linear-gradient(135deg,#E8902A,#C2710F)}
+  .tile-game{background:linear-gradient(135deg,#0E8A7D,#0B6B61)}
+  .tile-sky{background:linear-gradient(135deg,#1E5142,#16302B)}
+  .tile-bar{background:linear-gradient(135deg,#E8B04B,#B5710F)}
+  .tile-big{background:linear-gradient(135deg,#3F8E7E,#2C6B5E)}
   @media(max-width:780px){.tiles{grid-template-columns:1fr 1fr}.tile.big{grid-column:span 2}}
   @media(max-width:520px){.tiles{grid-template-columns:1fr}.tile.big{grid-column:span 1}}
 
@@ -246,8 +246,8 @@ const tracks = [
 
   /* HOST BAND */
   .host{padding:84px 0}
-  .host-card{background:linear-gradient(135deg,#241B14,#3A2A20);color:#fff;border-radius:26px;padding:56px 40px;text-align:center;position:relative;overflow:hidden}
-  .host-card::after{content:"";position:absolute;top:-60px;right:-40px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(240,87,61,.5),transparent 70%)}
+  .host-card{background:linear-gradient(135deg,#16302B,#1E5142);color:#fff;border-radius:26px;padding:56px 40px;text-align:center;position:relative;overflow:hidden}
+  .host-card::after{content:"";position:absolute;top:-60px;right:-40px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(232,144,42,.5),transparent 70%)}
   .host-card h2{font-family:var(--font-display);font-size:clamp(28px,4vw,44px);font-weight:800;margin-bottom:14px;position:relative;color:#fff}
   .host-card p{color:rgba(255,255,255,.82);font-size:17px;max-width:520px;margin:0 auto 26px;position:relative}
   .host-card .btn-1{position:relative}

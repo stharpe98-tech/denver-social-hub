@@ -23,10 +23,10 @@ const typeLabel: Record<string, string> = {
   bowling: '🎳 Bowling', active: '🏃 Active', casino: '🎰 Casino', food_trucks: '🌮 Food', other: '✨ Event',
 };
 const catColor: Record<string, [string, string]> = {
-  dinner: ['#FEEDE8','#C2410C'], game_night: ['#F1ECFF','#6D28D9'], outdoor: ['#E6F8EC','#15803D'],
-  coffee: ['#FEF3E2','#B45309'], arts: ['#FCE7F3','#9D174D'], social: ['#E5F8F6','#0E7490'],
+  dinner: ['#FCEFD8','#B5710F'], game_night: ['#DCF1EC','#0B6B61'], outdoor: ['#E9F1ED','#3F6B5E'],
+  coffee: ['#FCEFD8','#B5710F'], arts: ['#FCE7D8','#B5530F'], social: ['#DCF1EC','#0B6B61'],
 };
-const pill = (t: string) => catColor[t] || ['#FEEDE8','#C2410C'];
+const pill = (t: string) => catColor[t] || ['#FCEFD8','#B5710F'];
 ---
 <Base title="Summer in Denver" description="The whole season on one calendar — dinners, terrace hangs, hikes, big potlucks.">
 <div class="summer">
