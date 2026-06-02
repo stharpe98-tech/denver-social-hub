@@ -81,119 +81,212 @@ for (const s of signups) {
   rsvpsByCategory[cat].push({ name: (s as any).name, dish: (s as any).dish });
 }
 const totalWithDishes = signups.filter((s: any) => s.dish).length;
+
+// ── "On the menu": only what people are actually bringing, grouped by category ──
+const menuByCat: Record<string, { name: string; dish: string }[]> = {};
+const menuCatOrder: string[] = [];
+for (const s of signups as any[]) {
+  if (!s.dish) continue;
+  const cat = ((s.dish_category || '').trim()) || 'On the table';
+  if (!menuByCat[cat]) { menuByCat[cat] = []; menuCatOrder.push(cat); }
+  menuByCat[cat].push({ name: s.name, dish: s.dish });
+}
+const dishCount = signups.filter((s: any) => s.dish).length;
+
+// ── Map / directions ──
+const mapQuery = (potluck.latitude && potluck.longitude)
+  ? `${potluck.latitude},${potluck.longitude}`
+  : (potluck.plus_code || potluck.location || '');
+const mapEmbed = mapQuery
+  ? `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=15&output=embed`
+  : '';
+const dirHref = (potluck.latitude && potluck.longitude)
+  ? `https://www.google.com/maps/dir/?api=1&destination=${potluck.latitude},${potluck.longitude}`
+  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(potluck.plus_code || potluck.location || '')}`;
 ---
 <Base title={potluck.title} description={potluck.description ?? `Sign up for ${potluck.title}`}>
 
-<style>
-  /* ── Layout ─────────────────────────────────────────── */
-  .pk { max-width: 620px; margin: 0 auto; padding: 0 var(--space-4) var(--space-8); }
+<style is:inline>
+  /* ════════════════════════════════════════════════════════
+     POTLUCK DETAIL — single coherent flow
+     hero → where → on the menu → rsvp → mine → manage
+     All styles global (is:inline) so JS-injected rows style too.
+     ════════════════════════════════════════════════════════ */
 
-  /* ── Hero ────────────────────────────────────────────── */
+  /* ── Page column ─────────────────────────────────────── */
+  .pk { max-width: 620px; margin: 0 auto; padding: 0 var(--space-4) var(--space-9); }
+
+  /* ── Hero (full-bleed teal/photo band) ───────────────── */
   .pk-hero {
-    text-align: center;
     margin-top: -88px;
-    padding: 108px var(--space-4) var(--space-7);
-    background-color: #0E8A7D;
-    background-image: linear-gradient(140deg, rgba(14,138,125,0.78), rgba(16,30,28,0.88)), url('/tiles/potlucks.jpg');
-    background-size: cover; background-position: center;
+    padding: 116px var(--space-4) var(--space-7);
+    text-align: center;
     color: #fff;
+    background-color: #0E8A7D;
+    background-image: linear-gradient(150deg, rgba(14,138,125,0.80), rgba(16,30,28,0.90)), url('/tiles/potlucks.jpg');
+    background-size: cover;
+    background-position: center;
   }
-  @media (max-width: 900px) { .pk-hero { margin-top: 0; padding-top: 32px; } }
-  .pk-emoji {
-    font-size: 40px; line-height: 1;
-    width: 84px; height: 84px; margin: 0 auto var(--space-3);
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28);
-    border-radius: 50%;
+  @media (max-width: 900px) { .pk-hero { margin-top: 0; padding-top: 40px; } }
+  .pk-hero-inner { max-width: 600px; margin: 0 auto; }
+  .pk-kicker {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.22em;
+    text-transform: uppercase; color: rgba(255,255,255,0.78);
+    margin-bottom: var(--space-2);
   }
   .pk-title {
     font-family: 'Caveat', 'Bricolage Grotesque', cursive;
-    font-size: clamp(42px, 9vw, 72px);
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: 0;
-    margin-bottom: var(--space-3);
-    line-height: 0.98;
+    font-size: clamp(46px, 10vw, 78px); font-weight: 700;
+    line-height: 0.95; color: #fff; margin-bottom: var(--space-3);
   }
   .pk-meta {
-    display: flex; flex-wrap: wrap; justify-content: center;
-    gap: var(--space-2);
-    font-size: 14px; color: rgba(255,255,255,0.9);
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
     margin-bottom: var(--space-3);
   }
   .pk-meta span {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28);
-    border-radius: 999px; padding: 6px 14px; font-weight: 500; color: #fff;
-    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 999px; padding: 6px 14px; font-size: 13.5px; color: #fff;
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
   }
   .pk-desc {
-    font-size: 15px; color: rgba(255,255,255,0.88); line-height: 1.6;
-    max-width: 480px; margin: 0 auto;
+    font-size: 15px; line-height: 1.6; color: rgba(255,255,255,0.9);
+    max-width: 460px; margin: 0 auto var(--space-4);
   }
-  .pk-desc-detail { margin-top: 6px; font-size: 13px; }
+  .pk-hero-going {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    margin-bottom: var(--space-5);
+  }
+  .pk-hero-avs { display: flex; }
+  .pk-hero-avs span {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 2.5px solid #16302B; margin-left: -10px;
+    background: #DCF1EC; color: #16302B;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+  }
+  .pk-hero-avs span:first-child { margin-left: 0; }
+  .pk-hero-avs .more { background: rgba(255,255,255,0.22); color: #fff; }
+  .pk-hero-count { font-size: 14px; color: rgba(255,255,255,0.85); }
+  .pk-hero-cta {
+    display: inline-block;
+    background: var(--accent2); color: #16302B;
+    font-family: var(--font-display); font-weight: 700; font-size: 17px;
+    padding: 15px 36px; border-radius: var(--radius-pill);
+    text-decoration: none;
+    box-shadow: 0 10px 26px rgba(232,144,42,0.40);
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+  .pk-hero-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(232,144,42,0.5); }
+  .pk-hero-cta:active { transform: translateY(0); }
 
-  /* ── Stats strip ────────────────────────────────────── */
-  .pk-stats {
-    display: flex; justify-content: center; gap: var(--space-5);
-    padding: var(--space-4) var(--space-4) 0;
-    max-width: 620px; margin: 0 auto;
-  }
-  .pk-stat { text-align: center; }
-  .pk-stat-num {
-    font-family: var(--font-display); font-size: 32px; font-weight: 900;
-    background: var(--cta-bg); -webkit-background-clip: text;
-    background-clip: text; -webkit-text-fill-color: transparent;
-    color: var(--accent);
-  }
-  .pk-stat-label { font-size: 12px; color: var(--text-sec); margin-top: 2px; }
-
-  /* ── RSVP card ──────────────────────────────────────── */
-  .pk-rsvp {
+  /* ── Where / map card ────────────────────────────────── */
+  .pk-where {
+    margin-top: var(--space-6);
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: var(--space-5);
-    margin-bottom: var(--space-5);
+    overflow: hidden;
     box-shadow: var(--card-shadow);
+  }
+  .pk-where-map {
+    display: block; width: 100%; height: 190px; border: 0;
+    filter: saturate(0.95);
+  }
+  .pk-where-info {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-4);
+  }
+  .pk-where-text { flex: 1; min-width: 0; }
+  .pk-where-name { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); }
+  .pk-where-detail { font-size: 13.5px; color: var(--text-sec); margin-top: 3px; line-height: 1.45; }
+  .pk-where-code {
+    display: inline-block; margin-top: 8px;
+    font-family: monospace; font-size: 12.5px; color: var(--accent);
+    background: var(--accent-soft); border-radius: 8px; padding: 4px 10px;
+  }
+  .pk-where-dir {
+    flex-shrink: 0; align-self: center;
+    background: var(--accent2); color: #16302B;
+    font-family: var(--font-display); font-weight: 700; font-size: 13.5px;
+    padding: 11px 18px; border-radius: var(--radius-pill);
+    text-decoration: none; white-space: nowrap;
+    transition: transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 12px rgba(232,144,42,0.3);
+  }
+  .pk-where-dir:hover { transform: translateY(-1px); box-shadow: 0 7px 18px rgba(232,144,42,0.42); }
+  @media (max-width: 460px) {
+    .pk-where-info { flex-direction: column; align-items: stretch; }
+    .pk-where-dir { text-align: center; }
+  }
+
+  /* ── On the menu ─────────────────────────────────────── */
+  .pk-menu { margin-top: var(--space-7); }
+  .pk-menu-h {
+    font-family: 'Caveat', 'Bricolage Grotesque', cursive;
+    font-size: 40px; font-weight: 700; text-align: center;
+    color: var(--text); line-height: 1;
+  }
+  .pk-menu-sub { text-align: center; font-size: 13.5px; color: var(--text-sec); margin: 4px 0 var(--space-5); }
+  .pk-menu-cat { margin-bottom: var(--space-4); }
+  .pk-menu-cat h3 {
+    font-family: var(--font-display); font-size: 12.5px; font-weight: 700;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .pk-menu-row {
+    display: flex; justify-content: space-between; align-items: center; gap: var(--space-3);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px; margin-bottom: 8px;
+  }
+  .pk-menu-row .d { font-size: 14.5px; color: var(--text); font-weight: 500; min-width: 0; }
+  .pk-menu-by {
+    font-family: 'Caveat', cursive; font-size: 21px; font-weight: 700;
+    color: var(--accent); flex-shrink: 0;
+  }
+  .pk-menu-empty-state {
+    text-align: center; font-size: 14px; color: var(--text-sec);
+    background: var(--surface); border: 1px dashed var(--border);
+    border-radius: var(--radius); padding: var(--space-5) var(--space-4);
+    line-height: 1.55;
+  }
+
+  /* ── Shared form card ────────────────────────────────── */
+  .pk-rsvp {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: var(--space-5);
+    margin-top: var(--space-6);
+    box-shadow: var(--card-shadow);
+    scroll-margin-top: 96px;
     transition: border-color 0.3s, box-shadow 0.3s;
   }
-  .pk-rsvp.success {
-    border-color: var(--green);
-    box-shadow: 0 0 0 4px var(--green-dim);
-  }
+  .pk-rsvp.success { border-color: var(--green); box-shadow: 0 0 0 4px var(--green-dim); }
   .pk-step-label {
     font-size: 11px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 1.5px; color: var(--accent); margin-bottom: var(--space-2);
   }
   .pk-step-title {
-    font-family: var(--font-display); font-size: 20px; font-weight: 700;
-    color: var(--text); margin-bottom: var(--space-3);
+    font-family: var(--font-display); font-size: 21px; font-weight: 800;
+    color: var(--text); margin-bottom: var(--space-3); line-height: 1.15;
   }
 
   /* Fields */
   .pk-fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-bottom: var(--space-3); }
   @media (max-width: 500px) { .pk-fields { grid-template-columns: 1fr; } }
-  .pk-field label {
-    display: block; font-size: 12px; font-weight: 600;
-    color: var(--text-sec); margin-bottom: 4px;
-  }
+  .pk-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 4px; }
   .pk-field label .opt { font-weight: 400; color: var(--text-faint); }
   .pk-input, .pk-select {
     width: 100%; padding: 12px 14px;
-    background: rgba(0,0,0,0.04); border: 1.5px solid transparent;
+    background: var(--bg); border: 1.5px solid var(--border);
     border-radius: 10px; font-size: 16px; color: var(--text);
     font-family: var(--font); outline: none; -webkit-appearance: none;
-    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   }
   .pk-input::placeholder { color: var(--text-faint); }
-  .pk-input:focus, .pk-select:focus { background: rgba(255,255,255,0.7); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .pk-input:focus, .pk-select:focus { background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
   .pk-input.invalid { border-color: #EF4444; }
 
-  .pk-guests {
-    display: flex; align-items: center; gap: 8px;
-    margin-bottom: var(--space-3);
-  }
+  .pk-guests { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-3); }
   .pk-guests-label { font-size: 13px; color: var(--text-sec); font-weight: 600; }
   .pk-guests button {
     width: 44px; height: 44px; border-radius: 50%;
@@ -206,40 +299,34 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   .pk-guests .count { font-weight: 700; font-size: 16px; min-width: 24px; text-align: center; color: var(--text); }
   .pk-guests .note { font-size: 13px; color: var(--text-faint); }
 
-  /* CTA */
+  /* Primary CTA (teal) */
   .pk-cta {
-    width: 100%; padding: 15px;
-    border-radius: var(--radius-pill);
+    width: 100%; padding: 15px; border-radius: var(--radius-pill);
     border: none; cursor: pointer;
-    background: var(--cta-bg); color: var(--cta-text);
+    background: var(--accent); color: #fff;
     font-family: var(--font-display); font-size: 17px; font-weight: 800;
-    box-shadow: 0 4px 16px var(--cta-glow);
+    box-shadow: 0 8px 20px var(--cta-glow);
     transition: box-shadow 0.2s, transform 0.15s, filter 0.2s;
   }
-  .pk-cta:hover { box-shadow: 0 8px 24px var(--cta-glow); transform: translateY(-2px) scale(1.01); filter: saturate(1.08); }
-  .pk-cta:active { transform: translateY(0) scale(0.99); }
+  .pk-cta:hover { box-shadow: 0 12px 28px var(--cta-glow); transform: translateY(-2px); filter: saturate(1.06); }
+  .pk-cta:active { transform: translateY(0); }
   .pk-cta:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-  /* Step 2 — Category Picker */
+  /* Step 2 — category picker */
   #step2 { display: none; }
   .pk-pick-intro { font-size: 14px; color: var(--text-sec); margin-bottom: var(--space-3); line-height: 1.5; }
-
-  .pk-cat-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-    margin-bottom: var(--space-3);
-  }
+  .pk-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: var(--space-3); }
   @media (max-width: 500px) { .pk-cat-grid { grid-template-columns: repeat(2, 1fr); } }
   .pk-cat-card {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 4px; padding: 14px 8px;
-    background: var(--bg); border: 1.5px solid var(--border);
-    border-radius: 12px; cursor: pointer;
-    font-family: var(--font); transition: border-color 0.15s, background 0.15s, transform 0.1s, box-shadow 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 14px 8px; background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 12px; cursor: pointer; font-family: var(--font);
+    transition: border-color 0.15s, background 0.15s, transform 0.1s, box-shadow 0.15s;
   }
-  .pk-cat-card:hover { border-color: var(--accent); background: var(--bg); transform: translateY(-2px); box-shadow: var(--card-shadow); }
+  .pk-cat-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--card-shadow); }
   .pk-cat-card.selected { border-color: var(--accent); background: var(--accent-dim); box-shadow: inset 0 0 0 1px var(--accent); }
   .pk-cat-card.full { opacity: 0.4; cursor: default; }
-  .pk-cat-card.full:hover { border-color: var(--border); background: var(--surface); transform: none; }
+  .pk-cat-card.full:hover { border-color: var(--border); transform: none; box-shadow: none; }
   .pk-cat-custom { border-style: dashed; color: var(--text-sec); }
   .pk-cat-custom:hover { border-style: solid; }
   .pk-cat-custom.selected { border-style: solid; }
@@ -250,155 +337,53 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   .pk-cat-status.full { color: var(--text-faint); }
 
   .pk-dish-wrap { margin-bottom: var(--space-3); }
-  .pk-dish-label {
-    display: block; font-size: 13px; font-weight: 600;
-    color: var(--text-sec); margin-bottom: 6px;
-  }
+  .pk-dish-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-sec); margin-bottom: 6px; }
   .pk-dish-label .opt { font-weight: 400; color: var(--text-faint); }
-  /* (old slot-item radio styles removed — now using category cards) */
 
   .pk-step2-btns { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
   .pk-skip {
-    flex: 1; padding: 12px;
-    border-radius: var(--radius-pill);
-    border: 1.5px solid var(--border);
-    background: var(--bg); color: var(--text-sec);
-    font-family: var(--font); font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: border-color 0.15s;
+    flex: 1; padding: 13px; border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border); background: var(--bg); color: var(--text-sec);
+    font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
   }
   .pk-skip:hover { border-color: var(--text-sec); color: var(--text); }
   .pk-save {
-    flex: 2; padding: 13px;
-    border-radius: var(--radius-pill);
-    border: none; cursor: pointer;
-    background: var(--cta-bg); color: var(--cta-text);
+    flex: 2; padding: 13px; border-radius: var(--radius-pill);
+    border: none; cursor: pointer; background: var(--accent); color: #fff;
     font-family: var(--font-display); font-size: 15px; font-weight: 800;
-    box-shadow: 0 4px 14px var(--cta-glow);
+    box-shadow: 0 6px 16px var(--cta-glow);
     transition: box-shadow 0.2s, transform 0.15s, filter 0.2s;
   }
-  .pk-save:hover { box-shadow: 0 8px 22px var(--cta-glow); transform: translateY(-2px); filter: saturate(1.08); }
+  .pk-save:hover { box-shadow: 0 10px 24px var(--cta-glow); transform: translateY(-2px); filter: saturate(1.06); }
   .pk-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
   .pk-error { font-size: 13px; color: #EF4444; margin-top: var(--space-2); display: none; }
   .pk-error.show { display: block; }
 
-  /* ── Section headings ──────────────────────────────── */
-  .pk-section-title {
-    font-family: var(--font-display); font-size: 20px; font-weight: 800;
-    color: var(--text); margin-bottom: var(--space-3);
-    padding-bottom: var(--space-2);
-    border-bottom: 2px solid var(--border);
-    letter-spacing: -0.01em;
-  }
-
-  /* ── Sign-up sheet (SignUpGenius style) ────────────── */
-  .pk-sug-group {
-    margin-bottom: var(--space-3);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .pk-sug-header {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 16px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-  }
-  .pk-sug-emoji { font-size: 20px; }
-  .pk-sug-cat {
-    font-family: var(--font-display); font-size: 15px; font-weight: 700;
-    color: var(--text); flex: 1;
-  }
-  .pk-sug-spots {
-    font-size: 12px; font-weight: 600; color: var(--green);
-    background: rgba(16, 185, 129, 0.08); border-radius: 999px;
-    padding: 3px 10px;
-  }
-  .pk-sug-spots.full { color: var(--text-faint); background: var(--surface-hover); }
-  .pk-sug-people { padding: 4px 0; }
-  .pk-sug-person {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--surface-hover);
-  }
-  .pk-sug-person:last-child { border-bottom: none; }
-  .pk-sug-check {
-    width: 22px; height: 22px; border-radius: 50%;
-    background: rgba(16, 185, 129, 0.1); color: var(--green);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; flex-shrink: 0;
-  }
-  .pk-sug-pname { font-size: 14px; font-weight: 600; color: var(--text); }
-  .pk-sug-dish {
-    margin-left: auto; font-size: 13px; color: var(--text-sec);
-    font-style: italic;
-  }
-  .pk-sug-empty {
-    padding: 14px 16px;
-    font-size: 13px; color: var(--text-faint); font-style: italic;
-  }
-
-  /* ── Who's coming ───────────────────────────────────── */
-  .pk-guests-row {
-    display: flex; flex-wrap: wrap; gap: 8px;
-    margin-top: var(--space-2);
-  }
-  .pk-guest {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px 8px 8px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    min-width: 0;
-  }
-  .pk-avatar {
-    width: 30px; height: 30px; border-radius: 50%;
-    background: var(--cta-bg);
-    color: #fff; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 12px; flex-shrink: 0;
-  }
-  .pk-guest-info { display: flex; flex-direction: column; min-width: 0; }
-  .pk-guest-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; }
-  .pk-guest-dish { font-size: 11px; color: var(--text-sec); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
-  .pk-guest-plus { margin-left: auto; font-size: 12px; color: var(--accent); font-weight: 600; }
-  .pk-join-nudge { text-align: center; padding: var(--space-4); color: var(--text-sec); font-size: 14px; border: 1px dashed var(--border); border-radius: var(--radius); margin-top: var(--space-3); }
-  .pk-empty { padding: var(--space-5); text-align: center; color: var(--text-faint); font-style: italic; }
-
-  /* ── Your signup (multi-slot) card ─────────────────── */
+  /* ── Your signup (multi-slot) card ───────────────────── */
   .pk-mine { display: none; }
   .pk-mine.show { display: block; }
-  .pk-mine-summary {
-    font-size: 14px; color: var(--text); margin-bottom: var(--space-3);
-    line-height: 1.5;
-  }
+  .pk-mine-summary { font-size: 14px; color: var(--text); margin-bottom: var(--space-3); line-height: 1.5; }
   .pk-mine-summary strong { color: var(--accent); }
-  .pk-mine-list {
-    display: flex; flex-direction: column; gap: 8px;
-    margin-bottom: var(--space-3);
-  }
+  .pk-mine-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: var(--space-3); }
   .pk-mine-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px;
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 12px;
+    display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+    background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px;
   }
-  .pk-mine-item-text { flex: 1; min-width: 0; font-size: 14px; color: var(--text); }
-  .pk-mine-item-cat { font-size: 12px; color: var(--text-sec); margin-top: 2px; }
+  .pk-mine-item-text { flex: 1; min-width: 0; font-size: 14px; color: var(--text); font-weight: 500; }
+  .pk-mine-item-cat { font-size: 12px; color: var(--text-sec); margin-top: 2px; font-weight: 400; }
   .pk-mine-item-btns { display: flex; gap: 6px; flex-shrink: 0; }
   .pk-mine-mini {
-    background: none; border: none; cursor: pointer;
-    font-size: 12px; font-weight: 600; color: var(--text-sec);
-    padding: 4px 8px; border-radius: 6px;
-    font-family: inherit;
+    background: none; border: none; cursor: pointer; font-size: 12px; font-weight: 600;
+    color: var(--text-sec); padding: 4px 8px; border-radius: 6px; font-family: inherit;
     transition: background 0.15s, color 0.15s;
   }
   .pk-mine-mini:hover { background: var(--surface-hover); color: var(--text); }
   .pk-mine-mini.danger:hover { color: #EF4444; }
   .pk-mine-edit {
-    display: flex; flex-direction: column; gap: 8px;
-    padding: 12px;
-    background: var(--bg); border: 1.5px solid var(--accent);
-    border-radius: 12px;
+    display: flex; flex-direction: column; gap: 8px; padding: 12px;
+    background: var(--bg); border: 1.5px solid var(--accent); border-radius: 12px;
   }
   @media (min-width: 500px) {
     .pk-mine-edit { flex-direction: row; align-items: center; }
@@ -406,228 +391,164 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   }
   .pk-mine-edit-btns { display: flex; gap: 6px; }
   .pk-mine-add {
-    display: flex; flex-direction: column; gap: 8px;
-    padding: 12px;
-    background: var(--surface); border: 1.5px dashed var(--border);
-    border-radius: 12px;
+    display: flex; flex-direction: column; gap: 8px; padding: 12px;
+    background: var(--bg); border: 1.5px dashed var(--border); border-radius: 12px;
     margin-bottom: var(--space-3);
   }
-  .pk-mine-add.open { border-color: var(--accent); background: var(--bg); }
+  .pk-mine-add.open { border-color: var(--accent); }
   @media (min-width: 500px) {
     .pk-mine-add-fields { display: flex; gap: 8px; }
     .pk-mine-add-fields > * { flex: 1; }
   }
   .pk-mine-add-toggle {
-    width: 100%; padding: 12px;
-    border-radius: var(--radius-pill);
-    border: 1.5px dashed var(--border);
-    background: var(--bg); color: var(--accent);
-    font-family: var(--font); font-size: 14px; font-weight: 600;
-    cursor: pointer;
+    width: 100%; padding: 12px; border-radius: var(--radius-pill);
+    border: 1.5px dashed var(--border); background: var(--bg); color: var(--accent);
+    font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
   }
   .pk-mine-add-toggle:hover { border-color: var(--accent); background: var(--surface); }
   .pk-mine-cancel-link {
-    display: block; text-align: center;
-    margin-top: var(--space-3);
-    font-size: 12px; color: var(--text-faint);
-    background: none; border: none; cursor: pointer;
-    font-family: inherit; padding: 4px;
-    text-decoration: underline;
+    display: block; text-align: center; margin-top: var(--space-3);
+    font-size: 12px; color: var(--text-faint); background: none; border: none;
+    cursor: pointer; font-family: inherit; padding: 4px; text-decoration: underline;
   }
   .pk-mine-cancel-link:hover { color: #EF4444; }
-  .pk-mine-err {
-    font-size: 12px; color: #EF4444; margin-top: 6px; display: none;
-  }
+  .pk-mine-err { font-size: 12px; color: #EF4444; margin-top: 6px; display: none; }
   .pk-mine-err.show { display: block; }
 
-  /* ── Manage RSVP section ───────────────────────────── */
+  /* ── Manage RSVP ─────────────────────────────────────── */
   .pk-manage {
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: var(--radius-lg); padding: var(--space-4);
-    margin-bottom: var(--space-5);
+    margin-top: var(--space-5); padding: var(--space-4);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); scroll-margin-top: 96px;
   }
-  .pk-manage-title {
-    font-family: var(--font-display); font-size: 16px; font-weight: 700;
-    color: var(--text); margin-bottom: var(--space-2);
-  }
+  .pk-manage-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: var(--space-1); }
   .pk-manage-sub { font-size: 13px; color: var(--text-sec); margin-bottom: var(--space-3); line-height: 1.5; }
-  .pk-manage-fields { display: flex; gap: var(--space-2); margin-bottom: var(--space-2); }
+  .pk-manage-fields { display: flex; gap: var(--space-2); }
   @media (max-width: 500px) { .pk-manage-fields { flex-direction: column; } }
-  .pk-manage-fields .pk-input { flex: 1; padding: 10px 12px; font-size: 14px; }
+  .pk-manage-fields .pk-input { flex: 1; padding: 11px 13px; font-size: 14px; }
   .pk-manage-btn {
-    padding: 10px 20px; border-radius: var(--radius-pill);
-    border: 1.5px solid var(--accent); background: var(--bg);
-    color: var(--accent); font-family: var(--font); font-size: 13px;
-    font-weight: 600; cursor: pointer; white-space: nowrap;
-    transition: background 0.15s, color 0.15s;
+    padding: 11px 20px; border-radius: var(--radius-pill);
+    border: 1.5px solid var(--accent); background: var(--surface); color: var(--accent);
+    font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer;
+    white-space: nowrap; transition: background 0.15s, color 0.15s;
   }
   .pk-manage-btn:hover { background: var(--accent); color: #fff; }
   .pk-manage-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .pk-manage-err { font-size: 12px; color: #EF4444; margin-top: var(--space-1); display: none; }
+  .pk-manage-err { font-size: 12px; color: #EF4444; margin-top: var(--space-2); display: none; }
   .pk-manage-err.show { display: block; }
 
-  /* ── Actions row ────────────────────────────────────── */
-  .pk-actions {
-    display: flex; gap: var(--space-3); justify-content: center;
-    margin-bottom: var(--space-5); flex-wrap: wrap;
+  /* ── Footer share ────────────────────────────────────── */
+  .pk-foot { text-align: center; margin-top: var(--space-5); }
+  .pk-foot-link {
+    background: none; border: none; cursor: pointer; font-family: inherit;
+    font-size: 13px; color: var(--text-sec); padding: 6px 12px; border-radius: 999px;
+    transition: color 0.15s, background 0.15s;
   }
-  .pk-action-btn {
-    background: none; border: none; color: var(--text-sec);
-    font-size: 13px; cursor: pointer; padding: 0;
-    font-family: inherit; display: inline-flex;
-    align-items: center; gap: 4px;
-    text-decoration: none;
-  }
-  .pk-action-btn:hover { color: var(--text); }
+  .pk-foot-link:hover { color: var(--accent); background: var(--accent-dim); }
 
-  /* ── Toast ──────────────────────────────────────────── */
+  /* ── Toast ───────────────────────────────────────────── */
   .pk-toast {
     position: fixed; bottom: 24px; left: 50%;
     transform: translateX(-50%) translateY(80px);
-    background: var(--green); color: #fff;
-    padding: 12px 24px; border-radius: 999px;
-    font-size: 14px; font-weight: 600;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    z-index: 1000; opacity: 0;
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    background: var(--green); color: #fff; padding: 12px 24px; border-radius: 999px;
+    font-size: 14px; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: 1000; opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease;
   }
   .pk-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
-  /* ── Confirmation overlay ───────────────────────────── */
+  /* ── Confirmation overlay ────────────────────────────── */
   .pk-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(15,23,42,0.55); z-index: 1000;
-    align-items: center; justify-content: center; padding: 20px;
+    display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.55);
+    z-index: 1000; align-items: center; justify-content: center; padding: 20px;
   }
   .pk-overlay.show { display: flex; }
   .pk-overlay-card {
-    background: var(--bg); border-radius: var(--radius-lg);
-    max-width: 440px; width: 100%; padding: var(--space-5);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-    text-align: center;
+    background: var(--bg); border-radius: var(--radius-lg); max-width: 440px; width: 100%;
+    padding: var(--space-5); box-shadow: 0 20px 60px rgba(0,0,0,0.2); text-align: center;
   }
   .pk-overlay-emoji { font-size: 48px; margin-bottom: var(--space-2); }
-  .pk-overlay h2 {
-    font-family: var(--font-display); font-size: 24px;
-    font-weight: 800; margin-bottom: 4px;
-  }
+  .pk-overlay h2 { font-family: var(--font-display); font-size: 24px; font-weight: 800; margin-bottom: 4px; }
   .pk-overlay-sub { color: var(--text-sec); font-size: 14px; margin-bottom: var(--space-4); }
-  .pk-overlay-block {
-    background: var(--surface); border-radius: 12px;
-    padding: 14px 16px; margin-bottom: 10px; text-align: left;
-  }
-  .pk-overlay-block-label {
-    font-size: 11px; font-weight: 700; color: var(--text-sec);
-    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
-  }
-  .pk-overlay-block.pay { background: #EDE9FE; }
-  .pk-overlay-block.pay .pk-overlay-block-label { color: #5B21B6; }
+  .pk-overlay-block { background: var(--surface); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; text-align: left; }
+  .pk-overlay-block-label { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .pk-overlay-block.pay { background: var(--accent-soft); }
+  .pk-overlay-block.pay .pk-overlay-block-label { color: var(--accent); }
   .pk-overlay-rows { font-size: 14px; color: var(--text); line-height: 1.7; }
   .pk-overlay-rows a { color: var(--accent); font-weight: 600; }
   .pk-overlay-ok {
-    width: 100%; padding: 13px; border-radius: var(--radius-pill);
-    border: none; background: var(--cta-bg); color: var(--cta-text);
-    font-family: var(--font-display); font-size: 15px; font-weight: 700;
-    cursor: pointer; margin-top: var(--space-3);
+    width: 100%; padding: 13px; border-radius: var(--radius-pill); border: none;
+    background: var(--accent); color: #fff; font-family: var(--font-display);
+    font-size: 15px; font-weight: 700; cursor: pointer; margin-top: var(--space-3);
   }
 </style>
 
-<!-- ── HERO ────────────────────────────────────────────── -->
+<!-- ── HERO ─────────────────────────────────────────────── -->
 <section class="pk-hero">
-  <div class="pk-emoji">🍽️</div>
-  <h1 class="pk-title">{potluck.title}</h1>
-  <div class="pk-meta">
-    {potluck.date_label && <span>📅 {potluck.date_label}{potluck.time_label ? ` · ${potluck.time_label}` : ''}</span>}
-    {potluck.location && <span>📍 {potluck.location}</span>}
-  </div>
-  {potluck.description && <p class="pk-desc">{potluck.description}</p>}
-  {potluck.location_detail && <p class="pk-desc pk-desc-detail">{potluck.location_detail}</p>}
-  {(potluck.latitude && potluck.longitude) || potluck.plus_code ? (
-    <div class="pk-directions">
-      {potluck.plus_code && (
-        <span class="pk-pluscode" title="Google Plus Code — paste in Maps to find this spot">📍 {potluck.plus_code}</span>
-      )}
-      <a
-        class="pk-dir-btn"
-        href={potluck.latitude && potluck.longitude
-          ? `https://www.google.com/maps/dir/?api=1&destination=${potluck.latitude},${potluck.longitude}`
-          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(potluck.plus_code || potluck.location || '')}`}
-        target="_blank"
-        rel="noopener"
-      >Get directions →</a>
+  <div class="pk-hero-inner">
+    <div class="pk-kicker">Denver Social · Potluck</div>
+    <h1 class="pk-title">{potluck.title}</h1>
+    <div class="pk-meta">
+      {potluck.date_label && <span>📅 {potluck.date_label}{potluck.time_label ? ` · ${potluck.time_label}` : ''}</span>}
+      {potluck.location && <span>📍 {potluck.location}</span>}
     </div>
-  ) : null}
-  <div class="pk-hero-going">
-    {uniqueGuests.length > 0 && (
-      <div class="pk-hero-avs">
-        {uniqueGuests.slice(0, 6).map((g: any) => (<span>{(g.name || '?').charAt(0).toUpperCase()}</span>))}
-        {guestTotal > 6 && <span class="more">+{guestTotal - 6}</span>}
-      </div>
-    )}
-    <div class="pk-hero-count">{guestTotal} {guestTotal === 1 ? 'person' : 'people'} going · free, bring a dish</div>
+    {potluck.description && <p class="pk-desc">{potluck.description}</p>}
+    <div class="pk-hero-going">
+      {uniqueGuests.length > 0 && (
+        <div class="pk-hero-avs">
+          {uniqueGuests.slice(0, 6).map((g: any) => (<span>{(g.name || '?').charAt(0).toUpperCase()}</span>))}
+          {guestTotal > 6 && <span class="more">+{guestTotal - 6}</span>}
+        </div>
+      )}
+      <div class="pk-hero-count">{guestTotal} {guestTotal === 1 ? 'person' : 'people'} going · free, just bring a dish</div>
+    </div>
+    <a href="#rsvp-card" class="pk-hero-cta">Save my spot →</a>
   </div>
 </section>
-<style>
-  .pk-directions { margin-top: var(--space-3); display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
-  .pk-pluscode { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); border-radius: 999px; padding: 6px 14px; font-family: monospace; font-size: 13px; color: #fff; }
-  .pk-dir-btn { background: var(--accent2); color: #16302B; padding: 8px 18px; border-radius: 999px; font-size: 14px; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(232,144,42,0.3); transition: transform 0.15s, box-shadow 0.15s; }
-  .pk-dir-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(232,144,42,0.4); }
-</style>
 
 <div class="pk">
 
-  <!-- ── ON THE MENU (the spread) ──────────────────────── -->
-  {slotGroupKeys.length > 0 && (
-    <div class="pk-menu">
-      <h2 class="pk-menu-h">On the menu</h2>
-      <p class="pk-menu-sub">{totalClaimed} of {totalSlots} filled — grab an open spot so the spread stays balanced.</p>
-      {slotGroupKeys.map((cat: string) => {
-        const claimed = rsvpsByCategory[cat] || [];
-        const catSlots = slotGroups[cat] || [];
-        const unlimited = catSlots.some((s: any) => s.max_claims >= 900);
-        const maxClaims = unlimited ? 0 : catSlots.reduce((a: number, s: any) => a + (s.max_claims || 0), 0);
-        const claimedCount = catSlots.reduce((a: number, s: any) => a + (s.claim_count || 0), 0);
-        const open = unlimited ? 1 : Math.max(0, maxClaims - claimedCount);
-        return (
-          <div class="pk-menu-cat">
-            <h3>{cat}{open > 0 && <span class="cnt">{unlimited ? 'open' : `${open} open`}</span>}</h3>
-            {claimed.length > 0 ? claimed.map((c: any) => (
-              <div class="pk-menu-row"><span class="d">{c.dish || 'Bringing a dish'}</span><span class="pk-menu-by">{(c.name || 'A neighbor').split(' ')[0]}</span></div>
-            )) : (
-              <div class="pk-menu-empty">Nothing here yet — claim it below.</div>
-            )}
-          </div>
-        );
-      })}
-      <a href="#rsvp-card" class="pk-menu-cta">+ Claim a spot — add what you're bringing →</a>
-    </div>
+  <!-- ── WHERE / MAP ─────────────────────────────────────── -->
+  {(mapQuery || potluck.location) && (
+    <section class="pk-where">
+      {mapEmbed && (
+        <iframe class="pk-where-map" src={mapEmbed} title={`Map — ${potluck.location || potluck.title}`} loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      )}
+      <div class="pk-where-info">
+        <div class="pk-where-text">
+          <div class="pk-where-name">📍 {potluck.location || 'Meeting spot'}</div>
+          {potluck.location_detail && <div class="pk-where-detail">{potluck.location_detail}</div>}
+          {potluck.plus_code && <div class="pk-where-code">{potluck.plus_code}</div>}
+        </div>
+        <a class="pk-where-dir" href={dirHref} target="_blank" rel="noopener">Get directions →</a>
+      </div>
+    </section>
   )}
 
-  <style is:inline>
-    .pk-menu { margin: var(--space-5) 0; }
-    .pk-menu-h { font-family: 'Caveat', cursive; font-weight: 700; font-size: 36px; text-align: center; color: var(--text); line-height: 1; }
-    .pk-menu-sub { text-align: center; font-size: 13px; color: var(--text-sec); margin: 4px 0 18px; }
-    .pk-menu-cat { margin-bottom: 16px; }
-    .pk-menu-cat h3 { font-family: var(--font-display); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-    .pk-menu-cat h3 .cnt { margin-left: auto; font-size: 12px; color: var(--accent); background: var(--accent-soft); padding: 2px 10px; border-radius: 999px; font-weight: 700; letter-spacing: 0; text-transform: none; }
-    .pk-menu-row { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; margin-bottom: 6px; font-size: 14px; color: var(--text); }
-    .pk-menu-empty { font-size: 13px; color: var(--text-faint); padding: 10px 14px; border: 1px dashed var(--border); border-radius: 10px; }
-    .pk-menu-by { font-family: 'Caveat', cursive; font-size: 20px; font-weight: 700; color: var(--text-sec); }
-    .pk-menu-cta { display: block; text-align: center; margin-top: 16px; background: var(--accent); color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; padding: 13px; border-radius: 12px; text-decoration: none; box-shadow: 0 8px 20px rgba(14,138,125,0.28); transition: transform .15s; }
-    .pk-menu-cta:hover { transform: translateY(-2px); }
-    .pk-hero-going { margin-top: var(--space-4); display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    .pk-hero-avs { display: flex; }
-    .pk-hero-avs span { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid #16302B; margin-left: -10px; background: #DCF1EC; color: #16302B; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
-    .pk-hero-avs span:first-child { margin-left: 0; }
-    .pk-hero-avs .more { background: rgba(255,255,255,0.22); color: #fff; }
-    .pk-hero-cta { background: var(--accent2); color: #16302B; font-family: var(--font-display); font-weight: 700; font-size: 16px; padding: 14px 30px; border-radius: 999px; text-decoration: none; box-shadow: 0 8px 22px rgba(232,144,42,0.34); transition: transform .15s; }
-    .pk-hero-count { font-size: 14px; color: rgba(255,255,255,0.85); }
-    .pk-menu { margin: var(--space-6) 0 var(--space-5); }
-    .pk-rsvp, .pk-manage { scroll-margin-top: 90px; }
-  </style>
+  <!-- ── ON THE MENU (claimed dishes only) ───────────────── -->
+  <section class="pk-menu">
+    <h2 class="pk-menu-h">On the menu</h2>
+    {dishCount > 0 ? (
+      <div class="pk-menu-body">
+        <p class="pk-menu-sub">{dishCount} {dishCount === 1 ? 'dish' : 'dishes'} so far — add yours below 👇</p>
+        {menuCatOrder.map((cat: string) => (
+          <div class="pk-menu-cat">
+            <h3>{cat}</h3>
+            {menuByCat[cat].map((c: any) => (
+              <div class="pk-menu-row">
+                <span class="d">{c.dish}</span>
+                <span class="pk-menu-by">{(c.name || 'A neighbor').split(' ')[0]}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    ) : (
+      <p class="pk-menu-empty-state">Nobody's claimed a dish yet — <strong>be the first</strong> and the spread will fill in here 🍽️</p>
+    )}
+  </section>
 
-  <!-- ── RSVP CARD ──────────────────────────────────────── -->
+  <!-- ── RSVP CARD ───────────────────────────────────────── -->
   <div class="pk-rsvp" id="rsvp-card">
 
     <!-- STEP 1: Quick sign-up -->
@@ -665,15 +586,13 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
     <!-- STEP 2: Pick a category + say what you're bringing -->
     <div id="step2">
       <div class="pk-step-label">Step 2</div>
-      <div class="pk-step-title">On the menu — what are you bringing? 🍽️</div>
+      <div class="pk-step-title">What are you bringing? 🍽️</div>
       <p class="pk-pick-intro">Pick a category, then tell us what you're bringing — or skip if you're just coming to hang out!</p>
 
       <div id="cat-picker" class="pk-cat-grid">
         {slots.map((slot: any) => {
           const isFull = slot.max_claims < 900 && slot.claim_count >= slot.max_claims;
           const spotsLeft = slot.max_claims < 900 ? slot.max_claims - slot.claim_count : null;
-          const catEmoji = (slot.category || '').match(/^(\p{Emoji_Presentation}|\p{Emoji}️)/u)?.[0] || '🍽️';
-          const catLabel = (slot.category || '').replace(/^(\p{Emoji_Presentation}|\p{Emoji}️)\s*/u, '');
           return (
             <button
               type="button"
@@ -681,8 +600,8 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
               data-category={slot.category}
               disabled={isFull}
             >
-              <span class="pk-cat-emoji">{catEmoji}</span>
-              <span class="pk-cat-name">{catLabel}</span>
+              <span class="pk-cat-emoji">🍽️</span>
+              <span class="pk-cat-name">{slot.category}</span>
               {isFull ? (
                 <span class="pk-cat-status full">Full</span>
               ) : spotsLeft !== null ? (
@@ -730,7 +649,7 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
     </div>
   </div>
 
-  <!-- ── YOUR SIGNUP (multi-slot, token-anchored) ──────── -->
+  <!-- ── YOUR SIGNUP (multi-slot, token-anchored) ────────── -->
   <div class="pk-rsvp pk-mine" id="mine-card">
     <div class="pk-step-label">Your signup</div>
     <div class="pk-step-title" id="mine-title">You're in! 🎉</div>
@@ -770,7 +689,7 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
     <div class="pk-mine-err" id="mine-err"></div>
   </div>
 
-  <!-- ── MANAGE YOUR RSVP ──────────────────────────────── -->
+  <!-- ── MANAGE YOUR RSVP ────────────────────────────────── -->
   <div class="pk-manage" id="manage-section">
     <div class="pk-manage-title">Already signed up?</div>
     <div class="pk-manage-sub">Enter your name or email to edit or cancel your sign-up.</div>
@@ -779,6 +698,11 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
       <button class="pk-manage-btn" id="m-lookup-btn">Find my RSVP</button>
     </div>
     <div class="pk-manage-err" id="m-lookup-err"></div>
+  </div>
+
+  <!-- ── Share ───────────────────────────────────────────── -->
+  <div class="pk-foot">
+    <button type="button" class="pk-foot-link" id="copy-link">🔗 Copy invite link</button>
   </div>
 </div>
 
