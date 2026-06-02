@@ -565,7 +565,7 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
         {guestTotal > 6 && <span class="more">+{guestTotal - 6}</span>}
       </div>
     )}
-    <a href="#rsvp-card" class="pk-hero-cta">I'm in — save my spot →</a>
+    <div class="pk-hero-count">{guestTotal} {guestTotal === 1 ? 'person' : 'people'} going · free, bring a dish</div>
   </div>
 </section>
 <style>
@@ -575,11 +575,7 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   .pk-dir-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(232,144,42,0.4); }
 </style>
 
-<div class="pk pk-grid">
-  <div class="pk-main">
-  <div class="pk-actions" style="margin-bottom:var(--space-3)">
-    <button class="pk-action-btn" id="copy-link">🔗 Copy link</button>
-  </div>
+<div class="pk">
 
   <!-- ── ON THE MENU (the spread) ──────────────────────── -->
   {slotGroupKeys.length > 0 && (
@@ -626,13 +622,10 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
     .pk-hero-avs span:first-child { margin-left: 0; }
     .pk-hero-avs .more { background: rgba(255,255,255,0.22); color: #fff; }
     .pk-hero-cta { background: var(--accent2); color: #16302B; font-family: var(--font-display); font-weight: 700; font-size: 16px; padding: 14px 30px; border-radius: 999px; text-decoration: none; box-shadow: 0 8px 22px rgba(232,144,42,0.34); transition: transform .15s; }
-    .pk-hero-cta:hover { transform: translateY(-2px); }
-    .pk.pk-grid { display: grid; grid-template-columns: 1fr 360px; gap: 28px; align-items: start; max-width: 980px; }
-    .pk-side { min-width: 0; }
-    @media (max-width: 820px) { .pk.pk-grid { grid-template-columns: 1fr; } .pk-side { order: -1; } }
+    .pk-hero-count { font-size: 14px; color: rgba(255,255,255,0.85); }
+    .pk-menu { margin: var(--space-6) 0 var(--space-5); }
+    .pk-rsvp, .pk-manage { scroll-margin-top: 90px; }
   </style>
-  </div><!-- /pk-main -->
-  <aside class="pk-side">
 
   <!-- ── RSVP CARD ──────────────────────────────────────── -->
   <div class="pk-rsvp" id="rsvp-card">
@@ -787,7 +780,6 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
     </div>
     <div class="pk-manage-err" id="m-lookup-err"></div>
   </div>
-  </aside><!-- /pk-side -->
 </div>
 
 <!-- Toast -->
@@ -999,7 +991,8 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   });
 
   // ── Copy link ────────────────────────────────────────
-  $('copy-link').addEventListener('click', function () {
+  var copyLinkEl = $('copy-link');
+  if (copyLinkEl) copyLinkEl.addEventListener('click', function () {
     navigator.clipboard.writeText(location.href).then(function () {
       var t = $('toast');
       t.textContent = 'Link copied ✓';
