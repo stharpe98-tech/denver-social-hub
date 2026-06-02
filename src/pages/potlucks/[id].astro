@@ -107,13 +107,13 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
     border-radius: 50%;
   }
   .pk-title {
-    font-family: var(--font-display);
-    font-size: clamp(30px, 7vw, 46px);
-    font-weight: 900;
+    font-family: 'Caveat', 'Bricolage Grotesque', cursive;
+    font-size: clamp(42px, 9vw, 72px);
+    font-weight: 700;
     color: #fff;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
     margin-bottom: var(--space-3);
-    line-height: 1.05;
+    line-height: 0.98;
   }
   .pk-meta {
     display: flex; flex-wrap: wrap; justify-content: center;
@@ -622,7 +622,7 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
     <!-- STEP 2: Pick a category + say what you're bringing -->
     <div id="step2">
       <div class="pk-step-label">Step 2</div>
-      <div class="pk-step-title">What would you like to bring? 🥘</div>
+      <div class="pk-step-title">On the menu — what are you bringing? 🍽️</div>
       <p class="pk-pick-intro">Pick a category, then tell us what you're bringing — or skip if you're just coming to hang out!</p>
 
       <div id="cat-picker" class="pk-cat-grid">
