@@ -99,7 +99,7 @@ const currentPath = Astro.url.pathname;
     </div>
   </aside>
 
-  <main class:list={["site-main", { home: currentPath === "/" }]}>
+  <main class:list={["site-main", { home: currentPath === "/", bleed: currentPath === "/signup" || currentPath === "/sign-in" }]}>
   <slot />
 
   <!-- Site footer -->
@@ -479,6 +479,7 @@ const currentPath = Astro.url.pathname;
 
   .site-main { min-height: 100vh; }
   .site-main:not(.home) { padding-top: 88px; }
+  .site-main.bleed { padding-top: 0; }
 
   /* ── Mobile top bar ── */
   .mtop { display: none; }
