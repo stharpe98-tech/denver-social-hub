@@ -44,11 +44,17 @@ const currentPath = Astro.url.pathname;
       <a href="/events" class:list={["isl-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
       <a href="/potlucks" class:list={["isl-link", { active: currentPath.startsWith("/potlucks") }]}>Potlucks</a>
       <a href="/community" class:list={["isl-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/neighborhoods") }]}>Community</a>
-      <a href="/perks" class:list={["isl-link", { active: currentPath.startsWith("/perks") }]}>Perks</a>
       <a href="/about" class:list={["isl-link", { active: currentPath.startsWith("/about") }]}>About</a>
       {isAdmin && <a href="/admin/dashboard" class:list={["isl-link", { active: currentPath.startsWith("/admin") }]}>Admin</a>}
     </div>
-    <a href="/host" class="isl-cta">Host</a>
+    {hasProfileSession ? (
+      <a href="/profile" class="isl-cta">My page</a>
+    ) : (
+      <>
+        <a href="/sign-in" class="isl-signin">Sign in</a>
+        <a href="/signup" class="isl-cta">Join</a>
+      </>
+    )}
   </nav>
 
   <!-- Mobile top bar -->
@@ -466,6 +472,8 @@ const currentPath = Astro.url.pathname;
   .isl-link { font-size: 14px; font-weight: 500; color: var(--text-sec); padding: 8px 13px; border-radius: 999px; text-decoration: none; white-space: nowrap; transition: color 0.15s, background 0.15s; }
   .isl-link:hover { color: var(--text); background: rgba(16,30,28,0.05); }
   .isl-link.active { color: var(--accent); background: var(--accent-dim); font-weight: 700; }
+  .isl-signin { font-size: 14px; font-weight: 600; color: var(--text-sec); text-decoration: none; padding: 8px 8px; white-space: nowrap; transition: color 0.15s; }
+  .isl-signin:hover { color: var(--text); }
   .isl-cta { background: var(--accent2); color: #16302B; font-family: var(--font-display); font-weight: 700; font-size: 13.5px; padding: 9px 18px; border-radius: 999px; text-decoration: none; margin-left: 4px; transition: filter 0.15s; }
   .isl-cta:hover { filter: brightness(1.05); }
 
