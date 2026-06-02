@@ -558,6 +558,15 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
       >Get directions →</a>
     </div>
   ) : null}
+  <div class="pk-hero-going">
+    {uniqueGuests.length > 0 && (
+      <div class="pk-hero-avs">
+        {uniqueGuests.slice(0, 6).map((g: any) => (<span>{(g.name || '?').charAt(0).toUpperCase()}</span>))}
+        {guestTotal > 6 && <span class="more">+{guestTotal - 6}</span>}
+      </div>
+    )}
+    <a href="#rsvp-card" class="pk-hero-cta">I'm in — save my spot →</a>
+  </div>
 </section>
 <style>
   .pk-directions { margin-top: var(--space-3); display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
@@ -583,6 +592,53 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   <div class="pk-actions" style="margin-top:var(--space-4)">
     <button class="pk-action-btn" id="copy-link">🔗 Copy link</button>
   </div>
+
+  <!-- ── ON THE MENU (the spread) ──────────────────────── -->
+  {slotGroupKeys.length > 0 && (
+    <div class="pk-menu">
+      <h2 class="pk-menu-h">On the menu</h2>
+      <p class="pk-menu-sub">{totalClaimed} of {totalSlots} filled — grab an open spot so the spread stays balanced.</p>
+      {slotGroupKeys.map((cat: string) => {
+        const claimed = rsvpsByCategory[cat] || [];
+        const catSlots = slotGroups[cat] || [];
+        const unlimited = catSlots.some((s: any) => s.max_claims >= 900);
+        const maxClaims = unlimited ? 0 : catSlots.reduce((a: number, s: any) => a + (s.max_claims || 0), 0);
+        const claimedCount = catSlots.reduce((a: number, s: any) => a + (s.claim_count || 0), 0);
+        const open = unlimited ? 1 : Math.max(0, maxClaims - claimedCount);
+        return (
+          <div class="pk-menu-cat">
+            <h3>{cat}{!unlimited && <span class="cnt">{Math.min(claimedCount, maxClaims)} of {maxClaims}</span>}</h3>
+            {claimed.map((c: any) => (
+              <div class="pk-menu-row"><span class="d">{c.dish || 'Bringing a dish'}</span><span class="pk-menu-by">{(c.name || 'A neighbor').split(' ')[0]}</span></div>
+            ))}
+            {Array.from({ length: Math.min(open, 5) }).map(() => (
+              <a href="#rsvp-card" class="pk-menu-row open"><span class="d">Open spot</span><span class="pk-menu-claim">Claim →</span></a>
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  )}
+
+  <style is:inline>
+    .pk-menu { margin: var(--space-5) 0; }
+    .pk-menu-h { font-family: 'Caveat', cursive; font-weight: 700; font-size: 36px; text-align: center; color: var(--text); line-height: 1; }
+    .pk-menu-sub { text-align: center; font-size: 13px; color: var(--text-sec); margin: 4px 0 18px; }
+    .pk-menu-cat { margin-bottom: 16px; }
+    .pk-menu-cat h3 { font-family: var(--font-display); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .pk-menu-cat h3 .cnt { margin-left: auto; font-size: 12px; color: #15803D; background: #E6F8EC; padding: 2px 10px; border-radius: 999px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+    .pk-menu-row { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; margin-bottom: 6px; font-size: 14px; text-decoration: none; color: var(--text); }
+    .pk-menu-row.open { border-style: dashed; color: var(--text-sec); }
+    .pk-menu-by { font-family: 'Caveat', cursive; font-size: 20px; font-weight: 700; color: var(--text-sec); }
+    .pk-menu-claim { background: var(--accent-dim); color: var(--accent); font-weight: 700; font-size: 12px; padding: 6px 13px; border-radius: 999px; }
+    .pk-hero-going { margin-top: var(--space-4); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .pk-hero-avs { display: flex; }
+    .pk-hero-avs span { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid #16302B; margin-left: -10px; background: #DCF1EC; color: #16302B; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+    .pk-hero-avs span:first-child { margin-left: 0; }
+    .pk-hero-avs .more { background: rgba(255,255,255,0.22); color: #fff; }
+    .pk-hero-cta { background: var(--accent2); color: #16302B; font-family: var(--font-display); font-weight: 700; font-size: 16px; padding: 14px 30px; border-radius: 999px; text-decoration: none; box-shadow: 0 8px 22px rgba(232,144,42,0.34); transition: transform .15s; }
+    .pk-hero-cta:hover { transform: translateY(-2px); }
+  </style>
 
   <!-- ── RSVP CARD ──────────────────────────────────────── -->
   <div class="pk-rsvp" id="rsvp-card">
