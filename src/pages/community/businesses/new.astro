@@ -1,8 +1,8 @@
 ---
 import Base from '../../../layouts/Base.astro';
-import { BUSINESS_CATEGORIES } from '../../../lib/business-schema';
+import { BUSINESS_CATEGORIES, LISTING_TYPES } from '../../../lib/business-schema';
 ---
-<Base title="List your business — Denver Social" description="Add your business to the Denver Social local directory.">
+<Base title="List your service — Denver Social" description="Add your business or side hustle to the Denver Social neighbor directory.">
 
 <style is:inline>
   .bf-hero { margin-top: -88px; padding: 116px var(--space-4) var(--space-5); text-align: center; color: #fff; background-color: #0E8A7D; background-image: linear-gradient(150deg, rgba(14,138,125,0.92), rgba(16,30,28,0.92)); }
@@ -36,6 +36,12 @@ import { BUSINESS_CATEGORIES } from '../../../lib/business-schema';
   .bf-logo-clear { background: none; border: none; color: var(--text-faint); font-size: 12px; cursor: pointer; text-decoration: underline; font-family: inherit; }
   .bf-logo-clear:hover { color: #EF4444; }
 
+  /* Segmented type control */
+  .bf-seg { display: flex; gap: 8px; }
+  .bf-seg-btn { flex: 1; padding: 13px 10px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; font-weight: 700; cursor: pointer; transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s; }
+  .bf-seg-btn:hover { border-color: var(--accent); }
+  .bf-seg-btn.on { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+
   /* Honeypot — visually hidden, off-screen */
   .bf-gotcha { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
@@ -47,8 +53,8 @@ import { BUSINESS_CATEGORIES } from '../../../lib/business-schema';
 </style>
 
 <section class="bf-hero">
-  <h1 id="bf-title">List your business</h1>
-  <p>Reach your Denver neighbors. Free to list.</p>
+  <h1 id="bf-title">List your service</h1>
+  <p>A real business or just a side hustle — reach your Denver neighbors. Free to list.</p>
 </section>
 
 <div class="bf">
@@ -58,8 +64,19 @@ import { BUSINESS_CATEGORIES } from '../../../lib/business-schema';
     </div>
 
     <div class="bf-field">
-      <label class="bf-label" for="bf-name">Business name *</label>
-      <input type="text" class="bf-input" id="bf-name" placeholder="e.g. Mile High Pet Walks" maxlength="80" required />
+      <label class="bf-label">What is this?</label>
+      <div class="bf-seg" id="bf-types">
+        {LISTING_TYPES.map((t, i) => (
+          <button type="button" class={`bf-seg-btn ${i === 0 ? 'on' : ''}`} data-type={t.key}>{t.emoji} {t.label}</button>
+        ))}
+      </div>
+      <div class="bf-hint" id="bf-type-hint">A registered business or brand.</div>
+    </div>
+
+    <div class="bf-field">
+      <label class="bf-label" for="bf-name">Name *</label>
+      <input type="text" class="bf-input" id="bf-name" placeholder="Your name or business name" maxlength="80" required />
+      <div class="bf-hint">e.g. “Mile High Pet Walks” or just “Jordan M.”</div>
     </div>
 
     <div class="bf-field">
@@ -119,7 +136,7 @@ import { BUSINESS_CATEGORIES } from '../../../lib/business-schema';
       <textarea class="bf-textarea" id="bf-description" placeholder="What you offer, your rates, availability, what makes you great…" maxlength="1200"></textarea>
     </div>
 
-    <button type="submit" class="bf-submit" id="bf-submit">Post my business 🎉</button>
+    <button type="submit" class="bf-submit" id="bf-submit">Post my listing 🎉</button>
     <div class="bf-err" id="bf-err"></div>
   </form>
 </div>
@@ -133,6 +150,20 @@ import { BUSINESS_CATEGORIES } from '../../../lib/business-schema';
   var editToken = '';
   var logoUrl = ''; // existing or freshly uploaded URL
   var pendingFile = null;
+  var listingType = 'business';
+
+  // ── Listing-type segmented control ──────────────────
+  var segBtns = document.querySelectorAll('.bf-seg-btn');
+  function setType(t) {
+    listingType = t;
+    segBtns.forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-type') === t); });
+    $('bf-type-hint').textContent = t === 'individual'
+      ? 'Just you — picking up gigs or making a little extra cash.'
+      : 'A registered business or brand.';
+  }
+  segBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () { setType(btn.getAttribute('data-type')); });
+  });
 
   // ── Edit mode: must hold the token, then prefill ────
   if (editId) {
@@ -141,7 +172,7 @@ import { BUSINESS_CATEGORIES } from '../../../lib/business-schema';
       $('bf-err').textContent = "You can only edit a listing from the device you posted it on.";
       $('bf-err').classList.add('show');
     } else {
-      $('bf-title').textContent = 'Edit your business';
+      $('bf-title').textContent = 'Edit your listing';
       $('bf-submit').textContent = 'Save changes';
       fetch('/api/business?id=' + editId)
         .then(function (r) { return r.json(); })
@@ -149,6 +180,7 @@ import { BUSINESS_CATEGORIES } from '../../../lib/business-schema';
           if (!d.ok) return;
           var b = d.listing;
           $('bf-name').value = b.name || '';
+          setType(b.listing_type === 'individual' ? 'individual' : 'business');
           $('bf-category').value = b.category || '';
           $('bf-tagline').value = b.tagline || '';
           $('bf-phone').value = b.phone || '';
@@ -192,7 +224,7 @@ import { BUSINESS_CATEGORIES } from '../../../lib/business-schema';
     $('bf-err').textContent = msg;
     $('bf-err').classList.add('show');
     $('bf-submit').disabled = false;
-    $('bf-submit').textContent = editId ? 'Save changes' : 'Post my business 🎉';
+    $('bf-submit').textContent = editId ? 'Save changes' : 'Post my listing 🎉';
   }
 
   // ── Submit ───────────────────────────────────────────
@@ -217,6 +249,7 @@ import { BUSINESS_CATEGORIES } from '../../../lib/business-schema';
         id: editId || undefined,
         edit_token: editToken || undefined,
         name: name, category: category,
+        listing_type: listingType,
         tagline: val('bf-tagline'),
         description: val('bf-description'),
         phone: phone, email: email,

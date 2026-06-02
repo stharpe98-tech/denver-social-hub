@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getDB } from '../../lib/db';
-import { ensureBusinessSchema, BUSINESS_CATEGORY_KEYS } from '../../lib/business-schema';
+import { ensureBusinessSchema, BUSINESS_CATEGORY_KEYS, LISTING_TYPE_KEYS } from '../../lib/business-schema';
 
 export const prerender = false;
 
@@ -34,7 +34,7 @@ export const GET: APIRoute = async ({ url }) => {
   const id = parseInt(url.searchParams.get('id') || '', 10);
   if (!id) return json(400, { ok: false, error: 'Missing id' });
   const row: any = await db.prepare(
-    `SELECT id, owner_name, name, category, tagline, description, phone, email, website, instagram, neighborhood, logo_url, status
+    `SELECT id, owner_name, name, category, listing_type, tagline, description, phone, email, website, instagram, neighborhood, logo_url, status
      FROM business_listings WHERE id=?`
   ).bind(id).first();
   if (!row || row.status !== 'active') return json(404, { ok: false, error: 'Not found' });
@@ -80,9 +80,12 @@ export const POST: APIRoute = async ({ request }) => {
   if (!BUSINESS_CATEGORY_KEYS.includes(category)) return json(400, { ok: false, error: 'Pick a category' });
   if (!phone && !email) return json(400, { ok: false, error: 'Add a phone or email so people can reach you' });
 
+  const listing_type = LISTING_TYPE_KEYS.includes(clean(body.listing_type, 20)) ? clean(body.listing_type, 20) : 'business';
+
   const fields = {
     name,
     category,
+    listing_type,
     tagline: clean(body.tagline, 120),
     description: clean(body.description, 1200),
     phone,
@@ -102,9 +105,9 @@ export const POST: APIRoute = async ({ request }) => {
     if (!row) return json(404, { ok: false, error: 'Not found' });
     if (row.edit_token !== token) return json(403, { ok: false, error: 'Not authorized' });
     await db.prepare(
-      `UPDATE business_listings SET name=?, category=?, tagline=?, description=?, phone=?, email=?, website=?, instagram=?, neighborhood=?, logo_url=? WHERE id=?`
+      `UPDATE business_listings SET name=?, category=?, listing_type=?, tagline=?, description=?, phone=?, email=?, website=?, instagram=?, neighborhood=?, logo_url=? WHERE id=?`
     ).bind(
-      fields.name, fields.category, fields.tagline, fields.description,
+      fields.name, fields.category, fields.listing_type, fields.tagline, fields.description,
       fields.phone, fields.email, fields.website, fields.instagram,
       fields.neighborhood, fields.logo_url, id
     ).run();
@@ -117,10 +120,10 @@ export const POST: APIRoute = async ({ request }) => {
   const editToken = randomHex(16);
   const res = await db.prepare(
     `INSERT INTO business_listings
-       (owner_email, owner_name, name, category, tagline, description, phone, email, website, instagram, neighborhood, logo_url, edit_token, status)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'active')`
+       (owner_email, owner_name, name, category, listing_type, tagline, description, phone, email, website, instagram, neighborhood, logo_url, edit_token, status)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'active')`
   ).bind(
-    ownerEmail, ownerName, fields.name, fields.category, fields.tagline,
+    ownerEmail, ownerName, fields.name, fields.category, fields.listing_type, fields.tagline,
     fields.description, fields.phone, fields.email, fields.website,
     fields.instagram, fields.neighborhood, fields.logo_url, editToken
   ).run();

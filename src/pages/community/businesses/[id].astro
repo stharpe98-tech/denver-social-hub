@@ -1,7 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import { getDB } from '../../../lib/db';
-import { ensureBusinessSchema, businessCategory } from '../../../lib/business-schema';
+import { ensureBusinessSchema, businessCategory, listingType } from '../../../lib/business-schema';
 
 const db = getDB();
 if (db) { try { await ensureBusinessSchema(db); } catch {} }
@@ -17,6 +17,7 @@ if (!b || b.status !== 'active') return Astro.redirect('/community/businesses');
 
 const c = businessCategory(b.category);
 const color = c?.color || '#0E8A7D';
+const t = listingType(b.listing_type);
 const initial = (b.name || '?').charAt(0).toUpperCase();
 const ig = (b.instagram || '').replace(/^@/, '');
 const site = b.website && !/^https?:\/\//i.test(b.website) ? `https://${b.website}` : b.website;
@@ -44,7 +45,9 @@ const site = b.website && !/^https?:\/\//i.test(b.website) ? `https://${b.websit
   .bd-logo, .bd-mono { width: 104px; height: 104px; border-radius: 24px; flex-shrink: 0; object-fit: cover; border: 4px solid var(--surface); box-shadow: 0 8px 22px rgba(0,0,0,0.18); background: var(--surface); }
   .bd-mono { display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 44px; background: linear-gradient(140deg, var(--cat), color-mix(in srgb, var(--cat) 58%, #000)); }
   .bd-name { font-family: var(--font-display); font-size: clamp(26px,5vw,34px); font-weight: 800; line-height: 1.1; color: var(--text); padding-bottom: 6px; }
-  .bd-nbh { font-size: 13px; color: var(--text-faint); margin-bottom: var(--space-4); font-weight: 500; }
+  .bd-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: var(--space-4); }
+  .bd-type { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 3px 11px; border-radius: 999px; background: color-mix(in srgb, var(--cat) 12%, #fff); color: var(--cat); }
+  .bd-nbh { font-size: 13px; color: var(--text-faint); font-weight: 500; }
   .bd-tagline { font-size: 17px; color: var(--text); font-weight: 600; line-height: 1.5; margin-bottom: var(--space-4); }
   .bd-desc { font-size: 15px; color: var(--text-sec); line-height: 1.7; white-space: pre-wrap; margin-bottom: var(--space-5); }
   .bd-contacts { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: var(--space-6); }
@@ -80,7 +83,12 @@ const site = b.website && !/^https?:\/\//i.test(b.website) ? `https://${b.websit
       : <div class="bd-mono">{initial}</div>}
     <h1 class="bd-name">{b.name}</h1>
   </div>
-  {b.neighborhood && <div class="bd-nbh">📍 {b.neighborhood}</div>}
+  {(t || b.neighborhood) && (
+    <div class="bd-meta">
+      {t && <span class="bd-type">{t.emoji} {t.label}</span>}
+      {b.neighborhood && <span class="bd-nbh">📍 {b.neighborhood}</span>}
+    </div>
+  )}
 
   {b.tagline && <p class="bd-tagline">{b.tagline}</p>}
   {b.description && <p class="bd-desc">{b.description}</p>}

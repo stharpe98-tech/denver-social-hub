@@ -1,7 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import { getDB } from '../../../lib/db';
-import { ensureBusinessSchema, BUSINESS_CATEGORIES, businessCategory } from '../../../lib/business-schema';
+import { ensureBusinessSchema, BUSINESS_CATEGORIES, businessCategory, listingType } from '../../../lib/business-schema';
 
 const db = getDB();
 if (db) { try { await ensureBusinessSchema(db); } catch {} }
@@ -16,7 +16,7 @@ let total = 0;
 
 if (db) {
   try {
-    let sql = `SELECT id, owner_name, name, category, tagline, phone, email, website, instagram, neighborhood, logo_url
+    let sql = `SELECT id, owner_name, name, category, listing_type, tagline, phone, email, website, instagram, neighborhood, logo_url
                FROM business_listings WHERE status='active'`;
     const binds: any[] = [];
     if (cat) { sql += ` AND category=?`; binds.push(cat); }
@@ -34,7 +34,7 @@ if (db) {
 const FALLBACK = '#0E8A7D';
 const activeCat = cat ? businessCategory(cat) : null;
 ---
-<Base title="Local Businesses — Denver Social" description="Neighbor-run businesses in Denver. Find a photographer, dog walker, baker and more.">
+<Base title="Services & Side Hustles — Denver Social" description="Neighbor-run businesses and side hustles in Denver. Find a photographer, dog walker, babysitter, tutor and more.">
 
 <style is:inline>
   .biz { max-width: 1080px; margin: 0 auto; padding: 0 var(--space-4) var(--space-9); }
@@ -110,6 +110,7 @@ const activeCat = cat ? businessCategory(cat) : null;
   .biz-mono { display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 27px; background: linear-gradient(140deg, var(--cat), color-mix(in srgb, var(--cat) 58%, #000)); }
   .biz-name { font-family: var(--font-display); font-size: 18.5px; font-weight: 800; color: var(--text); line-height: 1.15; text-decoration: none; }
   .biz-name:hover { color: var(--cat); }
+  .biz-type { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: color-mix(in srgb, var(--cat) 12%, #fff); color: var(--cat); }
   .biz-tagline { font-size: 13.5px; color: var(--text-sec); line-height: 1.5; }
   .biz-nbh { font-size: 12px; color: var(--text-faint); font-weight: 500; }
   .biz-contacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 8px; }
@@ -130,9 +131,9 @@ const activeCat = cat ? businessCategory(cat) : null;
 
 <section class="biz-hero">
   <div class="biz-kicker">Denver Social · Neighbors</div>
-  <h1 class="biz-h1">Local Businesses</h1>
-  <p class="biz-sub">Members of the community, running their own thing. Need a photographer, a dog walker, a baker? Support a neighbor.</p>
-  <a href="/community/businesses/new" class="biz-hero-cta">+ List your business</a>
+  <h1 class="biz-h1">Services & Side Hustles</h1>
+  <p class="biz-sub">Real businesses and neighbors making a little extra. Need a photographer, a dog walker, a babysitter, a tutor? Hire someone down the block.</p>
+  <a href="/community/businesses/new" class="biz-hero-cta">+ List yours</a>
 </section>
 
 <div class="biz">
@@ -155,6 +156,7 @@ const activeCat = cat ? businessCategory(cat) : null;
       {listings.map((b) => {
         const c = businessCategory(b.category);
         const color = c?.color || FALLBACK;
+        const t = listingType(b.listing_type);
         const initial = (b.name || '?').charAt(0).toUpperCase();
         const ig = (b.instagram || '').replace(/^@/, '');
         const site = b.website && !/^https?:\/\//i.test(b.website) ? `https://${b.website}` : b.website;
@@ -170,6 +172,7 @@ const activeCat = cat ? businessCategory(cat) : null;
                   : <div class="biz-mono">{initial}</div>}
               </div>
               <a class="biz-name" href={`/community/businesses/${b.id}`}>{b.name}</a>
+              {t && <span class="biz-type">{t.emoji} {t.label}</span>}
               {b.tagline && <p class="biz-tagline">{b.tagline}</p>}
               {b.neighborhood && <div class="biz-nbh">📍 {b.neighborhood}</div>}
               <div class="biz-contacts">
