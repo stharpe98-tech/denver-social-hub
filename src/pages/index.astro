@@ -68,11 +68,11 @@ const pill = (t: string) => catColor[t] || ['#FCEFD8', '#B5710F'];
 
 // What we do — evergreen tiles
 const tracks = [
-  { cls: 'big', em: '🍽️', t: 'Dinners', d: 'Tables of 8 — strangers in, friends out.', img: '/tiles/dinners.jpg' },
-  { cls: '', em: '🎲', t: 'Game nights', d: '', img: '/tiles/games.jpg' },
-  { cls: '', em: '🌇', t: 'Sky terrace hangs', d: '', img: '/tiles/terrace.jpg' },
-  { cls: '', em: '🍻', t: 'Bar meetups', d: '', img: '/tiles/bar.jpg' },
-  { cls: 'big', em: '🥗', t: 'Big potlucks', d: 'Everyone brings one thing. Cheesman regulars.', img: '/tiles/potlucks.jpg' },
+  { cls: 'big', em: '🍽️', t: 'Dinners', d: 'Tables of 8 — strangers in, friends out.', img: '/tiles/dinners.jpg', href: '/events#dinner' },
+  { cls: '', em: '🎲', t: 'Game nights', d: '', img: '/tiles/games.jpg', href: '/events#game_night' },
+  { cls: '', em: '🌇', t: 'Sky terrace hangs', d: '', img: '/tiles/terrace.jpg', href: '/events' },
+  { cls: '', em: '🍻', t: 'Bar meetups', d: '', img: '/tiles/bar.jpg', href: '/events' },
+  { cls: 'big', em: '🥗', t: 'Big potlucks', d: 'Everyone brings one thing. Cheesman regulars.', img: '/tiles/potlucks.jpg', href: '/potlucks' },
 ];
 ---
 <Base title="Real events, real people" description="Lively small-group events across Denver — game nights, dinners, terrace hangs, bar meetups, potlucks. Find one or host your own.">
@@ -110,7 +110,7 @@ const tracks = [
       </div>
       <div class="tiles">
         {tracks.map((t) => (
-          <a class={`tile ${t.cls}`} href="/events" style={`background-image:url(${t.img})`}>
+          <a class={`tile ${t.cls}`} href={t.href} style={`background-image:url(${t.img})`}>
             <div class="lab"><div class="em">{t.em}</div><h3>{t.t}</h3>{t.d && <p>{t.d}</p>}</div>
           </a>
         ))}

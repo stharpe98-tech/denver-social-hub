@@ -529,6 +529,15 @@ try {
     });
   });
 
+  // Deep link: /events#dinner pre-selects that category filter on load
+  (function(){
+    var hash = (location.hash || '').replace('#','').trim();
+    if (hash) {
+      var target = document.querySelector('.fpill[data-type="' + hash + '"]');
+      if (target) target.click();
+    }
+  })();
+
   // "Post an event" button just navigates to /events/new — no JS
   // intercept. The inline create-panel below was a legacy flow that's
   // superseded by the dedicated /events/new page.
