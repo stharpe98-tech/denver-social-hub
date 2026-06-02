@@ -29,19 +29,19 @@ export async function ensureBusinessSchema(db: D1Database): Promise<void> {
 }
 
 export const BUSINESS_CATEGORIES = [
-  { key: 'photo',    label: 'Photo & Video',      emoji: '📸' },
-  { key: 'pets',     label: 'Pet Care',           emoji: '🐕' },
-  { key: 'beauty',   label: 'Beauty & Hair',      emoji: '💇' },
-  { key: 'fitness',  label: 'Fitness & Coaching', emoji: '🏋️' },
-  { key: 'art',      label: 'Art & Design',       emoji: '🎨' },
-  { key: 'home',     label: 'Home & Handywork',   emoji: '🔧' },
-  { key: 'cleaning', label: 'Cleaning',           emoji: '🧹' },
-  { key: 'food',     label: 'Food & Baking',      emoji: '🍰' },
-  { key: 'tech',     label: 'Tech & Web',         emoji: '💻' },
-  { key: 'pro',      label: 'Professional',       emoji: '📋' },
-  { key: 'music',    label: 'Music & DJ',         emoji: '🎵' },
-  { key: 'auto',     label: 'Auto',               emoji: '🚗' },
-  { key: 'other',    label: 'Other',              emoji: '🌿' },
+  { key: 'photo',    label: 'Photo & Video',      emoji: '📸', color: '#7A53B0' },
+  { key: 'pets',     label: 'Pet Care',           emoji: '🐕', color: '#E8902A' },
+  { key: 'beauty',   label: 'Beauty & Hair',      emoji: '💇', color: '#D6336C' },
+  { key: 'fitness',  label: 'Fitness & Coaching', emoji: '🏋️', color: '#2F9E6E' },
+  { key: 'art',      label: 'Art & Design',       emoji: '🎨', color: '#3B6FB0' },
+  { key: 'home',     label: 'Home & Handywork',   emoji: '🔧', color: '#B5732B' },
+  { key: 'cleaning', label: 'Cleaning',           emoji: '🧹', color: '#0E8A7D' },
+  { key: 'food',     label: 'Food & Baking',      emoji: '🍰', color: '#E2542C' },
+  { key: 'tech',     label: 'Tech & Web',         emoji: '💻', color: '#4263EB' },
+  { key: 'pro',      label: 'Professional',       emoji: '📋', color: '#5E7068' },
+  { key: 'music',    label: 'Music & DJ',         emoji: '🎵', color: '#9C36B5' },
+  { key: 'auto',     label: 'Auto',               emoji: '🚗', color: '#C2410C' },
+  { key: 'other',    label: 'Other',              emoji: '🌿', color: '#15803D' },
 ] as const;
 
 export function businessCategory(key: string | null | undefined) {

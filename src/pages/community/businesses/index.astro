@@ -31,81 +31,98 @@ if (db) {
   } catch (e) { console.error(e); }
 }
 
-// Deterministic tint for the monogram fallback (no logo).
-const TINTS = ['#0E8A7D', '#E8902A', '#3B6FB0', '#B0476E', '#5E7068', '#7A53B0', '#2F9E6E'];
-function tintFor(s: string): string {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return TINTS[h % TINTS.length];
-}
+const FALLBACK = '#0E8A7D';
 const activeCat = cat ? businessCategory(cat) : null;
 ---
 <Base title="Local Businesses — Denver Social" description="Neighbor-run businesses in Denver. Find a photographer, dog walker, baker and more.">
 
 <style is:inline>
-  .biz { max-width: 1040px; margin: 0 auto; padding: 0 var(--space-4) var(--space-9); }
+  .biz { max-width: 1080px; margin: 0 auto; padding: 0 var(--space-4) var(--space-9); }
 
   /* Hero */
   .biz-hero {
     margin-top: -88px; padding: 120px var(--space-4) var(--space-6);
-    text-align: center; color: #fff;
+    text-align: center; color: #fff; position: relative; overflow: hidden;
     background-color: #0E8A7D;
-    background-image: linear-gradient(150deg, rgba(14,138,125,0.92), rgba(16,30,28,0.92));
+    background-image: linear-gradient(135deg, #0E8A7D 0%, #15803D 45%, #7A53B0 100%);
   }
   @media (max-width: 900px) { .biz-hero { margin-top: 0; padding-top: 40px; } }
-  .biz-kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.78); margin-bottom: var(--space-2); }
-  .biz-h1 { font-family: 'Caveat','Bricolage Grotesque',cursive; font-size: clamp(44px,9vw,72px); font-weight: 700; line-height: 0.95; margin-bottom: var(--space-3); }
-  .biz-sub { font-size: 15px; color: rgba(255,255,255,0.9); max-width: 520px; margin: 0 auto var(--space-4); line-height: 1.55; }
+  .biz-kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.82); margin-bottom: var(--space-2); }
+  .biz-h1 { font-family: 'Caveat','Bricolage Grotesque',cursive; font-size: clamp(46px,9vw,76px); font-weight: 700; line-height: 0.95; margin-bottom: var(--space-3); }
+  .biz-sub { font-size: 15px; color: rgba(255,255,255,0.92); max-width: 540px; margin: 0 auto var(--space-4); line-height: 1.55; }
   .biz-hero-cta {
     display: inline-block; background: var(--accent2); color: #16302B;
     font-family: var(--font-display); font-weight: 700; font-size: 16px;
     padding: 14px 30px; border-radius: var(--radius-pill); text-decoration: none;
-    box-shadow: 0 10px 26px rgba(232,144,42,0.4); transition: transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.25); transition: transform 0.15s, box-shadow 0.2s;
   }
-  .biz-hero-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(232,144,42,0.5); }
+  .biz-hero-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0,0,0,0.32); }
 
-  /* Category chips */
+  /* Category chips — color-dotted */
   .biz-cats { display: flex; gap: 8px; overflow-x: auto; padding: var(--space-5) 0 var(--space-4); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .biz-cats::-webkit-scrollbar { display: none; }
   .biz-chip {
-    flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 16px; border-radius: var(--radius-pill);
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 15px; border-radius: var(--radius-pill);
     border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
     font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap;
-    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
   }
-  .biz-chip:hover { border-color: var(--accent); color: var(--accent); }
-  .biz-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .biz-chip .n { font-size: 11px; opacity: 0.7; }
+  .biz-chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cat, var(--accent)); flex-shrink: 0; }
+  .biz-chip:hover { border-color: var(--cat, var(--accent)); box-shadow: 0 4px 12px color-mix(in srgb, var(--cat, var(--accent)) 18%, transparent); }
+  .biz-chip.on { background: var(--cat, var(--accent)); border-color: var(--cat, var(--accent)); color: #fff; }
+  .biz-chip.on .dot { background: rgba(255,255,255,0.9); }
+  .biz-chip .n { font-size: 11px; opacity: 0.65; font-weight: 700; }
 
   /* Grid */
-  .biz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
+  .biz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-4); }
   .biz-card {
-    display: flex; flex-direction: column; gap: var(--space-3);
+    display: flex; flex-direction: column;
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); padding: var(--space-4);
-    box-shadow: var(--card-shadow); transition: transform 0.15s, box-shadow 0.2s, border-color 0.15s;
+    border-radius: var(--radius-lg); overflow: hidden;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.18s, box-shadow 0.22s, border-color 0.15s;
   }
-  .biz-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.08); border-color: var(--border-hover); }
-  .biz-card-top { display: flex; align-items: center; gap: var(--space-3); }
-  .biz-logo, .biz-mono { width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0; object-fit: cover; }
-  .biz-mono { display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 24px; }
-  .biz-card-id { min-width: 0; }
-  .biz-name { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--text); line-height: 1.2; text-decoration: none; }
-  .biz-name:hover { color: var(--accent); }
-  .biz-catpill { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 11.5px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 3px 10px; }
+  .biz-card:hover { transform: translateY(-5px); border-color: transparent; box-shadow: 0 18px 38px color-mix(in srgb, var(--cat) 30%, transparent); }
+
+  /* Colored cover band */
+  .biz-band {
+    height: 78px; position: relative; padding: 11px 14px;
+    display: flex; justify-content: flex-end; align-items: flex-start;
+    background: linear-gradient(135deg, var(--cat), color-mix(in srgb, var(--cat) 52%, #FFFFFF));
+  }
+  .biz-band::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 18% 130%, rgba(255,255,255,0.25), transparent 60%); }
+  .biz-band-cat {
+    position: relative; z-index: 1;
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,0.92); color: var(--cat);
+    font-size: 11.5px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+
+  .biz-body { padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: 7px; flex: 1; }
+  .biz-logo-wrap { margin-top: -36px; margin-bottom: 3px; }
+  .biz-logo, .biz-mono {
+    width: 66px; height: 66px; border-radius: 17px; object-fit: cover;
+    border: 3px solid var(--surface); box-shadow: 0 5px 14px rgba(0,0,0,0.14);
+    background: var(--surface);
+  }
+  .biz-mono { display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 27px; background: linear-gradient(140deg, var(--cat), color-mix(in srgb, var(--cat) 58%, #000)); }
+  .biz-name { font-family: var(--font-display); font-size: 18.5px; font-weight: 800; color: var(--text); line-height: 1.15; text-decoration: none; }
+  .biz-name:hover { color: var(--cat); }
   .biz-tagline { font-size: 13.5px; color: var(--text-sec); line-height: 1.5; }
-  .biz-nbh { font-size: 12px; color: var(--text-faint); }
-  .biz-contacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+  .biz-nbh { font-size: 12px; color: var(--text-faint); font-weight: 500; }
+  .biz-contacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 8px; }
   .biz-cbtn {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 8px 13px; border-radius: var(--radius-pill);
     border: 1.5px solid var(--border); background: var(--bg); color: var(--text);
-    font-size: 12.5px; font-weight: 600; text-decoration: none; transition: border-color 0.15s, background 0.15s, color 0.15s;
+    font-size: 12.5px; font-weight: 600; text-decoration: none;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
   }
-  .biz-cbtn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-  .biz-cbtn.call { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .biz-cbtn.call:hover { filter: saturate(1.1); }
+  .biz-cbtn:hover { border-color: var(--cat); color: var(--cat); background: color-mix(in srgb, var(--cat) 8%, #fff); }
+  .biz-cbtn.call { background: var(--cat); border-color: var(--cat); color: #fff; box-shadow: 0 4px 12px color-mix(in srgb, var(--cat) 35%, transparent); }
+  .biz-cbtn.call:hover { color: #fff; filter: saturate(1.12) brightness(1.03); }
 
   .biz-empty { text-align: center; padding: var(--space-8) var(--space-4); color: var(--text-sec); }
   .biz-empty h3 { font-family: var(--font-display); font-size: 22px; color: var(--text); margin-bottom: var(--space-2); }
@@ -120,10 +137,10 @@ const activeCat = cat ? businessCategory(cat) : null;
 
 <div class="biz">
   <nav class="biz-cats" aria-label="Business categories">
-    <a href="/community/businesses" class={`biz-chip ${!cat ? 'on' : ''}`}>All{total ? <span class="n">{total}</span> : null}</a>
+    <a href="/community/businesses" class={`biz-chip ${!cat ? 'on' : ''}`}><span class="dot"></span>All{total ? <span class="n">{total}</span> : null}</a>
     {BUSINESS_CATEGORIES.map((c) => (
-      <a href={`/community/businesses?cat=${c.key}`} class={`biz-chip ${cat === c.key ? 'on' : ''}`}>
-        {c.emoji} {c.label}{counts[c.key] ? <span class="n">{counts[c.key]}</span> : null}
+      <a href={`/community/businesses?cat=${c.key}`} class={`biz-chip ${cat === c.key ? 'on' : ''}`} style={`--cat:${c.color}`}>
+        <span class="dot"></span>{c.emoji} {c.label}{counts[c.key] ? <span class="n">{counts[c.key]}</span> : null}
       </a>
     ))}
   </nav>
@@ -137,27 +154,30 @@ const activeCat = cat ? businessCategory(cat) : null;
     <div class="biz-grid">
       {listings.map((b) => {
         const c = businessCategory(b.category);
+        const color = c?.color || FALLBACK;
         const initial = (b.name || '?').charAt(0).toUpperCase();
         const ig = (b.instagram || '').replace(/^@/, '');
         const site = b.website && !/^https?:\/\//i.test(b.website) ? `https://${b.website}` : b.website;
         return (
-          <article class="biz-card">
-            <div class="biz-card-top">
-              {b.logo_url
-                ? <img class="biz-logo" src={b.logo_url} alt={`${b.name} logo`} loading="lazy" />
-                : <div class="biz-mono" style={`background:${tintFor(b.name || '')}`}>{initial}</div>}
-              <div class="biz-card-id">
-                <a class="biz-name" href={`/community/businesses/${b.id}`}>{b.name}</a>
-                {c && <div class="biz-catpill">{c.emoji} {c.label}</div>}
-              </div>
+          <article class="biz-card" style={`--cat:${color}`}>
+            <div class="biz-band">
+              {c && <span class="biz-band-cat">{c.emoji} {c.label}</span>}
             </div>
-            {b.tagline && <p class="biz-tagline">{b.tagline}</p>}
-            {b.neighborhood && <div class="biz-nbh">📍 {b.neighborhood}</div>}
-            <div class="biz-contacts">
-              {b.phone && <a class="biz-cbtn call" href={`tel:${b.phone}`}>📞 Call</a>}
-              {b.email && <a class="biz-cbtn" href={`mailto:${b.email}`}>✉️ Email</a>}
-              {site && <a class="biz-cbtn" href={site} target="_blank" rel="noopener">🌐 Site</a>}
-              {ig && <a class="biz-cbtn" href={`https://instagram.com/${ig}`} target="_blank" rel="noopener">📷 @{ig}</a>}
+            <div class="biz-body">
+              <div class="biz-logo-wrap">
+                {b.logo_url
+                  ? <img class="biz-logo" src={b.logo_url} alt={`${b.name} logo`} loading="lazy" />
+                  : <div class="biz-mono">{initial}</div>}
+              </div>
+              <a class="biz-name" href={`/community/businesses/${b.id}`}>{b.name}</a>
+              {b.tagline && <p class="biz-tagline">{b.tagline}</p>}
+              {b.neighborhood && <div class="biz-nbh">📍 {b.neighborhood}</div>}
+              <div class="biz-contacts">
+                {b.phone && <a class="biz-cbtn call" href={`tel:${b.phone}`}>📞 Call</a>}
+                {b.email && <a class="biz-cbtn" href={`mailto:${b.email}`}>✉️ Email</a>}
+                {site && <a class="biz-cbtn" href={site} target="_blank" rel="noopener">🌐 Site</a>}
+                {ig && <a class="biz-cbtn" href={`https://instagram.com/${ig}`} target="_blank" rel="noopener">📷 @{ig}</a>}
+              </div>
             </div>
           </article>
         );
