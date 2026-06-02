@@ -91,25 +91,24 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   /* ── Hero ────────────────────────────────────────────── */
   .pk-hero {
     text-align: center;
-    padding: var(--space-7) var(--space-4) var(--space-6);
-    background:
-      radial-gradient(120% 90% at 50% -10%, rgba(236,72,153,0.10), transparent 60%),
-      linear-gradient(168deg, #FBF4E6 0%, var(--bg) 55%, #F4E9F2 100%);
-    border-bottom: 1px solid var(--border);
+    margin-top: -88px;
+    padding: 108px var(--space-4) var(--space-7);
+    background: linear-gradient(140deg, #0E8A7D 0%, #16302B 100%);
+    color: #fff;
   }
+  @media (max-width: 900px) { .pk-hero { margin-top: 0; padding-top: 32px; } }
   .pk-emoji {
     font-size: 40px; line-height: 1;
     width: 84px; height: 84px; margin: 0 auto var(--space-3);
     display: flex; align-items: center; justify-content: center;
-    background: var(--bg); border: 1px solid var(--border);
+    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28);
     border-radius: 50%;
-    box-shadow: 0 6px 20px rgba(124,58,237,0.12), inset 0 1px 0 rgba(255,255,255,0.6);
   }
   .pk-title {
     font-family: var(--font-display);
     font-size: clamp(30px, 7vw, 46px);
     font-weight: 900;
-    color: var(--text);
+    color: #fff;
     letter-spacing: -0.02em;
     margin-bottom: var(--space-3);
     line-height: 1.05;
@@ -117,17 +116,17 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
   .pk-meta {
     display: flex; flex-wrap: wrap; justify-content: center;
     gap: var(--space-2);
-    font-size: 14px; color: var(--text-sec);
+    font-size: 14px; color: rgba(255,255,255,0.9);
     margin-bottom: var(--space-3);
   }
   .pk-meta span {
     display: inline-flex; align-items: center; gap: 5px;
-    background: rgba(255,255,255,0.6); border: 1px solid var(--border);
-    border-radius: 999px; padding: 6px 14px; font-weight: 500;
+    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 999px; padding: 6px 14px; font-weight: 500; color: #fff;
     backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
   }
   .pk-desc {
-    font-size: 15px; color: var(--text-sec); line-height: 1.6;
+    font-size: 15px; color: rgba(255,255,255,0.88); line-height: 1.6;
     max-width: 480px; margin: 0 auto;
   }
   .pk-desc-detail { margin-top: 6px; font-size: 13px; }
@@ -560,9 +559,9 @@ const totalWithDishes = signups.filter((s: any) => s.dish).length;
 </section>
 <style>
   .pk-directions { margin-top: var(--space-3); display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
-  .pk-pluscode { background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font-family: monospace; font-size: 13px; color: var(--text-sec); }
-  .pk-dir-btn { background: var(--accent, #7c3aed); color: #fff; padding: 8px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(124,58,237,0.25); transition: transform 0.15s, box-shadow 0.15s; }
-  .pk-dir-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(124,58,237,0.35); }
+  .pk-pluscode { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); border-radius: 999px; padding: 6px 14px; font-family: monospace; font-size: 13px; color: #fff; }
+  .pk-dir-btn { background: var(--accent2); color: #16302B; padding: 8px 18px; border-radius: 999px; font-size: 14px; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(232,144,42,0.3); transition: transform 0.15s, box-shadow 0.15s; }
+  .pk-dir-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(232,144,42,0.4); }
 </style>
 
 <!-- ── STATS ──────────────────────────────────────────── -->
