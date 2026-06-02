@@ -37,30 +37,19 @@ const currentPath = Astro.url.pathname;
 </head>
 <body>
 
-  <!-- Left sidebar (desktop) -->
-  <aside class="site-sidebar">
-    <a href="/" class="sb-logo" aria-label="Denver Social home">Denver<span>Social</span></a>
-    <div class="sb-sub">Show up. Meet people.</div>
-    <nav class="sb-nav">
-      <a href="/events" class:list={["sb-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}><span class="sb-ic">📅</span>Events</a>
-      <a href="/potlucks" class:list={["sb-link", { active: currentPath.startsWith("/potlucks") }]}><span class="sb-ic">🥘</span>Potlucks</a>
-      <a href="/community" class:list={["sb-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/neighborhoods") }]}><span class="sb-ic">📌</span>Community</a>
-      <a href="/perks" class:list={["sb-link", { active: currentPath.startsWith("/perks") }]}><span class="sb-ic">🎟️</span>Perks</a>
-      <a href="/about" class:list={["sb-link", { active: currentPath.startsWith("/about") }]}><span class="sb-ic">🌆</span>About</a>
-      <a href="/help" class:list={["sb-link", { active: currentPath.startsWith("/help") }]}><span class="sb-ic">💬</span>Help</a>
-      {isAdmin && (
-        <a href="/admin/dashboard" class:list={["sb-link sb-admin", { active: currentPath.startsWith("/admin") }]}><span class="sb-ic">⚙️</span>Admin</a>
-      )}
-    </nav>
-    <div class="sb-foot">
-      <a href="/host" class="sb-cta">+ Host an event</a>
-      {!hasProfileSession && (
-        <div class="sb-auth"><a href="/sign-in">Sign in</a><span>·</span><a href="/signup">Sign up</a></div>
-      )}
-      {isAdmin && <a href="/api/admin/logout" class="sb-auth-link">Admin sign out</a>}
-      <div class="sb-tag">Denver, CO · since 2026</div>
+  <!-- Floating nav island (desktop) -->
+  <nav class="site-island">
+    <a href="/" class="isl-logo" aria-label="Denver Social home">Denver<span>Social</span></a>
+    <div class="isl-links">
+      <a href="/events" class:list={["isl-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
+      <a href="/potlucks" class:list={["isl-link", { active: currentPath.startsWith("/potlucks") }]}>Potlucks</a>
+      <a href="/community" class:list={["isl-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/neighborhoods") }]}>Community</a>
+      <a href="/perks" class:list={["isl-link", { active: currentPath.startsWith("/perks") }]}>Perks</a>
+      <a href="/about" class:list={["isl-link", { active: currentPath.startsWith("/about") }]}>About</a>
+      {isAdmin && <a href="/admin/dashboard" class:list={["isl-link", { active: currentPath.startsWith("/admin") }]}>Admin</a>}
     </div>
-  </aside>
+    <a href="/host" class="isl-cta">Host</a>
+  </nav>
 
   <!-- Mobile top bar -->
   <header class="mtop">
@@ -104,7 +93,7 @@ const currentPath = Astro.url.pathname;
     </div>
   </aside>
 
-  <main class="site-main">
+  <main class:list={["site-main", { home: currentPath === "/" }]}>
   <slot />
 
   <!-- Site footer -->
@@ -462,8 +451,26 @@ const currentPath = Astro.url.pathname;
   .sb-auth-link { display: block; text-align: center; margin-top: 12px; font-size: 13px; color: var(--text-sec); text-decoration: none; }
   .sb-tag { margin-top: 16px; font-size: 11.5px; color: var(--text-faint); text-align: center; }
 
-  /* main column offset by the fixed sidebar */
-  .site-main { margin-left: 230px; min-height: 100vh; }
+  /* ── Floating nav island (desktop) ── */
+  .site-island {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 200;
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.7); border-radius: 999px;
+    padding: 8px 8px 8px 20px; box-shadow: 0 12px 36px rgba(16,30,28,0.16);
+    max-width: calc(100vw - 32px);
+  }
+  .isl-logo { font-family: var(--font-display); font-weight: 800; font-size: 19px; letter-spacing: -0.02em; color: var(--text); text-decoration: none; margin-right: 6px; white-space: nowrap; }
+  .isl-logo span { color: var(--accent); }
+  .isl-links { display: flex; align-items: center; gap: 2px; }
+  .isl-link { font-size: 14px; font-weight: 500; color: var(--text-sec); padding: 8px 13px; border-radius: 999px; text-decoration: none; white-space: nowrap; transition: color 0.15s, background 0.15s; }
+  .isl-link:hover { color: var(--text); background: rgba(16,30,28,0.05); }
+  .isl-link.active { color: var(--accent); background: var(--accent-dim); font-weight: 700; }
+  .isl-cta { background: var(--accent2); color: #16302B; font-family: var(--font-display); font-weight: 700; font-size: 13.5px; padding: 9px 18px; border-radius: 999px; text-decoration: none; margin-left: 4px; transition: filter 0.15s; }
+  .isl-cta:hover { filter: brightness(1.05); }
+
+  .site-main { min-height: 100vh; }
+  .site-main:not(.home) { padding-top: 88px; }
 
   /* ── Mobile top bar ── */
   .mtop { display: none; }
@@ -472,8 +479,8 @@ const currentPath = Astro.url.pathname;
   .mtop-cta { background: var(--cta-bg); color: var(--cta-text); font-weight: 600; font-size: 13px; padding: 9px 16px; border-radius: 999px; text-decoration: none; }
 
   @media(max-width: 900px) {
-    .site-sidebar { display: none; }
-    .site-main { margin-left: 0; }
+    .site-sidebar, .site-island { display: none; }
+    .site-main:not(.home) { padding-top: 0; }
     .mtop {
       display: flex; align-items: center; justify-content: space-between;
       position: sticky; top: 0; z-index: 200; height: 60px; padding: 0 16px;
