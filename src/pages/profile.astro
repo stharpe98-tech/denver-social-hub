@@ -5,7 +5,7 @@ import { getCurrentProfile } from '../lib/profile-auth';
 
 const db = getDB();
 const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
-if (!me) return Astro.redirect('/u/new');
+if (!me) return Astro.redirect('/signup');
 
 // Hosted events and posted flyers — best-effort counts.
 let hostedCount = 0;
@@ -53,7 +53,7 @@ const isEmpty = hostedCount === 0 && flyerCount === 0;
       <div class="hd-id">
         <h1 class="hd-name">{me.display_name}</h1>
         <p class="hd-email">{me.email}</p>
-        <span class={`tier-badge ${me.tier}`}>{me.tier === 'organizer' ? '✨ Organizer' : '👋 Regular'}</span>
+        <span class="tier-badge regular">👋 Member</span>
       </div>
     </header>
 
@@ -80,27 +80,7 @@ const isEmpty = hostedCount === 0 && flyerCount === 0;
       </div>
     </section>
 
-    {me.tier === 'regular' && (
-      <section class="upgrade">
-        <h2 class="up-h">Want a public page?</h2>
-        <p class="up-sub">Become an Organizer to get a public page at <span class="mono">/u/yourname</span>, group creation, booking tools, and DMs from members.</p>
-        <a class="up-cta" href="/u/new">Upgrade to Organizer →</a>
-      </section>
-    )}
-
-    {me.tier === 'organizer' && (
-      <section class="organizer-tools">
-        <h2 class="up-h">Your organizer page</h2>
-        <div class="org-row">
-          <a class="org-btn primary" href={`/u/${me.slug}/edit`}>Edit your page</a>
-          <a class="org-btn" href={`/u/${me.slug}`}>View public page →</a>
-          <a class="org-btn" href="/dashboard/booking-setup">Booking setup</a>
-          <a class="org-btn" href="/dashboard/reservations">Reservations</a>
-        </div>
-      </section>
-    )}
-
-    {me.tier === 'regular' && (
+    {me && (
       <section class="contact-edit">
         <h2 class="up-h">Saved contact info</h2>
         <p class="up-sub">Used to auto-fill flyers and RSVP forms. Never shown publicly unless you attach it to a flyer.</p>

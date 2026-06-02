@@ -121,7 +121,7 @@ const currentPath = Astro.url.pathname;
       </div>
       <div class="footer-col">
         <div class="footer-col-title">People</div>
-        <a href="/organizers">Organizers</a>
+        <a href="/host">Host an event</a>
         <a href="/groups">Groups</a>
         <a href="/sign-in">Sign in</a>
         <a href="/signup">Sign up</a>
@@ -241,7 +241,7 @@ const currentPath = Astro.url.pathname;
             html += '<div class="mc-phone-ok" style="background:#F0FDF4;color:#047857;border-color:#BBF7D0">Regular member — no public page.</div>';
           } else if (!hasViewer) {
             // No profile session — show a CTA to sign up.
-            html += '<a class="mc-btn mc-btn-primary" href="/u/new?next=' + encodeURIComponent(window.location.pathname) + '">Sign up to message</a>';
+            html += '<a class="mc-btn mc-btn-primary" href="/signup?next=' + encodeURIComponent(window.location.pathname) + '">Sign up to message</a>';
           } else {
             html += '<button class="mc-btn mc-btn-primary" id="mc-msg" data-email="' + escapeHtml(m.email) + '">💬 Message</button>';
             var sent = data.phoneRequest && data.phoneRequest.sent;

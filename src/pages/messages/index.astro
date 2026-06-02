@@ -6,7 +6,7 @@ import { getCurrentProfile } from '../../lib/profile-auth';
 
 const db = getDB();
 const viewer = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
-if (!viewer) return Astro.redirect('/u/new?next=/messages');
+if (!viewer) return Astro.redirect('/signup?next=/messages');
 
 let conversations: any[] = [];
 if (db) {
