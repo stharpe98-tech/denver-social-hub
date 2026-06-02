@@ -70,19 +70,24 @@ const currentPath = Astro.url.pathname;
   <div class="mob-backdrop" id="mob-backdrop" hidden></div>
   <aside class="mob-drawer" id="mob-drawer" hidden aria-label="Site menu">
     <div class="mob-drawer-head">
-      <a href="/" class="mob-drawer-brand">
-        <span>🌆</span><strong>Denver Social</strong>
-      </a>
+      <a href="/" class="mob-drawer-brand">Denver<span>Social</span></a>
       <button class="mob-drawer-close" id="mob-drawer-close" aria-label="Close menu">×</button>
     </div>
 
     <nav class="mob-drawer-nav">
-      <a href="/" class:list={["mob-drawer-link", { active: currentPath === "/" }]}><span class="mob-drawer-icon">🏠</span>Home</a>
-      <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") || currentPath.startsWith("/calendar") }]}><span class="mob-drawer-icon">📅</span>Events</a>
-      <a href="/community" class:list={["mob-drawer-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/neighborhoods") }]}><span class="mob-drawer-icon">📌</span>Community Board</a>
-      <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]}><span class="mob-drawer-icon">🏪</span>Perks</a>
+      <a href="/" class:list={["mob-drawer-link", { active: currentPath === "/" }]} style="--i:#0E8A7D"><span class="mob-drawer-icon">🏠</span>Home</a>
+      <a href="/events" class:list={["mob-drawer-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/calendar") }]} style="--i:#3B82F6"><span class="mob-drawer-icon">📅</span>Events</a>
+      <a href="/potlucks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/potlucks") }]} style="--i:#E8902A"><span class="mob-drawer-icon">🍽️</span>Potlucks</a>
+      <a href="/community" class:list={["mob-drawer-link", { active: currentPath === "/community" || currentPath.startsWith("/community/post") || currentPath.startsWith("/neighborhoods") }]} style="--i:#D6336C"><span class="mob-drawer-icon">📌</span>Community Board</a>
+      <a href="/community/businesses" class:list={["mob-drawer-link", { active: currentPath.startsWith("/community/businesses") }]} style="--i:#9C36B5"><span class="mob-drawer-icon">🛠️</span>Services & Side Hustles</a>
+      <a href="/groups" class:list={["mob-drawer-link", { active: currentPath.startsWith("/groups") }]} style="--i:#0CA5B0"><span class="mob-drawer-icon">👥</span>Groups</a>
+      <a href="/perks" class:list={["mob-drawer-link", { active: currentPath.startsWith("/perks") }]} style="--i:#15803D"><span class="mob-drawer-icon">🎁</span>Perks</a>
+      <a href="/about" class:list={["mob-drawer-link", { active: currentPath.startsWith("/about") }]} style="--i:#5E7068"><span class="mob-drawer-icon">💬</span>About</a>
+      {hasProfileSession && (
+        <a href="/profile" class:list={["mob-drawer-link", { active: currentPath.startsWith("/profile") }]} style="--i:#7A53B0"><span class="mob-drawer-icon">👤</span>My page</a>
+      )}
       {isAdmin && (
-        <a href="/admin/dashboard" class:list={["mob-drawer-link mob-drawer-link-admin", { active: currentPath.startsWith("/admin") }]}><span class="mob-drawer-icon">⚙️</span>Admin</a>
+        <a href="/admin/dashboard" class:list={["mob-drawer-link", { active: currentPath.startsWith("/admin") }]} style="--i:#C2410C"><span class="mob-drawer-icon">⚙️</span>Admin</a>
       )}
     </nav>
 
@@ -90,7 +95,7 @@ const currentPath = Astro.url.pathname;
       {!hasProfileSession && (
         <>
           <a href="/sign-in" class="mob-drawer-cta mob-drawer-cta-ghost">Sign in</a>
-          <a href="/signup" class="mob-drawer-cta">Sign up</a>
+          <a href="/signup" class="mob-drawer-cta">Join the community</a>
         </>
       )}
       {isAdmin && (
@@ -632,58 +637,58 @@ const currentPath = Astro.url.pathname;
 
   .mob-drawer-head {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 20px 12px; border-bottom: 1px solid var(--border);
+    padding: 22px 20px;
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(21,128,61,0.9), transparent 60%),
+      radial-gradient(circle at 95% 10%, rgba(122,83,176,0.85), transparent 55%),
+      linear-gradient(135deg, #0E8A7D, #0B5C54);
+    color: #fff;
   }
-  .mob-drawer-brand { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
-  .mob-drawer-brand span { font-size: 22px; }
-  .mob-drawer-brand strong { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+  .mob-drawer-brand { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.02em; text-decoration: none; }
+  .mob-drawer-brand span { color: var(--accent2); }
   .mob-drawer-close {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: var(--surface); border: 1px solid var(--border);
-    font-size: 22px; line-height: 1; color: var(--text-sec);
-    cursor: pointer; padding: 0;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3);
+    font-size: 20px; line-height: 1; color: #fff;
+    cursor: pointer; padding: 0; transition: background 0.15s;
   }
-  .mob-drawer-close:hover { background: var(--surface-hover); color: var(--text); }
+  .mob-drawer-close:hover { background: rgba(255,255,255,0.3); }
 
-  .mob-drawer-user {
-    display: flex; align-items: center; gap: 12px;
-    padding: 16px 20px; border-bottom: 1px solid var(--border);
-    text-decoration: none; color: var(--text);
-  }
-  .mob-drawer-user:hover { background: var(--surface); }
-  .mob-drawer-avatar {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: #fff; display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-size: 17px; font-weight: 800;
-  }
-  .mob-drawer-user strong { display: block; font-size: 15px; font-weight: 700; }
-  .mob-drawer-user span { font-size: 12px; color: var(--text-sec); }
-
-  .mob-drawer-nav { display: flex; flex-direction: column; padding: 12px 12px; flex: 1; }
+  .mob-drawer-nav { display: flex; flex-direction: column; gap: 2px; padding: 14px 12px; flex: 1; }
   .mob-drawer-link {
-    display: flex; align-items: center; gap: 14px;
-    padding: 14px 14px; border-radius: 12px;
-    font-size: 15px; font-weight: 600; color: var(--text); text-decoration: none;
-    transition: background 0.15s;
+    display: flex; align-items: center; gap: 13px;
+    padding: 11px 12px; border-radius: 14px;
+    font-family: var(--font-display); font-size: 15px; font-weight: 600;
+    color: var(--text); text-decoration: none;
+    transition: background 0.15s, transform 0.1s;
   }
   .mob-drawer-link:hover { background: var(--surface); }
-  .mob-drawer-link.active { background: var(--accent-dim); color: var(--accent); }
-  .mob-drawer-icon { font-size: 20px; width: 24px; text-align: center; }
-  .mob-drawer-link-admin { color: #7C3AED; }
-  .mob-drawer-link-admin.active { background: rgba(124,58,237,0.12); }
+  .mob-drawer-link:active { transform: scale(0.99); }
+  .mob-drawer-link.active { background: color-mix(in srgb, var(--i) 12%, #fff); color: var(--i); }
+  .mob-drawer-icon {
+    width: 38px; height: 38px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px; border-radius: 11px;
+    background: color-mix(in srgb, var(--i) 14%, #fff);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--i) 22%, transparent);
+  }
 
   .mob-drawer-foot {
-    padding: 16px 20px max(20px, env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 16px 18px max(20px, env(safe-area-inset-bottom));
     border-top: 1px solid var(--border);
   }
   .mob-drawer-cta {
-    display: block; padding: 12px; border-radius: 999px;
-    background: var(--cta-bg); color: var(--cta-text);
-    font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    display: block; padding: 13px; border-radius: var(--radius-pill);
+    background: var(--accent); color: #fff;
+    font-family: var(--font-display); font-weight: 800; font-size: 14.5px;
     text-align: center; text-decoration: none;
+    box-shadow: 0 6px 16px var(--cta-glow);
+    transition: transform 0.15s, box-shadow 0.2s;
   }
-  .mob-drawer-cta-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .mob-drawer-cta:hover { transform: translateY(-1px); box-shadow: 0 10px 22px var(--cta-glow); }
+  .mob-drawer-cta-ghost { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); box-shadow: none; }
+  .mob-drawer-cta-ghost:hover { border-color: var(--accent); color: var(--accent); }
 
   @media(max-width: 900px) {
     .mob-hamburger { display: flex; }
@@ -702,12 +707,25 @@ const currentPath = Astro.url.pathname;
   .card:hover { box-shadow: var(--card-shadow-lg); border-color: var(--border-hover); }
   .card:active { transform: translateY(1px); }
 
-  /* Shared community tab strip — used on /community, /groups, /organizers. */
-  .cb-tabs-strip { background: #FAF8F4; border-top: 1px solid #E8E2D5; border-bottom: 1px solid #E8E2D5; display: flex; justify-content: center; gap: 4px; padding: 14px 16px 0; flex-wrap: wrap; margin-bottom: 0; }
-  .cb-tab-link { padding: 9px 18px; border-radius: 999px 999px 0 0; font-size: 13px; font-weight: 600; color: #888; text-decoration: none; border: 1px solid transparent; border-bottom: none; transition: color .15s, background .15s; }
-  .cb-tab-link:hover { color: #1A1A1A; background: rgba(0,0,0,0.04); }
-  .cb-tab-link-on { color: #1A1A1A; background: #fff; border-color: #E8E2D5; }
-  @media (max-width: 540px) { .cb-tab-link { padding: 8px 14px; font-size: 12px; } }
+  /* Shared community tab strip — used on /community, /community/businesses, /groups. */
+  .cb-tabs-strip {
+    display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;
+    width: fit-content; margin: 0 auto var(--space-5);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-pill); padding: 6px;
+    box-shadow: var(--card-shadow);
+  }
+  .cb-tab-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: var(--radius-pill);
+    font-family: var(--font-display); font-size: 13.5px; font-weight: 700;
+    color: var(--text-sec); text-decoration: none; white-space: nowrap;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+  }
+  .cb-tab-link:hover { color: var(--text); background: var(--surface-hover); }
+  .cb-tab-link:active { transform: translateY(1px); }
+  .cb-tab-link-on, .cb-tab-link-on:hover { background: var(--accent); color: #fff; }
+  @media (max-width: 540px) { .cb-tab-link { padding: 8px 14px; font-size: 12.5px; } }
 
   .btn-cta {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;

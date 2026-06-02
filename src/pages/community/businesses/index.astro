@@ -151,6 +151,11 @@ const activeCat = cat ? businessCategory(cat) : null;
 </section>
 
 <div class="biz">
+  <nav class="cb-tabs-strip" aria-label="Community sections" style="margin-top: var(--space-5)">
+    <a href="/community" class="cb-tab-link">📌 Flyers</a>
+    <a href="/community/businesses" class="cb-tab-link cb-tab-link-on">🛠️ Services</a>
+    <a href="/groups" class="cb-tab-link">👥 Groups</a>
+  </nav>
   <nav class="biz-cats" aria-label="Business categories">
     <a href="/community/businesses" class={`biz-chip ${!cat ? 'on' : ''}`}><span class="dot"></span>All{total ? <span class="n">{total}</span> : null}</a>
     {BUSINESS_CATEGORIES.map((c) => (
