@@ -1,0 +1,127 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { getDB } from '../../../lib/db';
+import { ensureBusinessSchema, businessCategory } from '../../../lib/business-schema';
+
+const db = getDB();
+if (db) { try { await ensureBusinessSchema(db); } catch {} }
+const { id } = Astro.params;
+
+let b: any = null;
+try {
+  if (db && id) {
+    b = await db.prepare(
+      `SELECT * FROM business_listings WHERE id=?`
+    ).bind(id).first();
+  }
+} catch (e) { console.error(e); }
+if (!b || b.status !== 'active') return Astro.redirect('/community/businesses');
+
+const c = businessCategory(b.category);
+const initial = (b.name || '?').charAt(0).toUpperCase();
+const ig = (b.instagram || '').replace(/^@/, '');
+const site = b.website && !/^https?:\/\//i.test(b.website) ? `https://${b.website}` : b.website;
+
+const TINTS = ['#0E8A7D', '#E8902A', '#3B6FB0', '#B0476E', '#5E7068', '#7A53B0', '#2F9E6E'];
+let h = 0; for (let i = 0; i < (b.name || '').length; i++) h = (h * 31 + b.name.charCodeAt(i)) >>> 0;
+const tint = TINTS[h % TINTS.length];
+---
+<Base title={`${b.name} — Denver Social`} description={b.tagline || `${b.name} on the Denver Social local business board`}>
+
+<style is:inline>
+  .bd { max-width: 680px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-9); }
+  .bd-back { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-sec); text-decoration: none; margin-bottom: var(--space-4); }
+  .bd-back:hover { color: var(--accent); }
+  .bd-head { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-5); }
+  .bd-logo, .bd-mono { width: 96px; height: 96px; border-radius: 22px; flex-shrink: 0; object-fit: cover; }
+  .bd-mono { display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 42px; }
+  .bd-name { font-family: var(--font-display); font-size: clamp(26px,5vw,34px); font-weight: 800; line-height: 1.1; color: var(--text); }
+  .bd-catpill { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 4px 12px; }
+  .bd-nbh { font-size: 13px; color: var(--text-faint); margin-top: 8px; }
+  .bd-tagline { font-size: 17px; color: var(--text); font-weight: 500; line-height: 1.5; margin-bottom: var(--space-4); }
+  .bd-desc { font-size: 15px; color: var(--text-sec); line-height: 1.7; white-space: pre-wrap; margin-bottom: var(--space-5); }
+  .bd-contacts { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: var(--space-6); }
+  .bd-cbtn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 12px 20px; border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
+    font-size: 14px; font-weight: 600; text-decoration: none; transition: border-color 0.15s, background 0.15s, color 0.15s;
+  }
+  .bd-cbtn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .bd-cbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 6px 16px var(--cta-glow); }
+  .bd-cbtn.primary:hover { filter: saturate(1.1); color: #fff; }
+  .bd-manage { display: none; border-top: 1px solid var(--border); padding-top: var(--space-4); margin-top: var(--space-4); }
+  .bd-manage.show { display: block; }
+  .bd-manage-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin-bottom: var(--space-3); }
+  .bd-manage-btns { display: flex; gap: 10px; }
+  .bd-mbtn { padding: 10px 18px; border-radius: var(--radius-pill); border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .bd-mbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .bd-mbtn.danger:hover { border-color: #EF4444; color: #EF4444; }
+</style>
+
+<div class="bd">
+  <a href="/community/businesses" class="bd-back">← All businesses</a>
+
+  <div class="bd-head">
+    {b.logo_url
+      ? <img class="bd-logo" src={b.logo_url} alt={`${b.name} logo`} />
+      : <div class="bd-mono" style={`background:${tint}`}>{initial}</div>}
+    <div>
+      <h1 class="bd-name">{b.name}</h1>
+      {c && <span class="bd-catpill">{c.emoji} {c.label}</span>}
+      {b.neighborhood && <div class="bd-nbh">📍 {b.neighborhood}</div>}
+    </div>
+  </div>
+
+  {b.tagline && <p class="bd-tagline">{b.tagline}</p>}
+  {b.description && <p class="bd-desc">{b.description}</p>}
+
+  <div class="bd-contacts">
+    {b.phone && <a class="bd-cbtn primary" href={`tel:${b.phone}`}>📞 {b.phone}</a>}
+    {b.email && <a class="bd-cbtn" href={`mailto:${b.email}`}>✉️ Email</a>}
+    {site && <a class="bd-cbtn" href={site} target="_blank" rel="noopener">🌐 Website</a>}
+    {ig && <a class="bd-cbtn" href={`https://instagram.com/${ig}`} target="_blank" rel="noopener">📷 @{ig}</a>}
+  </div>
+
+  <div class="bd-manage" id="bd-manage">
+    <div class="bd-manage-label">You posted this</div>
+    <div class="bd-manage-btns">
+      <a class="bd-mbtn" id="bd-edit" href={`/community/businesses/new?edit=${b.id}`}>Edit listing</a>
+      <button type="button" class="bd-mbtn danger" id="bd-delete">Delete listing</button>
+    </div>
+  </div>
+</div>
+
+<script is:inline define:vars={{ bizId: b.id }}>
+(function () {
+  var key = 'dsn_biz_' + bizId;
+  var token = '';
+  try { token = localStorage.getItem(key) || ''; } catch (_) {}
+  if (token) {
+    var mgr = document.getElementById('bd-manage');
+    if (mgr) mgr.classList.add('show');
+    var del = document.getElementById('bd-delete');
+    if (del) del.addEventListener('click', function () {
+      if (!confirm('Delete this listing? This cannot be undone.')) return;
+      del.disabled = true; del.textContent = 'Deleting…';
+      fetch('/api/business', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id: bizId, edit_token: token }),
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok) {
+          try { localStorage.removeItem(key); } catch (_) {}
+          window.location.href = '/community/businesses';
+        } else {
+          del.disabled = false; del.textContent = 'Delete listing';
+          alert(d.error || 'Could not delete.');
+        }
+      })
+      .catch(function () { del.disabled = false; del.textContent = 'Delete listing'; });
+    });
+  }
+})();
+</script>
+</Base>
