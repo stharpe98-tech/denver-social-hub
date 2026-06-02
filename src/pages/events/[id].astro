@@ -140,32 +140,33 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
 
 <Base title={event.title}>
 <main class="ev">
-  <!-- Back link -->
-  <div class="ev-top-row">
-    <a href="/events" class="ev-back">← Back to events</a>
-    <div class="ev-top-actions">
-      {user && !canDeleteEvent && (
-        <button class="ev-report-btn" data-report="event" data-id={id}>🚩 Report</button>
-      )}
-      {canDeleteEvent && (
-        <button class="ev-delete-btn" id="ev-delete-btn" data-event-id={id}>🗑 Delete event</button>
-      )}
+  <!-- Full-bleed hero band -->
+  <div class="ev-herowrap"><div class="ev-hero-inner">
+    <div class="ev-top-row">
+      <a href="/events" class="ev-back">← Back to events</a>
+      <div class="ev-top-actions">
+        {user && !canDeleteEvent && (
+          <button class="ev-report-btn" data-report="event" data-id={id}>🚩 Report</button>
+        )}
+        {canDeleteEvent && (
+          <button class="ev-delete-btn" id="ev-delete-btn" data-event-id={id}>🗑 Delete event</button>
+        )}
+      </div>
     </div>
-  </div>
 
-  <!-- Hero header -->
-  <div class="ev-hero">
-    <span class="ev-emoji">{typeEmoji[event.event_type] || '📌'}</span>
-    <h1 class="ev-title">{event.title}</h1>
-    <div class="ev-tags">
-      <span class="tag tag-blue">{typeLabel[event.event_type] || 'Event'}</span>
-      {event.account_age_min > 0 && <span class="tag tag-yellow">🔒 {event.account_age_min}d+ account</span>}
-      {parseVibeTags(event.vibe_tags).map((key:string) => {
-        const t = vibeLabel(key);
-        return t && <span class="tag tag-green">{t.emoji} {t.label}</span>;
-      })}
+    <div class="ev-hero">
+      <span class="ev-emoji">{typeEmoji[event.event_type] || '📌'}</span>
+      <h1 class="ev-title">{event.title}</h1>
+      <div class="ev-tags">
+        <span class="tag tag-blue">{typeLabel[event.event_type] || 'Event'}</span>
+        {event.account_age_min > 0 && <span class="tag tag-yellow">🔒 {event.account_age_min}d+ account</span>}
+        {parseVibeTags(event.vibe_tags).map((key:string) => {
+          const t = vibeLabel(key);
+          return t && <span class="tag tag-green">{t.emoji} {t.label}</span>;
+        })}
+      </div>
     </div>
-  </div>
+  </div></div>
 
   <!-- Info cards row -->
   <div class="ev-info-grid">
@@ -671,11 +672,29 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
   .ev {
     max-width: 640px;
     margin: 0 auto;
-    padding: 24px 20px 64px;
+    padding: 0 20px 64px;
     display: flex;
     flex-direction: column;
     gap: 24px;
   }
+
+  /* Full-bleed hero band (full-screen header the floating nav sits over) */
+  .ev-herowrap {
+    margin: 0 calc(50% - 50vw); width: 100vw;
+    background: linear-gradient(140deg, #0E8A7D 0%, #16302B 100%);
+    color: #fff; padding: 100px 24px 44px;
+  }
+  .ev-hero-inner { max-width: 640px; margin: 0 auto; }
+  .ev-herowrap .ev-top-row { margin-bottom: 24px; }
+  .ev-herowrap .ev-back { color: rgba(255,255,255,.85); }
+  .ev-herowrap .ev-back:hover { color: #fff; }
+  .ev-herowrap .ev-report-btn,
+  .ev-herowrap .ev-delete-btn { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.32); color: #fff; }
+  .ev-herowrap .ev-report-btn:hover,
+  .ev-herowrap .ev-delete-btn:hover { background: rgba(255,255,255,.24); color: #fff; }
+  .ev-herowrap .ev-hero { padding: 0; }
+  .ev-herowrap .ev-title { color: #fff; }
+  @media (max-width: 900px) { .ev-herowrap { padding-top: 30px; } }
 
   /* Back link */
   .ev-top-row {

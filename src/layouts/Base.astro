@@ -99,7 +99,7 @@ const currentPath = Astro.url.pathname;
     </div>
   </aside>
 
-  <main class:list={["site-main", { home: currentPath === "/", bleed: currentPath === "/signup" || currentPath === "/sign-in" }]}>
+  <main class:list={["site-main", { home: currentPath === "/", bleed: currentPath === "/signup" || currentPath === "/sign-in" || (currentPath.startsWith("/events/") && currentPath !== "/events/new") }]}>
   <slot />
 
   <!-- Site footer -->
