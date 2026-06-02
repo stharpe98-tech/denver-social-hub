@@ -17,6 +17,20 @@ export async function ensureEventsSchema(db: D1Database): Promise<void> {
       await db.prepare("ALTER TABLE events ADD COLUMN rsvp_requires_profile INTEGER DEFAULT 0").run();
     } catch { /* stale schema or race — safe to ignore */ }
   }
+  // Type-aware fields (all optional, non-destructive).
+  if (!names.has('rsvp_deadline')) {
+    try { await db.prepare("ALTER TABLE events ADD COLUMN rsvp_deadline TEXT").run(); } catch {}
+  }
+  if (!names.has('location_hidden')) {
+    // 1 = only reveal exact venue/address to confirmed RSVPs.
+    try { await db.prepare("ALTER TABLE events ADD COLUMN location_hidden INTEGER DEFAULT 0").run(); } catch {}
+  }
+  if (!names.has('house_notes')) {
+    try { await db.prepare("ALTER TABLE events ADD COLUMN house_notes TEXT").run(); } catch {}
+  }
+  if (!names.has('bring_note')) {
+    try { await db.prepare("ALTER TABLE events ADD COLUMN bring_note TEXT").run(); } catch {}
+  }
 }
 
 // Canonical vibe-tag dictionary. Keep keys URL/storage-friendly; labels

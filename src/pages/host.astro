@@ -1,4 +1,86 @@
 ---
-// Short alias: /host → organizer signup
-return Astro.redirect('/profile/new?mode=signup&tier=organizer', 301);
+import Base from '../layouts/Base.astro';
+
+// /host used to 301 to the organizer signup. We keep a real marketing page now;
+// the primary CTA goes to the create-event flow.
+const createHref = '/events/new';
 ---
+<Base title="Host an event" description="Got an idea? Throw it. Pick a date, set the size, hit publish — we handle RSVPs, reminders, and headcounts.">
+<div class="host-page">
+
+  <header class="hero"><div class="wrap-n">
+    <div class="k">You're the host</div>
+    <h1>Got an idea? Throw it.</h1>
+    <p>A dinner, a game night, a terrace hang — pick a date, set the size, hit publish. We handle the rest.</p>
+    <a class="btn btn-1" href={createHref}>Create an event →</a>
+  </div></header>
+
+  <section class="wrap"><div class="layout">
+    <div class="form-demo">
+      <h3>Create an event</h3>
+      <div class="field"><label>What is it?</label><div class="fake">e.g. Table for 8 · Thai Night</div></div>
+      <div class="field"><label>Type</label><div class="types"><span class="ty on">🍽 Dinner</span><span class="ty">🎲 Game night</span><span class="ty">🌇 Terrace</span><span class="ty">🍻 Bar</span><span class="ty">🥗 Potluck</span></div></div>
+      <div class="row2">
+        <div class="field"><label>Date & time</label><div class="fake">Fri Jun 6 · 6:30 PM</div></div>
+        <div class="field"><label>Neighborhood</label><div class="fake">RiNo</div></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Seats</label><div class="fake">8</div></div>
+        <div class="field"><label>RSVP closes</label><div class="fake">Wed 6:00 PM</div></div>
+      </div>
+      <a class="btn-pub" href={createHref}>Publish event →</a>
+    </div>
+    <div class="why">
+      <h2>From idea to live in 2 minutes</h2>
+      <p>You bring the idea and the energy. The platform handles the logistics.</p>
+      <div class="step"><div class="n">1</div><div><strong>Sketch it out</strong><span>Title, type, date, neighborhood. One line is plenty.</span></div></div>
+      <div class="step"><div class="n">2</div><div><strong>Set the size + deadline</strong><span>Cap the seats and pick when RSVPs close. Waitlist auto-forms.</span></div></div>
+      <div class="step"><div class="n">3</div><div><strong>We do the rest</strong><span>At the deadline you get the headcount + list. Book the table — we tell everyone.</span></div></div>
+      <div class="perks"><span class="perk">✓ RSVPs & waitlist</span><span class="perk">✓ Auto reminders</span><span class="perk">✓ Headcount at cutoff</span><span class="perk">✓ Your own /u/ page</span><span class="perk">✓ Free forever</span></div>
+    </div>
+  </div></section>
+
+  <section class="cta"><div class="wrap-n">
+    <h2>Your first event is one form away.</h2>
+    <p>No app to download, no contract, no commitment past the one night.</p>
+    <a class="btn btn-1" href={createHref}>Start hosting — it's free</a>
+  </div></section>
+
+</div>
+
+<style>
+  .host-page{background:var(--bg);color:var(--text)}
+  .host-page .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+  .host-page .wrap-n{max-width:720px;margin:0 auto;padding:0 24px}
+  .host-page a{text-decoration:none}
+  .host-page .k{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+  .hero{text-align:center;padding:64px 0 40px}
+  .hero h1{font-family:var(--font-display);font-size:clamp(34px,5.5vw,58px);font-weight:800;letter-spacing:-.02em;margin-bottom:16px}
+  .hero p{color:var(--text-sec);font-size:18px;max-width:520px;margin:0 auto 26px}
+  .btn-1{display:inline-block;background:var(--accent);color:#fff;font-weight:700;padding:15px 30px;border-radius:999px;box-shadow:0 8px 22px rgba(14,138,125,.3)}
+  .btn-1:hover{transform:translateY(-2px)}
+  .layout{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;padding:24px 0 64px}
+  .form-demo{background:#fff;border:1px solid var(--border);border-radius:22px;padding:28px;box-shadow:0 10px 30px rgba(0,0,0,.05)}
+  .form-demo h3{font-family:var(--font-display);font-size:20px;margin-bottom:18px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--text-sec);margin-bottom:6px}
+  .fake{padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;background:var(--surface);color:var(--text-faint)}
+  .types{display:flex;gap:8px;flex-wrap:wrap}
+  .ty{padding:9px 14px;border:1.5px solid var(--border);border-radius:999px;font-size:13.5px;font-weight:600;background:#fff;color:var(--text-sec)}
+  .ty.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .btn-pub{display:block;text-align:center;background:var(--accent);color:#fff;font-weight:700;padding:15px;border-radius:12px;font-size:16px;margin-top:8px}
+  .why h2{font-family:var(--font-display);font-size:30px;font-weight:800;margin-bottom:8px}
+  .why>p{color:var(--text-sec);font-size:16px;margin-bottom:24px}
+  .step{display:flex;gap:14px;margin-bottom:18px}
+  .step .n{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--font-display);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .step strong{display:block;font-family:var(--font-display);font-size:16px}
+  .step span{font-size:14px;color:var(--text-sec)}
+  .perks{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .perk{background:#fff;border:1px solid var(--border);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600}
+  @media(max-width:780px){.layout{grid-template-columns:1fr}.why{order:-1}}
+  .cta{text-align:center;padding:64px 0;border-top:1px solid var(--border)}
+  .cta h2{font-family:var(--font-display);font-size:clamp(28px,4vw,42px);font-weight:800;margin-bottom:12px}
+  .cta p{color:var(--text-sec);font-size:17px;margin-bottom:24px}
+</style>
+</Base>

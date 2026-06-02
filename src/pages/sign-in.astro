@@ -1,3 +1,122 @@
 ---
-return Astro.redirect('/profile/new?mode=signin', 301);
+import Base from '../layouts/Base.astro';
+// Full-page sign-in. Passwordless email-code.
 ---
+<Base title="Sign in" description="Sign in to Denver Social — no password, just a 6-digit code we email you.">
+<div class="auth">
+
+  <aside class="auth-brand">
+    <div class="photo"></div><div class="ov"></div>
+    <a href="/" class="b-logo">Denver<span>Social</span></a>
+    <div class="b-mid">
+      <h2>Welcome back to the table.</h2>
+      <p>Your next dinner, game night, or potluck is one tap away.</p>
+    </div>
+    <div class="b-foot">84+ neighbors · something every week · always free</div>
+  </aside>
+
+  <section class="auth-form">
+    <div class="auth-card">
+      <div class="auth-emoji">👋</div>
+      <h1>Sign in</h1>
+      <p class="auth-sub">No password — we'll email you a 6-digit code.</p>
+
+      <div id="step1">
+        <label class="lbl" for="email">Your email</label>
+        <input id="email" class="inp" type="email" placeholder="you@example.com" autocomplete="email" />
+        <button id="sendBtn" class="btn-go">Email me a code →</button>
+        <div id="err1" class="err" hidden></div>
+      </div>
+
+      <div id="step2" hidden>
+        <p class="sent">We sent a code to <strong id="sentTo"></strong>.</p>
+        <label class="lbl" for="code">6-digit code</label>
+        <input id="code" class="inp code" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••••" autocomplete="one-time-code" />
+        <button id="verifyBtn" class="btn-go">Sign in →</button>
+        <div id="err2" class="err" hidden></div>
+        <div class="links"><button id="resend" type="button" class="lnk">Resend code</button><button id="back" type="button" class="lnk">Use a different email</button></div>
+        <div id="resentOk" class="ok" hidden>✓ New code sent</div>
+      </div>
+
+      <p class="auth-foot">New here? <a href="/signup">Create an account →</a></p>
+    </div>
+  </section>
+</div>
+
+<style>
+  .auth{display:grid;grid-template-columns:1.05fr 1fr;min-height:100vh}
+  .auth-brand{position:relative;overflow:hidden;color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:56px 48px}
+  .auth-brand .photo{position:absolute;inset:0;background:url('/hero/skyline.jpg') center/cover}
+  .auth-brand .ov{position:absolute;inset:0;background:linear-gradient(155deg,rgba(14,138,125,.82),rgba(16,30,28,.86))}
+  .auth-brand > :not(.photo):not(.ov){position:relative;z-index:1}
+  .b-logo{font-family:var(--font-display);font-weight:800;font-size:23px;letter-spacing:-.02em;color:#fff;text-decoration:none}
+  .b-logo span{color:var(--accent2)}
+  .b-mid{max-width:420px}
+  .b-mid h2{font-family:var(--font-display);font-size:clamp(30px,3.2vw,46px);font-weight:800;letter-spacing:-.02em;line-height:1.05;margin-bottom:14px;color:#fff}
+  .b-mid p{font-size:18px;color:rgba(255,255,255,.85)}
+  .b-foot{font-size:13px;color:rgba(255,255,255,.7);letter-spacing:.02em}
+
+  .auth-form{display:flex;align-items:center;justify-content:center;padding:48px 28px;background:var(--bg)}
+  .auth-card{width:100%;max-width:400px;text-align:center}
+  .auth-emoji{font-size:40px;margin-bottom:8px}
+  .auth-card h1{font-family:var(--font-display);font-size:32px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+  .auth-sub{color:var(--text-sec);font-size:15px;margin-bottom:28px}
+  .lbl{display:block;text-align:left;font-size:13px;font-weight:600;color:var(--text-sec);margin:0 0 6px}
+  .inp{width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;font-size:16px;font-family:inherit;background:#fff;margin-bottom:14px}
+  .inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+  .inp.code{text-align:center;letter-spacing:.4em;font-size:22px;font-weight:700}
+  .btn-go{width:100%;background:var(--accent);color:#fff;font-family:var(--font-display);font-weight:700;font-size:16px;padding:14px;border:none;border-radius:12px;cursor:pointer;transition:transform .15s,filter .15s;box-shadow:0 8px 20px rgba(14,138,125,.28)}
+  .btn-go:hover{transform:translateY(-1px);filter:brightness(1.04)}
+  .btn-go:disabled{opacity:.6;cursor:default;transform:none;box-shadow:none}
+  .err{color:#B91C1C;font-size:13.5px;margin-top:2px;text-align:left}
+  .ok{color:var(--accent);font-size:13.5px;margin-top:10px}
+  .sent{font-size:14.5px;color:var(--text-sec);margin-bottom:18px}.sent strong{color:var(--text)}
+  .links{display:flex;justify-content:center;gap:18px;margin-top:14px}
+  .lnk{background:none;border:none;color:var(--text-sec);font-size:13.5px;cursor:pointer;text-decoration:underline;font-family:inherit}
+  .lnk:hover{color:var(--text)}
+  .auth-foot{margin-top:26px;font-size:14px;color:var(--text-sec)}
+  .auth-foot a{color:var(--accent);font-weight:600}
+  @media(max-width:860px){.auth{grid-template-columns:1fr}.auth-brand{display:none}.auth-form{min-height:100vh;padding-top:96px}}
+</style>
+
+<script is:inline>
+  (function(){
+    var email=document.getElementById('email'), code=document.getElementById('code');
+    var step1=document.getElementById('step1'), step2=document.getElementById('step2');
+    var sendBtn=document.getElementById('sendBtn'), verifyBtn=document.getElementById('verifyBtn');
+    var err1=document.getElementById('err1'), err2=document.getElementById('err2');
+    var sentTo=document.getElementById('sentTo'), resend=document.getElementById('resend'), back=document.getElementById('back'), resentOk=document.getElementById('resentOk');
+    function show(el,msg){ el.textContent=msg; el.hidden=false; }
+    async function send(){
+      var e=(email.value||'').trim(); err1.hidden=true;
+      if(!e){ show(err1,'Enter your email.'); return; }
+      sendBtn.disabled=true; sendBtn.textContent='Sending…';
+      try{
+        var r=await fetch('/api/profile/signin-send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e})});
+        var d=await r.json().catch(function(){return{};});
+        if(r.ok && d.ok!==false){ sentTo.textContent=e; step1.hidden=true; step2.hidden=false; code.focus(); }
+        else show(err1, d.error||"No account found for that email — try signing up.");
+      }catch(_){ show(err1,'Network error — try again.'); }
+      sendBtn.disabled=false; sendBtn.textContent='Email me a code →';
+    }
+    async function verify(){
+      var e=(email.value||'').trim(), c=(code.value||'').trim(); err2.hidden=true;
+      if(c.length<6){ show(err2,'Enter the 6-digit code.'); return; }
+      verifyBtn.disabled=true; verifyBtn.textContent='Signing in…';
+      try{
+        var r=await fetch('/api/profile/signin-verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,code:c})});
+        var d=await r.json().catch(function(){return{};});
+        if(r.ok && d.ok){ var nx=new URLSearchParams(location.search).get('next')||''; if(!/^\/[^/]/.test(nx)) nx=''; location.href=nx||d.redirect||'/profile'; return; }
+        show(err2, d.error||"That code didn't work — try again.");
+      }catch(_){ show(err2,'Network error — try again.'); }
+      verifyBtn.disabled=false; verifyBtn.textContent='Sign in →';
+    }
+    sendBtn.addEventListener('click',send);
+    verifyBtn.addEventListener('click',verify);
+    email.addEventListener('keydown',function(ev){ if(ev.key==='Enter') send(); });
+    code.addEventListener('keydown',function(ev){ if(ev.key==='Enter') verify(); });
+    resend.addEventListener('click',function(){ resentOk.hidden=false; fetch('/api/profile/signin-send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:(email.value||'').trim()})}); });
+    back.addEventListener('click',function(){ step2.hidden=true; step1.hidden=false; code.value=''; err2.hidden=true; email.focus(); });
+  })();
+</script>
+</Base>

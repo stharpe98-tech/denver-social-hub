@@ -1,4 +1,90 @@
 ---
-// Redirect old /potlucks bookmarks to the unified /events page
-return Astro.redirect('/events', 301);
+import Base from '../../layouts/Base.astro';
+import { getDB } from '../../lib/db';
+
+// Real /potlucks landing (was a 301 to /events). Lists upcoming potlucks.
+const db = getDB();
+let potlucks: any[] = [];
+try {
+  if (db) {
+    const rows = (await db.prepare(`
+      SELECT p.*,
+        COUNT(DISTINCT CASE WHEN r.rsvp='yes' THEN r.id END) as attendee_count,
+        COUNT(DISTINCT CASE WHEN r.rsvp='yes' AND r.dish!='' THEN LOWER(r.dish) END) as dish_count
+      FROM potlucks p LEFT JOIN potluck_rsvp r ON r.potluck_id=p.id
+      WHERE p.status='upcoming' GROUP BY p.id ORDER BY p.id DESC
+    `).all())?.results || [];
+    potlucks = rows;
+  }
+} catch {}
+const pHref = (p: any) => p.slug ? `/${p.slug}` : `/potlucks/${p.id}`;
 ---
+<Base title="Potlucks" description="Big community potlucks at the park — everyone brings one thing. Claim a dish and show up.">
+<div class="plk">
+
+  <section class="plk-hero">
+    <div class="plk-emoji">🥗</div>
+    <h1>Big potlucks at the park.</h1>
+    <p>Everyone brings one thing — claim a dish so there's no five-salad pileup. Show up, eat well, meet your neighbors.</p>
+    <a href="/potlucks/new" class="plk-cta">+ Host a potluck</a>
+  </section>
+
+  <section class="plk-list">
+    {potlucks.length > 0 ? (
+      <div class="plk-grid">
+        {potlucks.map((p: any) => (
+          <a class="plk-card" href={pHref(p)}>
+            <span class="plk-tag">🍽 Potluck</span>
+            <h3>{p.title}</h3>
+            <div class="plk-when">📅 {p.date_label || 'TBD'}{p.time_label ? ` · ${p.time_label}` : ''}</div>
+            <div class="plk-loc">📍 {p.location || 'Denver'}</div>
+            <div class="plk-foot">
+              <span>👥 {p.attendee_count || 0} going · 🍽 {p.dish_count || 0} dishes</span>
+              <span class="plk-go">Claim a dish →</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    ) : (
+      <p class="plk-empty">No potlucks on the calendar yet — <a href="/potlucks/new">host the first one →</a></p>
+    )}
+  </section>
+</div>
+
+<style>
+  .plk { background: var(--bg); color: var(--text); }
+  .plk a { text-decoration: none; }
+
+  .plk-hero {
+    text-align: center; color: #fff;
+    margin-top: -88px; padding: 108px 24px 56px;
+    background-color: #0E8A7D;
+    background-image: linear-gradient(140deg, rgba(14,138,125,0.78), rgba(16,30,28,0.88)), url('/tiles/potlucks.jpg');
+    background-size: cover; background-position: center;
+  }
+  @media (max-width: 900px) { .plk-hero { margin-top: 0; padding-top: 32px; } }
+  .plk-emoji {
+    font-size: 38px; width: 80px; height: 80px; margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); border-radius: 50%;
+  }
+  .plk-hero h1 { font-family: var(--font-display); font-size: clamp(32px,5vw,52px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 14px; color: #fff; }
+  .plk-hero p { font-size: 17px; color: rgba(255,255,255,0.88); max-width: 540px; margin: 0 auto 24px; line-height: 1.55; }
+  .plk-cta { display: inline-block; background: var(--accent2); color: #16302B; font-family: var(--font-display); font-weight: 700; font-size: 15px; padding: 13px 26px; border-radius: 999px; box-shadow: 0 8px 22px rgba(232,144,42,0.32); transition: transform 0.15s; }
+  .plk-cta:hover { transform: translateY(-2px); }
+
+  .plk-list { max-width: 1080px; margin: 0 auto; padding: 48px 24px 80px; }
+  .plk-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .plk-card { background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 20px; transition: transform 0.15s, box-shadow 0.15s; display: flex; flex-direction: column; gap: 6px; }
+  .plk-card:hover { transform: translateY(-3px); box-shadow: 0 16px 34px rgba(16,30,28,0.08); }
+  .plk-tag { align-self: flex-start; font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px; background: #E6F8EC; color: #15803D; margin-bottom: 4px; }
+  .plk-card h3 { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text); }
+  .plk-when, .plk-loc { font-size: 14px; color: var(--text-sec); }
+  .plk-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px; font-size: 12.5px; color: var(--text-sec); }
+  .plk-go { color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .plk-empty { text-align: center; color: var(--text-sec); font-size: 18px; padding: 40px 0; }
+  .plk-empty a { color: var(--accent); font-weight: 600; }
+  @media (max-width: 860px) { .plk-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .plk-grid { grid-template-columns: 1fr; } }
+</style>
+</Base>

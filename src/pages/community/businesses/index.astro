@@ -1,0 +1,205 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { getDB } from '../../../lib/db';
+import { ensureBusinessSchema, BUSINESS_CATEGORIES, businessCategory, listingType } from '../../../lib/business-schema';
+
+const db = getDB();
+if (db) { try { await ensureBusinessSchema(db); } catch {} }
+
+const validKeys = new Set(BUSINESS_CATEGORIES.map(c => c.key));
+const rawCat = (Astro.url.searchParams.get('cat') || '').toLowerCase();
+const cat = validKeys.has(rawCat) ? rawCat : '';
+
+let listings: any[] = [];
+const counts: Record<string, number> = {};
+let total = 0;
+
+if (db) {
+  try {
+    let sql = `SELECT id, owner_name, name, category, listing_type, tagline, phone, email, website, instagram, neighborhood, logo_url
+               FROM business_listings WHERE status='active'`;
+    const binds: any[] = [];
+    if (cat) { sql += ` AND category=?`; binds.push(cat); }
+    sql += ` ORDER BY id DESC LIMIT 120`;
+    const r = await db.prepare(sql).bind(...binds).all();
+    listings = (r.results || []) as any[];
+
+    const cr = await db.prepare(
+      `SELECT category, COUNT(*) AS c FROM business_listings WHERE status='active' GROUP BY category`
+    ).all();
+    for (const row of (cr.results || []) as any[]) { counts[row.category] = row.c; total += row.c; }
+  } catch (e) { console.error(e); }
+}
+
+const FALLBACK = '#0E8A7D';
+const activeCat = cat ? businessCategory(cat) : null;
+---
+<Base title="Services & Side Hustles — Denver Social" description="Neighbor-run businesses and side hustles in Denver. Find a photographer, dog walker, babysitter, tutor and more.">
+
+<style is:inline>
+  .biz { max-width: 1080px; margin: 0 auto; padding: 0 var(--space-4) var(--space-9); }
+
+  /* Hero */
+  .biz-hero {
+    margin-top: -88px; padding: 116px var(--space-4) var(--space-6);
+    text-align: center; color: #fff; position: relative; overflow: hidden;
+    background-color: #0C6E63;
+    background-image:
+      radial-gradient(circle at 14% 18%, rgba(21,128,61,0.95), transparent 42%),
+      radial-gradient(circle at 86% 12%, rgba(122,83,176,0.95), transparent 44%),
+      radial-gradient(circle at 78% 96%, rgba(232,144,42,0.85), transparent 40%),
+      radial-gradient(circle at 22% 92%, rgba(214,51,108,0.7), transparent 42%),
+      linear-gradient(135deg, #0E8A7D, #0B5C54);
+  }
+  @media (max-width: 900px) { .biz-hero { margin-top: 0; padding-top: 40px; } }
+  .biz-kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.85); margin-bottom: var(--space-2); position: relative; z-index: 1; }
+  .biz-h1 { font-family: 'Caveat','Bricolage Grotesque',cursive; font-size: clamp(46px,9vw,80px); font-weight: 700; line-height: 0.92; margin-bottom: var(--space-3); position: relative; z-index: 1; text-shadow: 0 4px 24px rgba(0,0,0,0.18); }
+  .biz-h1 .hl { color: var(--accent2); }
+  .biz-sub { font-size: 15px; color: rgba(255,255,255,0.94); max-width: 540px; margin: 0 auto var(--space-4); line-height: 1.55; position: relative; z-index: 1; }
+  .biz-hero-cta {
+    display: inline-block; background: #fff; color: var(--accent);
+    font-family: var(--font-display); font-weight: 800; font-size: 16px;
+    padding: 14px 32px; border-radius: var(--radius-pill); text-decoration: none;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.28); transition: transform 0.15s, box-shadow 0.2s;
+    position: relative; z-index: 1;
+  }
+  .biz-hero-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 38px rgba(0,0,0,0.34); }
+  .biz-hero-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 580px; margin: var(--space-5) auto 0; position: relative; z-index: 1; }
+  .biz-hp { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: #fff; padding: 7px 14px; border-radius: 999px; background: var(--c); box-shadow: 0 5px 16px color-mix(in srgb, var(--c) 45%, transparent); }
+
+  /* Category chips — color-dotted */
+  .biz-cats { display: flex; gap: 8px; overflow-x: auto; padding: var(--space-5) 0 var(--space-4); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .biz-cats::-webkit-scrollbar { display: none; }
+  .biz-chip {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 15px; border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
+    font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+  }
+  .biz-chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cat, var(--accent)); flex-shrink: 0; }
+  .biz-chip:hover { border-color: var(--cat, var(--accent)); box-shadow: 0 4px 12px color-mix(in srgb, var(--cat, var(--accent)) 18%, transparent); }
+  .biz-chip.on { background: var(--cat, var(--accent)); border-color: var(--cat, var(--accent)); color: #fff; }
+  .biz-chip.on .dot { background: rgba(255,255,255,0.9); }
+  .biz-chip .n { font-size: 11px; opacity: 0.65; font-weight: 700; }
+
+  /* Grid */
+  .biz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-4); }
+  .biz-card {
+    display: flex; flex-direction: column;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.18s, box-shadow 0.22s, border-color 0.15s;
+  }
+  .biz-card:hover { transform: translateY(-5px); border-color: transparent; box-shadow: 0 18px 38px color-mix(in srgb, var(--cat) 30%, transparent); }
+
+  /* Colored cover band */
+  .biz-band {
+    height: 78px; position: relative; padding: 11px 14px;
+    display: flex; justify-content: flex-end; align-items: flex-start;
+    background: linear-gradient(135deg, var(--cat), color-mix(in srgb, var(--cat) 52%, #FFFFFF));
+  }
+  .biz-band::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 18% 130%, rgba(255,255,255,0.25), transparent 60%); }
+  .biz-band-cat {
+    position: relative; z-index: 1;
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,0.92); color: var(--cat);
+    font-size: 11.5px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+
+  .biz-body { padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: 7px; flex: 1; }
+  .biz-logo-wrap { margin-top: -36px; margin-bottom: 3px; }
+  .biz-logo, .biz-mono {
+    width: 66px; height: 66px; border-radius: 17px; object-fit: cover;
+    border: 3px solid var(--surface); box-shadow: 0 5px 14px rgba(0,0,0,0.14);
+    background: var(--surface);
+  }
+  .biz-mono { display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 27px; background: linear-gradient(140deg, var(--cat), color-mix(in srgb, var(--cat) 58%, #000)); }
+  .biz-name { font-family: var(--font-display); font-size: 18.5px; font-weight: 800; color: var(--text); line-height: 1.15; text-decoration: none; }
+  .biz-name:hover { color: var(--cat); }
+  .biz-type { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: color-mix(in srgb, var(--cat) 12%, #fff); color: var(--cat); }
+  .biz-tagline { font-size: 13.5px; color: var(--text-sec); line-height: 1.5; }
+  .biz-nbh { font-size: 12px; color: var(--text-faint); font-weight: 500; }
+  .biz-contacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 8px; }
+  .biz-cbtn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 8px 13px; border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border); background: var(--bg); color: var(--text);
+    font-size: 12.5px; font-weight: 600; text-decoration: none;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+  }
+  .biz-cbtn:hover { border-color: var(--cat); color: var(--cat); background: color-mix(in srgb, var(--cat) 8%, #fff); }
+  .biz-cbtn.call { background: var(--cat); border-color: var(--cat); color: #fff; box-shadow: 0 4px 12px color-mix(in srgb, var(--cat) 35%, transparent); }
+  .biz-cbtn.call:hover { color: #fff; filter: saturate(1.12) brightness(1.03); }
+
+  .biz-empty { text-align: center; padding: var(--space-8) var(--space-4); color: var(--text-sec); }
+  .biz-empty h3 { font-family: var(--font-display); font-size: 22px; color: var(--text); margin-bottom: var(--space-2); }
+</style>
+
+<section class="biz-hero">
+  <div class="biz-kicker">Denver Social · Neighbors</div>
+  <h1 class="biz-h1">Services & <span class="hl">Side Hustles</span></h1>
+  <p class="biz-sub">Real businesses and neighbors making a little extra. Need a photographer, a dog walker, a babysitter, a tutor? Hire someone down the block.</p>
+  <a href="/community/businesses/new" class="biz-hero-cta">+ List yours</a>
+  <div class="biz-hero-pills">
+    {BUSINESS_CATEGORIES.slice(0, 9).map((c) => (
+      <span class="biz-hp" style={`--c:${c.color}`}>{c.emoji} {c.label}</span>
+    ))}
+  </div>
+</section>
+
+<div class="biz">
+  <nav class="biz-cats" aria-label="Business categories">
+    <a href="/community/businesses" class={`biz-chip ${!cat ? 'on' : ''}`}><span class="dot"></span>All{total ? <span class="n">{total}</span> : null}</a>
+    {BUSINESS_CATEGORIES.map((c) => (
+      <a href={`/community/businesses?cat=${c.key}`} class={`biz-chip ${cat === c.key ? 'on' : ''}`} style={`--cat:${c.color}`}>
+        <span class="dot"></span>{c.emoji} {c.label}{counts[c.key] ? <span class="n">{counts[c.key]}</span> : null}
+      </a>
+    ))}
+  </nav>
+
+  {listings.length === 0 ? (
+    <div class="biz-empty">
+      <h3>{activeCat ? `No ${activeCat.label.toLowerCase()} listed yet` : 'No businesses listed yet'}</h3>
+      <p>Be the first — <a href="/community/businesses/new" style="color:var(--accent);font-weight:600">list your business</a> and neighbors will find you here.</p>
+    </div>
+  ) : (
+    <div class="biz-grid">
+      {listings.map((b) => {
+        const c = businessCategory(b.category);
+        const color = c?.color || FALLBACK;
+        const t = listingType(b.listing_type);
+        const initial = (b.name || '?').charAt(0).toUpperCase();
+        const ig = (b.instagram || '').replace(/^@/, '');
+        const site = b.website && !/^https?:\/\//i.test(b.website) ? `https://${b.website}` : b.website;
+        return (
+          <article class="biz-card" style={`--cat:${color}`}>
+            <div class="biz-band">
+              {c && <span class="biz-band-cat">{c.emoji} {c.label}</span>}
+            </div>
+            <div class="biz-body">
+              <div class="biz-logo-wrap">
+                {b.logo_url
+                  ? <img class="biz-logo" src={b.logo_url} alt={`${b.name} logo`} loading="lazy" />
+                  : <div class="biz-mono">{initial}</div>}
+              </div>
+              <a class="biz-name" href={`/community/businesses/${b.id}`}>{b.name}</a>
+              {t && <span class="biz-type">{t.emoji} {t.label}</span>}
+              {b.tagline && <p class="biz-tagline">{b.tagline}</p>}
+              {b.neighborhood && <div class="biz-nbh">📍 {b.neighborhood}</div>}
+              <div class="biz-contacts">
+                {b.phone && <a class="biz-cbtn call" href={`tel:${b.phone}`}>📞 Call</a>}
+                {b.email && <a class="biz-cbtn" href={`mailto:${b.email}`}>✉️ Email</a>}
+                {site && <a class="biz-cbtn" href={site} target="_blank" rel="noopener">🌐 Site</a>}
+                {ig && <a class="biz-cbtn" href={`https://instagram.com/${ig}`} target="_blank" rel="noopener">📷 @{ig}</a>}
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  )}
+</div>
+</Base>

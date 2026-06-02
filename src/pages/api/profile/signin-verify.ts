@@ -59,7 +59,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   } catch { /* non-fatal */ }
 
   // Organizers go to their editor; regulars go to /profile.
-  const redirect = profile.tier === 'organizer' ? `/u/${profile.slug}/edit` : '/profile';
+  const redirect = '/profile';
   return new Response(JSON.stringify({ ok: true, redirect, tier: profile.tier }), {
     headers: { 'Content-Type': 'application/json' },
   });

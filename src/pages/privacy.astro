@@ -63,69 +63,69 @@ import Base from '../layouts/Base.astro';
   </div>
 
   <style>
-    .canvas { background: #FDFBF7; min-height: 100vh; }
+    .canvas { background: var(--bg); min-height: 100vh; }
 
     .hp {
       max-width: 760px; margin: 0 auto;
       padding: 56px clamp(20px, 5vw, 32px) 96px;
-      color: #1C1B1F;
+      color: var(--text);
     }
 
     .hp-h { margin-bottom: 32px; }
     .kicker {
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-family: var(--font);
       font-size: 12px; font-weight: 500;
       letter-spacing: 0.18em; text-transform: uppercase;
-      color: #6B6A70; margin-bottom: 16px;
+      color: var(--text-sec); margin-bottom: 16px;
     }
     .hp-h h1 {
-      font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
+      font-family: var(--font-display);
       font-size: clamp(44px, 7vw, 64px); font-weight: 800;
       letter-spacing: -0.035em; line-height: 1.02;
-      margin-bottom: 18px; color: #1C1B1F;
+      margin-bottom: 18px; color: var(--text);
     }
-    .hp-h h1 em { font-style: italic; font-weight: 500; color: #7C3AED; }
+    .hp-h h1 em { font-style: italic; font-weight: 500; color: var(--accent); }
     .hp-h h1 .amp {
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: var(--font);
       font-style: italic; font-weight: 300;
-      color: #B5AFA3; padding: 0 0.08em;
+      color: var(--text-faint); padding: 0 0.08em;
     }
     .lede {
       font-size: 18px; line-height: 1.55;
-      color: #6B6A70; max-width: 56ch;
+      color: var(--text-sec); max-width: 56ch;
       margin-bottom: 14px;
     }
-    .lede a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-    .lede a:hover { color: #7C3AED; }
+    .lede a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    .lede a:hover { color: var(--accent); }
     .hp-cta {
       display: inline-flex; align-items: center;
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-family: var(--font);
       font-size: 13px; font-weight: 600;
       letter-spacing: -0.01em;
-      color: #7C3AED; text-decoration: underline;
+      color: var(--accent); text-decoration: underline;
       text-underline-offset: 5px; text-decoration-thickness: 1px;
       transition: color 280ms cubic-bezier(0.16,1,0.3,1);
     }
-    .hp-cta:hover { color: #5B21B6; }
+    .hp-cta:hover { color: var(--accent); }
 
     .hp-s { margin-bottom: 96px; scroll-margin-top: 88px; }
     .hp-s:last-of-type { margin-bottom: 56px; }
     .h2-block {
       padding-bottom: 14px;
-      border-bottom: 1px solid #E8E0D0;
+      border-bottom: 1px solid var(--border);
       margin-bottom: 18px;
     }
     .hp-s h2 {
-      font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
+      font-family: var(--font-display);
       font-size: clamp(28px, 4vw, 36px); font-weight: 800;
       letter-spacing: -0.025em; line-height: 1.05;
-      color: #1C1B1F; margin: 0;
+      color: var(--text); margin: 0;
     }
     .h2-cap {
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-family: var(--font);
       font-size: 11px; font-weight: 500;
       letter-spacing: 0.14em; text-transform: uppercase;
-      color: #9A938A; margin: 6px 0 0;
+      color: var(--text-faint); margin: 6px 0 0;
     }
 
     .card {
@@ -138,11 +138,11 @@ import Base from '../layouts/Base.astro';
     }
     .card:hover { border-color: rgba(220, 208, 184, 0.9); }
     .card[open] {
-      background: #FFFFFF;
-      border-color: #D9CFB8;
+      background: var(--surface);
+      border-color: var(--border);
       box-shadow: 0 4px 20px -4px rgba(28,27,31,0.05);
     }
-    .card summary:hover h3 { color: #7C3AED; }
+    .card summary:hover h3 { color: var(--accent); }
     .card summary h3 { transition: color 200ms cubic-bezier(0.16,1,0.3,1); }
     .card summary {
       display: flex; align-items: center; justify-content: space-between;
@@ -151,17 +151,17 @@ import Base from '../layouts/Base.astro';
     }
     .card summary::-webkit-details-marker { display: none; }
     .card summary h3 {
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: var(--font);
       font-size: 16px; font-weight: 600;
       letter-spacing: -0.005em;
-      color: #1C1B1F; margin: 0;
+      color: var(--text); margin: 0;
     }
     .plus {
       flex-shrink: 0; position: relative;
       width: 20px; height: 20px;
       display: inline-flex; align-items: center; justify-content: center;
       transition: transform 360ms cubic-bezier(0.16,1,0.3,1), color 280ms cubic-bezier(0.16,1,0.3,1);
-      color: #9A938A;
+      color: var(--text-faint);
     }
     .plus i {
       position: absolute; background: currentColor; border-radius: 2px;
@@ -169,7 +169,7 @@ import Base from '../layouts/Base.astro';
     }
     .plus i:nth-child(1) { width: 14px; height: 2px; }
     .plus i:nth-child(2) { width: 2px; height: 14px; }
-    .card[open] .plus { color: #7C3AED; transform: rotate(90deg); }
+    .card[open] .plus { color: var(--accent); transform: rotate(90deg); }
     .card[open] .plus i:nth-child(2) { transform: scaleY(0); }
     .ans {
       padding: 4px 22px 22px;
@@ -178,21 +178,21 @@ import Base from '../layouts/Base.astro';
     }
     .ans p {
       font-size: 15px; line-height: 1.7;
-      color: #4A4850; margin: 14px 0 0;
+      color: var(--text-sec); margin: 14px 0 0;
     }
     .ans p:first-child { margin-top: 14px; }
     .ans ul { margin: 14px 0 0; padding-left: 20px; }
-    .ans li { font-size: 15px; line-height: 1.7; color: #4A4850; margin-bottom: 6px; }
-    .ans a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-    .ans a:hover { color: #7C3AED; }
-    .ans strong { color: #1C1B1F; font-weight: 600; }
+    .ans li { font-size: 15px; line-height: 1.7; color: var(--text-sec); margin-bottom: 6px; }
+    .ans a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    .ans a:hover { color: var(--accent); }
+    .ans strong { color: var(--text); font-weight: 600; }
 
     .hp-foot {
       margin-top: 64px; padding-top: 28px;
-      border-top: 1px solid #EDE6D7;
-      font-size: 14px; color: #6B6A70; text-align: center;
+      border-top: 1px solid var(--border);
+      font-size: 14px; color: var(--text-sec); text-align: center;
     }
-    .hp-foot a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; }
-    .hp-foot a:hover { color: #7C3AED; }
+    .hp-foot a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+    .hp-foot a:hover { color: var(--accent); }
   </style>
 </Base>

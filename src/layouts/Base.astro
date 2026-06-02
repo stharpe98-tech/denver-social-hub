@@ -33,41 +33,37 @@ const currentPath = Astro.url.pathname;
   <meta name="twitter:image" content="https://denversocialhub.com/og-default.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,600;1,9..144,800&family=Work+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800;900&family=Caveat:wght@600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
 
-  <!-- Top nav -->
-  <header class="site-header">
-    <div class="site-header-inner">
-      <button class="mob-hamburger" id="mob-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mob-drawer">
-        <span></span><span></span><span></span>
-      </button>
-
-      <nav class="site-nav site-nav-left">
-        <a href="/events" class:list={["site-nav-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
-        <a href="/community" class:list={["site-nav-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/neighborhoods") }]}>Community Board</a>
-        <a href="/perks" class:list={["site-nav-link", { active: currentPath.startsWith("/perks") }]}>Perks</a>
-      </nav>
-
-      <a href="/" class="site-logo" aria-label="Denver Social home">
-        <img src="/logo-light.svg" alt="Denver Social" class="site-logo-img" />
-      </a>
-
-      <nav class="site-nav site-nav-right">
-        <a href="/about" class:list={["site-nav-link", { active: currentPath.startsWith("/about") }]}>About</a>
-        <a href="/help"  class:list={["site-nav-link", { active: currentPath.startsWith("/help") }]}>Help</a>
-        {isAdmin && (
-          <a href="/admin/dashboard" class:list={["site-nav-link site-nav-admin", { active: currentPath.startsWith("/admin") }]}>⚙ Admin</a>
-        )}
-      </nav>
-
-      <div class="site-auth">
-        {!hasProfileSession && <a href="/sign-in" class="site-signin">Sign in</a>}
-        {!hasProfileSession && <a href="/signup" class="site-cta">Sign up</a>}
-        {isAdmin && <a href="/api/admin/logout" class="site-logout">Admin sign out</a>}
-      </div>
+  <!-- Floating nav island (desktop) -->
+  <nav class="site-island">
+    <a href="/" class="isl-logo" aria-label="Denver Social home">Denver<span>Social</span></a>
+    <div class="isl-links">
+      <a href="/events" class:list={["isl-link", { active: currentPath.startsWith("/events") || currentPath.startsWith("/potlucks") }]}>Events</a>
+      <a href="/potlucks" class:list={["isl-link", { active: currentPath.startsWith("/potlucks") }]}>Potlucks</a>
+      <a href="/community" class:list={["isl-link", { active: currentPath.startsWith("/community") || currentPath.startsWith("/neighborhoods") }]}>Community</a>
+      <a href="/about" class:list={["isl-link", { active: currentPath.startsWith("/about") }]}>About</a>
+      {isAdmin && <a href="/admin/dashboard" class:list={["isl-link", { active: currentPath.startsWith("/admin") }]}>Admin</a>}
     </div>
+    {hasProfileSession ? (
+      <a href="/profile" class="isl-cta">My page</a>
+    ) : (
+      <>
+        <a href="/sign-in" class="isl-signin">Sign in</a>
+        <a href="/signup" class="isl-cta">Join</a>
+      </>
+    )}
+  </nav>
+
+  <!-- Mobile top bar -->
+  <header class="mtop">
+    <button class="mob-hamburger" id="mob-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mob-drawer">
+      <span></span><span></span><span></span>
+    </button>
+    <a href="/" class="mtop-logo">Denver<span>Social</span></a>
+    {!hasProfileSession ? <a href="/signup" class="mtop-cta">Join</a> : <span style="width:44px"></span>}
   </header>
 
   <!-- Mobile drawer -->
@@ -103,6 +99,7 @@ const currentPath = Astro.url.pathname;
     </div>
   </aside>
 
+  <main class:list={["site-main", { home: currentPath === "/", bleed: currentPath === "/signup" || currentPath === "/sign-in" || currentPath === "/events" || (currentPath.startsWith("/events/") && currentPath !== "/events/new") }]}>
   <slot />
 
   <!-- Site footer -->
@@ -124,7 +121,7 @@ const currentPath = Astro.url.pathname;
       </div>
       <div class="footer-col">
         <div class="footer-col-title">People</div>
-        <a href="/organizers">Organizers</a>
+        <a href="/host">Host an event</a>
         <a href="/groups">Groups</a>
         <a href="/sign-in">Sign in</a>
         <a href="/signup">Sign up</a>
@@ -145,6 +142,7 @@ const currentPath = Astro.url.pathname;
       <span>Made in Denver, CO 🏔</span>
     </div>
   </footer>
+  </main>
 
 
   <script is:inline>
@@ -243,7 +241,7 @@ const currentPath = Astro.url.pathname;
             html += '<div class="mc-phone-ok" style="background:#F0FDF4;color:#047857;border-color:#BBF7D0">Regular member — no public page.</div>';
           } else if (!hasViewer) {
             // No profile session — show a CTA to sign up.
-            html += '<a class="mc-btn mc-btn-primary" href="/u/new?next=' + encodeURIComponent(window.location.pathname) + '">Sign up to message</a>';
+            html += '<a class="mc-btn mc-btn-primary" href="/signup?next=' + encodeURIComponent(window.location.pathname) + '">Sign up to message</a>';
           } else {
             html += '<button class="mc-btn mc-btn-primary" id="mc-msg" data-email="' + escapeHtml(m.email) + '">💬 Message</button>';
             var sent = data.phoneRequest && data.phoneRequest.sent;
@@ -336,59 +334,60 @@ const currentPath = Astro.url.pathname;
      duo and warm grey for secondary text. Fraunces display + Work Sans
      body. Fun but restrained. */
   :root {
-    /* Surface — parchment */
-    --bg: #F5EFE3;
-    --surface: #EDE6D6;
-    --surface-hover: #E4DBC7;
-    --border: #DDD2BB;
-    --border-hover: #C9BCA0;
+    /* Surface — cool cream */
+    --bg: #F2F6F4;
+    --surface: #FFFFFF;
+    --surface-hover: #EAF1ED;
+    --border: #DCE7E2;
+    --border-hover: #C7D6CE;
 
-    /* Text — ink + warm grey */
-    --text: #2A2730;
-    --text-sec: #6B6B73;
-    --text-faint: #9B9AA0;
+    /* Text — deep teal ink + grey */
+    --text: #16302B;
+    --text-sec: #5E7068;
+    --text-faint: #8FA39A;
 
-    /* Accents — purple primary, pink secondary */
-    --accent: #7C3AED;       /* deep purple — primary */
-    --accent-dim: rgba(124, 58, 237, 0.14);
-    --accent-glow: rgba(124, 58, 237, 0.28);
-    --accent2: #EC4899;      /* hot pink */
-    --accent2-dim: rgba(236, 72, 153, 0.14);
-    --sunset: #EC4899;       /* legacy slot — pink */
-    --sunset-dim: rgba(236, 72, 153, 0.14);
-    --pink: #EC4899;
-    --pink-dim: rgba(236, 72, 153, 0.14);
-    --mint: #7C3AED;
-    --marigold: #EC4899;     /* legacy slot — pink */
-    --marigold-dim: rgba(236, 72, 153, 0.16);
+    /* Accents — teal primary, marigold secondary */
+    --accent: #0E8A7D;       /* teal — primary */
+    --accent-dim: rgba(14, 138, 125, 0.12);
+    --accent-glow: rgba(14, 138, 125, 0.28);
+    --accent-soft: #DCF1EC;
+    --accent2: #E8902A;      /* marigold */
+    --accent2-dim: rgba(232, 144, 42, 0.14);
+    --sunset: #E8902A;       /* legacy slot — marigold */
+    --sunset-dim: rgba(232, 144, 42, 0.14);
+    --pink: #E8902A;
+    --pink-dim: rgba(232, 144, 42, 0.14);
+    --mint: #0E8A7D;
+    --marigold: #E8902A;
+    --marigold-dim: rgba(232, 144, 42, 0.16);
 
-    /* CTA — purple → pink */
-    --cta-bg: linear-gradient(135deg, #7C3AED, #EC4899);
-    --cta-bg-solid: #7C3AED;
+    /* CTA — solid teal */
+    --cta-bg: #0E8A7D;
+    --cta-bg-solid: #0E8A7D;
     --cta-text: #FFFFFF;
-    --cta-glow: rgba(124, 58, 237, 0.32);
+    --cta-glow: rgba(14, 138, 125, 0.32);
 
     /* Tags */
-    --tag-bg: #EDE9FE;       /* lilac */
-    --tag-text: #5B21B6;
-    --tag-bg2: #FCE7F3;      /* blush */
-    --tag-text2: #9D174D;
-    --tag-bg3: #EAE6DE;      /* warm grey */
-    --tag-text3: #52525B;
-    --tag-bg4: #EDE9FE;
-    --tag-text4: #5B21B6;
+    --tag-bg: #DCF1EC;       /* teal soft */
+    --tag-text: #0B6B61;
+    --tag-bg2: #FCEFD8;      /* marigold soft */
+    --tag-text2: #B5710F;
+    --tag-bg3: #E9F1ED;      /* sage soft */
+    --tag-text3: #3F6B5E;
+    --tag-bg4: #DCF1EC;
+    --tag-text4: #0B6B61;
 
     /* Status */
-    --green: #10B981;
-    --green-dim: rgba(16, 185, 129, 0.10);
+    --green: #16A34A;
+    --green-dim: rgba(22, 163, 74, 0.10);
     --red: #DC2626;
     --red-dim: rgba(220, 38, 38, 0.10);
     --yellow: #D97706;
     --yellow-dim: rgba(217, 119, 6, 0.10);
 
     /* Type */
-    --font: 'Work Sans', system-ui, sans-serif;
-    --font-display: 'Fraunces', 'Work Sans', system-ui, serif;
+    --font: 'Inter', system-ui, sans-serif;
+    --font-display: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
 
     /* Shape */
     --radius: 14px;
@@ -418,12 +417,94 @@ const currentPath = Astro.url.pathname;
   button { font-family: var(--font); }
   h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
 
+  /* ── Left sidebar (desktop) ── */
+  .site-sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 230px; z-index: 200;
+    background: var(--surface); border-right: 1px solid var(--border);
+    padding: 28px 22px; display: flex; flex-direction: column; overflow-y: auto;
+  }
+  .sb-logo {
+    font-family: var(--font-display); font-weight: 800; font-size: 25px;
+    letter-spacing: -0.02em; color: var(--text); line-height: 1.02;
+    text-decoration: none;
+  }
+  .sb-logo span { color: var(--accent); }
+  .sb-sub { font-size: 11.5px; color: var(--text-faint); margin: 7px 0 30px; }
+  .sb-nav { display: flex; flex-direction: column; gap: 3px; }
+  .sb-link {
+    display: flex; align-items: center; gap: 11px;
+    font-size: 15px; font-weight: 600; color: var(--text-sec);
+    padding: 10px 12px; border-radius: 11px; text-decoration: none; position: relative;
+    transition: color 0.15s, background 0.15s, transform 0.12s;
+  }
+  .sb-ic { font-size: 16px; width: 20px; text-align: center; }
+  .sb-link:hover { color: var(--text); background: var(--surface-hover); transform: translateX(2px); }
+  .sb-link.active { color: var(--accent); background: var(--accent-dim); font-weight: 700; }
+  .sb-link.active::before { content: ""; position: absolute; left: -22px; top: 50%; transform: translateY(-50%); width: 4px; height: 22px; border-radius: 0 4px 4px 0; background: var(--accent2); }
+  .sb-admin { color: var(--accent); }
+  .sb-foot { margin-top: auto; padding-top: 24px; }
+  .sb-cta {
+    display: block; text-align: center; background: var(--accent2); color: #16302B;
+    font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    padding: 12px 16px; border-radius: 12px; text-decoration: none;
+    box-shadow: 0 6px 16px rgba(232,144,42,0.32); transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .sb-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(232,144,42,0.45); }
+  .sb-auth { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 14px; font-size: 13.5px; }
+  .sb-auth a { color: var(--text-sec); text-decoration: none; }
+  .sb-auth a:hover { color: var(--text); }
+  .sb-auth span { color: var(--text-faint); }
+  .sb-auth-link { display: block; text-align: center; margin-top: 12px; font-size: 13px; color: var(--text-sec); text-decoration: none; }
+  .sb-tag { margin-top: 16px; font-size: 11.5px; color: var(--text-faint); text-align: center; }
+
+  /* ── Floating nav island (desktop) ── */
+  .site-island {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 200;
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.7); border-radius: 999px;
+    padding: 8px 8px 8px 20px; box-shadow: 0 12px 36px rgba(16,30,28,0.16);
+    max-width: calc(100vw - 32px);
+  }
+  .isl-logo { font-family: var(--font-display); font-weight: 800; font-size: 19px; letter-spacing: -0.02em; color: var(--text); text-decoration: none; margin-right: 6px; white-space: nowrap; }
+  .isl-logo span { color: var(--accent); }
+  .isl-links { display: flex; align-items: center; gap: 2px; }
+  .isl-link { font-size: 14px; font-weight: 500; color: var(--text-sec); padding: 8px 13px; border-radius: 999px; text-decoration: none; white-space: nowrap; transition: color 0.15s, background 0.15s; }
+  .isl-link:hover { color: var(--text); background: rgba(16,30,28,0.05); }
+  .isl-link.active { color: var(--accent); background: var(--accent-dim); font-weight: 700; }
+  .isl-signin { font-size: 14px; font-weight: 600; color: var(--text-sec); text-decoration: none; padding: 8px 8px; white-space: nowrap; transition: color 0.15s; }
+  .isl-signin:hover { color: var(--text); }
+  .isl-cta { background: var(--accent2); color: #16302B; font-family: var(--font-display); font-weight: 700; font-size: 13.5px; padding: 9px 18px; border-radius: 999px; text-decoration: none; margin-left: 4px; transition: filter 0.15s; }
+  .isl-cta:hover { filter: brightness(1.05); }
+
+  .site-main { min-height: 100vh; }
+  .site-main:not(.home) { padding-top: 88px; }
+  .site-main.bleed { padding-top: 0; }
+
+  /* ── Mobile top bar ── */
+  .mtop { display: none; }
+  .mtop-logo { font-family: var(--font-display); font-weight: 800; font-size: 19px; letter-spacing: -0.02em; color: var(--text); text-decoration: none; }
+  .mtop-logo span { color: var(--accent); }
+  .mtop-cta { background: var(--cta-bg); color: var(--cta-text); font-weight: 600; font-size: 13px; padding: 9px 16px; border-radius: 999px; text-decoration: none; }
+
+  @media(max-width: 900px) {
+    .site-sidebar, .site-island { display: none; }
+    .site-main:not(.home) { padding-top: 0; }
+    .mtop {
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 200; height: 60px; padding: 0 16px;
+      background: rgba(242,246,244,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .mtop .mob-hamburger { display: flex; }
+  }
+
   /* ── Site Header — dark slate, centered logo, nav split L/R ── */
   .site-header {
     position: sticky; top: 0; z-index: 200;
-    background: rgba(15, 23, 42, 0.94); /* slate-900 */
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255, 252, 248, 0.9);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
     height: 72px; display: flex; align-items: center;
   }
   .site-header-inner {
@@ -440,19 +521,19 @@ const currentPath = Astro.url.pathname;
   .site-nav-right { justify-self: start; }
   .site-nav-link {
     font-size: 14px; font-weight: 500;
-    color: rgba(255,255,255,0.72);
+    color: var(--text-sec);
     padding: 8px 14px; border-radius: 999px;
     transition: color 0.15s, background 0.15s; text-decoration: none;
     white-space: nowrap;
   }
-  .site-nav-link:hover { color: #fff; background: rgba(255,255,255,0.06); }
-  .site-nav-link:active { background: rgba(255,255,255,0.10); }
-  .site-nav-link.active { color: var(--accent); background: rgba(14, 165, 233, 0.14); }
+  .site-nav-link:hover { color: var(--text); background: rgba(0,0,0,0.04); }
+  .site-nav-link:active { background: rgba(0,0,0,0.07); }
+  .site-nav-link.active { color: var(--accent); background: var(--accent-dim); }
   .site-nav-admin {
-    color: #c4b5fd; background: rgba(124,58,237,0.18);
-    border: 1px solid rgba(124,58,237,0.35);
+    color: var(--accent); background: var(--accent-dim);
+    border: 1px solid var(--accent-soft);
   }
-  .site-nav-admin:hover { color: #fff; background: rgba(124,58,237,0.30); }
+  .site-nav-admin:hover { color: #fff; background: var(--accent); }
 
   .site-logo {
     display: inline-flex; align-items: center; gap: var(--space-2);
@@ -462,11 +543,11 @@ const currentPath = Astro.url.pathname;
   }
   .site-logo:hover { opacity: 0.92; transform: translateY(-1px); }
   .site-logo:active { opacity: 0.8; transform: none; }
-  .site-logo-img {
-    height: 44px; width: auto;
-    display: block;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+  .site-logo-word {
+    font-family: var(--font-display); font-weight: 800; font-size: 21px;
+    letter-spacing: -0.02em; color: var(--text); white-space: nowrap;
   }
+  .site-logo-word span { color: var(--accent); }
 
   .site-auth { display: flex; align-items: center; gap: var(--space-2); justify-self: end; }
   .site-user {
@@ -474,14 +555,14 @@ const currentPath = Astro.url.pathname;
     text-decoration: none; padding: 6px 12px; border-radius: 10px;
     transition: background 0.15s;
   }
-  .site-user:hover { background: rgba(255,255,255,0.06); }
-  .site-user-name { font-size: 13px; font-weight: 600; color: #fff; }
+  .site-user:hover { background: rgba(0,0,0,0.04); }
+  .site-user-name { font-size: 13px; font-weight: 600; color: var(--text); }
   .site-logout {
-    font-size: 13px; color: rgba(255,255,255,0.55);
+    font-size: 13px; color: var(--text-sec);
     padding: 6px 10px; border-radius: 10px;
     transition: color 0.15s;
   }
-  .site-logout:hover { color: #fff; }
+  .site-logout:hover { color: var(--text); }
   .site-signin {
     font-size: 14px; font-weight: 600;
     color: var(--text-sec, #555);
@@ -498,9 +579,9 @@ const currentPath = Astro.url.pathname;
     padding: 10px 20px; border-radius: var(--radius-pill);
     transition: all 0.15s;
     white-space: nowrap;
-    box-shadow: 0 1px 2px rgba(14,165,233,0.30);
+    box-shadow: 0 2px 8px rgba(240,87,61,0.28);
   }
-  .site-cta:hover { box-shadow: 0 4px 14px rgba(14,165,233,0.50); transform: translateY(-1px); }
+  .site-cta:hover { box-shadow: 0 6px 18px rgba(240,87,61,0.42); transform: translateY(-1px); }
   .site-cta:active { transform: translateY(0); }
 
   @media(max-width: 760px) {
@@ -508,7 +589,7 @@ const currentPath = Astro.url.pathname;
     .site-header-inner { grid-template-columns: 1fr auto 1fr; gap: var(--space-3); }
     .site-logo { grid-column: 2 / 3; }
     .site-auth { grid-column: 3 / 4; }
-    .site-logo-img { height: 38px; }
+    .site-logo-word { font-size: 19px; }
   }
   @media(max-width: 500px) {
     .site-cta { font-size: 13px; padding: 9px 16px; }
@@ -524,11 +605,11 @@ const currentPath = Astro.url.pathname;
   }
   .mob-hamburger span {
     display: block; width: 22px; height: 2px;
-    background: rgba(255,255,255,0.92); border-radius: 2px;
+    background: var(--text); border-radius: 2px;
     transition: background 0.15s;
   }
-  .mob-hamburger:hover { background: rgba(255,255,255,0.08); }
-  .mob-hamburger:active { background: rgba(255,255,255,0.14); }
+  .mob-hamburger:hover { background: rgba(0,0,0,0.05); }
+  .mob-hamburger:active { background: rgba(0,0,0,0.09); }
 
   .mob-backdrop {
     position: fixed; inset: 0; z-index: 999;
@@ -604,12 +685,10 @@ const currentPath = Astro.url.pathname;
   }
   .mob-drawer-cta-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 
-  @media(max-width: 760px) {
-    .mob-hamburger { display: flex; justify-self: start; }
-    .site-header-inner { grid-template-columns: auto 1fr auto; }
-    .site-nav-left, .site-nav-right { display: none; }
+  @media(max-width: 900px) {
+    .mob-hamburger { display: flex; }
   }
-  @media(min-width: 761px) {
+  @media(min-width: 901px) {
     .mob-drawer, .mob-backdrop { display: none !important; }
   }
 

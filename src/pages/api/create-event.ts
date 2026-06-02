@@ -59,7 +59,7 @@ export async function POST({ request, cookies }: APIContext) {
       }), { status: 401 });
     }
 
-const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day, vibe_tags, group_id: rawGroupId, rsvp_requires_profile } = await request.json() as any;
+const { title, description, type, subcat, suggested_date, location, budget, group_size, venue, link, contact_phone, spots: rawSpots, event_month, event_day, vibe_tags, group_id: rawGroupId, rsvp_requires_profile, rsvp_deadline, location_hidden, house_notes, bring_note } = await request.json() as any;
     void subcat;
 
     // Only organizers can gate RSVP behind a profile. Regulars always
@@ -173,6 +173,21 @@ const { title, description, type, subcat, suggested_date, location, budget, grou
       try {
         await db.prepare(`UPDATE events SET rsvp_requires_profile = 1 WHERE id = ?`).bind(newId).run();
       } catch { /* column may not exist on stale envs */ }
+    }
+
+    // Persist type-aware fields separately (schema-compat with older envs).
+    if (newId) {
+      try {
+        await db.prepare(
+          `UPDATE events SET rsvp_deadline = ?, location_hidden = ?, house_notes = ?, bring_note = ? WHERE id = ?`
+        ).bind(
+          ((rsvp_deadline || '') as string).toString().trim().slice(0, 80) || null,
+          Number(location_hidden) === 1 ? 1 : 0,
+          ((house_notes || '') as string).toString().trim().slice(0, 500) || null,
+          ((bring_note || '') as string).toString().trim().slice(0, 200) || null,
+          newId,
+        ).run();
+      } catch { /* columns may not exist on stale envs */ }
     }
 
     // Notify Seth about new event (non-blocking)

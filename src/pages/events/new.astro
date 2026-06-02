@@ -6,7 +6,9 @@ import { getCurrentProfile } from '../../lib/profile-auth';
 
 const db = getDB();
 const me = db ? await getCurrentProfile(Astro.cookies, db, Astro.request) : null;
-if (!me) return Astro.redirect('/u/new?next=/events/new');
+// Hosting just needs a member account — send logged-out hosts to the simple
+// signup (not the organizer /u/ page builder), then back here to post.
+if (!me) return Astro.redirect('/signup?next=/events/new');
 
 const groupSlug = Astro.url.searchParams.get('group') || '';
 let postingInGroup: any = null;
@@ -75,6 +77,26 @@ const TYPES = [
             </button>
           ))}
         </div>
+      </div>
+
+      <!-- Type-specific extras (shown based on the type / home toggle) -->
+      <div class="ne-field ne-extra" id="extra-dinner" hidden>
+        <label class="ne-label" for="ne-deadline">RSVP deadline <span class="opt">(so you can book the table)</span></label>
+        <input type="text" id="ne-deadline" class="ne-input" placeholder="e.g. Wed 6pm" maxlength="60" />
+        <label class="ne-vibe ne-toggle" style="margin-top:10px"><input type="checkbox" id="ne-hide-restaurant" /><span>📍 Only reveal the exact restaurant to people who RSVP</span></label>
+      </div>
+
+      <div class="ne-field">
+        <label class="ne-vibe ne-toggle"><input type="checkbox" id="ne-home" /><span>🏠 I'm hosting at my home / private space</span></label>
+      </div>
+      <div class="ne-field ne-extra" id="extra-home" hidden>
+        <label class="ne-label" for="ne-house">House notes <span class="opt">(shoes off, parking, wind-down time…)</span></label>
+        <textarea id="ne-house" class="ne-input ne-textarea" rows="2" placeholder="Shoes off · street parking · please wind down by 10" maxlength="500"></textarea>
+        <p class="ne-hint">🔒 Your exact address will only be shown to people who RSVP.</p>
+      </div>
+      <div class="ne-field ne-extra" id="extra-bring" hidden>
+        <label class="ne-label" for="ne-bring">Ask guests to bring <span class="opt">(optional)</span></label>
+        <input type="text" id="ne-bring" class="ne-input" placeholder="A drink to share, a side to pass…" maxlength="160" />
       </div>
 
       <div class="ne-field">
@@ -226,6 +248,8 @@ const TYPES = [
   .ne-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
   .ne-input.invalid { border-color: var(--red); }
   .ne-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+  .ne-hint { font-size: 12px; color: var(--text-faint); margin-top: 6px; }
+  .ne-extra { border-left: 2px solid var(--accent-dim); padding-left: 12px; }
   .ne-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 460px) { .ne-grid { grid-template-columns: 1fr; } }
 
@@ -310,8 +334,22 @@ const TYPES = [
       document.querySelectorAll('#ne-types .ne-type').forEach(function (x) { x.classList.remove('active'); });
       btn.classList.add('active');
       selectedType = btn.getAttribute('data-type') || 'dinner';
+      applyTypeExtras();
     });
   });
+
+  // ── Type-aware fields: show the right extras per type / home toggle ──
+  function applyTypeExtras() {
+    var isDinner = selectedType === 'dinner';
+    var homeEl = document.getElementById('ne-home');
+    var homeOn = !!(homeEl && homeEl.checked);
+    var d = document.getElementById('extra-dinner'); if (d) d.hidden = !isDinner;
+    var h = document.getElementById('extra-home'); if (h) h.hidden = !homeOn;
+    var b = document.getElementById('extra-bring'); if (b) b.hidden = !(homeOn || isDinner || selectedType === 'social');
+  }
+  var homeToggle = document.getElementById('ne-home');
+  if (homeToggle) homeToggle.addEventListener('change', applyTypeExtras);
+  applyTypeExtras();
 
   // ── Calendar ──
   var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -423,6 +461,10 @@ const TYPES = [
       vibe_tags: Array.from(document.querySelectorAll('input[name="vibe"]:checked')).map(function (c) { return c.value; }),
       group_id: groupId,
       submitted_by: (document.getElementById('ne-host') && document.getElementById('ne-host').value.trim()) || '',
+      rsvp_deadline: (document.getElementById('ne-deadline') && document.getElementById('ne-deadline').value.trim()) || '',
+      location_hidden: ((document.getElementById('ne-hide-restaurant') && document.getElementById('ne-hide-restaurant').checked) || (document.getElementById('ne-home') && document.getElementById('ne-home').checked)) ? 1 : 0,
+      house_notes: (document.getElementById('ne-house') && document.getElementById('ne-house').value.trim()) || '',
+      bring_note: (document.getElementById('ne-bring') && document.getElementById('ne-bring').value.trim()) || '',
     };
     try {
       var res = await fetch('/api/create-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

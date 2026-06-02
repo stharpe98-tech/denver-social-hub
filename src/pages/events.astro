@@ -84,39 +84,8 @@ try {
       });
     }
 
-    // -- Query potlucks --
-    const potluckRows = (await db.prepare(`
-      SELECT p.*, COUNT(DISTINCT CASE WHEN r.rsvp='yes' THEN r.id END) as attendee_count,
-        COUNT(DISTINCT CASE WHEN r.rsvp='yes' AND r.dish!='' THEN LOWER(r.dish) END) as dish_count
-      FROM potlucks p LEFT JOIN potluck_rsvp r ON r.potluck_id=p.id
-      WHERE p.status = 'upcoming' GROUP BY p.id
-    `).all())?.results || [];
-
-    for (const p of potluckRows) {
-      const parts = (p.date_label || '').trim().split(/\s+/);
-      const monthStr = (parts[0] || '').toLowerCase().replace(/[^a-z]/g, '');
-      const dayStr = (parts[1] || '').replace(/\D/g, '');
-      const sm = potluckMonthMap[monthStr] ?? potluckMonthMap[monthStr.slice(0,3)] ?? 99;
-      const sd = parseInt(dayStr) || 99;
-      // Skip past potlucks
-      if (sm < currentMonth || (sm === currentMonth && sd < currentDay)) continue;
-      let ds = p.date_label || 'TBD';
-      if (sm !== 99 && sd !== 99) {
-        const dt = new Date(2026, sm, sd);
-        ds = `${dayNames[dt.getDay()]}, ${monthAbbrs[sm]} ${sd}`;
-      }
-      cards.push({
-        kind: 'potluck', id: p.id, href: p.slug ? `/${p.slug}` : `/potlucks/${p.id}`,
-        title: p.title, description: p.description || '',
-        type: 'potluck',
-        dateStr: ds, timeStr: p.time_label || '',
-        sortMonth: sm, sortDay: sd,
-        location: p.location || 'Denver',
-        fillPct: 0, goingCount: p.attendee_count || 0, spotsLeft: -1,
-        hostName: '',
-        attendeeCount: p.attendee_count || 0, dishCount: p.dish_count || 0,
-      });
-    }
+    // Potlucks now live on their own /potlucks page — the events feed shows
+    // events only. (A "next potluck" spotlight still links over to /potlucks.)
   }
 } catch (err) { console.error('Events page query error:', err); }
 
@@ -144,16 +113,18 @@ try {
 <Base title="Browse Events">
 <div class="ev-page">
 
-  <!-- Header -->
-  <div class="ev-header">
-    <div class="ev-header-left">
-      <span class="tag tag-orange">Events</span>
-      <h1 class="ev-h1">{cards.length} {cards.length === 1 ? 'event' : 'events'} live</h1>
-      <p class="ev-sub">{content.events_subtitle || 'Small groups, real plans, no flakes.'} <a href="/calendar" class="ev-sub-link">See the shared calendar →</a></p>
-    </div>
-    <div class="ev-header-cta">
-      <a href="/events/new" class="btn btn-primary" id="createBtn">Post an event</a>
-      <a href="/potlucks/new" class="btn btn-sec">🥘 Host a potluck</a>
+  <!-- Full-bleed hero band -->
+  <div class="ev-herowrap">
+    <div class="ev-header">
+      <div class="ev-header-left">
+        <span class="ev-kicker">What's on · Denver</span>
+        <h1 class="ev-h1">{cards.length > 0 ? `${cards.length} things to show up to` : 'Browse events'}</h1>
+        <p class="ev-sub">Small groups, real plans. Pick one and RSVP — spots are capped so it stays easy to meet everyone.</p>
+      </div>
+      <div class="ev-header-cta">
+        <a href="/events/new" class="ev-btn ev-btn-primary" id="createBtn">+ Host an event</a>
+        <a href="/potlucks" class="ev-btn ev-btn-sec">🥗 Potlucks</a>
+      </div>
     </div>
   </div>
 
@@ -223,9 +194,9 @@ try {
     </a>
   )}
   <style is:inline>
-    .ev-potluck-pill { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 16px; padding: 10px 16px; border-radius: 999px; background: linear-gradient(135deg, #D1FAE5, #E0F2FE); border: 1px solid #A7F3D0; color: var(--text, #111); text-decoration: none; font-size: 14px; font-weight: 600; transition: transform 0.15s, box-shadow 0.15s; }
-    .ev-potluck-pill:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(16,185,129,0.18); }
-    .ev-potluck-pill-arrow { color: #047857; font-weight: 700; }
+    .ev-potluck-pill { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 20px; padding: 11px 18px; border-radius: 999px; background: #E6F8EC; border: 1px solid #BBF7D0; color: var(--text); text-decoration: none; font-size: 14px; font-weight: 600; transition: transform 0.15s, box-shadow 0.15s; }
+    .ev-potluck-pill:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(22,163,74,0.16); }
+    .ev-potluck-pill-arrow { color: #15803D; font-weight: 700; }
   </style>
 
   {cards.length > 0 ? (
@@ -233,8 +204,9 @@ try {
       {cards.map((c) => (
           <a href={c.href} class="ec" data-type={c.type}>
             <div class="ec-top">
+              <div class="ec-datechip"><span class="m">{c.sortMonth < 12 ? monthAbbrs[c.sortMonth] : ''}</span><span class="d">{c.sortDay < 99 ? c.sortDay : '·'}</span></div>
               {c.kind === 'potluck' ? (
-                <span class="ec-type tag tag-green">🍽 potluck</span>
+                <span class="ec-type tag tag-green">🥘 potluck</span>
               ) : (
                 <span class="ec-type tag tag-blue">{typeLabel[c.type] || 'event'}</span>
               )}
@@ -276,7 +248,7 @@ try {
         <span class="term-output">No events posted. The calendar's a blank canvas. Could be you, could be Marcus, could be a deer who got a Discord account.</span>
       </div>
       <p>{content.events_empty || 'Check back soon or post your own event.'}</p>
-      <a href="/events/new" class="btn btn-primary">Post the first event</a>
+      <a href="/events/new" class="ev-btn ev-btn-primary">Post the first event</a>
     </div>
   )}
 
@@ -382,59 +354,63 @@ try {
 </Base>
 
 <style is:inline>
-  .ev-page { max-width: 960px; margin: 0 auto; padding: 24px 24px 80px; }
+  .ev-page { max-width: 1080px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* Full-bleed hero band (full-screen header the floating nav sits over) */
+  .ev-herowrap { margin: 0 calc(50% - 50vw) 28px; width: 100vw; background: linear-gradient(140deg, #0E8A7D 0%, #16302B 100%); color: #fff; padding: 100px 24px 40px; }
+  @media (max-width: 900px) { .ev-herowrap { padding-top: 28px; } }
+  .ev-herowrap .ev-header { max-width: 1080px; margin: 0 auto; }
+  .ev-herowrap .ev-kicker { color: var(--accent2); }
+  .ev-herowrap .ev-h1 { color: #fff; }
+  .ev-herowrap .ev-sub { color: rgba(255,255,255,0.85); }
+  .ev-herowrap .ev-btn-primary { background: #fff; color: var(--text); box-shadow: none; }
+  .ev-herowrap .ev-btn-sec { background: rgba(255,255,255,0.14); color: #fff; border: 1.5px solid rgba(255,255,255,0.4); }
 
   /* Header */
-  .ev-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
-  .ev-header-cta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .ev-h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; margin-top: 6px; }
-  .ev-sub { font-size: 14px; color: var(--text-sec); margin-top: 4px; }
+  .ev-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .ev-kicker { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+  .ev-h1 { font-family: var(--font-display); font-size: clamp(28px,4vw,42px); font-weight: 800; letter-spacing: -.02em; margin: 8px 0; }
+  .ev-sub { font-size: 16px; color: var(--text-sec); max-width: 520px; line-height: 1.5; }
+  .ev-header-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+  .ev-btn { font-family: var(--font-display); font-weight: 700; font-size: 14px; padding: 12px 20px; border-radius: 999px; text-decoration: none; white-space: nowrap; transition: transform .15s, filter .15s, border-color .15s, color .15s; }
+  .ev-btn-primary { background: var(--accent); color: #fff; box-shadow: 0 8px 20px rgba(14,138,125,.28); }
+  .ev-btn-primary:hover { transform: translateY(-2px); }
+  .ev-btn-sec { background: #fff; color: var(--text); border: 1.5px solid var(--border); }
+  .ev-btn-sec:hover { border-color: var(--accent); color: var(--accent); }
 
-  /* Filters */
-  .ev-filters {
-    display: flex; gap: 6px; overflow-x: auto; padding-bottom: 16px;
-    border-bottom: 1px solid var(--border); margin-bottom: 20px;
-    scrollbar-width: none;
-  }
+  /* Search + filters */
+  .ev-search-row { margin-bottom: 14px; }
+  .ev-search-input { width: 100%; max-width: 420px; padding: 12px 18px; border: 1.5px solid var(--border); border-radius: 999px; font-size: 15px; font-family: inherit; background: #fff; }
+  .ev-search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .ev-filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 22px; margin-bottom: 24px; scrollbar-width: none; }
   .ev-filters::-webkit-scrollbar { display: none; }
-  .fpill {
-    font-family: var(--mono); font-size: 12px; font-weight: 600;
-    padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
-    background: var(--surface); color: var(--text-faint);
-    cursor: pointer; white-space: nowrap; transition: all .2s;
-  }
-  .fpill:hover { color: var(--text-sec); border-color: var(--border-hover); }
-  .fpill.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+  .fpill { font-size: 13.5px; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: 1.5px solid var(--border); background: #fff; color: var(--text-sec); cursor: pointer; white-space: nowrap; transition: all .15s; }
+  .fpill:hover { color: var(--text); border-color: var(--border-hover); }
+  .fpill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-  /* Event grid */
-  .ev-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-
-  .ec {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 18px; text-decoration: none;
-    display: flex; flex-direction: column; gap: 8px;
-    transition: all .25s;
-  }
-  .ec:hover { border-color: var(--border-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  /* Grid + cards */
+  .ev-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .ec { background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 18px; text-decoration: none; display: flex; flex-direction: column; gap: 8px; transition: transform .15s, box-shadow .15s; }
+  .ec:hover { transform: translateY(-3px); box-shadow: 0 16px 34px rgba(16,30,28,.08); }
   .ec[data-hidden="true"] { display: none; }
-
-  .ec-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .ec-title { font-weight: 700; font-size: 16px; color: var(--text); line-height: 1.3; }
-  .ec-desc { font-size: 13px; color: var(--text-sec); line-height: 1.5; }
-  .ec-meta {
-    font-family: var(--mono); font-size: 12px; color: var(--text-faint);
-    display: flex; align-items: center; gap: 6px;
-  }
+  .ec-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+  .ec-datechip { display: flex; flex-direction: column; align-items: center; background: var(--accent-soft); border-radius: 12px; padding: 7px 12px; line-height: 1; min-width: 50px; }
+  .ec-datechip .m { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; }
+  .ec-datechip .d { font-family: var(--font-display); font-size: 19px; font-weight: 800; color: var(--text); }
+  .ec-type { font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px; white-space: nowrap; }
+  .ec-title { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--text); line-height: 1.25; }
+  .ec-desc { font-size: 13.5px; color: var(--text-sec); line-height: 1.5; }
+  .ec-meta { font-size: 13.5px; color: var(--text-sec); display: flex; align-items: center; gap: 6px; }
   .ec-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-faint); }
   .ec-date { color: var(--text-sec); }
-
-  .ec-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 6px; }
+  .ec-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
   .ec-fill-wrap { display: flex; align-items: center; gap: 8px; }
-  .ec-fill-bar { width: 56px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
-  .ec-fill { height: 100%; border-radius: 2px; background: var(--green); transition: width .3s; }
-  .ec-fill-text { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
-  .ec-host { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+  .ec-fill-bar { width: 56px; height: 5px; border-radius: 99px; background: var(--border); overflow: hidden; }
+  .ec-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .3s; }
+  .ec-fill-text { font-size: 12.5px; color: var(--text-sec); font-weight: 600; }
+  .ec-host { font-size: 12px; color: var(--text-faint); }
   .ec-footer-inner { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+  @media (max-width: 860px) { .ev-grid { grid-template-columns: 1fr 1fr; } }
 
   /* Empty state */
   .ev-empty { text-align: center; padding: 48px 24px; }
@@ -528,6 +504,15 @@ try {
       });
     });
   });
+
+  // Deep link: /events#dinner pre-selects that category filter on load
+  (function(){
+    var hash = (location.hash || '').replace('#','').trim();
+    if (hash) {
+      var target = document.querySelector('.fpill[data-type="' + hash + '"]');
+      if (target) target.click();
+    }
+  })();
 
   // "Post an event" button just navigates to /events/new — no JS
   // intercept. The inline create-panel below was a legacy flow that's

@@ -6,208 +6,165 @@ const db = getDB();
 let totalMembers = 0;
 try {
   if (db) {
-    const mc = await db.prepare("SELECT COUNT(*) as cnt FROM members").first();
+    const mc: any = await db.prepare("SELECT COUNT(*) as cnt FROM members").first();
     totalMembers = mc?.cnt || 0;
   }
 } catch {}
-
-const faqs = [
-  { q: "Is this actually free?", a: "Yep. No fees, no premium tier, no upsell." },
-  { q: "I don't know anyone — is that weird?", a: "Most people show up solo. Events stay small enough that you actually meet everyone." },
-  { q: "Is it safe? What about creeps?", a: "Every event has a host, locations are public so you know exactly where you're going, and we remove anyone who makes others uncomfortable." },
-  { q: "How much does an event cost?", a: "Some are free (hikes, park hangs, coffee). Dinners run $20–35 a head. Price is always shown upfront." },
-  { q: "Can I post my own event?", a: "Yes — hit \"Plan an event\" from /events. You don't need permission to have a good idea." },
-  { q: "What if I RSVP and can't make it?", a: "Just cancel so someone else can grab the spot. Life happens — don't ghost repeatedly." },
-];
+const memberLabel = totalMembers ? `${totalMembers}+` : '80+';
 ---
 <Base title="About" description="Why Denver Social exists, and the story behind the table for 8 that started it.">
-  <div class="canvas">
-    <div class="hp">
-      <header class="hp-h">
-        <p class="kicker">About · Denver Social · Since 2026</p>
-        <h1>Making friends in Denver is <em>hard.</em></h1>
-        <p class="lede">A small community site, run by one person, built around the idea that you shouldn't need an app full of strangers to grab dinner on a Tuesday.</p>
-        <a href="/events" class="hp-cta">Find something to show up to →</a>
-      </header>
 
-      <section class="hp-s">
-        <div class="h2-block"><h2>The story.</h2><p class="h2-cap">Seth · Host · Fellow Denverite</p></div>
-        <div class="prose">
-          <p>I moved to Denver from Louisiana about two and a half years ago. As a fellow autistic guy, making friends in a new city was rough — bars were too loud, meetup groups had 400 people standing around awkwardly, and Bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
-          <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up. People kept asking <em>"when's the next one?"</em> — so we kept going. Bowling, hikes, pottery, game nights. There's <strong>{totalMembers || '80'}+</strong> of us now — dinners stay small, but a hike or game night might be twenty.</p>
-          <p>I love organizing and helping the community. If you've ever found it hard to meet people here, that's the whole reason this site exists — I want to spread the love and make Denver feel a little smaller, one table at a time.</p>
-        </div>
-      </section>
+<style is:inline>
+  .ab { color: var(--text); }
+  .ab-wrap { max-width: 820px; margin: 0 auto; padding: 0 var(--space-4); }
 
-      <section class="hp-s">
-        <div class="h2-block"><h2>The rules.</h2><p class="h2-cap">Short list · Easy to remember</p></div>
-        <div class="prose">
-          <p>Don't be a creep. Show up if you say you will. Be kind. That's it.</p>
-        </div>
-      </section>
+  /* Hero — full-bleed teal mesh */
+  .ab-hero {
+    margin-top: -88px; padding: 124px var(--space-4) var(--space-7);
+    text-align: center; color: #fff; position: relative; overflow: hidden;
+    background-color: #0C6E63;
+    background-image:
+      radial-gradient(circle at 16% 16%, rgba(21,128,61,0.95), transparent 42%),
+      radial-gradient(circle at 84% 14%, rgba(122,83,176,0.9), transparent 44%),
+      radial-gradient(circle at 80% 96%, rgba(232,144,42,0.8), transparent 40%),
+      linear-gradient(135deg, #0E8A7D, #0B5C54);
+  }
+  @media (max-width: 900px) { .ab-hero { margin-top: 0; padding-top: 44px; } }
+  .ab-k { font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--space-3); }
+  .ab-hero .ab-k { color: rgba(255,255,255,0.85); position: relative; z-index: 1; }
+  .ab-hero h1 {
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800;
+    font-size: clamp(36px, 6.5vw, 64px); letter-spacing: -0.02em; line-height: 1.05;
+    margin: 0 auto var(--space-4); max-width: 14ch; position: relative; z-index: 1;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  }
+  .ab-hero h1 em { font-style: normal; font-family: 'Caveat', cursive; color: var(--accent2); font-weight: 700; font-size: 1.12em; }
+  .ab-hero p { color: rgba(255,255,255,0.94); font-size: 18px; max-width: 540px; margin: 0 auto; line-height: 1.55; position: relative; z-index: 1; }
 
-      <section class="hp-s">
-        <div class="h2-block"><h2>How it works.</h2><p class="h2-cap">Three lines · No quiz</p></div>
-        <div class="prose">
-          <p><strong>Make a profile</strong> (sixty seconds, no quiz). <strong>Find something that sounds fun.</strong> <strong>Actually show up.</strong> You walk in, there's eight people at a table, and twenty minutes later you're laughing about something dumb.</p>
-        </div>
-      </section>
+  /* Photo collage — lifts up over the hero edge */
+  .ab-photos {
+    display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px;
+    height: 320px; margin: calc(var(--space-7) * -1) auto var(--space-7);
+    max-width: 1000px; padding: 0 var(--space-4); position: relative; z-index: 2;
+  }
+  .ab-photos > div { border-radius: var(--radius-lg); background-size: cover; background-position: center; box-shadow: 0 14px 36px rgba(0,0,0,0.18); border: 4px solid #fff; }
+  .ab-photos .p1 { grid-row: 1 / 3; background-image: url('/hero/red-rocks.jpg'); background-color: #1f5e55; }
+  .ab-photos .p2 { background-image: url('/hero/foothills.jpg'); background-color: #2f6f63; }
+  .ab-photos .p3 { background-image: url('/hero/skyline.jpg'); background-color: #3a5a7a; }
+  @media (max-width: 620px) { .ab-photos { height: 230px; } }
 
-      <section class="hp-s">
-        <div class="h2-block"><h2>Fair questions.</h2><p class="h2-cap">Quick answers · No fluff</p></div>
-        {faqs.map((f) => (
-          <details class="card">
-            <summary><h3>{f.q}</h3><span class="plus" aria-hidden="true"><i></i><i></i></span></summary>
-            <div class="ans"><p>{f.a}</p></div>
-          </details>
-        ))}
-      </section>
+  /* Story */
+  .ab-story { padding: var(--space-2) 0 var(--space-6); }
+  .ab-story h2 { font-family: var(--font-display); font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: var(--space-2); }
+  .ab-by { display: inline-flex; align-items: center; gap: 9px; color: var(--text-sec); font-size: 14px; font-weight: 600; margin-bottom: var(--space-4); }
+  .ab-by .av { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(140deg, var(--accent), #0B5C54); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; font-size: 14px; }
+  .ab-story p { font-size: 17px; color: var(--text); line-height: 1.75; margin-bottom: var(--space-4); }
+  .ab-story em { color: var(--accent); font-style: italic; }
+  .ab-quote { font-family: 'Caveat', cursive; font-size: clamp(28px, 5vw, 40px); font-weight: 700; color: var(--accent2); line-height: 1.1; text-align: center; margin: var(--space-5) 0; }
+  .ab-rules { background: var(--accent-soft); border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5); margin-top: var(--space-3); font-size: 18px; font-weight: 700; line-height: 1.5; }
+  .ab-rules span { color: var(--accent); }
 
-      <footer class="hp-foot">
-        <p>Ready? <a href="/profile/new">Make a profile</a> or join our <a href="https://discord.gg/S8SFNkdSgK" target="_blank" rel="noopener">Discord</a>.</p>
-      </footer>
-    </div>
+  /* Stats strip */
+  .ab-stats { display: flex; justify-content: center; gap: var(--space-6); flex-wrap: wrap; max-width: 820px; margin: 0 auto; padding: var(--space-6) var(--space-4); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .ab-stat { text-align: center; }
+  .ab-stat-n { font-family: var(--font-display); font-size: 36px; font-weight: 900; color: var(--accent); line-height: 1; }
+  .ab-stat-l { font-size: 13px; color: var(--text-sec); margin-top: 6px; font-weight: 500; }
+
+  /* Pillars */
+  .ab-pillars { padding: var(--space-7) var(--space-4); }
+  .ab-pillars-inner { max-width: 1000px; margin: 0 auto; }
+  .ab-pillars h2 { font-family: var(--font-display); font-size: clamp(24px, 3.6vw, 34px); font-weight: 800; text-align: center; margin-bottom: var(--space-5); letter-spacing: -0.01em; }
+  .ab-pillars h2 em { font-style: normal; font-family: 'Caveat', cursive; color: var(--accent2); font-size: 1.15em; }
+  .ab-pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+  @media (max-width: 720px) { .ab-pgrid { grid-template-columns: 1fr; } }
+  .ab-pill { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-5); box-shadow: var(--card-shadow); border-top: 4px solid var(--c); transition: transform 0.15s, box-shadow 0.2s; }
+  .ab-pill:hover { transform: translateY(-4px); box-shadow: 0 14px 30px color-mix(in srgb, var(--c) 24%, transparent); }
+  .ab-pill .e { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px; background: color-mix(in srgb, var(--c) 12%, #fff); margin-bottom: var(--space-3); }
+  .ab-pill h3 { font-family: var(--font-display); font-size: 20px; font-weight: 800; margin-bottom: var(--space-2); }
+  .ab-pill p { font-size: 14.5px; color: var(--text-sec); line-height: 1.6; }
+
+  /* CTA */
+  .ab-cta { text-align: center; padding: var(--space-8) var(--space-4); position: relative; overflow: hidden; color: #fff;
+    background-color: #0C6E63;
+    background-image: radial-gradient(circle at 20% 20%, rgba(232,144,42,0.5), transparent 45%), radial-gradient(circle at 85% 80%, rgba(122,83,176,0.6), transparent 45%), linear-gradient(135deg, #0E8A7D, #0B5C54);
+  }
+  .ab-cta h2 { font-family: 'Caveat', cursive; font-size: clamp(36px, 6vw, 56px); font-weight: 700; margin-bottom: var(--space-4); position: relative; z-index: 1; }
+  .ab-cta-btns { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; position: relative; z-index: 1; }
+  .ab-btn { display: inline-block; font-family: var(--font-display); font-weight: 800; font-size: 16px; padding: 15px 32px; border-radius: var(--radius-pill); text-decoration: none; transition: transform 0.15s, box-shadow 0.2s; }
+  .ab-btn-primary { background: #fff; color: var(--accent); box-shadow: 0 12px 30px rgba(0,0,0,0.28); }
+  .ab-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 38px rgba(0,0,0,0.34); }
+  .ab-btn-ghost { background: rgba(255,255,255,0.14); color: #fff; border: 1.5px solid rgba(255,255,255,0.4); }
+  .ab-btn-ghost:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+</style>
+
+<div class="ab">
+
+  <!-- HERO -->
+  <header class="ab-hero">
+    <div class="ab-k">Since 2026 · Denver, Colorado</div>
+    <h1>Making friends in Denver is <em>hard.</em></h1>
+    <p>A small community, run by one person, built on the idea that you shouldn't need an app full of strangers to grab dinner on a Tuesday.</p>
+  </header>
+
+  <!-- PHOTO COLLAGE -->
+  <div class="ab-photos">
+    <div class="p1"></div>
+    <div class="p2"></div>
+    <div class="p3"></div>
   </div>
 
-  <style>
-    .canvas { background: #FDFBF7; min-height: 100vh; }
+  <!-- STORY -->
+  <section class="ab-wrap ab-story">
+    <div class="ab-k">The story</div>
+    <h2>How a table for 8 in RiNo turned into this.</h2>
+    <div class="ab-by"><span class="av">S</span> Seth · Host · Fellow Denverite</div>
+    <p>I moved to Denver from Louisiana a couple years ago. Making friends in a new city was rough — bars too loud, meetups had 400 people standing around awkwardly, and Bumble BFF felt like a job interview. All I wanted was a few people to grab dinner with on a Tuesday.</p>
+    <p>So I booked a table for 8 in RiNo and posted it. Strangers showed up.</p>
+    <div class="ab-quote">“when's the next one?”</div>
+    <p>People kept asking — so we kept going. Bowling, hikes, pottery, terrace hangs, big potlucks. There's <strong>{memberLabel}</strong> of us now — dinners stay small, but a hike or game night might be twenty.</p>
+    <p>If you've ever found it hard to meet people here, that's the whole reason this exists — to make Denver feel <em>a little smaller</em>, one table at a time.</p>
+    <div class="ab-rules">Don't be a creep. Show up if you say you will. Be kind. <span>That's it.</span></div>
+  </section>
 
-    .hp {
-      max-width: 760px; margin: 0 auto;
-      padding: 56px clamp(20px, 5vw, 32px) 96px;
-      color: #1C1B1F;
-    }
+  <!-- STATS -->
+  <section class="ab-stats">
+    <div class="ab-stat"><div class="ab-stat-n">{memberLabel}</div><div class="ab-stat-l">neighbors at the table</div></div>
+    <div class="ab-stat"><div class="ab-stat-n">$0</div><div class="ab-stat-l">to host or join — always</div></div>
+    <div class="ab-stat"><div class="ab-stat-n">2026</div><div class="ab-stat-l">since one dinner in RiNo</div></div>
+  </section>
 
-    .hp-h { margin-bottom: 32px; }
-    .kicker {
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
-      font-size: 12px; font-weight: 500;
-      letter-spacing: 0.18em; text-transform: uppercase;
-      color: #6B6A70; margin-bottom: 16px;
-    }
-    .hp-h h1 {
-      font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
-      font-size: clamp(44px, 7vw, 64px); font-weight: 800;
-      letter-spacing: -0.035em; line-height: 1.02;
-      margin-bottom: 18px; color: #1C1B1F;
-    }
-    .hp-h h1 em { font-style: italic; font-weight: 500; color: #7C3AED; }
-    .hp-h h1 .amp {
-      font-family: 'Inter', system-ui, sans-serif;
-      font-style: italic; font-weight: 300;
-      color: #B5AFA3; padding: 0 0.08em;
-    }
-    .lede {
-      font-size: 18px; line-height: 1.55;
-      color: #6B6A70; max-width: 56ch;
-      margin-bottom: 14px;
-    }
-    .lede a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-    .lede a:hover { color: #7C3AED; }
-    .hp-cta {
-      display: inline-flex; align-items: center;
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
-      font-size: 13px; font-weight: 600;
-      letter-spacing: -0.01em;
-      color: #7C3AED; text-decoration: underline;
-      text-underline-offset: 5px; text-decoration-thickness: 1px;
-      transition: color 280ms cubic-bezier(0.16,1,0.3,1);
-    }
-    .hp-cta:hover { color: #5B21B6; }
+  <!-- PILLARS -->
+  <section class="ab-pillars">
+    <div class="ab-pillars-inner">
+      <h2>What we're <em>not.</em></h2>
+      <div class="ab-pgrid">
+        <div class="ab-pill" style="--c:#0E8A7D">
+          <div class="e">🚫</div>
+          <h3>No algorithm</h3>
+          <p>Events show up in the order they happen. The thing on top is the thing happening soonest — not what an engagement model picks.</p>
+        </div>
+        <div class="ab-pill" style="--c:#E8902A">
+          <div class="e">💸</div>
+          <h3>No paid tier</h3>
+          <p>Hosting is free. RSVPing is free. Always. Nothing locked behind a paywall.</p>
+        </div>
+        <div class="ab-pill" style="--c:#7A53B0">
+          <div class="e">📭</div>
+          <h3>No spam</h3>
+          <p>You can't message someone without a mutual RSVP. The whole point is the in-person meet.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    .hp-s { margin-bottom: 96px; scroll-margin-top: 88px; }
-    .hp-s:last-of-type { margin-bottom: 56px; }
-    .h2-block {
-      padding-bottom: 14px;
-      border-bottom: 1px solid #E8E0D0;
-      margin-bottom: 18px;
-    }
-    .hp-s h2 {
-      font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
-      font-size: clamp(28px, 4vw, 36px); font-weight: 800;
-      letter-spacing: -0.025em; line-height: 1.05;
-      color: #1C1B1F; margin: 0;
-    }
-    .h2-cap {
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
-      font-size: 11px; font-weight: 500;
-      letter-spacing: 0.14em; text-transform: uppercase;
-      color: #9A938A; margin: 6px 0 0;
-    }
+  <!-- CTA -->
+  <section class="ab-cta">
+    <h2>So — see you Saturday?</h2>
+    <div class="ab-cta-btns">
+      <a class="ab-btn ab-btn-primary" href="/events">Find something this week</a>
+      <a class="ab-btn ab-btn-ghost" href="/signup">Join the community</a>
+    </div>
+  </section>
 
-    .prose p {
-      font-size: 16px; line-height: 1.7; color: #4A4850;
-      margin: 0 0 14px;
-    }
-    .prose p:last-child { margin-bottom: 0; }
-    .prose em { font-style: italic; color: #6B6A70; }
-    .prose strong { color: #1C1B1F; font-weight: 600; }
-    .prose a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-    .prose a:hover { color: #7C3AED; }
-
-    .card {
-      border: 1px solid rgba(232, 224, 208, 0.8);
-      background: rgba(255,255,255,0.35);
-      border-radius: 22px;
-      margin-bottom: 8px;
-      overflow: hidden;
-      transition: background 360ms cubic-bezier(0.16,1,0.3,1), border-color 360ms cubic-bezier(0.16,1,0.3,1), box-shadow 360ms cubic-bezier(0.16,1,0.3,1);
-    }
-    .card:hover { border-color: rgba(220, 208, 184, 0.9); }
-    .card[open] {
-      background: #FFFFFF;
-      border-color: #D9CFB8;
-      box-shadow: 0 4px 20px -4px rgba(28,27,31,0.05);
-    }
-    .card summary:hover h3 { color: #7C3AED; }
-    .card summary h3 { transition: color 200ms cubic-bezier(0.16,1,0.3,1); }
-    .card summary {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 16px; padding: 20px 22px; cursor: pointer;
-      list-style: none;
-    }
-    .card summary::-webkit-details-marker { display: none; }
-    .card summary h3 {
-      font-family: 'Inter', system-ui, sans-serif;
-      font-size: 16px; font-weight: 600;
-      letter-spacing: -0.005em;
-      color: #1C1B1F; margin: 0;
-    }
-    .plus {
-      flex-shrink: 0; position: relative;
-      width: 20px; height: 20px;
-      display: inline-flex; align-items: center; justify-content: center;
-      transition: transform 360ms cubic-bezier(0.16,1,0.3,1), color 280ms cubic-bezier(0.16,1,0.3,1);
-      color: #9A938A;
-    }
-    .plus i {
-      position: absolute; background: currentColor; border-radius: 2px;
-      transition: transform 360ms cubic-bezier(0.16,1,0.3,1);
-    }
-    .plus i:nth-child(1) { width: 14px; height: 2px; }
-    .plus i:nth-child(2) { width: 2px; height: 14px; }
-    .card[open] .plus { color: #7C3AED; transform: rotate(90deg); }
-    .card[open] .plus i:nth-child(2) { transform: scaleY(0); }
-    .ans {
-      padding: 4px 22px 22px;
-      border-top: 1px solid rgba(28,27,31,0.06);
-      margin-top: 0;
-    }
-    .ans p {
-      font-size: 15px; line-height: 1.7;
-      color: #4A4850; margin: 14px 0 0;
-    }
-    .ans p:first-child { margin-top: 14px; }
-    .ans a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-    .ans a:hover { color: #7C3AED; }
-    .ans strong { color: #1C1B1F; font-weight: 600; }
-
-    .hp-foot {
-      margin-top: 64px; padding-top: 28px;
-      border-top: 1px solid #EDE6D7;
-      font-size: 14px; color: #6B6A70; text-align: center;
-    }
-    .hp-foot a { color: #1C1B1F; text-decoration: underline; text-underline-offset: 3px; }
-    .hp-foot a:hover { color: #7C3AED; }
-  </style>
+</div>
 </Base>
