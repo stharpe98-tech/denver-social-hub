@@ -68,11 +68,10 @@ const pill = (t: string) => catColor[t] || ['#FCEFD8', '#B5710F'];
 
 // What we do — evergreen tiles
 const tracks = [
-  { cls: 'big', em: '🍽️', t: 'Dinners', d: 'Tables of 8 — strangers in, friends out.', img: '/tiles/dinners.jpg', href: '/events#dinner' },
-  { cls: '', em: '🎲', t: 'Game nights', d: '', img: '/tiles/games.jpg', href: '/events#game_night' },
-  { cls: '', em: '🥂', t: 'Hangouts', d: '', img: '/tiles/terrace.jpg', href: '/events#social' },
-  { cls: '', em: '🍻', t: 'Bar meetups', d: '', img: '/tiles/bar.jpg', href: '/events' },
-  { cls: '', em: '🥗', t: 'Big potlucks', d: 'Everyone brings one thing.', img: '/tiles/potlucks.jpg', href: '/potlucks' },
+  { em: '🍽️', t: 'Dinners', d: 'Tables of 8 — strangers in, friends out.', imgs: ['/tiles/dinners.jpg', '/tiles/terrace.jpg', '/tiles/bar.jpg'], href: '/events#dinner' },
+  { em: '🎲', t: 'Game nights', d: 'Cards, board games, trivia.', imgs: ['/tiles/games.jpg', '/tiles/bar.jpg', '/tiles/terrace.jpg'], href: '/events#game_night' },
+  { em: '🥂', t: 'Social hangouts', d: 'Rooftops, bars, easy weeknight meetups.', imgs: ['/tiles/terrace.jpg', '/tiles/bar.jpg', '/hero/skyline.jpg'], href: '/events#social' },
+  { em: '🥗', t: 'Big potlucks', d: 'Everyone brings one thing.', imgs: ['/tiles/terrace.jpg', '/tiles/dinners.jpg', '/hero/foothills.jpg'], href: '/potlucks' },
 ];
 ---
 <Base title="Real events, real people" description="Lively small-group events across Denver — game nights, dinners, terrace hangs, bar meetups, potlucks. Find one or host your own.">
@@ -110,7 +109,12 @@ const tracks = [
       </div>
       <div class="tiles">
         {tracks.map((t) => (
-          <a class={`tile ${t.cls}`} href={t.href} style={t.img ? `background-image:url(${t.img})` : 'background:linear-gradient(135deg,#16A34A,#0E8A7D)'}>
+          <a class="tile" href={t.href}>
+            <div class="tile-photos">
+              {t.imgs.map((src, j) => (
+                <img src={src} alt="" class={`tile-photo tp-${j + 1}`} loading="lazy" />
+              ))}
+            </div>
             <div class="lab"><div class="em">{t.em}</div><h3>{t.t}</h3>{t.d && <p>{t.d}</p>}</div>
           </a>
         ))}
@@ -204,17 +208,21 @@ const tracks = [
   .sec-head p{color:var(--text-sec);font-size:17px}
 
   /* TILES */
-  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-  .tile{position:relative;border-radius:26px;overflow:hidden;min-height:230px;display:flex;align-items:flex-end;color:#fff;transition:transform .2s;background:#1E5142;background-size:cover;background-position:center}
+  .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .tile{position:relative;border-radius:26px;overflow:hidden;min-height:240px;display:flex;align-items:flex-end;color:#fff;transition:transform .2s;background:#1E5142}
   .tile:hover{transform:translateY(-4px)}
-  .tile::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,30,28,.12) 18%,rgba(16,30,28,.66))}
+  .tile-photos{position:absolute;inset:0;z-index:0}
+  .tile-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;animation:tileFade 21s infinite}
+  .tp-1{animation-delay:0s}.tp-2{animation-delay:7s}.tp-3{animation-delay:14s}
+  @keyframes tileFade{0%{opacity:0}5%{opacity:1}28%{opacity:1}34%{opacity:0}100%{opacity:0}}
+  .tile:hover .tile-photo{transform:scale(1.04);transition:transform .4s}
+  .tile::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(16,30,28,.12) 18%,rgba(16,30,28,.66))}
   .tile .lab{position:relative;z-index:2;padding:22px}
   .tile .lab .em{font-size:30px}
   .tile .lab h3{font-family:var(--font-display);font-size:22px;font-weight:700;margin-top:4px;color:#fff}
   .tile .lab p{font-size:13.5px;opacity:.92;margin-top:2px}
-  .tile.big{grid-column:span 2}
-  @media(max-width:780px){.tiles{grid-template-columns:1fr 1fr}.tile.big{grid-column:span 2}}
-  @media(max-width:520px){.tiles{grid-template-columns:1fr}.tile.big{grid-column:span 1}}
+  @media(prefers-reduced-motion:reduce){.tile-photo{animation:none}.tp-1{opacity:1}}
+  @media(max-width:520px){.tiles{grid-template-columns:1fr}}
 
   /* WEEK CARDS */
   .week{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
