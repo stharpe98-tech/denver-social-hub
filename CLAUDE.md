@@ -79,6 +79,13 @@
   - Vote list (`.vi`) with progress bars and upvote buttons — community voting is the core differentiator.
   - Hero gradient: `linear-gradient(135deg, #F8F9FB, #EEF2FF, #F0FDF4)` — subtle, airy.
 
+## Button hierarchy (site-wide standard)
+- **One primary action per view.** Use `.btn-cta` (purple/CTA pill) for the single most important action (RSVP, Create, Submit). Never put two `.btn-cta`s side by side.
+- **Secondary:** `.btn-sec` (white pill w/ border) for the next-most-important action.
+- **Tertiary / utility actions:** group them in an `.action-row` of `.btn-mini` pills (compact, share evenly, wrap on mobile). This is the canonical home for **Share · Add to calendar · Directions · Get reminders** and similar. Place the row directly beneath (or just above) the primary CTA — don't scatter these around the page.
+- All three (`.btn-cta`, `.btn-sec`, `.btn-mini`) live in `Base.astro` and already have `:hover`/`:active` states — reference them, don't re-style per page.
+- **Reference implementation:** the event detail page (`src/pages/events/[id].astro`) — RSVP is the primary CTA, with an `.action-row` of `.btn-mini` actions above it.
+
 ## Project-Specific Rules
 - **SSR only** — never switch to static output.
 - **Wrap every page in `<Base>`** — nav and global styles come from there.

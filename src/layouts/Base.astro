@@ -752,6 +752,22 @@ const currentPath = Astro.url.pathname;
   .btn-sec:hover { border-color: var(--border-hover); background: var(--surface); }
   .btn-sec:active { background: var(--surface-hover); }
 
+  /* Secondary-action row — the canonical home for compact tertiary actions
+     (Share, Add to calendar, Directions, Get reminders) that sit beneath a
+     single primary CTA. Buttons share the row evenly and wrap on small screens. */
+  .action-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .btn-mini {
+    flex: 1 1 auto;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 14px; border-radius: var(--radius-pill);
+    font-size: 13px; font-weight: 600; line-height: 1; white-space: nowrap;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    cursor: pointer; text-decoration: none; transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent; font-family: var(--font);
+  }
+  .btn-mini:hover { border-color: var(--accent); color: var(--accent); background: var(--bg); }
+  .btn-mini:active { background: var(--surface-hover); }
+
   .input {
     width: 100%; padding: 12px 14px;
     background: var(--bg); border: 1px solid var(--border);

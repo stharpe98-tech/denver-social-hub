@@ -233,6 +233,30 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
     <div class="ev-deadline">⏳ RSVP by <strong>{event.rsvp_deadline}</strong>{event.location_hidden == 1 ? ' — the exact spot is shared once you’re in.' : ''}</div>
   )}
 
+  {/* Secondary-action row — primary action (RSVP) lives below. */}
+  <div class="action-row ev-actions">
+    <a class="btn-mini" href={`/api/events/${id}/ics`}>📅 Add to calendar</a>
+    <a class="btn-mini" href={`https://maps.google.com/?q=${encodeURIComponent(event.location || event.zone || 'Denver')}`} target="_blank" rel="noopener">🧭 Directions</a>
+    <button class="btn-mini" type="button" id="ev-share" data-title={event.title}>🔗 Share</button>
+  </div>
+  <script is:inline>
+    (function () {
+      var b = document.getElementById('ev-share');
+      if (!b) return;
+      b.addEventListener('click', async function () {
+        var share = { title: b.getAttribute('data-title') || document.title, url: location.href };
+        try {
+          if (navigator.share) { await navigator.share(share); }
+          else {
+            await navigator.clipboard.writeText(location.href);
+            var t = b.textContent; b.textContent = '✓ Link copied';
+            setTimeout(function () { b.textContent = t; }, 1800);
+          }
+        } catch (e) { /* user dismissed share sheet */ }
+      });
+    })();
+  </script>
+
   <!-- Description -->
   {event.description && (
     <div class="ev-section">
@@ -800,6 +824,7 @@ const typeLabel: Record<string, string> = { dinner: 'Dinner', game_night: 'Game 
 
   /* ── Type-aware blocks ── */
   .ev-deadline { background: var(--accent-soft); color: var(--accent); border-radius: 12px; padding: 12px 16px; font-size: 14px; font-weight: 600; }
+  .ev-actions { margin: 14px 0 4px; }
   .ev-deadline strong { color: var(--text); }
   .ev-bring { background: #FCEFD8; color: #8A5A12; border-radius: 12px; padding: 12px 16px; font-size: 14px; }
   .ev-bring strong { color: var(--text); }
